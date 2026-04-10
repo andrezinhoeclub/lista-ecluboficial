@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista VIP - Eclub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-md bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700">
+        <h1 class="text-2xl font-bold text-center mb-6 text-yellow-500 uppercase">Lista VIP Eclub</h1>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400">Escolha o Evento</label>
+                <select id="evento" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+                    <option value="">Carregando eventos...</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400">Seu Nome Completo</label>
+                <input type="text" id="nome" placeholder="Digite seu nome" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400">WhatsApp</label>
+                <input type="tel" id="telefone" placeholder="(41) 99999-9999" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+            </div>
+
+            <button onclick="enviarParaLista()" id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-lg transition duration-300">
+                COLOCAR NOME NA LISTA
+            </button>
+            
+            <p id="mensagem" class="text-center text-sm mt-4 hidden"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // BUSCA OS EVENTOS QUE VOCÊ CADASTROU (Festa Lizona, etc)
+        async function carregarEventos() {
+            const select = document.getElementById('evento');
+            try {
+                const q = query(collection(db, "eventos"), where("ativo", "==", true));
+                const querySnapshot = await getDocs(q);
+                
+                select.innerHTML = ''; 
+
+                if (querySnapshot.empty) {
+                    select.innerHTML = '<option value="">Nenhum evento ativo</option>';
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const dados = doc.data();
+                    const option = document.createElement('option');
+                    option.value = dados.nome;
+                    option.innerText = dados.nome;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error("Erro:", e);
+                select.innerHTML = '<option value="">Erro ao carregar eventos</option>';
+            }
+        }
+
+        carregarEventos();
+
+        // SALVA O CLIENTE NA LISTA
+        window.enviarParaLista = async function() {
+            const evento = document.getElementById('evento').value;
+            const nome = document.getElementById('nome').value;
+            const telefone = document.getElementById('telefone').value;
+            const btn = document.getElementById('btnEnviar');
+            const msg = document.getElementById('mensagem');
+
+            if(!nome || !telefone || !evento) {
+                alert("Preencha todos os campos!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "ENVIANDO...";
+
+            try {
+                await addDoc(collection(db, "lista_eventos"), {
+                    evento: evento,
+                    nome: nome,
+                    telefone: telefone,
+                    data_cadastro: new Date()
+                });
+
+                msg.innerText = "Sucesso! Nome na lista.";
+                msg.classList.remove('hidden', 'text-red-500');
+                msg.classList.add('text-green-500');
+                
+                document.getElementById('nome').value = "";
+                document.getElementById('telefone').value = "";
+            } catch (e) {
+                msg.innerText = "Erro ao enviar.";
+                msg.classList.remove('hidden');
+                msg.classList.add('text-red-500');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "COLOCAR NOME NA LISTA";
+            }
+        }
+    </script>
+</body>
+</html>
