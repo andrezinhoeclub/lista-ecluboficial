@@ -18,17 +18,23 @@
 
         <div class="space-y-4">
             <div>
-                <label class="block text-sm mb-1 text-zinc-400 font-medium">Escolha o Evento</label>
+                <label class="block text-sm mb-1 text-zinc-400 font-medium text-xs uppercase">Escolha o Evento</label>
                 <select id="evento" onchange="trocarBanner()" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
                     <option value="">Carregando eventos...</option>
                 </select>
             </div>
+            
+            <div id="containerPreco" class="bg-zinc-900/50 border border-zinc-700 p-3 rounded-lg hidden">
+                <p class="text-[10px] text-yellow-500 uppercase font-bold mb-1">Valores com nome na lista:</p>
+                <p id="textoPreco" class="text-xs text-zinc-300 italic"></p>
+            </div>
+
             <div>
-                <label class="block text-sm mb-1 text-zinc-400 font-medium">Seu Nome Completo</label>
+                <label class="block text-sm mb-1 text-zinc-400 font-medium text-xs uppercase">Seu Nome Completo</label>
                 <input type="text" id="nome" placeholder="Digite seu nome" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
             </div>
             <div>
-                <label class="block text-sm mb-1 text-zinc-400 font-medium">WhatsApp</label>
+                <label class="block text-sm mb-1 text-zinc-400 font-medium text-xs uppercase">WhatsApp</label>
                 <input type="tel" id="telefone" placeholder="(41) 99999-9999" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
             </div>
             <button onclick="enviarParaLista()" id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-lg transition duration-300 shadow-lg uppercase tracking-wider">Colocar Nome na Lista</button>
@@ -78,16 +84,28 @@
         window.trocarBanner = function() {
             const sel = document.getElementById('evento').value;
             const ev = eventosCache.find(e => e.nome === sel);
+            const containerPreco = document.getElementById('containerPreco');
+            const textoPreco = document.getElementById('textoPreco');
+
             if (ev) {
+                // Banner e Info
                 if(ev.imagem) { document.getElementById('eventoBanner').src = ev.imagem; document.getElementById('bannerContainer').classList.remove('hidden'); }
                 if(ev.data) {
                     const [a, m, d] = ev.data.split('-');
                     document.getElementById('infoEvento').innerText = `📅 ${d}/${m}/${a} às ${ev.hora}h`;
                     document.getElementById('infoEvento').classList.remove('hidden');
                 }
+                // Mostrar Preço
+                if(ev.preço) {
+                    textoPreco.innerText = ev.preço;
+                    containerPreco.classList.remove('hidden');
+                } else {
+                    containerPreco.classList.add('hidden');
+                }
             } else {
                 document.getElementById('bannerContainer').classList.add('hidden');
                 document.getElementById('infoEvento').classList.add('hidden');
+                containerPreco.classList.add('hidden');
             }
         }
 
@@ -97,7 +115,6 @@
             const telefone = document.getElementById('telefone').value;
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('mensagem');
-
             const urlParams = new URLSearchParams(window.location.search);
             const promoterRef = urlParams.get('ref') || "Direto";
 
