@@ -9,10 +9,11 @@
 <body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-md bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700">
-        <h1 class="text-2xl font-bold text-center mb-6 text-yellow-500 uppercase">Lista VIP Eclub</h1>
+        <h1 class="text-2xl font-bold text-center mb-2 text-yellow-500 uppercase">Lista VIP Eclub</h1>
+        <p id="infoEvento" class="text-center text-sm text-zinc-400 mb-6 hidden"></p>
         
         <div id="bannerContainer" class="mb-6 hidden">
-            <img id="eventoBanner" src="" alt="Banner do Evento" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg">
+            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg">
         </div>
 
         <div class="space-y-4">
@@ -57,7 +58,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let eventosCache = []; // Variável para guardar os dados e as imagens
+        let eventosCache = [];
 
         async function carregarEventos() {
             const select = document.getElementById('evento');
@@ -68,35 +69,54 @@
                 select.innerHTML = '<option value="">Selecione o evento...</option>'; 
                 eventosCache = [];
 
+                // Pega a data de hoje formatada (AAAA-MM-DD)
+                const hoje = new Date().toISOString().split('T')[0];
+
                 querySnapshot.forEach((doc) => {
                     const dados = doc.data();
-                    eventosCache.push(dados); // Guarda nome e imagem na memória
                     
+                    // LÓGICA DE EXCLUSÃO AUTOMÁTICA: 
+                    // Se a data do evento existir e for menor que hoje, ele não aparece na lista
+                    if (dados.data && dados.data < hoje) {
+                        return; // Pula este evento (não mostra no site)
+                    }
+
+                    eventosCache.push(dados);
                     const option = document.createElement('option');
                     option.value = dados.nome;
                     option.innerText = dados.nome;
                     select.appendChild(option);
                 });
             } catch (e) {
-                console.error("Erro:", e);
-                select.innerHTML = '<option value="">Erro ao carregar eventos</option>';
+                select.innerHTML = '<option value="">Erro ao carregar</option>';
             }
         }
 
-        // FUNÇÃO QUE FAZ A MÁGICA DA IMAGEM
         window.trocarBanner = function() {
             const selecionado = document.getElementById('evento').value;
             const container = document.getElementById('bannerContainer');
             const imgTag = document.getElementById('eventoBanner');
+            const infoTxt = document.getElementById('infoEvento');
 
-            // Procura nos dados salvos qual tem o mesmo nome do que foi clicado
-            const eventoEncontrado = eventosCache.find(e => e.nome === selecionado);
+            const ev = eventosCache.find(e => e.nome === selecionado);
 
-            if (eventoEncontrado && eventoEncontrado.imagem) {
-                imgTag.src = eventoEncontrado.imagem;
-                container.classList.remove('hidden');
+            if (ev) {
+                // Mostra Banner
+                if(ev.imagem) {
+                    imgTag.src = ev.imagem;
+                    container.classList.remove('hidden');
+                }
+                // Mostra Data e Hora formatados
+                if(ev.data && ev.hora) {
+                    const [ano, mes, dia] = ev.data.split('-');
+                    infoTxt.innerText = `📅 ${dia}/${mes}/${ano} às ${ev.hora}h`;
+                    infoTxt.classList.remove('hidden');
+                } else {
+                    infoTxt.classList.add('hidden');
+                }
             } else {
                 container.classList.add('hidden');
+                infoTxt.classList.add('hidden');
             }
         }
 
@@ -109,26 +129,18 @@
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('mensagem');
 
-            if(!nome || !telefone || !evento) {
-                alert("Preencha todos os campos!");
-                return;
-            }
+            if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
 
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
 
             try {
                 await addDoc(collection(db, "lista_eventos"), {
-                    evento: evento,
-                    nome: nome,
-                    telefone: telefone,
-                    data_cadastro: new Date()
+                    evento: evento, nome: nome, telefone: telefone, data_cadastro: new Date()
                 });
-
                 msg.innerText = "Sucesso! Nome na lista.";
                 msg.classList.remove('hidden', 'text-red-500');
                 msg.classList.add('text-green-500');
-                
                 document.getElementById('nome').value = "";
                 document.getElementById('telefone').value = "";
             } catch (e) {
