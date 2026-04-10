@@ -1,166 +1,54 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista VIP - Eclub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
+<script type="module">
+    // ... (mantenha seu firebaseConfig e imports)
 
-    <div class="w-full max-w-md bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700">
-        <h1 class="text-2xl font-bold text-center mb-2 text-yellow-500 uppercase tracking-widest">Lista VIP Eclub</h1>
-        <p id="infoEvento" class="text-center text-sm text-zinc-400 mb-6 hidden"></p>
-        
-        <div id="bannerContainer" class="mb-6 hidden">
-            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg">
-        </div>
+    window.enviarParaLista = async function() {
+        const evento = document.getElementById('evento').value;
+        const nome = document.getElementById('nome').value;
+        const telefone = document.getElementById('telefone').value;
+        const btn = document.getElementById('btnEnviar');
+        const msg = document.getElementById('mensagem');
 
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm mb-1 text-zinc-400 font-medium">Escolha o Evento</label>
-                <select id="evento" onchange="trocarBanner()" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
-                    <option value="">Carregando eventos...</option>
-                </select>
-            </div>
+        // BUSCA O PROMOTER NO LINK (ex: ?ref=bruna)
+        const urlParams = new URLSearchParams(window.location.search);
+        const promoterRef = urlParams.get('ref') || "Direto"; 
 
-            <div>
-                <label class="block text-sm mb-1 text-zinc-400 font-medium">Seu Nome Completo</label>
-                <input type="text" id="nome" placeholder="Digite seu nome" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
-            </div>
+        if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
+        btn.disabled = true;
 
-            <div>
-                <label class="block text-sm mb-1 text-zinc-400 font-medium">WhatsApp</label>
-                <input type="tel" id="telefone" placeholder="(41) 99999-9999" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
-            </div>
+        try {
+            // TRAVA DE DUPLICIDADE
+            const q = query(collection(db, "lista_eventos"), where("evento", "==", evento));
+            const snap = await getDocs(q);
+            let jaExiste = false;
+            snap.forEach(doc => { if(doc.data().telefone === telefone) jaExiste = true; });
 
-            <button onclick="enviarParaLista()" id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-lg transition duration-300 shadow-lg uppercase tracking-wider">
-                Colocar Nome na Lista
-            </button>
-            
-            <p id="mensagem" class="text-center text-sm mt-4 hidden font-bold"></p>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
-            authDomain: "teste-de-reserva.firebaseapp.com",
-            projectId: "teste-de-reserva",
-            storageBucket: "teste-de-reserva.firebasestorage.app",
-            messagingSenderId: "163395694876",
-            appId: "1:163395694876:web:8b1116a0483af951548ad9"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        let eventosCache = [];
-
-        async function carregarEventos() {
-            const select = document.getElementById('evento');
-            try {
-                const q = query(collection(db, "eventos"), where("ativo", "==", true));
-                const querySnapshot = await getDocs(q);
-                let eventosBrutos = [];
-                const hoje = new Date().toISOString().split('T')[0];
-
-                querySnapshot.forEach((doc) => {
-                    const dados = doc.data();
-                    if (dados.data && dados.data >= hoje) {
-                        eventosBrutos.push(dados);
-                    }
-                });
-
-                eventosBrutos.sort((a, b) => a.data.localeCompare(b.data));
-                select.innerHTML = '<option value="">Selecione o evento...</option>'; 
-                eventosCache = eventosBrutos;
-
-                eventosBrutos.forEach((dados) => {
-                    const option = document.createElement('option');
-                    option.value = dados.nome;
-                    option.innerText = dados.nome;
-                    select.appendChild(option);
-                });
-            } catch (e) {
-                select.innerHTML = '<option value="">Erro ao carregar</option>';
-            }
-        }
-
-        window.trocarBanner = function() {
-            const selecionado = document.getElementById('evento').value;
-            const container = document.getElementById('bannerContainer');
-            const imgTag = document.getElementById('eventoBanner');
-            const infoTxt = document.getElementById('infoEvento');
-            const ev = eventosCache.find(e => e.nome === selecionado);
-
-            if (ev) {
-                if(ev.imagem) { imgTag.src = ev.imagem; container.classList.remove('hidden'); }
-                if(ev.data && ev.hora) {
-                    const [ano, mes, dia] = ev.data.split('-');
-                    infoTxt.innerText = `📅 ${dia}/${mes}/${ano} às ${ev.hora}h`;
-                    infoTxt.classList.remove('hidden');
-                }
-            } else {
-                container.classList.add('hidden');
-                infoTxt.classList.add('hidden');
-            }
-        }
-
-        window.enviarParaLista = async function() {
-            const evento = document.getElementById('evento').value;
-            const nome = document.getElementById('nome').value;
-            const telefone = document.getElementById('telefone').value;
-            const btn = document.getElementById('btnEnviar');
-            const msg = document.getElementById('mensagem');
-
-            if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
-
-            btn.disabled = true;
-            btn.innerText = "CARREGANDO...";
-
-            try {
-                // JEITO NOVO: Busca apenas pelo evento (que o Firebase já entende)
-                const q = query(collection(db, "lista_eventos"), where("evento", "==", evento));
-                const snap = await getDocs(q);
-                
-                let jaExiste = false;
-                snap.forEach(doc => {
-                    if(doc.data().telefone === telefone) jaExiste = true;
-                });
-
-                if (jaExiste) {
-                    msg.innerText = "⚠️ Este número já está na lista!";
-                    msg.className = "text-center text-sm mt-4 font-bold text-yellow-500";
-                    msg.classList.remove('hidden');
-                    btn.disabled = false;
-                    btn.innerText = "Colocar Nome na Lista";
-                    return;
-                }
-
-                await addDoc(collection(db, "lista_eventos"), {
-                    evento, nome, telefone, data_cadastro: new Date(), entrou: false
-                });
-
-                msg.innerText = "✅ Sucesso! Nome na lista.";
-                msg.className = "text-center text-sm mt-4 font-bold text-green-500";
+            if (jaExiste) {
+                msg.innerText = "⚠️ Você já está na lista!";
+                msg.className = "text-center text-sm mt-4 font-bold text-yellow-500";
                 msg.classList.remove('hidden');
-                document.getElementById('nome').value = "";
-                document.getElementById('telefone').value = "";
-            } catch (e) {
-                msg.innerText = "❌ Erro ao enviar.";
-                msg.className = "text-center text-sm mt-4 font-bold text-red-500";
-                msg.classList.remove('hidden');
-            } finally {
                 btn.disabled = false;
-                btn.innerText = "Colocar Nome na Lista";
+                return;
             }
-        }
 
-        carregarEventos();
-    </script>
-</body>
-</html>
+            // SALVA COM O NOME DO PROMOTER
+            await addDoc(collection(db, "lista_eventos"), {
+                evento, 
+                nome, 
+                telefone, 
+                promoter: promoterRef, // Aqui salva quem trouxe
+                data_cadastro: new Date(), 
+                entrou: false
+            });
+
+            msg.innerText = "✅ Sucesso! Nome na lista.";
+            msg.className = "text-center text-sm mt-4 font-bold text-green-500";
+            msg.classList.remove('hidden');
+            document.getElementById('nome').value = "";
+            document.getElementById('telefone').value = "";
+        } catch (e) {
+            msg.innerText = "❌ Erro ao enviar.";
+            msg.classList.remove('hidden');
+        } finally { btn.disabled = false; }
+    }
+    // ...
+</script>
