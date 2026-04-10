@@ -5,42 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista VIP - Eclub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .card-evento.selecionado { border-color: #eab308; transform: scale(1.05); }
-    </style>
 </head>
-<body class="bg-zinc-900 text-white font-sans p-4">
+<body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
 
-    <div class="max-w-4xl mx-auto py-8">
-        <h1 class="text-3xl font-bold text-center mb-2 text-yellow-500 uppercase tracking-widest">Lista VIP Eclub</h1>
-        <p class="text-center text-zinc-400 mb-10">Selecione o evento desejado para entrar na lista:</p>
-
-        <div id="vitrineEventos" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <p class="col-span-full text-center py-10">Carregando eventos...</p>
+    <div class="w-full max-w-md bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700">
+        <h1 class="text-2xl font-bold text-center mb-2 text-yellow-500 uppercase">Lista VIP Eclub</h1>
+        <p id="infoEvento" class="text-center text-sm text-zinc-400 mb-6 hidden"></p>
+        
+        <div id="bannerContainer" class="mb-6 hidden">
+            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg">
         </div>
 
-        <div id="formCadastro" class="max-w-md mx-auto bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700 hidden">
-            <h2 id="tituloEventoSelecionado" class="text-xl font-bold text-center mb-6 text-yellow-500 uppercase"></h2>
-            
-            <div class="space-y-4">
-                <input type="hidden" id="eventoInput">
-                
-                <div>
-                    <label class="block text-sm mb-1 text-zinc-400">Seu Nome Completo</label>
-                    <input type="text" id="nome" placeholder="Digite seu nome" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
-                </div>
-
-                <div>
-                    <label class="block text-sm mb-1 text-zinc-400">WhatsApp</label>
-                    <input type="tel" id="telefone" placeholder="(41) 99999-9999" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
-                </div>
-
-                <button onclick="enviarParaLista()" id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-lg transition duration-300 uppercase">
-                    Confirmar Nome na Lista
-                </button>
-                
-                <p id="mensagem" class="text-center text-sm mt-4 hidden"></p>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400">Escolha o Evento</label>
+                <select id="evento" onchange="trocarBanner()" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+                    <option value="">Carregando eventos...</option>
+                </select>
             </div>
+
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400">Seu Nome Completo</label>
+                <input type="text" id="nome" placeholder="Digite seu nome" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+            </div>
+
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400">WhatsApp</label>
+                <input type="tel" id="telefone" placeholder="(41) 99999-9999" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+            </div>
+
+            <button onclick="enviarParaLista()" id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-lg transition duration-300">
+                COLOCAR NOME NA LISTA
+            </button>
+            
+            <p id="mensagem" class="text-center text-sm mt-4 hidden"></p>
         </div>
     </div>
 
@@ -60,67 +58,69 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        async function carregarVitrine() {
-            const vitrine = document.getElementById('vitrineEventos');
-            const hoje = new Date().toISOString().split('T')[0];
+        let eventosCache = [];
 
+        async function carregarEventos() {
+            const select = document.getElementById('evento');
             try {
+                // Organizando por data para não ficar aleatório
                 const q = query(collection(db, "eventos"), where("ativo", "==", true), orderBy("data", "asc"));
                 const querySnapshot = await getDocs(q);
                 
-                vitrine.innerHTML = '';
+                select.innerHTML = '<option value="">Selecione o evento...</option>'; 
+                eventosCache = [];
+                const hoje = new Date().toISOString().split('T')[0];
 
                 querySnapshot.forEach((doc) => {
                     const dados = doc.data();
-                    if (dados.data < hoje) return;
+                    if (dados.data && dados.data < hoje) return;
 
-                    const [ano, mes, dia] = dados.data.split('-');
-                    
-                    const card = document.createElement('div');
-                    card.className = "card-evento bg-zinc-800 border-2 border-zinc-700 rounded-xl overflow-hidden cursor-pointer transition duration-300 hover:border-yellow-500 group";
-                    card.onclick = () => selecionarEvento(dados.nome, card);
-                    
-                    card.innerHTML = `
-                        <div class="relative overflow-hidden h-64">
-                            <img src="${dados.imagem}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
-                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black p-4">
-                                <span class="text-xs font-bold text-yellow-500 uppercase">${dia}/${mes} às ${dados.hora}h</span>
-                                <h3 class="text-lg font-bold uppercase leading-tight">${dados.nome}</h3>
-                            </div>
-                        </div>
-                    `;
-                    vitrine.appendChild(card);
+                    eventosCache.push(dados);
+                    const option = document.createElement('option');
+                    option.value = dados.nome;
+                    option.innerText = dados.nome;
+                    select.appendChild(option);
                 });
             } catch (e) {
-                vitrine.innerHTML = '<p class="text-red-500">Erro ao carregar eventos.</p>';
+                console.error(e);
+                select.innerHTML = '<option value="">Erro ao carregar</option>';
             }
         }
 
-        window.selecionarEvento = function(nome, elemento) {
-            // Remove destaque de outros cards
-            document.querySelectorAll('.card-evento').forEach(c => c.classList.remove('selecionado', 'border-yellow-500'));
-            
-            // Destaca o selecionado
-            elemento.classList.add('selecionado', 'border-yellow-500');
+        window.trocarBanner = function() {
+            const selecionado = document.getElementById('evento').value;
+            const container = document.getElementById('bannerContainer');
+            const imgTag = document.getElementById('eventoBanner');
+            const infoTxt = document.getElementById('infoEvento');
 
-            // Preenche o form e mostra
-            document.getElementById('eventoInput').value = nome;
-            document.getElementById('tituloEventoSelecionado').innerText = "Lista para: " + nome;
-            const form = document.getElementById('formCadastro');
-            form.classList.remove('hidden');
-            
-            // Rola suavemente para o formulário
-            form.scrollIntoView({ behavior: 'smooth' });
+            const ev = eventosCache.find(e => e.nome === selecionado);
+
+            if (ev) {
+                if(ev.imagem) {
+                    imgTag.src = ev.imagem;
+                    container.classList.remove('hidden');
+                }
+                if(ev.data && ev.hora) {
+                    const [ano, mes, dia] = ev.data.split('-');
+                    infoTxt.innerText = `📅 ${dia}/${mes}/${ano} às ${ev.hora}h`;
+                    infoTxt.classList.remove('hidden');
+                }
+            } else {
+                container.classList.add('hidden');
+                infoTxt.classList.add('hidden');
+            }
         }
 
+        carregarEventos();
+
         window.enviarParaLista = async function() {
-            const evento = document.getElementById('eventoInput').value;
+            const evento = document.getElementById('evento').value;
             const nome = document.getElementById('nome').value;
             const telefone = document.getElementById('telefone').value;
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('mensagem');
 
-            if(!nome || !telefone) { alert("Preencha seu nome e Whats!"); return; }
+            if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
 
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
@@ -129,7 +129,7 @@
                 await addDoc(collection(db, "lista_eventos"), {
                     evento: evento, nome: nome, telefone: telefone, data_cadastro: new Date()
                 });
-                msg.innerText = "Sucesso! Você está na lista.";
+                msg.innerText = "Sucesso! Nome na lista.";
                 msg.classList.remove('hidden', 'text-red-500');
                 msg.classList.add('text-green-500');
                 document.getElementById('nome').value = "";
@@ -140,11 +140,9 @@
                 msg.classList.add('text-red-500');
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Confirmar Nome na Lista";
+                btn.innerText = "COLOCAR NOME NA LISTA";
             }
         }
-
-        carregarVitrine();
     </script>
 </body>
 </html>
