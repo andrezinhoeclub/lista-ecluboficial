@@ -9,21 +9,29 @@
 <body class="bg-zinc-900 text-white font-sans p-4">
 
     <div class="max-w-2xl mx-auto">
-        <h1 class="text-2xl font-bold text-center mb-6 text-yellow-500 uppercase tracking-widest">Portaria Eclub</h1>
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold text-yellow-500 uppercase tracking-widest">Portaria Eclub</h1>
+            <div class="bg-zinc-800 px-4 py-2 rounded-lg border border-zinc-700">
+                <span class="text-zinc-400 text-xs uppercase">Reservas Hoje:</span>
+                <span id="contador" class="text-yellow-500 font-bold ml-2 text-xl">0</span>
+            </div>
+        </div>
 
         <div class="mb-6">
-            <input type="text" id="busca" onkeyup="filtrarLista()" placeholder="Pesquisar por nome ou celular..." 
+            <input type="text" id="busca" onkeyup="filtrarLista()" placeholder="Pesquisar nome ou celular..." 
                 class="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl focus:outline-none focus:border-yellow-500 text-white shadow-lg">
         </div>
 
+        <p id="dataAtual" class="text-zinc-500 text-sm mb-4 italic"></p>
+
         <div id="listaClientes" class="space-y-3">
-            <p class="text-center text-zinc-500">Carregando lista...</p>
+            <p class="text-center text-zinc-500">Carregando lista de hoje...</p>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -37,71 +45,84 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // FUNÇÃO PARA DAR CHECK-IN
+        const hojeObj = new Date();
+        const hojeISO = hojeObj.toISOString().split('T')[0]; // Formato AAAA-MM-DD
+        document.getElementById('dataAtual').innerText = "Eventos de hoje: " + hojeObj.toLocaleDateString('pt-br');
+
         window.darCheckIn = async function(id, statusAtual) {
             const clienteRef = doc(db, "lista_eventos", id);
-            try {
-                await updateDoc(clienteRef, { entrou: !statusAtual });
-            } catch (e) {
-                alert("Erro ao atualizar check-in");
-            }
+            try { await updateDoc(clienteRef, { entrou: !statusAtual }); } catch (e) { alert("Erro!"); }
         };
 
-        // ESCUTA A LISTA EM TEMPO REAL
-        function carregarLista() {
+        async function carregarListaDoDia() {
             const container = document.getElementById('listaClientes');
-            const q = query(collection(db, "lista_eventos"), orderBy("data_cadastro", "desc"));
+            
+            // 1. Primeiro, descobrimos quais eventos são HOJE
+            const qEventos = query(collection(db, "eventos"), where("data", "==", hojeISO));
+            const snapEventos = await getDocs(qEventos);
+            const nomesEventosHoje = [];
+            snapEventos.forEach(doc => nomesEventosHoje.push(doc.data().nome));
 
-            onSnapshot(q, (snapshot) => {
+            if (nomesEventosHoje.length === 0) {
+                container.innerHTML = '<p class="text-center text-zinc-500 py-10">Nenhum evento cadastrado para a data de hoje.</p>';
+                return;
+            }
+
+            // 2. Agora escutamos a lista apenas desses eventos
+            const qLista = query(collection(db, "lista_eventos"), where("evento", "in", nomesEventosHoje));
+
+            onSnapshot(qLista, (snapshot) => {
                 container.innerHTML = '';
-                if (snapshot.empty) {
-                    container.innerHTML = '<p class="text-center text-zinc-500">Nenhum nome na lista ainda.</p>';
-                    return;
-                }
+                let total = 0;
 
                 snapshot.forEach((doc) => {
                     const item = doc.data();
                     const id = doc.id;
                     const entrou = item.entrou || false;
+                    total++;
 
                     const div = document.createElement('div');
                     div.className = `cliente-item p-4 rounded-xl border transition-all ${entrou ? 'bg-green-900/20 border-green-800 opacity-60' : 'bg-zinc-800 border-zinc-700'}`;
-                    // Guardamos os dados de busca dentro do elemento para o filtro funcionar
                     div.setAttribute('data-busca', `${item.nome} ${item.telefone}`.toLowerCase());
 
                     div.innerHTML = `
                         <div class="flex justify-between items-center">
                             <div>
                                 <p class="font-bold text-lg ${entrou ? 'line-through text-green-500' : 'text-white'}">${item.nome}</p>
-                                <p class="text-sm text-zinc-400">${item.telefone} | <span class="text-yellow-500/70">${item.evento}</span></p>
+                                <p class="text-sm text-zinc-400">${item.telefone} <span class="mx-1">|</span> <span class="text-yellow-500/70">${item.evento}</span></p>
                             </div>
                             <button onclick="darCheckIn('${id}', ${entrou})" 
-                                class="ml-4 px-4 py-2 rounded-lg font-bold text-xs uppercase transition ${entrou ? 'bg-green-600 text-white' : 'bg-zinc-700 text-zinc-300 hover:bg-yellow-500 hover:text-black'}">
-                                ${entrou ? 'Check-out' : 'Check-in'}
+                                class="ml-4 px-4 py-2 rounded-lg font-bold text-xs uppercase transition ${entrou ? 'bg-green-600 text-white' : 'bg-zinc-700 text-zinc-300'}">
+                                ${entrou ? 'OK' : 'Check-in'}
                             </button>
                         </div>
                     `;
                     container.appendChild(div);
                 });
+                
+                document.getElementById('contador').innerText = total;
+                filtrarLista(); // Reaplica o filtro se o segurança estiver digitando
             });
         }
 
-        // FUNÇÃO DE BUSCA INSTANTÂNEA
         window.filtrarLista = function() {
             const termo = document.getElementById('busca').value.toLowerCase();
             const itens = document.querySelectorAll('.cliente-item');
+            let visiveis = 0;
 
             itens.forEach(item => {
                 const texto = item.getAttribute('data-busca');
                 if (texto.includes(termo)) {
                     item.style.display = 'block';
+                    visiveis++;
                 } else {
                     item.style.display = 'none';
                 }
             });
+            // O contador pode mostrar o total da busca se você preferir
         };
 
-        carregarLista();
+        carregarListaDoDia();
     </script>
 </body>
 </html>
