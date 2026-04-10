@@ -65,7 +65,6 @@
             try {
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const querySnapshot = await getDocs(q);
-                
                 let eventosBrutos = [];
                 const hoje = new Date().toISOString().split('T')[0];
 
@@ -77,7 +76,6 @@
                 });
 
                 eventosBrutos.sort((a, b) => a.data.localeCompare(b.data));
-
                 select.innerHTML = '<option value="">Selecione o evento...</option>'; 
                 eventosCache = eventosBrutos;
 
@@ -88,5 +86,81 @@
                     select.appendChild(option);
                 });
             } catch (e) {
-                console.error(e);
                 select.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        }
+
+        window.trocarBanner = function() {
+            const selecionado = document.getElementById('evento').value;
+            const container = document.getElementById('bannerContainer');
+            const imgTag = document.getElementById('eventoBanner');
+            const infoTxt = document.getElementById('infoEvento');
+            const ev = eventosCache.find(e => e.nome === selecionado);
+
+            if (ev) {
+                if(ev.imagem) { imgTag.src = ev.imagem; container.classList.remove('hidden'); }
+                if(ev.data && ev.hora) {
+                    const [ano, mes, dia] = ev.data.split('-');
+                    infoTxt.innerText = `📅 ${dia}/${mes}/${ano} às ${ev.hora}h`;
+                    infoTxt.classList.remove('hidden');
+                }
+            } else {
+                container.classList.add('hidden');
+                infoTxt.classList.add('hidden');
+            }
+        }
+
+        window.enviarParaLista = async function() {
+            const evento = document.getElementById('evento').value;
+            const nome = document.getElementById('nome').value;
+            const telefone = document.getElementById('telefone').value;
+            const btn = document.getElementById('btnEnviar');
+            const msg = document.getElementById('mensagem');
+
+            if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
+
+            btn.disabled = true;
+            btn.innerText = "CARREGANDO...";
+
+            try {
+                // JEITO NOVO: Busca apenas pelo evento (que o Firebase já entende)
+                const q = query(collection(db, "lista_eventos"), where("evento", "==", evento));
+                const snap = await getDocs(q);
+                
+                let jaExiste = false;
+                snap.forEach(doc => {
+                    if(doc.data().telefone === telefone) jaExiste = true;
+                });
+
+                if (jaExiste) {
+                    msg.innerText = "⚠️ Este número já está na lista!";
+                    msg.className = "text-center text-sm mt-4 font-bold text-yellow-500";
+                    msg.classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerText = "Colocar Nome na Lista";
+                    return;
+                }
+
+                await addDoc(collection(db, "lista_eventos"), {
+                    evento, nome, telefone, data_cadastro: new Date(), entrou: false
+                });
+
+                msg.innerText = "✅ Sucesso! Nome na lista.";
+                msg.className = "text-center text-sm mt-4 font-bold text-green-500";
+                msg.classList.remove('hidden');
+                document.getElementById('nome').value = "";
+                document.getElementById('telefone').value = "";
+            } catch (e) {
+                msg.innerText = "❌ Erro ao enviar.";
+                msg.className = "text-center text-sm mt-4 font-bold text-red-500";
+                msg.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Colocar Nome na Lista";
+            }
+        }
+
+        carregarEventos();
+    </script>
+</body>
+</html>
