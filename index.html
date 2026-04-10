@@ -1,54 +1,136 @@
-<script type="module">
-    // ... (mantenha seu firebaseConfig e imports)
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista VIP - Eclub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
 
-    window.enviarParaLista = async function() {
-        const evento = document.getElementById('evento').value;
-        const nome = document.getElementById('nome').value;
-        const telefone = document.getElementById('telefone').value;
-        const btn = document.getElementById('btnEnviar');
-        const msg = document.getElementById('mensagem');
+    <div class="w-full max-w-md bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700">
+        <h1 class="text-2xl font-bold text-center mb-2 text-yellow-500 uppercase tracking-widest">Lista VIP Eclub</h1>
+        <p id="infoEvento" class="text-center text-sm text-zinc-400 mb-6 hidden"></p>
+        
+        <div id="bannerContainer" class="mb-6 hidden">
+            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg">
+        </div>
 
-        // BUSCA O PROMOTER NO LINK (ex: ?ref=bruna)
-        const urlParams = new URLSearchParams(window.location.search);
-        const promoterRef = urlParams.get('ref') || "Direto"; 
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400 font-medium">Escolha o Evento</label>
+                <select id="evento" onchange="trocarBanner()" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+                    <option value="">Carregando eventos...</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400 font-medium">Seu Nome Completo</label>
+                <input type="text" id="nome" placeholder="Digite seu nome" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+            </div>
+            <div>
+                <label class="block text-sm mb-1 text-zinc-400 font-medium">WhatsApp</label>
+                <input type="tel" id="telefone" placeholder="(41) 99999-9999" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+            </div>
+            <button onclick="enviarParaLista()" id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-lg transition duration-300 shadow-lg uppercase tracking-wider">Colocar Nome na Lista</button>
+            <p id="mensagem" class="text-center text-sm mt-4 hidden font-bold"></p>
+        </div>
+    </div>
 
-        if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
-        btn.disabled = true;
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        try {
-            // TRAVA DE DUPLICIDADE
-            const q = query(collection(db, "lista_eventos"), where("evento", "==", evento));
-            const snap = await getDocs(q);
-            let jaExiste = false;
-            snap.forEach(doc => { if(doc.data().telefone === telefone) jaExiste = true; });
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
 
-            if (jaExiste) {
-                msg.innerText = "⚠️ Você já está na lista!";
-                msg.className = "text-center text-sm mt-4 font-bold text-yellow-500";
-                msg.classList.remove('hidden');
-                btn.disabled = false;
-                return;
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        let eventosCache = [];
+
+        async function carregarEventos() {
+            const select = document.getElementById('evento');
+            try {
+                const q = query(collection(db, "eventos"), where("ativo", "==", true));
+                const snap = await getDocs(q);
+                let eventosBrutos = [];
+                const hoje = new Date().toISOString().split('T')[0];
+                snap.forEach((doc) => {
+                    const d = doc.data();
+                    if (d.data && d.data >= hoje) eventosBrutos.push(d);
+                });
+                eventosBrutos.sort((a, b) => a.data.localeCompare(b.data));
+                select.innerHTML = '<option value="">Selecione o evento...</option>'; 
+                eventosCache = eventosBrutos;
+                eventosBrutos.forEach((d) => {
+                    const opt = document.createElement('option');
+                    opt.value = d.nome; opt.innerText = d.nome;
+                    select.appendChild(opt);
+                });
+            } catch (e) { select.innerHTML = '<option value="">Erro ao carregar</option>'; }
+        }
+
+        window.trocarBanner = function() {
+            const sel = document.getElementById('evento').value;
+            const ev = eventosCache.find(e => e.nome === sel);
+            if (ev) {
+                if(ev.imagem) { document.getElementById('eventoBanner').src = ev.imagem; document.getElementById('bannerContainer').classList.remove('hidden'); }
+                if(ev.data) {
+                    const [a, m, d] = ev.data.split('-');
+                    document.getElementById('infoEvento').innerText = `📅 ${d}/${m}/${a} às ${ev.hora}h`;
+                    document.getElementById('infoEvento').classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('bannerContainer').classList.add('hidden');
+                document.getElementById('infoEvento').classList.add('hidden');
             }
+        }
 
-            // SALVA COM O NOME DO PROMOTER
-            await addDoc(collection(db, "lista_eventos"), {
-                evento, 
-                nome, 
-                telefone, 
-                promoter: promoterRef, // Aqui salva quem trouxe
-                data_cadastro: new Date(), 
-                entrou: false
-            });
+        window.enviarParaLista = async function() {
+            const evento = document.getElementById('evento').value;
+            const nome = document.getElementById('nome').value;
+            const telefone = document.getElementById('telefone').value;
+            const btn = document.getElementById('btnEnviar');
+            const msg = document.getElementById('mensagem');
 
-            msg.innerText = "✅ Sucesso! Nome na lista.";
-            msg.className = "text-center text-sm mt-4 font-bold text-green-500";
-            msg.classList.remove('hidden');
-            document.getElementById('nome').value = "";
-            document.getElementById('telefone').value = "";
-        } catch (e) {
-            msg.innerText = "❌ Erro ao enviar.";
-            msg.classList.remove('hidden');
-        } finally { btn.disabled = false; }
-    }
-    // ...
-</script>
+            const urlParams = new URLSearchParams(window.location.search);
+            const promoterRef = urlParams.get('ref') || "Direto";
+
+            if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
+            btn.disabled = true; btn.innerText = "VERIFICANDO...";
+
+            try {
+                const q = query(collection(db, "lista_eventos"), where("evento", "==", evento));
+                const snap = await getDocs(q);
+                let existe = false;
+                snap.forEach(d => { if(d.data().telefone === telefone) existe = true; });
+
+                if (existe) {
+                    msg.innerText = "⚠️ Você já está na lista!";
+                    msg.className = "text-center text-sm mt-4 font-bold text-yellow-500";
+                    msg.classList.remove('hidden');
+                    btn.disabled = false; btn.innerText = "Colocar Nome na Lista";
+                    return;
+                }
+
+                await addDoc(collection(db, "lista_eventos"), {
+                    evento, nome, telefone, promoter: promoterRef, data_cadastro: new Date(), entrou: false
+                });
+
+                msg.innerText = "✅ Sucesso! Nome na lista.";
+                msg.className = "text-center text-sm mt-4 font-bold text-green-500";
+                msg.classList.remove('hidden');
+                document.getElementById('nome').value = "";
+                document.getElementById('telefone').value = "";
+            } catch (e) { msg.innerText = "❌ Erro ao enviar."; msg.classList.remove('hidden'); }
+            finally { btn.disabled = false; btn.innerText = "Colocar Nome na Lista"; }
+        }
+        carregarEventos();
+    </script>
+</body>
+</html>
