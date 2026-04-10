@@ -54,9 +54,9 @@
                     <input type="tel" id="telefone" placeholder="WhatsApp (DDD + Número)" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
                 </div>
 
-                <div id="containerPreco" class="bg-zinc-900/80 border border-yellow-500/20 p-3 rounded-lg hidden">
-                    <p class="text-[10px] text-yellow-500 uppercase font-bold mb-1 text-center">Informações de Valores:</p>
-                    <p id="textoPreco" class="text-xs text-zinc-300 italic text-center"></p>
+                <div id="containerPreco" class="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-lg hidden">
+                    <p class="text-[10px] text-yellow-500 uppercase font-bold mb-1 text-center">Valor para <span id="labelTipo"></span> na lista:</p>
+                    <p id="textoPreco" class="text-xs text-zinc-200 font-medium text-center"></p>
                 </div>
 
                 <button id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-lg transition duration-300 shadow-lg uppercase tracking-wider">Confirmar Nome na Lista</button>
@@ -93,20 +93,12 @@
                 const snap = await getDocs(q);
                 let brutos = [];
                 const hoje = new Date().toISOString().split('T')[0];
-                
-                snap.forEach(doc => { 
-                    const d = doc.data();
-                    if(d.data >= hoje) brutos.push(d); 
-                });
-
+                snap.forEach(doc => { if(doc.data().data >= hoje) brutos.push(doc.data()); });
                 brutos.sort((a,b) => a.data.localeCompare(b.data));
                 selectEvento.innerHTML = '<option value="">Selecione a festa...</option>';
                 eventosCache = brutos;
-                
                 brutos.forEach(d => { 
-                    const opt = document.createElement('option');
-                    opt.value = d.nome; opt.innerText = d.nome;
-                    selectEvento.appendChild(opt);
+                    selectEvento.innerHTML += `<option value="${d.nome}">${d.nome}</option>`;
                 });
             } catch (e) { selectEvento.innerHTML = '<option value="">Erro ao carregar</option>'; }
         }
@@ -133,11 +125,10 @@
                     document.getElementById('infoEvento').innerText = `📅 ${d}/${m}/${a} às ${ev.hora}h`;
                     document.getElementById('infoEvento').classList.remove('hidden');
                 }
-                if(ev.preço) { 
-                    document.getElementById('textoPreco').innerText = ev.preço; 
-                    document.getElementById('containerPreco').classList.remove('hidden'); 
-                } else {
-                    document.getElementById('containerPreco').classList.add('hidden');
+                // Resetar preço ao trocar de evento
+                document.getElementById('containerPreco').classList.add('hidden');
+                if(document.getElementById('tipoPublico').value) {
+                    exibirPrecoFiltrado(document.getElementById('tipoPublico').value);
                 }
             }
         }
@@ -150,6 +141,26 @@
             document.getElementById('btnCasal').classList.toggle('active', tipo === 'Casal');
             document.getElementById('btnSolteiro').classList.toggle('active', tipo === 'Solteiro');
             sessaoDados.classList.remove('hidden');
+            exibirPrecoFiltrado(tipo);
+        }
+
+        function exibirPrecoFiltrado(tipo) {
+            const nomeEvento = selectEvento.value;
+            const ev = eventosCache.find(e => e.nome === nomeEvento);
+            const container = document.getElementById('containerPreco');
+            const texto = document.getElementById('textoPreco');
+            const label = document.getElementById('labelTipo');
+
+            if (ev) {
+                const valor = tipo === 'Casal' ? ev.valor_casal : ev.valor_solteiro;
+                if (valor) {
+                    label.innerText = tipo;
+                    texto.innerText = valor;
+                    container.classList.remove('hidden');
+                } else {
+                    container.classList.add('hidden');
+                }
+            }
         }
 
         document.getElementById('btnEnviar').onclick = async () => {
@@ -159,8 +170,7 @@
             const tipo = document.getElementById('tipoPublico').value;
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('mensagem');
-            const urlParams = new URLSearchParams(window.location.search);
-            const promoter = urlParams.get('ref') || "Direto";
+            const promoter = new URLSearchParams(window.location.search).get('ref') || "Direto";
 
             if(!nome || !telefone) { alert("Preencha seu nome e celular!"); return; }
             btn.disabled = true; btn.innerText = "VERIFICANDO...";
