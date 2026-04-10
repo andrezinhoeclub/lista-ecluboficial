@@ -11,10 +11,14 @@
     <div class="w-full max-w-md bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700">
         <h1 class="text-2xl font-bold text-center mb-6 text-yellow-500 uppercase">Lista VIP Eclub</h1>
         
+        <div id="bannerContainer" class="mb-6 hidden">
+            <img id="eventoBanner" src="" alt="Banner do Evento" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg">
+        </div>
+
         <div class="space-y-4">
             <div>
                 <label class="block text-sm mb-1 text-zinc-400">Escolha o Evento</label>
-                <select id="evento" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
+                <select id="evento" onchange="trocarBanner()" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
                     <option value="">Carregando eventos...</option>
                 </select>
             </div>
@@ -53,22 +57,21 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // BUSCA OS EVENTOS QUE VOCÊ CADASTROU (Festa Lizona, etc)
+        let eventosCache = []; // Variável para guardar os dados e as imagens
+
         async function carregarEventos() {
             const select = document.getElementById('evento');
             try {
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const querySnapshot = await getDocs(q);
                 
-                select.innerHTML = ''; 
-
-                if (querySnapshot.empty) {
-                    select.innerHTML = '<option value="">Nenhum evento ativo</option>';
-                    return;
-                }
+                select.innerHTML = '<option value="">Selecione o evento...</option>'; 
+                eventosCache = [];
 
                 querySnapshot.forEach((doc) => {
                     const dados = doc.data();
+                    eventosCache.push(dados); // Guarda nome e imagem na memória
+                    
                     const option = document.createElement('option');
                     option.value = dados.nome;
                     option.innerText = dados.nome;
@@ -80,9 +83,25 @@
             }
         }
 
+        // FUNÇÃO QUE FAZ A MÁGICA DA IMAGEM
+        window.trocarBanner = function() {
+            const selecionado = document.getElementById('evento').value;
+            const container = document.getElementById('bannerContainer');
+            const imgTag = document.getElementById('eventoBanner');
+
+            // Procura nos dados salvos qual tem o mesmo nome do que foi clicado
+            const eventoEncontrado = eventosCache.find(e => e.nome === selecionado);
+
+            if (eventoEncontrado && eventoEncontrado.imagem) {
+                imgTag.src = eventoEncontrado.imagem;
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
         carregarEventos();
 
-        // SALVA O CLIENTE NA LISTA
         window.enviarParaLista = async function() {
             const evento = document.getElementById('evento').value;
             const nome = document.getElementById('nome').value;
