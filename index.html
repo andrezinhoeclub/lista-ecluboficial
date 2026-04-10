@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista VIP - Eclub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .radio-btn.active { background-color: #eab308; color: black; border-color: #eab308; }
+    </style>
 </head>
 <body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
 
@@ -27,6 +30,15 @@
             <div id="containerPreco" class="bg-zinc-900/50 border border-zinc-700 p-3 rounded-lg hidden">
                 <p class="text-[10px] text-yellow-500 uppercase font-bold mb-1">Valores com nome na lista:</p>
                 <p id="textoPreco" class="text-xs text-zinc-300 italic"></p>
+            </div>
+
+            <div>
+                <label class="block text-sm mb-2 text-zinc-400 font-medium text-xs uppercase">Você é:</label>
+                <div class="flex gap-2">
+                    <button type="button" onclick="setTipo('Casal')" id="btnCasal" class="radio-btn flex-1 bg-zinc-700 border border-zinc-600 py-3 rounded-lg text-sm font-bold transition-all">👫 Casal</button>
+                    <button type="button" onclick="setTipo('Solteiro')" id="btnSolteiro" class="radio-btn flex-1 bg-zinc-700 border border-zinc-600 py-3 rounded-lg text-sm font-bold transition-all">👤 Solteiro(a)</button>
+                </div>
+                <input type="hidden" id="tipoPublico" value="">
             </div>
 
             <div>
@@ -59,6 +71,13 @@
         const db = getFirestore(app);
         let eventosCache = [];
 
+        window.setTipo = function(tipo) {
+            document.getElementById('tipoPublico').value = tipo;
+            document.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+            if(tipo === 'Casal') document.getElementById('btnCasal').classList.add('active');
+            else document.getElementById('btnSolteiro').classList.add('active');
+        }
+
         async function carregarEventos() {
             const select = document.getElementById('evento');
             try {
@@ -84,28 +103,19 @@
         window.trocarBanner = function() {
             const sel = document.getElementById('evento').value;
             const ev = eventosCache.find(e => e.nome === sel);
-            const containerPreco = document.getElementById('containerPreco');
-            const textoPreco = document.getElementById('textoPreco');
-
             if (ev) {
-                // Banner e Info
                 if(ev.imagem) { document.getElementById('eventoBanner').src = ev.imagem; document.getElementById('bannerContainer').classList.remove('hidden'); }
                 if(ev.data) {
                     const [a, m, d] = ev.data.split('-');
                     document.getElementById('infoEvento').innerText = `📅 ${d}/${m}/${a} às ${ev.hora}h`;
                     document.getElementById('infoEvento').classList.remove('hidden');
                 }
-                // Mostrar Preço
-                if(ev.preço) {
-                    textoPreco.innerText = ev.preço;
-                    containerPreco.classList.remove('hidden');
-                } else {
-                    containerPreco.classList.add('hidden');
-                }
+                if(ev.preço) { document.getElementById('textoPreco').innerText = ev.preço; document.getElementById('containerPreco').classList.remove('hidden'); }
+                else { document.getElementById('containerPreco').classList.add('hidden'); }
             } else {
                 document.getElementById('bannerContainer').classList.add('hidden');
                 document.getElementById('infoEvento').classList.add('hidden');
-                containerPreco.classList.add('hidden');
+                document.getElementById('containerPreco').classList.add('hidden');
             }
         }
 
@@ -113,12 +123,13 @@
             const evento = document.getElementById('evento').value;
             const nome = document.getElementById('nome').value;
             const telefone = document.getElementById('telefone').value;
+            const tipo = document.getElementById('tipoPublico').value;
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('mensagem');
             const urlParams = new URLSearchParams(window.location.search);
             const promoterRef = urlParams.get('ref') || "Direto";
 
-            if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
+            if(!nome || !telefone || !evento || !tipo) { alert("Por favor, preencha todos os campos e selecione se é Casal ou Solteiro!"); return; }
             btn.disabled = true; btn.innerText = "VERIFICANDO...";
 
             try {
@@ -136,7 +147,7 @@
                 }
 
                 await addDoc(collection(db, "lista_eventos"), {
-                    evento, nome, telefone, promoter: promoterRef, data_cadastro: new Date(), entrou: false
+                    evento, nome, telefone, tipo, promoter: promoterRef, data_cadastro: new Date(), entrou: false
                 });
 
                 msg.innerText = "✅ Sucesso! Nome na lista.";
@@ -144,6 +155,8 @@
                 msg.classList.remove('hidden');
                 document.getElementById('nome').value = "";
                 document.getElementById('telefone').value = "";
+                document.getElementById('tipoPublico').value = "";
+                document.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
             } catch (e) { msg.innerText = "❌ Erro ao enviar."; msg.classList.remove('hidden'); }
             finally { btn.disabled = false; btn.innerText = "Colocar Nome na Lista"; }
         }
