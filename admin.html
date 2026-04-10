@@ -12,7 +12,7 @@
         <div class="flex justify-center mb-6">
             <img src="https://raw.githubusercontent.com/andrezinhoeclub/lista-ecluboficial/main/logo-erotic.png" class="h-16 w-auto" onerror="this.src='https://i.imgur.com/8N6OqRE.png'">
         </div>
-        <h1 class="text-xl font-bold text-center mb-6 text-yellow-500 uppercase tracking-widest">Acesso Restrito</h1>
+        <h1 class="text-xl font-bold text-center mb-6 text-yellow-500 uppercase tracking-widest">Acesso Portaria</h1>
         <div class="space-y-4">
             <div>
                 <label class="block text-xs mb-1 text-zinc-400 uppercase font-bold">Usuário</label>
@@ -22,8 +22,8 @@
                 <label class="block text-xs mb-1 text-zinc-400 uppercase font-bold">Senha</label>
                 <input type="password" id="pass" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500 text-white">
             </div>
-            <button onclick="fazerLogin()" id="btnLogin" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-lg transition uppercase tracking-wider">Entrar na Portaria</button>
-            <p id="erroLogin" class="text-red-500 text-xs text-center hidden font-bold italic">Credenciais incorretas!</p>
+            <button onclick="fazerLogin()" id="btnLogin" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-lg transition uppercase tracking-wider">Entrar</button>
+            <p id="erroLogin" class="text-red-500 text-xs text-center hidden font-bold italic"></p>
         </div>
     </div>
 
@@ -43,8 +43,8 @@
             </div>
         </div>
 
-        <div class="relative mb-8">
-            <input type="text" id="busca" onkeyup="filtrar()" placeholder="Pesquisar nome ou celular..." class="w-full bg-zinc-800 border-2 border-zinc-700 p-4 rounded-2xl text-white outline-none focus:border-yellow-500 shadow-2xl pl-12">
+        <div class="relative mb-8 text-center">
+            <input type="text" id="busca" onkeyup="filtrar()" placeholder="Pesquisar nome ou celular..." class="w-full bg-zinc-800 border-2 border-zinc-700 p-4 rounded-2xl text-white outline-none focus:border-yellow-500 shadow-2xl pl-12 text-left">
             <span class="absolute left-4 top-5 text-zinc-500">🔍</span>
         </div>
         
@@ -67,41 +67,58 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // LÓGICA DE LOGIN
+        // FUNÇÃO DE LOGIN
         window.fazerLogin = async function() {
-            const usuario = document.getElementById('user').value;
-            const senhaDigitada = document.getElementById('pass').value;
+            const usuario = document.getElementById('user').value.trim();
+            const senhaDigitada = document.getElementById('pass').value.trim();
             const btn = document.getElementById('btnLogin');
             const erro = document.getElementById('erroLogin');
 
             if(!usuario || !senhaDigitada) return;
             btn.innerText = "VERIFICANDO...";
+            erro.classList.add('hidden');
             
             try {
+                // O usuario digitado deve ser o ID do documento na coleção 'usuarios'
                 const userRef = doc(db, "usuarios", usuario);
                 const userSnap = await getDoc(userRef);
 
-                if (userSnap.exists() && userSnap.data().senha === senhaDigitada) {
-                    document.getElementById('loginBox').classList.add('hidden');
-                    document.body.classList.remove('items-center', 'justify-center');
-                    document.getElementById('painelPortaria').classList.remove('hidden');
-                    iniciarPortaria();
+                if (userSnap.exists()) {
+                    const dados = userSnap.data();
+                    if (String(dados.senha) === String(senhaDigitada)) {
+                        document.getElementById('loginBox').classList.add('hidden');
+                        document.body.classList.remove('items-center', 'justify-center');
+                        document.getElementById('painelPortaria').classList.remove('hidden');
+                        iniciarPortaria();
+                    } else {
+                        erro.innerText = "Senha incorreta!";
+                        erro.classList.remove('hidden');
+                        btn.innerText = "Entrar";
+                    }
                 } else {
+                    erro.innerText = "Usuário não encontrado!";
                     erro.classList.remove('hidden');
-                    btn.innerText = "Entrar na Portaria";
+                    btn.innerText = "Entrar";
                 }
             } catch (e) {
-                alert("Erro de conexão!");
-                btn.innerText = "Entrar na Portaria";
+                console.error(e);
+                alert("Erro ao conectar ao Firebase. Verifique as Regras de Segurança.");
+                btn.innerText = "Entrar";
             }
         }
 
         window.darCheckIn = async (id) => {
-            await updateDoc(doc(db, "lista_eventos", id), { entrou: true });
+            const ref = doc(db, "lista_eventos", id);
+            try {
+                await updateDoc(ref, { entrou: true });
+            } catch (e) {
+                alert("Erro ao confirmar.");
+            }
         };
 
         async function iniciarPortaria() {
-            const hoje = new Date().toISOString().split('T')[0];
+            const hoje = new Date().toLocaleDateString('en-CA'); // Pega data AAAA-MM-DD
+            
             const qE = query(collection(db, "eventos"), where("data", "==", hoje));
             const snapE = await getDocs(qE);
             const evsHoje = [];
@@ -109,11 +126,13 @@
 
             const listContainer = document.getElementById('lista');
             if(evsHoje.length === 0) {
-                listContainer.innerHTML = '<p class="py-10">Nenhum evento para hoje.</p>';
+                listContainer.innerHTML = '<p class="py-10 italic">Nenhum evento para hoje ('+hoje+').</p>';
                 return;
             }
 
-            onSnapshot(query(collection(db, "lista_eventos"), where("evento", "in", evsHoje)), (snap) => {
+            const qLista = query(collection(db, "lista_eventos"), where("evento", "in", evsHoje));
+
+            onSnapshot(qLista, (snap) => {
                 listContainer.innerHTML = '';
                 let total = 0, checkins = 0;
                 snap.forEach(d => {
@@ -128,7 +147,7 @@
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="text-[9px] px-2 py-0.5 rounded-md font-black uppercase tracking-tighter ${isCasal ? 'bg-yellow-600 text-black' : 'bg-zinc-600 text-zinc-100'}">
-                                        ${data.tipo || 'Padrão'}
+                                        ${data.tipo || 'N/A'}
                                     </span>
                                     <p class="font-bold text-base ${data.entrou ? 'text-zinc-500' : 'text-white'} uppercase">${data.nome}</p>
                                 </div>
@@ -139,4 +158,21 @@
                                 </div>
                             </div>
                             <div class="ml-4">
-                                ${data.entrou ? '<span class="text-yellow
+                                ${data.entrou ? '<span class="text-yellow-600 text-[10px] font-black border border-yellow-600/30 px-3 py-1.5 rounded-lg">NA CASA</span>' : `<button onclick="darCheckIn('${d.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-black px-5 py-2.5 rounded-xl text-[11px] font-black">CHECK-IN</button>`}
+                            </div>
+                        </div>`;
+                    listContainer.appendChild(itemDiv);
+                });
+                document.getElementById('tot').innerText = total;
+                document.getElementById('chk').innerText = checkins;
+                filtrar();
+            });
+        }
+
+        window.filtrar = () => {
+            const busca = document.getElementById('busca').value.toLowerCase();
+            document.querySelectorAll('.item').forEach(i => i.style.display = i.getAttribute('data-search').includes(busca) ? 'block' : 'none');
+        };
+    </script>
+</body>
+</html>
