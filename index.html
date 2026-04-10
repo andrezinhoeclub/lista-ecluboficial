@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista VIP - Eclub</title>
+    <title>Lista VIP - Erotic Lounge</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .radio-btn.active { background-color: #eab308; color: black; border-color: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.3); }
@@ -14,12 +14,17 @@
 <body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
 
     <div class="w-full max-w-md bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700">
-        <h1 class="text-2xl font-bold text-center mb-2 text-yellow-500 uppercase tracking-widest">Lista VIP Eclub</h1>
+        
+        <div class="flex justify-center mb-6">
+            <img src="logo-erotic.png" alt="Erotic Lounge" class="h-20 w-auto object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]">
+        </div>
+
+        <h1 class="text-xl font-bold text-center mb-2 text-yellow-500 uppercase tracking-widest">Lista VIP</h1>
         
         <p id="infoEvento" class="text-center text-sm text-zinc-400 mb-6 hidden"></p>
         
-        <div id="bannerContainer" class="mb-6 hidden">
-            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg">
+        <div id="bannerContainer" class="mb-6 hidden text-center">
+            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg mx-auto">
         </div>
 
         <div class="space-y-4">
@@ -73,7 +78,6 @@
         const db = getFirestore(app);
         let eventosCache = [];
 
-        // Inicialização
         const selectEvento = document.getElementById('evento');
         const sessaoTipo = document.getElementById('sessaoTipo');
         const sessaoDados = document.getElementById('sessaoDados');
@@ -96,14 +100,10 @@
                 
                 brutos.forEach(d => { 
                     const opt = document.createElement('option');
-                    opt.value = d.nome;
-                    opt.innerText = d.nome;
+                    opt.value = d.nome; opt.innerText = d.nome;
                     selectEvento.appendChild(opt);
                 });
-            } catch (e) { 
-                console.error(e);
-                selectEvento.innerHTML = '<option value="">Erro ao carregar</option>'; 
-            }
+            } catch (e) { selectEvento.innerHTML = '<option value="">Erro ao carregar</option>'; }
         }
 
         selectEvento.addEventListener('change', () => {
@@ -118,10 +118,6 @@
 
         function trocarBanner(nomeEvento) {
             const ev = eventosCache.find(e => e.nome === nomeEvento);
-            const infoE = document.getElementById('infoEvento');
-            const contP = document.getElementById('containerPreco');
-            const txtP = document.getElementById('textoPreco');
-
             if(ev) {
                 if(ev.imagem) { 
                     document.getElementById('eventoBanner').src = ev.imagem; 
@@ -129,14 +125,12 @@
                 }
                 if(ev.data) {
                     const [a,m,d] = ev.data.split('-');
-                    infoE.innerText = `📅 ${d}/${m}/${a} às ${ev.hora}h`;
-                    infoE.classList.remove('hidden');
+                    document.getElementById('infoEvento').innerText = `📅 ${d}/${m}/${a} às ${ev.hora}h`;
+                    document.getElementById('infoEvento').classList.remove('hidden');
                 }
                 if(ev.preço) { 
-                    txtP.innerText = ev.preço; 
-                    contP.classList.remove('hidden'); 
-                } else {
-                    contP.classList.add('hidden');
+                    document.getElementById('textoPreco').innerText = ev.preço; 
+                    document.getElementById('containerPreco').classList.remove('hidden'); 
                 }
             }
         }
@@ -158,14 +152,11 @@
             const tipo = document.getElementById('tipoPublico').value;
             const btn = document.getElementById('btnEnviar');
             const msg = document.getElementById('mensagem');
-            
             const urlParams = new URLSearchParams(window.location.search);
             const promoter = urlParams.get('ref') || "Direto";
 
             if(!nome || !telefone) { alert("Preencha seu nome e celular!"); return; }
-            
-            btn.disabled = true; 
-            btn.innerText = "VERIFICANDO...";
+            btn.disabled = true; btn.innerText = "VERIFICANDO...";
 
             try {
                 const q = query(collection(db, "lista_eventos"), where("evento", "==", evento));
@@ -189,16 +180,9 @@
                 msg.innerText = "✅ Sucesso! Nome na lista.";
                 msg.className = "text-center text-sm mt-4 font-bold text-green-500";
                 msg.classList.remove('hidden');
-                
-                document.getElementById('nome').value = ""; 
-                document.getElementById('telefone').value = "";
-            } catch (e) { 
-                msg.innerText = "❌ Erro ao enviar."; 
-                msg.classList.remove('hidden'); 
-            } finally { 
-                btn.disabled = false; 
-                btn.innerText = "Confirmar Nome na Lista"; 
-            }
+                document.getElementById('nome').value = ""; document.getElementById('telefone').value = "";
+            } catch (e) { msg.innerText = "❌ Erro ao enviar."; msg.classList.remove('hidden'); }
+            finally { btn.disabled = false; btn.innerText = "Confirmar Nome na Lista"; }
         };
 
         carregarEventos();
