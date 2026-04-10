@@ -3,52 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acesso Portaria - Eclub</title>
+    <title>Portaria - Eclub</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-zinc-900 text-white font-sans min-h-screen flex items-center justify-center p-4">
-
-    <div id="loginBox" class="w-full max-w-sm bg-zinc-800 p-8 rounded-2xl shadow-2xl border border-zinc-700">
-        <h1 class="text-2xl font-bold text-center mb-6 text-yellow-500 uppercase tracking-widest">Acesso Restrito</h1>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm mb-1 text-zinc-400">Usuário</label>
-                <input type="text" id="user" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500">
-            </div>
-            <div>
-                <label class="block text-sm mb-1 text-zinc-400">Senha</label>
-                <input type="password" id="pass" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-lg focus:outline-none focus:border-yellow-500">
-            </div>
-            <button onclick="fazerLogin()" id="btnLogin" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 rounded-lg transition uppercase">Entrar</button>
-            <p id="erroLogin" class="text-red-500 text-sm text-center hidden">Usuário ou senha incorretos!</p>
-        </div>
-    </div>
-
-    <div id="painelPortaria" class="w-full max-w-2xl mx-auto hidden self-start pt-4">
+<body class="bg-zinc-900 text-white font-sans p-4">
+    <div class="max-w-2xl mx-auto">
         <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="bg-zinc-800 p-4 rounded-xl border border-zinc-700 text-center">
-                <p class="text-zinc-400 text-xs uppercase mb-1">Total Reservas</p>
-                <p id="totalReservas" class="text-white font-bold text-2xl">0</p>
-            </div>
-            <div class="bg-green-900/30 p-4 rounded-xl border border-green-800 text-center">
-                <p class="text-green-400 text-xs uppercase mb-1">Check-ins</p>
-                <p id="totalCheckins" class="text-green-500 font-bold text-2xl">0</p>
-            </div>
+            <div class="bg-zinc-800 p-4 rounded-xl border border-zinc-700 text-center text-zinc-400">Reservas: <span id="tot" class="text-white font-bold">0</span></div>
+            <div class="bg-zinc-800 p-4 rounded-xl border border-zinc-700 text-center text-zinc-400">Check-ins: <span id="chk" class="text-green-500 font-bold">0</span></div>
         </div>
-
-        <div class="mb-6 flex gap-2">
-            <input type="text" id="busca" onkeyup="filtrarLista()" placeholder="Pesquisar..." class="flex-1 bg-zinc-800 border border-zinc-700 p-4 rounded-xl focus:outline-none focus:border-yellow-500 text-white shadow-lg">
-            <button onclick="location.reload()" class="bg-zinc-800 p-4 rounded-xl border border-zinc-700 text-zinc-400">🔄</button>
-        </div>
-
-        <div id="listaClientes" class="space-y-3 pb-10">
-            <p class="text-center text-zinc-500">Carregando...</p>
-        </div>
+        <input type="text" id="busca" onkeyup="filtrar()" placeholder="Pesquisar..." class="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-xl mb-6 text-white outline-none focus:border-yellow-500">
+        <div id="lista" class="space-y-3"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -62,96 +32,48 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // FUNÇÃO DE LOGIN
-        window.fazerLogin = async function() {
-            const usuario = document.getElementById('user').value;
-            const senhaDigitada = document.getElementById('pass').value;
-            const btn = document.getElementById('btnLogin');
-            const erro = document.getElementById('erroLogin');
-
-            if(!usuario || !senhaDigitada) return;
-
-            btn.innerText = "VERIFICANDO...";
-            
-            try {
-                const userRef = doc(db, "usuarios", usuario);
-                const userSnap = await getDoc(userRef);
-
-                if (userSnap.exists() && userSnap.data().senha === senhaDigitada) {
-                    document.getElementById('loginBox').classList.add('hidden');
-                    document.body.classList.remove('items-center', 'justify-center');
-                    document.getElementById('painelPortaria').classList.remove('hidden');
-                    carregarPortaria();
-                } else {
-                    erro.classList.remove('hidden');
-                    btn.innerText = "Entrar";
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Erro na conexão!");
-                btn.innerText = "Entrar";
-            }
-        }
-
-        // LÓGICA DA PORTARIA
-        window.darCheckIn = async function(id) {
-            const clienteRef = doc(db, "lista_eventos", id);
-            try { await updateDoc(clienteRef, { entrou: true }); } catch (e) { alert("Erro!"); }
+        window.darCheckIn = async (id) => {
+            await updateDoc(doc(db, "lista_eventos", id), { entrou: true });
         };
 
-        async function carregarPortaria() {
-            const hojeISO = new Date().toISOString().split('T')[0];
-            const container = document.getElementById('listaClientes');
-            
-            const qEventos = query(collection(db, "eventos"), where("data", "==", hojeISO));
-            const snapEventos = await getDocs(qEventos);
-            const nomesEventosHoje = [];
-            snapEventos.forEach(doc => nomesEventosHoje.push(doc.data().nome));
+        async function iniciar() {
+            const hoje = new Date().toISOString().split('T')[0];
+            const qE = query(collection(db, "eventos"), where("data", "==", hoje));
+            const snapE = await getDocs(qE);
+            const evs = []; snapE.forEach(d => evs.push(d.data().nome));
 
-            if (nomesEventosHoje.length === 0) {
-                container.innerHTML = '<p class="text-center text-zinc-500 py-10">Sem eventos hoje.</p>';
-                return;
-            }
+            if(evs.length === 0) { document.getElementById('lista').innerHTML = '<p class="text-center text-zinc-500">Nenhum evento hoje.</p>'; return; }
 
-            const qLista = query(collection(db, "lista_eventos"), where("evento", "in", nomesEventosHoje));
-
-            onSnapshot(qLista, (snapshot) => {
-                container.innerHTML = '';
-                let total = 0, checkins = 0;
-
-                snapshot.forEach((doc) => {
-                    const item = doc.data();
-                    const entrou = item.entrou || false;
-                    total++; if(entrou) checkins++;
-
+            onSnapshot(query(collection(db, "lista_eventos"), where("evento", "in", evs)), (snap) => {
+                const list = document.getElementById('lista');
+                list.innerHTML = '';
+                let t = 0, c = 0;
+                snap.forEach(d => {
+                    const i = d.data(); t++; if(i.entrou) c++;
                     const div = document.createElement('div');
-                    div.className = `cliente-item p-4 rounded-xl border mb-2 ${entrou ? 'bg-green-900/10 border-green-800/50 opacity-70' : 'bg-zinc-800 border-zinc-700'}`;
-                    div.setAttribute('data-busca', `${item.nome} ${item.telefone}`.toLowerCase());
-
+                    div.className = `item p-4 rounded-xl border ${i.entrou ? 'bg-green-900/10 border-green-800/40 opacity-60' : 'bg-zinc-800 border-zinc-700'}`;
+                    div.setAttribute('data-s', `${i.nome} ${i.telefone}`.toLowerCase());
                     div.innerHTML = `
                         <div class="flex justify-between items-center">
                             <div>
-                                <p class="font-bold ${entrou ? 'text-green-500' : 'text-white'}">${entrou ? '✅ ' : ''}${item.nome}</p>
-                                <p class="text-xs text-zinc-500">${item.telefone} | ${item.evento}</p>
+                                <p class="font-bold ${i.entrou ? 'text-green-500' : 'text-white'}">${i.nome}</p>
+                                <p class="text-xs text-zinc-400">${i.telefone}</p>
+                                <p class="text-[10px] mt-1 uppercase font-bold text-yellow-500">Promoter: ${i.promoter || 'Direto'}</p>
                             </div>
-                            <div>
-                                ${entrou ? '<span class="text-green-500 text-[10px] font-bold uppercase">Check-in OK</span>' : `<button onclick="darCheckIn('${doc.id}')" class="bg-yellow-500 text-black font-bold py-2 px-3 rounded-lg text-[10px] uppercase">Confirmar</button>`}
-                            </div>
+                            ${i.entrou ? '<span class="text-green-500 text-[10px] font-bold">NA CASA</span>' : `<button onclick="darCheckIn('${d.id}')" class="bg-yellow-500 text-black px-3 py-2 rounded-lg text-[10px] font-bold">CONFIRMAR</button>`}
                         </div>`;
-                    container.appendChild(div);
+                    list.appendChild(div);
                 });
-                document.getElementById('totalReservas').innerText = total;
-                document.getElementById('totalCheckins').innerText = checkins;
-                filtrarLista();
+                document.getElementById('tot').innerText = t; document.getElementById('chk').innerText = c;
+                filtrar();
             });
         }
 
-        window.filtrarLista = function() {
-            const termo = document.getElementById('busca').value.toLowerCase();
-            document.querySelectorAll('.cliente-item').forEach(item => {
-                item.style.display = item.getAttribute('data-busca').includes(termo) ? 'block' : 'none';
-            });
+        window.filtrar = () => {
+            const val = document.getElementById('busca').value.toLowerCase();
+            document.querySelectorAll('.item').forEach(i => i.style.display = i.getAttribute('data-s').includes(val) ? 'block' : 'none');
         };
+        iniciar();
     </script>
 </body>
 </html>
