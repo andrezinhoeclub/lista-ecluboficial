@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portaria - Painel Administrativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-900 text-white font-sans p-4">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="flex justify-between items-center mb-8 border-b border-zinc-700 pb-4">
+            <h1 class="text-xl font-bold text-yellow-500 uppercase tracking-wider">Portaria Eclub</h1>
+            <button onclick="window.location.reload()" class="bg-zinc-700 px-4 py-2 rounded text-xs hover:bg-zinc-600 transition">ATUALIZAR LISTA</button>
+        </header>
+
+        <div class="mb-6">
+            <label class="block text-sm text-zinc-400 mb-2">Filtrar por Evento:</label>
+            <select id="filtroEvento" onchange="carregarNomes()" class="w-full bg-zinc-800 border border-zinc-700 p-3 rounded-lg text-white">
+                <option value="">Todos os Eventos</option>
+            </select>
+        </div>
+
+        <div class="bg-zinc-800 rounded-xl overflow-hidden border border-zinc-700">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-zinc-700 text-zinc-300 text-sm uppercase">
+                        <th class="p-4">Nome</th>
+                        <th class="p-4">Telefone</th>
+                        <th class="p-4">Check-in</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaNomes" class="divide-y divide-zinc-700">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, updateDoc, query, orderBy, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // COLOQUE SUAS CHAVES AQUI (As mesmas do index.html)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Função para carregar os eventos no filtro
+        async function carregarFiltros() {
+            const select = document.getElementById('filtroEvento');
+            const q = collection(db, "eventos");
+            const snap = await getDocs(q);
+            snap.forEach(doc => {
+                const opt = document.createElement('option');
+                opt.value = doc.data().nome;
+                opt.innerText = doc.data().nome;
+                select.appendChild(opt);
+            });
+        }
+
+        // Função para carregar a lista de clientes
+        window.carregarNomes = async function() {
+            const tabela = document.getElementById('tabelaNomes');
+            const filtro = document.getElementById('filtroEvento').value;
+            tabela.innerHTML = '<tr><td colspan="3" class="p-4 text-center">Carregando...</td></tr>';
+
+            try {
+                const q = query(collection(db, "lista_eventos"), orderBy("data_cadastro", "desc"));
+                const querySnapshot = await getDocs(q);
+                tabela.innerHTML = '';
+
+                querySnapshot.forEach((documento) => {
+                    const dados = documento.data();
+                    
+                    // Se houver filtro e o evento for diferente, pula este nome
+                    if(filtro && dados.evento !== filtro) return;
+
+                    const jaEntrou = dados.entrou === true;
+
+                    const tr = document.createElement('tr');
+                    tr.className = jaEntrou ? "bg-green-900/20 opacity-60" : "hover:bg-zinc-750";
+                    tr.innerHTML = `
+                        <td class="p-4 font-medium">${dados.nome} <br> <span class="text-[10px] text-zinc-500 uppercase">${dados.evento}</span></td>
+                        <td class="p-4 text-sm text-zinc-400">${dados.telefone}</td>
+                        <td class="p-4">
+                            <button onclick="fazerCheckin('${documento.id}', ${jaEntrou})" 
+                                    class="px-4 py-2 rounded text-xs font-bold transition ${jaEntrou ? 'bg-zinc-600 text-zinc-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500 text-white'}">
+                                ${jaEntrou ? 'OK' : 'ENTROU'}
+                            </button>
+                        </td>
+                    `;
+                    tabela.appendChild(tr);
+                });
+            } catch (e) {
+                console.error(e);
+                tabela.innerHTML = '<tr><td colspan="3" class="p-4 text-red-500">Erro ao carregar lista.</td></tr>';
+            }
+        }
+
+        // Função de Check-in
+        window.fazerCheckin = async function(id, jaEntrou) {
+            if(jaEntrou) return;
+            if(!confirm("Confirmar entrada deste cliente?")) return;
+
+            try {
+                const docRef = doc(db, "lista_eventos", id);
+                await updateDoc(docRef, { entrou: true });
+                carregarNomes(); // Recarrega a tabela
+            } catch (e) {
+                alert("Erro ao salvar check-in");
+            }
+        }
+
+        carregarFiltros();
+        carregarNomes();
+    </script>
+</body>
+</html>
