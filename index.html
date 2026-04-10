@@ -13,7 +13,7 @@
         <p id="infoEvento" class="text-center text-sm text-zinc-400 mb-6 hidden"></p>
         
         <div id="bannerContainer" class="mb-6 hidden">
-            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg transition-all duration-500">
+            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg">
         </div>
 
         <div class="space-y-4">
@@ -63,7 +63,6 @@
         async function carregarEventos() {
             const select = document.getElementById('evento');
             try {
-                // Removi o orderBy daqui para evitar o erro de índice
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const querySnapshot = await getDocs(q);
                 
@@ -77,7 +76,6 @@
                     }
                 });
 
-                // ORGANIZA POR DATA AQUI NO NAVEGADOR (Sem erro de Firebase)
                 eventosBrutos.sort((a, b) => a.data.localeCompare(b.data));
 
                 select.innerHTML = '<option value="">Selecione o evento...</option>'; 
@@ -92,65 +90,3 @@
             } catch (e) {
                 console.error(e);
                 select.innerHTML = '<option value="">Erro ao carregar</option>';
-            }
-        }
-
-        window.trocarBanner = function() {
-            const selecionado = document.getElementById('evento').value;
-            const container = document.getElementById('bannerContainer');
-            const imgTag = document.getElementById('eventoBanner');
-            const infoTxt = document.getElementById('infoEvento');
-
-            const ev = eventosCache.find(e => e.nome === selecionado);
-
-            if (ev) {
-                if(ev.imagem) {
-                    imgTag.src = ev.imagem;
-                    container.classList.remove('hidden');
-                }
-                if(ev.data && ev.hora) {
-                    const [ano, mes, dia] = ev.data.split('-');
-                    infoTxt.innerText = `📅 ${dia}/${mes}/${ano} às ${ev.hora}h`;
-                    infoTxt.classList.remove('hidden');
-                }
-            } else {
-                container.classList.add('hidden');
-                infoTxt.classList.add('hidden');
-            }
-        }
-
-        carregarEventos();
-
-        window.enviarParaLista = async function() {
-            const evento = document.getElementById('evento').value;
-            const nome = document.getElementById('nome').value;
-            const telefone = document.getElementById('telefone').value;
-            const btn = document.getElementById('btnEnviar');
-            const msg = document.getElementById('mensagem');
-
-            if(!nome || !telefone || !evento) { alert("Preencha tudo!"); return; }
-
-            btn.disabled = true;
-            btn.innerText = "ENVIANDO...";
-
-            try {
-                await addDoc(collection(db, "lista_eventos"), {
-                    evento: evento, nome: nome, telefone: telefone, data_cadastro: new Date()
-                });
-                msg.innerText = "✅ Sucesso! Seu nome está na lista.";
-                msg.classList.remove('hidden', 'text-red-500');
-                msg.classList.add('text-green-500');
-                document.getElementById('nome').value = "";
-                document.getElementById('telefone').value = "";
-            } catch (e) {
-                msg.innerText = "❌ Erro ao enviar.";
-                msg.classList.remove('hidden');
-                msg.classList.add('text-red-500');
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Colocar Nome na Lista";
-            }
-        }
-    </script>
-</body>
-</html>
