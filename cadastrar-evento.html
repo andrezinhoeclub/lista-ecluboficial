@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eclub - Novo Evento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card-glass { background: #111113; border: 1px solid #27272a; }
+        input, select { background: #000 !important; border: 1px solid #27272a !important; color: white !important; }
+        input:focus { border-color: #eab308 !important; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white font-sans min-h-screen p-4">
+
+    <div class="max-w-xl mx-auto">
+        <header class="flex flex-col items-center mb-10 py-6">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Eclub Logo" class="h-16 w-auto mb-4">
+            <div class="bg-yellow-500 text-black px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                Configurar Novo Evento
+            </div>
+        </header>
+
+        <form id="formEvento" class="card-glass p-8 rounded-[2.5rem] space-y-6">
+            <div>
+                <label class="text-[10px] font-black uppercase text-zinc-500 ml-2">Nome da Festa</label>
+                <input type="text" id="nome" class="w-full p-4 rounded-2xl mt-1 outline-none font-bold" placeholder="Ex: Noite do Champagne" required>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black uppercase text-zinc-500 ml-2">Link da Imagem (URL)</label>
+                <input type="url" id="imagem" class="w-full p-4 rounded-2xl mt-1 outline-none font-bold" placeholder="https://..." required>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-zinc-500 ml-2">Data do Evento</label>
+                    <input type="date" id="data" class="w-full p-4 rounded-2xl mt-1 outline-none font-bold" required onchange="sugerirFechamento()">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-zinc-500 ml-2">Hora de Início</label>
+                    <input type="time" id="hora" class="w-full p-4 rounded-2xl mt-1 outline-none font-bold" value="22:00">
+                </div>
+            </div>
+
+            <div class="bg-zinc-900/50 p-4 rounded-2xl border border-dashed border-zinc-700">
+                <label class="text-[10px] font-black uppercase text-yellow-500 ml-2">Encerrar Lista Automático em:</label>
+                <div class="grid grid-cols-2 gap-4 mt-2">
+                    <input type="date" id="data_fim" class="w-full p-4 rounded-2xl outline-none font-bold" required>
+                    <input type="time" id="hora_fim" class="w-full p-4 rounded-2xl outline-none font-bold" value="23:59" required>
+                </div>
+                <p class="text-[8px] text-zinc-500 mt-2 px-2 uppercase font-bold">A partir deste horário, o botão de "Colocar nome na lista" sumirá para os clientes.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-zinc-500 ml-2">Valor Casal (Texto)</label>
+                    <input type="text" id="v_casal" class="w-full p-4 rounded-2xl mt-1 outline-none font-bold" placeholder="Ex: R$ 150 cons.">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase text-zinc-500 ml-2">Valor Solteiro (Texto)</label>
+                    <input type="text" id="v_solteiro" class="w-full p-4 rounded-2xl mt-1 outline-none font-bold" placeholder="Ex: R$ 200 entrada">
+                </div>
+            </div>
+
+            <button type="submit" id="btnSalvar" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase text-xs tracking-widest hover:bg-yellow-500 transition-all mt-4">
+                Publicar Evento
+            </button>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Função para preencher automaticamente o fim da lista ao escolher a data da festa
+        window.sugerirFechamento = () => {
+            const dataFesta = document.getElementById('data').value;
+            document.getElementById('data_fim').value = dataFesta;
+        };
+
+        document.getElementById('formEvento').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvar');
+            btn.innerText = "SALVANDO...";
+            btn.disabled = true;
+
+            // Criamos um objeto de data/hora para o fechamento
+            const dataFechamentoStr = `${document.getElementById('data_fim').value}T${document.getElementById('hora_fim').value}`;
+
+            try {
+                await addDoc(collection(db, "eventos"), {
+                    nome: document.getElementById('nome').value,
+                    imagem: document.getElementById('imagem').value,
+                    data: document.getElementById('data').value,
+                    hora: document.getElementById('hora').value,
+                    valor_casal: document.getElementById('v_casal').value,
+                    valor_solteiro: document.getElementById('v_solteiro').value,
+                    data_encerramento: dataFechamentoStr, // Campo novo para controle
+                    ativo: true,
+                    criado_em: new Date()
+                });
+
+                alert("Evento publicado com sucesso!");
+                window.location.href = 'admin.html';
+            } catch (error) {
+                alert("Erro ao salvar.");
+                console.error(error);
+                btn.disabled = false;
+                btn.innerText = "Publicar Evento";
+            }
+        });
+    </script>
+</body>
+</html>
