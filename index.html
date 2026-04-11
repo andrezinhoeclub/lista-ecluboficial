@@ -14,6 +14,9 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .tipo-btn-active { background-color: white !important; color: black !important; border-color: white !important; }
+        /* Suaviza a aparição dos campos */
+        .input-group { transition: all 0.4s ease; opacity: 0; transform: translateY(-10px); display: none; }
+        .input-group.show { opacity: 1; transform: translateY(0); display: block; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4">
@@ -66,7 +69,6 @@
         const params = new URLSearchParams(window.location.search);
         const promoterRef = params.get('ref') || 'Direto';
 
-        // Armazenamento global dos valores para evitar erros de aspas no HTML
         window.valoresEventos = {};
 
         async function carregarAgenda() {
@@ -90,15 +92,8 @@
 
                 eventosFiltrados.sort((a, b) => a.dataObj - b.dataObj);
 
-                if (eventosFiltrados.length === 0) {
-                    container.innerHTML = '<p class="text-center text-zinc-600 uppercase font-black text-xs mt-10">Nenhuma festa disponível no momento.</p>';
-                    return;
-                }
-
                 eventosFiltrados.forEach(ev => {
                     const dataBR = ev.data.split('-').reverse().join('/');
-                    
-                    // Guardamos os valores no objeto global usando o ID do evento
                     window.valoresEventos[ev.id] = {
                         casal: ev.valor_casal || "Consultar portaria",
                         solteiro: ev.valor_solteiro || "Consultar portaria"
@@ -134,17 +129,19 @@
                                 <button type="button" id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'solteiro')" class="border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Solteiro</button>
                             </div>
 
-                            <div id="box-valor-${ev.id}" class="hidden mb-6 p-5 bg-black rounded-2xl border border-zinc-800 text-center">
+                            <div id="box-valor-${ev.id}" class="hidden mb-6 p-5 bg-black rounded-2xl border border-zinc-800 text-center fade-down">
                                 <p class="text-[9px] text-zinc-500 uppercase font-black mb-2 tracking-widest">Valor com nome na lista</p>
                                 <p id="valor-display-${ev.id}" class="text-sm font-bold text-yellow-500 uppercase leading-relaxed"></p>
                             </div>
 
-                            <form onsubmit="enviarLista(event, '${ev.nome}', '${ev.id}')" class="space-y-3">
-                                <input type="hidden" id="tipo-${ev.id}" value="">
-                                <input type="text" placeholder="Seu Nome Completo" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 font-bold text-white" required>
-                                <input type="tel" placeholder="Seu WhatsApp" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 font-bold text-white" required>
-                                <button type="submit" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest mt-2 hover:bg-zinc-200 transition">Enviar Reserva</button>
-                            </form>
+                            <div id="campos-dados-${ev.id}" class="input-group">
+                                <form onsubmit="enviarLista(event, '${ev.nome}', '${ev.id}')" class="space-y-3">
+                                    <input type="hidden" id="tipo-${ev.id}" value="">
+                                    <input type="text" placeholder="Seu Nome Completo" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 font-bold text-white" required>
+                                    <input type="tel" placeholder="Seu WhatsApp" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 font-bold text-white" required>
+                                    <button type="submit" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest mt-2 hover:bg-zinc-200 transition">Enviar Reserva</button>
+                                </form>
+                            </div>
                         </div>
                     `;
                     container.appendChild(card);
@@ -164,6 +161,9 @@
             document.getElementById(`tipo-${id}`).value = tipo;
             document.getElementById(`box-valor-${id}`).classList.remove('hidden');
             document.getElementById(`valor-display-${id}`).innerText = valorTexto;
+            
+            // MOSTRA OS CAMPOS DE NOME E TELEFONE
+            document.getElementById(`campos-dados-${id}`).classList.add('show');
         }
 
         window.toggleForm = (id) => {
@@ -179,11 +179,6 @@
         window.enviarLista = async (event, nomeEvento, formId) => {
             event.preventDefault();
             const tipoSelecionado = document.getElementById(`tipo-${formId}`).value;
-            if(!tipoSelecionado) {
-                alert("Por favor, selecione: CASAL ou SOLTEIRO.");
-                return;
-            }
-
             const inputs = event.target.querySelectorAll('input');
             const btn = event.target.querySelector('button');
             btn.disabled = true;
@@ -201,7 +196,8 @@
                 document.getElementById('telaSucesso').classList.remove('hidden');
                 document.getElementById(`form-${formId}`).classList.add('hidden');
                 event.target.reset();
-                document.getElementById(`tipo-${formId}`).value = "";
+                // Oculta os campos novamente para a próxima vez
+                document.getElementById(`campos-dados-${formId}`).classList.remove('show');
             } catch (e) {
                 alert("Erro ao enviar.");
             } finally {
