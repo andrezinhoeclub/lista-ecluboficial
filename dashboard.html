@@ -130,7 +130,6 @@
             ['abaRelatorios', 'abaEventos', 'abaPromoters'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== 'aba' + aba.charAt(0).toUpperCase() + aba.slice(1)));
         }
 
-        // --- RELATÓRIOS E LIMPEZA DE CLIENTES ---
         async function carregarRelatorios() {
             const snap = await getDocs(collection(db, "lista_eventos"));
             listaGeral = []; snap.forEach(d => listaGeral.push(d.data()));
@@ -173,7 +172,6 @@
             }
         }
 
-        // --- GESTÃO DE PROMOTERS ---
         window.cadastrarPromoter = async () => {
             const nome = document.getElementById('nomeNovoPromoter').value.trim().toLowerCase();
             if(!nome) return alert("Digite o nome!");
@@ -188,11 +186,14 @@
         async function carregarPromoters() {
             const snap = await getDocs(collection(db, "promoters"));
             const cont = document.getElementById('gridPromoters');
-            const urlBase = window.location.href.replace('dashboard.html', 'index.html');
+            
+            // ALTERAÇÃO AQUI: Agora gera o link usando o seu site oficial
+            const urlOficial = "https://cluberotic.com.br/lista/";
+            
             cont.innerHTML = '';
             snap.forEach(d => {
                 const nome = d.id;
-                const link = `${urlBase}?ref=${nome}`;
+                const link = `${urlOficial}?ref=${nome}`;
                 cont.innerHTML += `
                     <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-700 flex flex-col md:flex-row justify-between items-center gap-4">
                         <div class="text-left w-full overflow-hidden">
@@ -220,9 +221,11 @@
             if(confirm(`Remover "${nome}"?`)) { await deleteDoc(doc(db, "promoters", nome)); carregarPromoters(); }
         }
 
-        window.copiarLink = (link) => { navigator.clipboard.writeText(link); alert("Link copiado!"); }
+        window.copiarLink = (link) => { 
+            navigator.clipboard.writeText(link); 
+            alert("Link Profissional Copiado!"); 
+        }
 
-        // --- FESTAS ---
         document.getElementById('evData').addEventListener('change', async (e) => {
             const dataVal = e.target.value;
             if(!dataVal) return;
