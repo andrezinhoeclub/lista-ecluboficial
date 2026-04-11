@@ -3,88 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lista VIP - Eclub Swing Dance</title>
+    <title>Lista VIP - Eclub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .radio-btn.active { background-color: #eab308; color: black; border-color: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.3); }
-        .fade-in { animation: fadeIn 0.5s ease-in forwards; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Esconde tudo por padrão para evitar que o formulário "pisque" antes de bloquear */
+        #conteudoPrincipal { display: none; }
     </style>
 </head>
 <body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
 
-    <div class="w-full max-w-md bg-zinc-800 p-8 rounded-3xl shadow-2xl border border-zinc-700">
+    <div id="telaCarregando" class="text-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto mb-4"></div>
+        <p class="text-zinc-500 text-xs uppercase font-bold tracking-widest">Validando Link...</p>
+    </div>
+
+    <div id="telaErro" class="hidden text-center p-10 bg-zinc-800 rounded-3xl border border-red-900/50 shadow-2xl max-w-sm fade-in">
+        <div class="text-red-500 text-5xl mb-4">⚠️</div>
+        <h2 class="text-red-500 font-black text-xl mb-2 uppercase italic">Acesso Negado</h2>
+        <p class="text-zinc-400 text-xs leading-relaxed">Este link de promoter não é oficial ou expirou. Por favor, solicite um novo link atualizado.</p>
+    </div>
+
+    <div id="conteudoPrincipal" class="w-full max-w-md bg-zinc-800 p-8 rounded-3xl shadow-2xl border border-zinc-700 fade-in">
         
         <div class="flex justify-center mb-6">
-            <img src="https://raw.githubusercontent.com/andrezinhoeclub/lista-ecluboficial/main/logo-erotic.png" 
-                 alt="Eclub" 
-                 class="h-20 w-auto object-contain drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]"
-                 onerror="this.src='https://i.imgur.com/8N6OqRE.png'">
+            <img src="https://raw.githubusercontent.com/andrezinhoeclub/lista-ecluboficial/main/logo-erotic.png" class="h-20 object-contain">
         </div>
 
         <h1 class="text-xl font-bold text-center mb-2 text-yellow-500 uppercase tracking-widest">Lista VIP</h1>
+        <p id="infoEvento" class="text-center text-xs text-zinc-400 mb-6 bg-zinc-900/50 py-2 rounded-lg hidden"></p>
         
-        <p id="infoEvento" class="text-center text-sm text-zinc-400 mb-6 hidden"></p>
-        
-        <div id="bannerContainer" class="mb-6 hidden text-center">
-            <img id="eventoBanner" src="" alt="Banner" class="w-full h-auto rounded-lg border border-zinc-600 shadow-lg mx-auto">
-        </div>
-
         <div class="space-y-4">
             <div>
-                <label class="block text-xs mb-1 text-zinc-500 uppercase font-bold tracking-tighter">1. Escolha o Evento</label>
-                <select id="evento" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-xl focus:outline-none focus:border-yellow-500 text-white">
+                <label class="block text-[10px] mb-1 text-zinc-500 uppercase font-black">1. Escolha a Festa</label>
+                <select id="evento" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-xl text-white outline-none focus:border-yellow-500 text-sm">
                     <option value="">Carregando eventos...</option>
                 </select>
             </div>
             
             <div id="sessaoTipo" class="hidden fade-in">
-                <label class="block text-xs mb-2 text-zinc-500 uppercase font-bold tracking-tighter">2. Você é:</label>
+                <label class="block text-[10px] mb-2 text-zinc-500 uppercase font-black">2. Perfil</label>
                 <div class="flex gap-2">
-                    <button type="button" id="btnCasal" class="radio-btn flex-1 bg-zinc-700 border border-zinc-600 py-3 rounded-xl text-sm font-bold transition-all">👫 Casal</button>
-                    <button type="button" id="btnSolteiro" class="radio-btn flex-1 bg-zinc-700 border border-zinc-600 py-3 rounded-xl text-sm font-bold transition-all">👤 Solteiro(a)</button>
+                    <button type="button" id="btnCasal" class="radio-btn flex-1 bg-zinc-700 border border-zinc-600 py-3 rounded-xl text-xs font-bold transition-all uppercase">👫 Casal</button>
+                    <button type="button" id="btnSolteiro" class="radio-btn flex-1 bg-zinc-700 border border-zinc-600 py-3 rounded-xl text-xs font-bold transition-all uppercase">👤 Solteiro</button>
                 </div>
                 <input type="hidden" id="tipoPublico" value="">
             </div>
 
             <div id="sessaoDados" class="hidden fade-in space-y-4 pt-2 border-t border-zinc-700/50">
+                <div id="containerPreco" class="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl hidden text-center">
+                    <p id="textoPreco" class="text-xs text-yellow-500 font-bold uppercase"></p>
+                </div>
+
                 <div>
-                    <label class="block text-xs mb-1 text-zinc-500 uppercase font-bold tracking-tighter">3. Seus Dados</label>
-                    <input type="text" id="nome" placeholder="Nome Completo" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-xl focus:outline-none focus:border-yellow-500 text-white mb-3">
-                    <input type="tel" id="telefone" placeholder="WhatsApp (DDD + Número)" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-xl focus:outline-none focus:border-yellow-500 text-white">
+                    <label class="block text-[10px] mb-1 text-zinc-500 uppercase font-black">3. Identificação</label>
+                    <input type="text" id="nome" placeholder="Nome Completo" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-xl mb-3 text-sm outline-none focus:border-yellow-500">
+                    <input type="tel" id="telefone" placeholder="WhatsApp (DDD + Número)" class="w-full bg-zinc-700 border border-zinc-600 p-3 rounded-xl text-sm outline-none focus:border-yellow-500">
                 </div>
 
-                <div id="containerPreco" class="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl hidden">
-                    <p class="text-[10px] text-yellow-500 uppercase font-bold mb-1 text-center">Valor para <span id="labelTipo"></span> na lista:</p>
-                    <p id="textoPreco" class="text-xs text-zinc-200 font-medium text-center italic"></p>
-                </div>
-
-                <button id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 rounded-xl transition duration-300 shadow-lg uppercase tracking-wider">Confirmar Nome na Lista</button>
+                <button id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-black py-4 rounded-xl transition shadow-lg uppercase text-sm tracking-wider">Confirmar na Lista</button>
             </div>
 
             <p id="mensagem" class="text-center text-sm mt-4 hidden font-bold"></p>
-
-            <div class="pt-6 mt-6 border-t border-zinc-700 text-center space-y-3">
-                <div class="text-[11px] text-zinc-500 flex flex-col items-center gap-1">
-                    <a href="https://www.google.com/maps/search/?api=1&query=R.+Aníbal+Goularte+Maia+Filho,+81+-+Bairro+Alto,+Curitiba+-+PR" target="_blank" class="flex items-center gap-1 text-zinc-400 hover:text-yellow-500 transition-colors px-2">
-                       📍 <span>R. Aníbal Goularte Maia Filho, 81 - Bairro Alto</span>
-                    </a>
-                    <p class="flex items-center gap-1 pt-1">
-                        📞 <a href="https://wa.me/5541995040506" target="_blank" class="text-yellow-500 hover:underline font-bold"> (41) 99504-0506</a>
-                    </p>
-                </div>
-                <div class="flex justify-center pt-2">
-                    <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="text-zinc-400 hover:text-yellow-500 transition-colors flex items-center gap-2 text-[11px] uppercase font-bold">
-                        📸 INSTAGRAM
-                    </a>
-                </div>
-            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -99,19 +87,46 @@
         const db = getFirestore(app);
         let eventosCache = [];
 
-        const selectEvento = document.getElementById('evento');
-        const sessaoTipo = document.getElementById('sessaoTipo');
-        const sessaoDados = document.getElementById('sessaoDados');
+        async function validarEIniciar() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ref = urlParams.get('ref');
+
+            if (!ref) {
+                mostrarErro();
+                return;
+            }
+
+            try {
+                // Tenta buscar o documento do promoter na coleção 'promoters'
+                const promoterRef = doc(db, "promoters", ref.toLowerCase());
+                const promoterSnap = await getDoc(promoterRef);
+
+                if (promoterSnap.exists()) {
+                    // SE EXISTIR: Esconde o carregando e mostra o site
+                    document.getElementById('telaCarregando').style.display = 'none';
+                    document.getElementById('conteudoPrincipal').style.display = 'block';
+                    carregarEventos();
+                } else {
+                    mostrarErro();
+                }
+            } catch (error) {
+                console.error("Erro na validação:", error);
+                mostrarErro();
+            }
+        }
+
+        function mostrarErro() {
+            document.getElementById('telaCarregando').style.display = 'none';
+            document.getElementById('telaErro').classList.remove('hidden');
+        }
 
         async function carregarEventos() {
+            const selectEvento = document.getElementById('evento');
             try {
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snap = await getDocs(q);
                 let brutos = [];
-                
-                // DATA DE HOJE BLINDADA (Zera hora para não sumir o evento de hoje)
-                const hoje = new Date();
-                hoje.setHours(0, 0, 0, 0);
+                const hoje = new Date(); hoje.setHours(0,0,0,0);
 
                 snap.forEach(doc => { 
                     const d = doc.data();
@@ -120,109 +135,74 @@
                 });
 
                 brutos.sort((a,b) => a.data.localeCompare(b.data));
-                selectEvento.innerHTML = '<option value="">Selecione a festa...</option>';
+                selectEvento.innerHTML = '<option value="">Selecione...</option>';
                 eventosCache = brutos;
-                
                 brutos.forEach(d => { 
-                    const opt = document.createElement('option');
-                    opt.value = d.nome; opt.innerText = d.nome;
-                    selectEvento.appendChild(opt);
+                    selectEvento.innerHTML += `<option value="${d.nome}">${d.nome}</option>`;
                 });
             } catch (e) { selectEvento.innerHTML = '<option value="">Erro ao carregar</option>'; }
         }
 
-        selectEvento.addEventListener('change', () => {
-            if(selectEvento.value !== "") {
-                sessaoTipo.classList.remove('hidden');
-                trocarBanner(selectEvento.value);
-            } else {
-                sessaoTipo.classList.add('hidden');
-                sessaoDados.classList.add('hidden');
+        // --- LÓGICA DE INTERAÇÃO (BOTOES E EVENTOS) ---
+        document.getElementById('evento').addEventListener('change', (e) => {
+            if(e.target.value) {
+                document.getElementById('sessaoTipo').classList.remove('hidden');
+                const ev = eventosCache.find(ev => ev.nome === e.target.value);
+                if(ev) {
+                    const [a,m,d] = ev.data.split('-');
+                    document.getElementById('infoEvento').innerText = `FESTA: ${d}/${m}/${a} às ${ev.hora || '22:00'}h`;
+                    document.getElementById('infoEvento').classList.remove('hidden');
+                }
             }
         });
 
-        function trocarBanner(nomeEvento) {
-            const ev = eventosCache.find(e => e.nome === nomeEvento);
-            if(ev) {
-                if(ev.imagem) { 
-                    document.getElementById('eventoBanner').src = ev.imagem; 
-                    document.getElementById('bannerContainer').classList.remove('hidden'); 
-                } else {
-                    document.getElementById('bannerContainer').classList.add('hidden');
-                }
-                if(ev.data) {
-                    const [a,m,d] = ev.data.split('-');
-                    document.getElementById('infoEvento').innerText = `📅 ${d}/${m}/${a} às ${ev.hora || '22:00'}h`;
-                    document.getElementById('infoEvento').classList.remove('hidden');
-                }
-                if(document.getElementById('tipoPublico').value) exibirPrecoFiltrado(document.getElementById('tipoPublico').value);
-            }
-        }
+        document.getElementById('btnCasal').onclick = () => selecionarPerfil('Casal');
+        document.getElementById('btnSolteiro').onclick = () => selecionarPerfil('Solteiro');
 
-        document.getElementById('btnCasal').onclick = () => selecionarTipo('Casal');
-        document.getElementById('btnSolteiro').onclick = () => selecionarTipo('Solteiro');
-
-        function selecionarTipo(tipo) {
+        function selecionarPerfil(tipo) {
             document.getElementById('tipoPublico').value = tipo;
             document.getElementById('btnCasal').classList.toggle('active', tipo === 'Casal');
             document.getElementById('btnSolteiro').classList.toggle('active', tipo === 'Solteiro');
-            sessaoDados.classList.remove('hidden');
-            exibirPrecoFiltrado(tipo);
-        }
-
-        function exibirPrecoFiltrado(tipo) {
-            const ev = eventosCache.find(e => e.nome === selectEvento.value);
-            if (ev) {
-                const valor = tipo === 'Casal' ? ev.valor_casal : ev.valor_solteiro;
-                if (valor && valor.trim() !== "") {
-                    document.getElementById('labelTipo').innerText = tipo;
-                    document.getElementById('textoPreco').innerText = valor;
+            document.getElementById('sessaoDados').classList.remove('hidden');
+            
+            const ev = eventosCache.find(e => e.nome === document.getElementById('evento').value);
+            if(ev) {
+                const preco = tipo === 'Casal' ? ev.valor_casal : ev.valor_solteiro;
+                if(preco) {
+                    document.getElementById('textoPreco').innerText = `${tipo}: ${preco}`;
                     document.getElementById('containerPreco').classList.remove('hidden');
-                } else { document.getElementById('containerPreco').classList.add('hidden'); }
+                }
             }
         }
 
         document.getElementById('btnEnviar').onclick = async () => {
-            const evento = selectEvento.value;
+            const btn = document.getElementById('btnEnviar');
             const nome = document.getElementById('nome').value;
             const telefone = document.getElementById('telefone').value;
-            const tipo = document.getElementById('tipoPublico').value;
-            const btn = document.getElementById('btnEnviar');
-            const msg = document.getElementById('mensagem');
-            const urlParams = new URLSearchParams(window.location.search);
-            const promoter = urlParams.get('ref') || "Direto";
+            const ref = new URLSearchParams(window.location.search).get('ref');
 
-            if(!nome || !telefone) { alert("Preencha seu nome e celular!"); return; }
-            btn.disabled = true; btn.innerText = "VERIFICANDO...";
-
+            if(!nome || !telefone) return alert("Preencha tudo!");
+            
+            btn.disabled = true; btn.innerText = "GRAVANDO...";
+            
             try {
-                const q = query(collection(db, "lista_eventos"), where("evento", "==", evento));
-                const snap = await getDocs(q);
-                let existe = false;
-                snap.forEach(d => { if(d.data().telefone === telefone) existe = true; });
-
-                if (existe) {
-                    msg.innerText = "⚠️ Você já está na lista!";
-                    msg.className = "text-center text-sm mt-4 font-bold text-yellow-500";
-                    msg.classList.remove('hidden');
-                    btn.disabled = false; btn.innerText = "Confirmar Nome na Lista";
-                    return;
-                }
-
-                await addDoc(collection(db, "lista_eventos"), { 
-                    evento, nome, telefone, tipo, promoter, 
-                    data_cadastro: new Date(), entrou: false 
+                await addDoc(collection(db, "lista_eventos"), {
+                    nome, telefone, 
+                    evento: document.getElementById('evento').value,
+                    tipo: document.getElementById('tipoPublico').value,
+                    promoter: ref,
+                    entrou: false,
+                    data_cadastro: new Date()
                 });
-
-                msg.innerText = "✅ Sucesso! Nome na lista.";
-                msg.className = "text-center text-sm mt-4 font-bold text-green-500";
-                msg.classList.remove('hidden');
+                document.getElementById('mensagem').innerText = "✅ NOME NA LISTA COM SUCESSO!";
+                document.getElementById('mensagem').classList.remove('hidden');
                 document.getElementById('nome').value = ""; document.getElementById('telefone').value = "";
-            } catch (e) { msg.innerText = "❌ Erro ao enviar."; msg.classList.remove('hidden'); }
-            finally { btn.disabled = false; btn.innerText = "Confirmar Nome na Lista"; }
+            } catch(e) { alert("Erro ao salvar."); }
+            finally { btn.disabled = false; btn.innerText = "Confirmar na Lista"; }
         };
 
-        carregarEventos();
+        // Roda a validação assim que abre
+        validarEIniciar();
     </script>
 </body>
 </html>
