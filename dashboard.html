@@ -34,15 +34,15 @@
         <section id="aba-relatorios" class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-blue-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Total Geral Reservas</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2">Total Geral Reservas</p>
                     <p id="res-total" class="text-4xl font-black italic">0</p>
                 </div>
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-yellow-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Check-ins Realizados</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2">Check-ins Realizados</p>
                     <p id="res-checkin-total" class="text-4xl font-black italic text-yellow-500">0</p>
                 </div>
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-green-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Taxa de Conversão</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2">Taxa de Conversão</p>
                     <p id="res-conversao" class="text-4xl font-black italic text-green-500">0%</p>
                 </div>
             </div>
@@ -52,15 +52,12 @@
                     <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-blue-500">Ranking: Eventos em Aberto</h3>
                     <div id="ranking-container" class="space-y-4 max-h-[400px] overflow-y-auto pr-2"></div>
                 </div>
-
                 <div class="card-glass p-8 rounded-[2.5rem]">
                     <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-green-500">Auditoria de Check-ins</h3>
                     <select id="filtro-promoter-checkin" class="w-full p-4 rounded-xl mb-6 font-bold text-xs uppercase" onchange="window.filtrarClientesCheckin()">
                         <option value="">Selecione um Promoter</option>
                     </select>
-                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-xl p-4">
-                        <p class="text-[10px] text-zinc-600 uppercase text-center py-10 font-bold">Aguardando seleção...</p>
-                    </div>
+                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-xl p-4"></div>
                 </div>
             </div>
         </section>
@@ -90,19 +87,22 @@
 
         <section id="aba-equipe" class="hidden">
             <div class="card-glass p-8 rounded-[2.5rem]">
-                <h2 class="text-green-500 font-black uppercase italic text-lg mb-8 tracking-widest">Cadastrar Promoter</h2>
+                <h2 class="text-green-500 font-black uppercase italic text-lg mb-8 tracking-widest">Gerenciar Equipe</h2>
                 <form id="formEquipe" class="flex gap-4 mb-10">
                     <input type="text" id="nome_promoter" placeholder="Nome do Promoter" class="flex-grow p-4 rounded-2xl font-bold" required>
                     <button type="submit" class="bg-green-600 px-10 rounded-2xl font-black uppercase text-xs hover:bg-green-700 transition text-white">Salvar</button>
                 </form>
-                <div id="lista-promoters" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+                
+                <h3 class="text-[10px] font-black uppercase text-zinc-500 mb-4 tracking-widest">Promoters e Links de Divulgação</h3>
+                <div id="lista-promoters" class="space-y-3">
+                    </div>
             </div>
         </section>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -187,6 +187,51 @@
             listaDiv.innerHTML += `</div>`;
         };
 
+        // EQUIPE: LISTAR E GERAR LINKS
+        onSnapshot(collection(db, "equipe"), (snap) => {
+            const container = document.getElementById('lista-promoters');
+            container.innerHTML = '';
+            const baseUrl = "https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref=";
+
+            snap.forEach(d => {
+                const promoter = d.data().nome;
+                const linkFinal = baseUrl + encodeURIComponent(promoter);
+                
+                container.innerHTML += `
+                    <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="flex-grow">
+                            <h4 class="font-black uppercase text-xs text-white mb-1">${promoter}</h4>
+                            <p class="text-[9px] text-zinc-500 truncate max-w-[250px] font-mono">${linkFinal}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="copiarLink('${linkFinal}')" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl text-[9px] font-black uppercase transition">Copiar Link</button>
+                            <button onclick="excluirPromoter('${d.id}')" class="bg-red-900/20 text-red-500 hover:bg-red-900/40 px-3 py-2 rounded-xl text-[9px] font-black uppercase transition">X</button>
+                        </div>
+                    </div>`;
+            });
+        });
+
+        window.copiarLink = (link) => {
+            navigator.clipboard.writeText(link);
+            alert("Link copiado para a área de transferência!");
+        };
+
+        window.excluirPromoter = async (id) => {
+            if(confirm("Deseja remover este promoter da equipe?")) {
+                await deleteDoc(doc(db, "equipe", id));
+            }
+        };
+
+        document.getElementById('formEquipe').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('nome_promoter').value.trim();
+            if(nome) {
+                await addDoc(collection(db, "equipe"), { nome: nome });
+                document.getElementById('formEquipe').reset();
+            }
+        });
+
+        // FESTAS
         document.getElementById('formEvento').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnPublicar');
@@ -206,20 +251,6 @@
                 alert("Evento Publicado!");
                 document.getElementById('formEvento').reset();
             } catch (err) { alert("Erro ao salvar."); } finally { btn.innerText = "Publicar Festa no Site"; }
-        });
-
-        document.getElementById('formEquipe').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await addDoc(collection(db, "equipe"), { nome: document.getElementById('nome_promoter').value });
-            document.getElementById('formEquipe').reset();
-        });
-
-        onSnapshot(collection(db, "equipe"), (snap) => {
-            const container = document.getElementById('lista-promoters');
-            container.innerHTML = '';
-            snap.forEach(d => {
-                container.innerHTML += `<div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-center font-black uppercase text-[10px]">${d.data().nome}</div>`;
-            });
         });
     </script>
 </body>
