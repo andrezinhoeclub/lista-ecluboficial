@@ -6,35 +6,40 @@
     <title>Eclub - Portaria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .card-glass { background: #18181b; border: 1px solid #27272a; }
+        .card-glass { background: #111113; border: 1px solid #27272a; transition: all 0.3s ease; }
         .btn-checkin { transition: all 0.2s ease; }
         .btn-checkin:active { transform: scale(0.95); }
+        .checkin-done { opacity: 0.4; border-color: #22c55e !important; background: #09090b; }
     </style>
 </head>
-<body class="bg-zinc-950 text-white font-sans min-h-screen p-4">
+<body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
 
-    <div class="max-w-md mx-auto">
+    <div class="max-w-md mx-auto w-full">
         <header class="flex justify-center mb-10 py-6">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Eclub Logo" class="h-16 w-auto object-contain">
         </header>
 
-        <div class="grid grid-cols-2 gap-4 mb-8">
-            <div class="card-glass p-6 rounded-[2rem] text-center">
-                <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Reservas</p>
-                <p id="countReservas" class="text-3xl font-black italic text-white">0%</p>
+        <div class="grid grid-cols-3 gap-2 mb-8">
+            <div class="card-glass p-4 rounded-3xl text-center">
+                <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Reservas</p>
+                <p id="countReservas" class="text-xl font-black italic text-white">0</p>
             </div>
-            <div class="card-glass p-6 rounded-[2rem] text-center">
-                <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Na Casa</p>
-                <p id="countNaCasa" class="text-3xl font-black italic text-yellow-500">0%</p>
+            <div class="card-glass p-4 rounded-3xl text-center border-l-2 border-l-yellow-500">
+                <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Na Casa</p>
+                <p id="countNaCasa" class="text-xl font-black italic text-yellow-500">0</p>
+            </div>
+            <div class="card-glass p-4 rounded-3xl text-center bg-zinc-900/50">
+                <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Ocupação</p>
+                <p id="porcentagemOcupacao" class="text-xl font-black italic text-green-500">0%</p>
             </div>
         </div>
 
         <div class="relative mb-8">
-            <input type="text" id="inputBusca" placeholder="Pesquisar nome ou celular..." class="w-full bg-zinc-900 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-yellow-500 font-bold text-sm transition">
-            <span class="absolute right-5 top-5 opacity-30">🔍</span>
+            <input type="text" id="inputBusca" autocomplete="off" placeholder="Pesquisar nome ou celular..." class="w-full bg-zinc-900 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-yellow-500 font-bold text-sm transition">
+            <span class="absolute right-5 top-5 opacity-30 text-lg">🔍</span>
         </div>
 
-        <div id="listaPortaria" class="space-y-4">
+        <div id="listaPortaria" class="space-y-4 mb-20">
             </div>
     </div>
 
@@ -62,54 +67,69 @@
                 const busca = document.getElementById('inputBusca').value.toLowerCase();
                 container.innerHTML = '';
                 
-                let reservas = 0;
-                let naCasa = 0;
+                let totalReservas = 0;
+                let totalNaCasa = 0;
 
                 snapshot.forEach((d) => {
                     const res = d.data();
                     const id = d.id;
 
-                    reservas++;
-                    if (res.entrou) naCasa++;
+                    totalReservas++;
+                    if (res.entrou) totalNaCasa++;
 
-                    // Filtro de busca
+                    // Filtro de busca em tempo real
                     if (res.nome.toLowerCase().includes(busca) || res.telefone.includes(busca)) {
                         const card = document.createElement('div');
-                        card.className = `card-glass p-6 rounded-[2rem] flex justify-between items-center ${res.entrou ? 'opacity-40 border-green-500/50' : ''}`;
+                        card.className = `card-glass p-5 rounded-[2rem] flex justify-between items-center ${res.entrou ? 'checkin-done' : ''}`;
                         
                         card.innerHTML = `
-                            <div>
+                            <div class="pr-2">
                                 <div class="flex items-center space-x-2 mb-1">
-                                    <span class="bg-yellow-500 text-black text-[8px] font-black px-2 py-0.5 rounded uppercase">${res.tipo}</span>
-                                    <h3 class="font-black uppercase italic text-sm text-white">${res.nome}</h3>
+                                    <span class="bg-yellow-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded uppercase">${res.tipo}</span>
+                                    <h3 class="font-black uppercase italic text-xs text-white truncate max-w-[120px]">${res.nome}</h3>
                                 </div>
-                                <p class="text-[10px] text-zinc-500 font-bold">${res.telefone}</p>
-                                <p class="text-[9px] text-yellow-500/50 font-black uppercase mt-1">P: ${res.promoter} | ${res.evento}</p>
+                                <p class="text-[9px] text-zinc-500 font-bold tracking-wider">${res.telefone}</p>
+                                <p class="text-[8px] text-zinc-600 font-black uppercase mt-1">P: ${res.promoter} | ${res.evento}</p>
                             </div>
                             
-                            <button onclick="fazerCheckin('${id}', ${res.entrou})" class="btn-checkin ${res.entrou ? 'bg-zinc-800 text-zinc-500' : 'bg-yellow-500 text-black'} font-black px-6 py-3 rounded-xl text-[10px] uppercase">
-                                ${res.entrou ? 'OK' : 'Check-in'}
+                            <button onclick="fazerCheckin('${id}', ${res.entrou})" class="btn-checkin ${res.entrou ? 'bg-zinc-800 text-zinc-600' : 'bg-yellow-500 text-black'} font-black px-5 py-3 rounded-xl text-[9px] uppercase shadow-lg shadow-black/50">
+                                ${res.entrou ? 'CHECKED' : 'CHECK-IN'}
                             </button>
                         `;
                         container.appendChild(card);
                     }
                 });
 
-                // Atualiza métricas com %
-                document.getElementById('countReservas').innerText = reservas + '%';
-                document.getElementById('countNaCasa').innerText = naCasa + '%';
+                // CÁLCULO DA PORCENTAGEM (Taxa de ocupação)
+                const ocupacao = totalReservas > 0 ? Math.round((totalNaCasa / totalReservas) * 100) : 0;
+
+                document.getElementById('countReservas').innerText = totalReservas;
+                document.getElementById('countNaCasa').innerText = totalNaCasa;
+                document.getElementById('porcentagemOcupacao').innerText = ocupacao + '%';
             });
         }
 
         window.fazerCheckin = async (id, statusAtual) => {
-            const confirmacao = statusAtual ? "Remover check-in deste cliente?" : "Confirmar entrada do cliente?";
-            if(confirm(confirmacao)) {
-                await updateDoc(doc(db, "lista_eventos", id), { entrou: !statusAtual });
+            // Só faz o check-in se não estiver marcado, ou confirma para desmarcar
+            if(!statusAtual || confirm("Deseja remover o check-in deste cliente?")) {
+                try {
+                    await updateDoc(doc(db, "lista_eventos", id), { entrou: !statusAtual });
+                    
+                    // LIMPAR CAMPO DE BUSCA APÓS SUCESSO
+                    const input = document.getElementById('inputBusca');
+                    input.value = '';
+                    // Mantém o foco no input para o próximo
+                    input.focus();
+                } catch (e) {
+                    alert("Erro ao processar check-in.");
+                }
             }
         }
 
+        // Listener para a busca
         document.getElementById('inputBusca').addEventListener('input', carregarPortaria);
-        carregarAgenda(); // Inicia
+        
+        // Início
         carregarPortaria();
     </script>
 </body>
