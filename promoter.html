@@ -11,8 +11,7 @@
     <div id="loginPromoter" class="flex flex-col items-center justify-center min-h-[80vh]">
         <div class="w-full max-w-sm bg-zinc-800 p-8 rounded-3xl border border-zinc-700 shadow-2xl text-center">
             <h1 class="text-2xl font-bold mb-6 text-blue-500 uppercase italic">Acesso Promoter</h1>
-            <p class="text-zinc-500 text-[10px] mb-4 uppercase font-bold tracking-widest">Digite seu usuário autorizado</p>
-            <input type="text" id="userPromoter" placeholder="Ex: fabi" class="w-full bg-zinc-900 border border-zinc-700 p-4 rounded-2xl mb-6 outline-none focus:border-blue-500 text-center font-bold text-white">
+            <input type="text" id="userPromoter" placeholder="Seu usuário (ex: fabi)" class="w-full bg-zinc-900 border border-zinc-700 p-4 rounded-2xl mb-6 outline-none focus:border-blue-500 text-center font-bold text-white uppercase">
             <button onclick="acessarPainel()" id="btnAcessar" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase transition hover:bg-blue-700">Entrar no Painel</button>
         </div>
     </div>
@@ -20,8 +19,8 @@
     <div id="painelDados" class="max-w-md mx-auto hidden">
         <header class="text-center mb-8 flex justify-between items-end">
             <div class="text-left">
-                <h1 id="boasVindas" class="text-2xl font-black text-blue-500 uppercase italic leading-none">Olá, Promoter</h1>
-                <p class="text-zinc-500 text-[9px] uppercase font-bold mt-1">Status dos Eventos Ativos</p>
+                <h1 id="boasVindas" class="text-2xl font-black text-blue-500 uppercase italic leading-none">Olá</h1>
+                <p class="text-zinc-500 text-[9px] uppercase font-black mt-1 tracking-tighter">Comparativo de Reservas por Evento</p>
             </div>
             <button onclick="location.reload()" class="text-zinc-600 text-[10px] font-bold uppercase underline mb-1">Sair</button>
         </header>
@@ -30,7 +29,7 @@
             </div>
 
         <footer class="mt-10 text-center border-t border-zinc-800 pt-6">
-            <p class="text-zinc-600 text-[9px] uppercase font-black tracking-widest italic">Eclub Swing Dance - Curitiba</p>
+            <p class="text-zinc-600 text-[9px] uppercase font-black tracking-widest italic">Eclub Master Control</p>
         </footer>
     </div>
 
@@ -55,83 +54,76 @@
             const btn = document.getElementById('btnAcessar');
             if(!nome) return alert("Digite seu nome!");
 
-            btn.innerText = "VALIDANDO...";
+            btn.innerText = "CARREGANDO...";
             try {
                 const snapP = await getDoc(doc(db, "promoters", nome));
                 if(snapP.exists()) {
                     document.getElementById('loginPromoter').classList.add('hidden');
                     document.getElementById('painelDados').classList.remove('hidden');
-                    document.getElementById('boasVindas').innerText = `Olá, ${nome}`;
-                    carregarDesempenho(nome);
+                    document.getElementById('boasVindas').innerText = `Olá, ${nome}!`;
+                    carregarDados(nome);
                 } else {
-                    alert("Usuário não encontrado.");
+                    alert("Usuário não autorizado.");
                     btn.innerText = "Entrar no Painel";
                 }
-            } catch(e) { alert("Erro de conexão."); }
+            } catch(e) { alert("Erro ao conectar."); }
         }
 
-        async function carregarDesempenho(nomePromoter) {
+        async function carregarDados(nomePromoter) {
             const cont = document.getElementById('listaEventosPromoter');
-            cont.innerHTML = '<div class="text-center py-10"><div class="animate-spin h-6 w-6 border-b-2 border-blue-500 mx-auto"></div></div>';
+            cont.innerHTML = '<p class="text-center py-10 text-xs animate-pulse">Sincronizando...</p>';
 
             try {
-                // 1. Pega os eventos ativos
                 const qEventos = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snapEventos = await getDocs(qEventos);
                 
-                // 2. Pega TODA a lista de eventos para calcular o total da casa
-                const snapTodasReservas = await getDocs(collection(db, "lista_eventos"));
-                const todasAsReservas = [];
-                snapTodasReservas.forEach(d => todasAsReservas.push(d.data()));
+                const snapReservas = await getDocs(collection(db, "lista_eventos"));
+                const todasReservas = [];
+                snapReservas.forEach(d => todasReservas.push(d.data()));
 
                 cont.innerHTML = '';
 
                 if(snapEventos.empty) {
-                    cont.innerHTML = '<p class="text-center text-zinc-500 text-xs uppercase font-bold italic">Nenhum evento ativo.</p>';
+                    cont.innerHTML = '<p class="text-center text-zinc-500 text-[10px] uppercase font-black italic">Nenhuma festa ativa.</p>';
                     return;
                 }
 
                 snapEventos.forEach(docEv => {
                     const ev = docEv.data();
-                    
-                    // Total de Nomes de TODOS na casa para este evento
-                    const totalCasa = todasAsReservas.filter(r => r.evento === ev.nome).length;
-                    
-                    // Total de Nomes apenas desta Promoter para este evento
-                    const meusNomes = todasAsReservas.filter(r => r.evento === ev.nome && r.promoter === nomePromoter).length;
-
+                    const totalGeral = todasReservas.filter(r => r.evento === ev.nome).length;
+                    const totalIndividual = todasReservas.filter(r => r.evento === ev.nome && r.promoter === nomePromoter).length;
                     const [a,m,d] = ev.data.split('-');
 
-                    cont.innerHTML += `
-                        <div class="bg-zinc-800 p-5 rounded-3xl border border-zinc-700 shadow-xl relative overflow-hidden">
-                            <div class="absolute top-0 right-0 p-2">
-                                <span class="bg-green-500/10 text-green-500 text-[8px] px-2 py-1 rounded-full font-black uppercase tracking-widest">Evento Aberto</span>
-                            </div>
+                    // Verifica se existe imagem, senão usa um fundo escuro
+                    const bannerImg = ev.imagem ? `<img src="${ev.imagem}" class="w-full h-32 object-cover rounded-2xl mb-4 shadow-lg">` : '';
 
-                            <div class="mb-5">
-                                <h3 class="text-lg font-black text-white uppercase italic leading-tight">${ev.nome}</h3>
-                                <p class="text-[10px] text-zinc-500 font-bold">${d}/${m}/${a} às ${ev.hora || '22:00'}h</p>
+                    cont.innerHTML += `
+                        <div class="bg-zinc-800 p-5 rounded-3xl border border-zinc-700 shadow-2xl">
+                            ${bannerImg}
+                            <div class="mb-4">
+                                <h3 class="text-lg font-black text-white uppercase italic leading-none">${ev.nome}</h3>
+                                <p class="text-[9px] text-zinc-500 font-bold">${d}/${m}/${a}</p>
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-700/50 text-center">
-                                    <p class="text-[8px] text-zinc-500 uppercase font-black mb-1">Total da Casa</p>
-                                    <p class="text-2xl font-black text-blue-500">${totalCasa}</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-700/50 text-center">
+                                    <p class="text-[8px] text-yellow-500 uppercase font-black mb-1">Minhas Reservas</p>
+                                    <p class="text-3xl font-black text-yellow-500">${totalIndividual}</p>
                                 </div>
-                                <div class="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-700/50 text-center">
-                                    <p class="text-[8px] text-yellow-500 uppercase font-black mb-1">Meus Nomes</p>
-                                    <p class="text-2xl font-black text-yellow-500">${meusNomes}</p>
+                                <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-700/50 text-center">
+                                    <p class="text-[8px] text-blue-500 uppercase font-black mb-1">Total da Equipe</p>
+                                    <p class="text-3xl font-black text-blue-500">${totalGeral}</p>
                                 </div>
                             </div>
 
-                            <button onclick="copiarLink('${nomePromoter}')" class="w-full mt-4 bg-zinc-700 hover:bg-zinc-600 text-white text-[9px] font-black py-3 rounded-xl uppercase transition tracking-widest">
-                                Copiar Meu Link de Divulgação
+                            <button onclick="copiarLink('${nomePromoter}')" class="w-full mt-4 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-400 text-[9px] font-black py-3 rounded-xl uppercase transition tracking-widest">
+                                Copiar Meu Link Individual
                             </button>
                         </div>
                     `;
                 });
             } catch(e) { 
-                cont.innerHTML = '<p class="text-center text-red-500 text-xs">Erro ao carregar os dados.</p>'; 
+                cont.innerHTML = '<p class="text-center text-red-500 text-[10px]">ERRO AO CARREGAR.</p>'; 
             }
         }
 
@@ -139,7 +131,7 @@
             const urlBase = window.location.href.replace('promoter.html', 'index.html');
             const link = `${urlBase}?ref=${nome}`;
             navigator.clipboard.writeText(link);
-            alert("Link copiado! Envie para seus clientes.");
+            alert("Link copiado!");
         }
     </script>
 </body>
