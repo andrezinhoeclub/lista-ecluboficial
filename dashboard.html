@@ -12,10 +12,10 @@
         .btn-nav { background: #3f3f46; color: white; font-weight: 900; transition: all 0.2s; }
         .btn-nav.active { background: #eab308; color: black; }
         .hidden { display: none; }
-        /* Custom scrollbar para as listas */
+        .select-all { user-select: all; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #09090b; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-6">
@@ -50,8 +50,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="card-glass p-8 rounded-[2.5rem]">
                     <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-blue-500">Ranking: Eventos em Aberto</h3>
-                    <div id="ranking-container" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                        </div>
+                    <div id="ranking-container" class="space-y-4 max-h-[400px] overflow-y-auto pr-2"></div>
                 </div>
 
                 <div class="card-glass p-8 rounded-[2.5rem]">
@@ -59,8 +58,8 @@
                     <select id="filtro-promoter-checkin" class="w-full p-4 rounded-xl mb-6 font-bold text-xs uppercase" onchange="window.filtrarClientesCheckin()">
                         <option value="">Selecione um Promoter</option>
                     </select>
-                    <div id="lista-clientes-checkin" class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                        <p class="text-[10px] text-zinc-600 uppercase text-center py-10 font-bold">Selecione um promoter acima</p>
+                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-xl p-4">
+                        <p class="text-[10px] text-zinc-600 uppercase text-center py-10 font-bold">Aguardando seleção...</p>
                     </div>
                 </div>
             </div>
@@ -94,10 +93,9 @@
                 <h2 class="text-green-500 font-black uppercase italic text-lg mb-8 tracking-widest">Cadastrar Promoter</h2>
                 <form id="formEquipe" class="flex gap-4 mb-10">
                     <input type="text" id="nome_promoter" placeholder="Nome do Promoter" class="flex-grow p-4 rounded-2xl font-bold" required>
-                    <button type="submit" class="bg-green-600 px-10 rounded-2xl font-black uppercase text-xs hover:bg-green-700 transition">Salvar</button>
+                    <button type="submit" class="bg-green-600 px-10 rounded-2xl font-black uppercase text-xs hover:bg-green-700 transition text-white">Salvar</button>
                 </form>
-                <div id="lista-promoters" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    </div>
+                <div id="lista-promoters" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
             </div>
         </section>
     </div>
@@ -120,7 +118,6 @@
 
         let todasReservasGlobal = [];
 
-        // NAVEGAÇÃO
         window.trocarAba = (id, botao) => {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.querySelectorAll('.btn-nav').forEach(b => b.classList.remove('active'));
@@ -128,7 +125,6 @@
             botao.classList.add('active');
         };
 
-        // RELATÓRIOS E RANKING
         onSnapshot(collection(db, "lista_eventos"), (snap) => {
             todasReservasGlobal = [];
             let total = 0, checkins = 0;
@@ -140,8 +136,6 @@
                 todasReservasGlobal.push(r);
                 total++;
                 if(r.entrou) checkins++;
-                
-                // Ranking de eventos em aberto (hoje em diante)
                 if(r.evento_data >= hoje || !r.evento_data) {
                     rankingPromoters[r.promoter] = (rankingPromoters[r.promoter] || 0) + 1;
                 }
@@ -155,14 +149,12 @@
             const containerRank = document.getElementById('ranking-container');
             containerRank.innerHTML = '';
             Object.entries(rankingPromoters).sort((a,b) => b[1]-a[1]).forEach(([nome, qtd]) => {
-                containerRank.innerHTML += `
-                    <div class="flex justify-between items-center bg-black/40 p-4 rounded-xl border border-zinc-800">
-                        <span class="font-black uppercase text-[10px] tracking-widest text-zinc-300">${nome}</span>
-                        <span class="text-yellow-500 font-black text-xs">${qtd} reserv.</span>
-                    </div>`;
+                containerRank.innerHTML += `<div class="flex justify-between items-center bg-black/40 p-4 rounded-xl border border-zinc-800">
+                    <span class="font-black uppercase text-[10px] text-zinc-300">${nome}</span>
+                    <span class="text-yellow-500 font-black text-xs">${qtd} reserv.</span>
+                </div>`;
             });
 
-            // Atualiza Select de Promoters
             const select = document.getElementById('filtro-promoter-checkin');
             const promotersUnicos = [...new Set(todasReservasGlobal.map(r => r.promoter))].sort();
             const valorAtual = select.value;
@@ -180,22 +172,21 @@
             const promoterAlvo = document.getElementById('filtro-promoter-checkin').value;
             const listaDiv = document.getElementById('lista-clientes-checkin');
             if(!promoterAlvo) {
-                listaDiv.innerHTML = '<p class="text-[10px] text-zinc-600 uppercase text-center py-10 font-bold">Selecione um promoter acima</p>';
+                listaDiv.innerHTML = '<p class="text-[10px] text-zinc-600 uppercase text-center py-10 font-bold">Aguardando seleção...</p>';
                 return;
             }
             const filtrados = todasReservasGlobal.filter(r => r.promoter === promoterAlvo && r.entrou === true);
-            listaDiv.innerHTML = filtrados.length === 0 ? '<p class="text-[10px] text-zinc-600 text-center py-10 font-bold italic">Nenhum check-in confirmado.</p>' : '';
+            if(filtrados.length === 0) {
+                listaDiv.innerHTML = '<p class="text-[10px] text-zinc-600 text-center py-10 font-bold italic">Nenhum check-in.</p>';
+                return;
+            }
+            listaDiv.innerHTML = `<div class="font-mono text-[11px] text-zinc-300 select-all">`;
             filtrados.forEach(c => {
-                listaDiv.innerHTML += `
-                    <div class="bg-black/60 p-4 rounded-xl border border-zinc-900 flex flex-col">
-                        <span class="text-[10px] font-black uppercase text-white tracking-widest">${c.nome}</span>
-                        <span class="text-[9px] text-zinc-500 font-bold">${c.telefone}</span>
-                        <span class="text-[8px] text-green-500 font-black uppercase mt-1 italic">Evento: ${c.evento}</span>
-                    </div>`;
+                listaDiv.innerHTML += `<div class="py-1 border-b border-zinc-900/50">${c.nome.toUpperCase()} - ${c.telefone}</div>`;
             });
+            listaDiv.innerHTML += `</div>`;
         };
 
-        // SALVAR EVENTO
         document.getElementById('formEvento').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnPublicar');
@@ -217,7 +208,6 @@
             } catch (err) { alert("Erro ao salvar."); } finally { btn.innerText = "Publicar Festa no Site"; }
         });
 
-        // EQUIPE
         document.getElementById('formEquipe').addEventListener('submit', async (e) => {
             e.preventDefault();
             await addDoc(collection(db, "equipe"), { nome: document.getElementById('nome_promoter').value });
@@ -228,7 +218,7 @@
             const container = document.getElementById('lista-promoters');
             container.innerHTML = '';
             snap.forEach(d => {
-                container.innerHTML += `<div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-center font-black uppercase text-[10px] tracking-tighter">${d.data().nome}</div>`;
+                container.innerHTML += `<div class="bg-zinc-900 p-4 rounded-xl border border-zinc-800 text-center font-black uppercase text-[10px]">${d.data().nome}</div>`;
             });
         });
     </script>
