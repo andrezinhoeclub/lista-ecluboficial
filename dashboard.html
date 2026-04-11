@@ -12,7 +12,6 @@
         .btn-nav { background: #3f3f46; color: white; font-weight: 900; transition: all 0.2s; }
         .btn-nav.active { background: #eab308; color: black; }
         .hidden { display: none; }
-        .select-all { user-select: all; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #09090b; }
         ::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
@@ -34,15 +33,15 @@
         <section id="aba-relatorios" class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-blue-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Total Geral Reservas</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2">Total Geral Reservas</p>
                     <p id="res-total" class="text-4xl font-black italic">0</p>
                 </div>
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-yellow-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Check-ins Realizados</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2">Check-ins Realizados</p>
                     <p id="res-checkin-total" class="text-4xl font-black italic text-yellow-500">0</p>
                 </div>
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-green-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Taxa de Conversão</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2">Taxa de Conversão</p>
                     <p id="res-conversao" class="text-4xl font-black italic text-green-500">0%</p>
                 </div>
             </div>
@@ -52,20 +51,17 @@
                     <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-blue-500">Ranking: Eventos em Aberto</h3>
                     <div id="ranking-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-2"></div>
                 </div>
-
                 <div class="card-glass p-8 rounded-[2.5rem]">
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-green-500">Auditoria de Check-ins (Entradas)</h3>
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-green-500">Auditoria de Check-ins</h3>
                     <select id="filtro-promoter-checkin" class="w-full p-4 rounded-xl mb-6 font-bold text-xs uppercase" onchange="window.filtrarClientesCheckin()">
                         <option value="">Selecione um Promoter</option>
                     </select>
-                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-xl p-4 font-mono text-[11px] select-all">
-                        <p class="text-[10px] text-zinc-600 uppercase text-center py-10 font-bold">Aguardando seleção...</p>
-                    </div>
+                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-xl p-4 font-mono text-[11px] select-all"></div>
                 </div>
             </div>
         </section>
 
-        <section id="aba-festas" class="hidden">
+        <section id="aba-festas" class="hidden space-y-8">
             <div class="card-glass p-8 rounded-[2.5rem]">
                 <h2 class="text-blue-500 font-black uppercase italic text-lg mb-8 tracking-widest">Novo Evento</h2>
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -86,26 +82,29 @@
                     <button type="submit" id="btnPublicar" class="col-span-1 md:col-span-2 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase text-sm tracking-widest hover:bg-blue-700 transition">Publicar Festa no Site</button>
                 </form>
             </div>
+
+            <div class="card-glass p-8 rounded-[2.5rem]">
+                <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-yellow-500">Eventos Publicados no Site</h3>
+                <div id="lista-eventos-ativos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    </div>
+            </div>
         </section>
 
         <section id="aba-equipe" class="hidden">
             <div class="card-glass p-8 rounded-[2.5rem]">
                 <h2 class="text-green-500 font-black uppercase italic text-lg mb-8 tracking-widest">Gerenciar Equipe</h2>
                 <form id="formEquipe" class="flex gap-4 mb-10">
-                    <input type="text" id="nome_promoter" placeholder="Novo Promoter (Nome)" class="flex-grow p-4 rounded-2xl font-bold" required>
+                    <input type="text" id="nome_promoter" placeholder="Nome do Promoter" class="flex-grow p-4 rounded-2xl font-bold" required>
                     <button type="submit" class="bg-green-600 px-10 rounded-2xl font-black uppercase text-xs hover:bg-green-700 transition text-white">Salvar</button>
                 </form>
-                
-                <h3 class="text-[10px] font-black uppercase text-zinc-500 mb-4 tracking-widest">Links de Divulgação Ativos</h3>
-                <div id="lista-promoters" class="space-y-3">
-                    </div>
+                <div id="lista-promoters" class="space-y-3"></div>
             </div>
         </section>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -128,7 +127,7 @@
             botao.classList.add('active');
         };
 
-        // RELATÓRIOS E AUDITORIA
+        // RELATÓRIOS
         onSnapshot(collection(db, "lista_eventos"), (snap) => {
             todasReservasGlobal = snap.docs.map(d => d.data());
             let total = 0, checkins = 0;
@@ -166,7 +165,6 @@
                 select.appendChild(opt);
             });
             select.value = valorAtual;
-            if(valorAtual) window.filtrarClientesCheckin();
         });
 
         window.filtrarClientesCheckin = () => {
@@ -180,44 +178,33 @@
             });
         };
 
-        // EQUIPE COM AUTO-DETECÇÃO DE HISTÓRICO (DEBORA, MARILIA, ETC)
-        onSnapshot(collection(db, "equipe"), (snapEquipe) => {
-            const container = document.getElementById('lista-promoters');
+        // GESTÃO DE EVENTOS (LISTAR E REMOVER)
+        onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
+            const container = document.getElementById('lista-eventos-ativos');
             container.innerHTML = '';
-            const baseUrl = "https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref=";
-            
-            // Pega nomes da coleção equipe + nomes que já fizeram reservas
-            const nomesEquipe = snapEquipe.docs.map(d => d.data().nome);
-            const promotersHistorico = [...new Set(todasReservasGlobal.map(r => r.promoter))];
-            const listaUnificada = [...new Set([...nomesEquipe, ...promotersHistorico])].filter(n => n && n !== 'Direto').sort();
-
-            listaUnificada.forEach(p => {
-                const link = baseUrl + encodeURIComponent(p);
-                const idDoc = snapEquipe.docs.find(d => d.data().nome === p)?.id;
+            snap.forEach(d => {
+                const ev = d.data();
                 container.innerHTML += `
-                    <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div class="flex-grow overflow-hidden">
-                            <h4 class="font-black uppercase text-xs text-white mb-1">${p}</h4>
-                            <p class="text-[9px] text-zinc-500 truncate font-mono">${link}</p>
+                    <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center gap-4">
+                        <div class="flex items-center gap-3">
+                            <img src="${ev.imagem}" class="w-10 h-10 rounded-lg object-cover">
+                            <div>
+                                <h4 class="font-black uppercase text-[10px] text-white">${ev.nome}</h4>
+                                <p class="text-[8px] text-zinc-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
+                            </div>
                         </div>
-                        <div class="flex gap-2 shrink-0">
-                            <button onclick="copiarLink('${link}')" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl text-[9px] font-black uppercase text-white">Copiar Link</button>
-                            ${idDoc ? `<button onclick="excluirPromoter('${idDoc}')" class="bg-red-900/20 text-red-500 px-3 py-2 rounded-xl text-[9px] font-black uppercase">X</button>` : ''}
-                        </div>
+                        <button onclick="removerEvento('${d.id}')" class="bg-red-900/20 text-red-500 hover:bg-red-900/40 px-3 py-2 rounded-xl text-[9px] font-black uppercase transition">Remover</button>
                     </div>`;
             });
         });
 
-        window.copiarLink = (l) => { navigator.clipboard.writeText(l); alert("Link copiado!"); };
-        window.excluirPromoter = async (id) => { if(confirm("Remover?")) await deleteDoc(doc(db, "equipe", id)); };
+        window.removerEvento = async (id) => {
+            if(confirm("Deseja realmente remover este evento do site?")) {
+                await updateDoc(doc(db, "eventos", id), { ativo: false });
+            }
+        };
 
-        document.getElementById('formEquipe').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const n = document.getElementById('nome_promoter').value.trim();
-            if(n) { await addDoc(collection(db, "equipe"), { nome: n }); document.getElementById('formEquipe').reset(); }
-        });
-
-        // FESTAS
+        // SALVAR EVENTO
         document.getElementById('formEvento').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnPublicar');
@@ -234,8 +221,39 @@
                     data_encerramento: dataFim,
                     ativo: true, criado_em: new Date()
                 });
-                alert("Evento Publicado!"); document.getElementById('formEvento').reset();
+                alert("Festa Publicada!"); document.getElementById('formEvento').reset();
             } catch (err) { alert("Erro ao salvar."); } finally { btn.innerText = "Publicar Festa no Site"; }
+        });
+
+        // EQUIPE
+        onSnapshot(collection(db, "equipe"), (snapEquipe) => {
+            const container = document.getElementById('lista-promoters');
+            container.innerHTML = '';
+            const baseUrl = "https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref=";
+            const nomesEquipe = snapEquipe.docs.map(d => d.data().nome);
+            const promotersHistorico = [...new Set(todasReservasGlobal.map(r => r.promoter))];
+            const listaUnificada = [...new Set([...nomesEquipe, ...promotersHistorico])].filter(n => n && n !== 'Direto').sort();
+
+            listaUnificada.forEach(p => {
+                const link = baseUrl + encodeURIComponent(p);
+                const idDoc = snapEquipe.docs.find(d => d.data().nome === p)?.id;
+                container.innerHTML += `
+                    <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center gap-4">
+                        <div class="overflow-hidden"><h4 class="font-black uppercase text-[10px] text-white">${p}</h4></div>
+                        <div class="flex gap-2">
+                            <button onclick="copiarLink('${link}')" class="bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-xl text-[9px] font-black uppercase text-white transition">Copiar Link</button>
+                            ${idDoc ? `<button onclick="excluirPromoter('${idDoc}')" class="bg-red-900/20 text-red-500 px-3 py-2 rounded-xl text-[9px] font-black uppercase">X</button>` : ''}
+                        </div>
+                    </div>`;
+            });
+        });
+
+        window.copiarLink = (l) => { navigator.clipboard.writeText(l); alert("Link copiado!"); };
+        window.excluirPromoter = async (id) => { if(confirm("Remover?")) await deleteDoc(doc(db, "equipe", id)); };
+        document.getElementById('formEquipe').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const n = document.getElementById('nome_promoter').value.trim();
+            if(n) { await addDoc(collection(db, "equipe"), { nome: n }); document.getElementById('formEquipe').reset(); }
         });
     </script>
 </body>
