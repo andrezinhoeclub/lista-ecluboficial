@@ -13,7 +13,6 @@
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* Estilo para destacar o botão selecionado */
         .tipo-btn-active { background-color: white !important; color: black !important; border-color: white !important; }
     </style>
 </head>
@@ -36,7 +35,7 @@
                 <span class="text-4xl text-black font-bold">✓</span>
             </div>
             <h2 class="text-2xl font-black uppercase italic mb-2 text-white">Confirmado!</h2>
-            <p class="text-zinc-400 text-sm mb-8">Seu nome foi enviado com sucesso para a portaria da Eclub.</p>
+            <p class="text-zinc-400 text-sm mb-8 px-10">Seu nome foi enviado com sucesso para a portaria da Eclub.</p>
             <button onclick="fecharSucesso()" class="w-full max-w-xs bg-zinc-800 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-zinc-700 text-white">Voltar para a Agenda</button>
         </div>
 
@@ -67,6 +66,9 @@
         const params = new URLSearchParams(window.location.search);
         const promoterRef = params.get('ref') || 'Direto';
 
+        // Armazenamento global dos valores para evitar erros de aspas no HTML
+        window.valoresEventos = {};
+
         async function carregarAgenda() {
             try {
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
@@ -89,15 +91,21 @@
                 eventosFiltrados.sort((a, b) => a.dataObj - b.dataObj);
 
                 if (eventosFiltrados.length === 0) {
-                    container.innerHTML = '<p class="text-center text-zinc-600 uppercase font-bold text-xs mt-10">Nenhuma festa disponível no momento.</p>';
+                    container.innerHTML = '<p class="text-center text-zinc-600 uppercase font-black text-xs mt-10">Nenhuma festa disponível no momento.</p>';
                     return;
                 }
 
                 eventosFiltrados.forEach(ev => {
+                    const dataBR = ev.data.split('-').reverse().join('/');
+                    
+                    // Guardamos os valores no objeto global usando o ID do evento
+                    window.valoresEventos[ev.id] = {
+                        casal: ev.valor_casal || "Consultar portaria",
+                        solteiro: ev.valor_solteiro || "Consultar portaria"
+                    };
+
                     const card = document.createElement('div');
                     card.className = "flex flex-col mb-12 fade-down";
-                    const dataBR = ev.data.split('-').reverse().join('/');
-
                     card.innerHTML = `
                         <div class="relative w-full h-80 rounded-[2.5rem] overflow-hidden border-2 border-zinc-800 shadow-2xl mb-4">
                             <img src="${ev.imagem}" class="w-full h-full object-cover" alt="${ev.nome}">
@@ -122,13 +130,13 @@
                             <h4 class="text-[10px] font-black uppercase text-zinc-500 mb-6 text-center tracking-[0.2em]">Selecione o seu Tipo</h4>
                             
                             <div class="grid grid-cols-2 gap-3 mb-6">
-                                <button type="button" id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'casal', '${ev.valor_casal || 'Consultar'}')" class="border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Casal</button>
-                                <button type="button" id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'solteiro', '${ev.valor_solteiro || 'Consultar'}')" class="border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Solteiro</button>
+                                <button type="button" id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'casal')" class="border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Casal</button>
+                                <button type="button" id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'solteiro')" class="border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Solteiro</button>
                             </div>
 
-                            <div id="box-valor-${ev.id}" class="hidden mb-6 p-4 bg-black rounded-2xl border border-zinc-800 text-center">
-                                <p class="text-[9px] text-zinc-500 uppercase font-black mb-1">Valor com nome na lista</p>
-                                <p id="valor-display-${ev.id}" class="text-lg font-black text-yellow-500 italic leading-tight"></p>
+                            <div id="box-valor-${ev.id}" class="hidden mb-6 p-5 bg-black rounded-2xl border border-zinc-800 text-center">
+                                <p class="text-[9px] text-zinc-500 uppercase font-black mb-2 tracking-widest">Valor com nome na lista</p>
+                                <p id="valor-display-${ev.id}" class="text-sm font-bold text-yellow-500 uppercase leading-relaxed"></p>
                             </div>
 
                             <form onsubmit="enviarLista(event, '${ev.nome}', '${ev.id}')" class="space-y-3">
@@ -146,19 +154,16 @@
             }
         }
 
-        // FUNÇÃO DE SELEÇÃO CORRIGIDA
-        window.selecionarTipo = (id, tipo, valor) => {
-            // Remove destaque de ambos os botões do formulário específico
+        window.selecionarTipo = (id, tipo) => {
             document.getElementById(`btn-casal-${id}`).classList.remove('tipo-btn-active');
             document.getElementById(`btn-solteiro-${id}`).classList.remove('tipo-btn-active');
-            
-            // Adiciona destaque ao botão clicado
             document.getElementById(`btn-${tipo}-${id}`).classList.add('tipo-btn-active');
 
-            // Atualiza o input oculto e exibe o valor
+            const valorTexto = window.valoresEventos[id][tipo];
+
             document.getElementById(`tipo-${id}`).value = tipo;
             document.getElementById(`box-valor-${id}`).classList.remove('hidden');
-            document.getElementById(`valor-display-${id}`).innerText = valor;
+            document.getElementById(`valor-display-${id}`).innerText = valorTexto;
         }
 
         window.toggleForm = (id) => {
@@ -174,9 +179,8 @@
         window.enviarLista = async (event, nomeEvento, formId) => {
             event.preventDefault();
             const tipoSelecionado = document.getElementById(`tipo-${formId}`).value;
-            
             if(!tipoSelecionado) {
-                alert("Por favor, selecione: CASAL ou SOLTEIRO antes de enviar.");
+                alert("Por favor, selecione: CASAL ou SOLTEIRO.");
                 return;
             }
 
@@ -197,7 +201,7 @@
                 document.getElementById('telaSucesso').classList.remove('hidden');
                 document.getElementById(`form-${formId}`).classList.add('hidden');
                 event.target.reset();
-                document.getElementById(`tipo-${formId}`).value = ""; // Reset do tipo
+                document.getElementById(`tipo-${formId}`).value = "";
             } catch (e) {
                 alert("Erro ao enviar.");
             } finally {
