@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eclub - Booking</title>
+    <title>Eclub - Official Booking</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .btn-action { transition: all 0.2s ease; }
         .btn-action:active { transform: scale(0.95); }
-        /* Animação suave para o formulário aparecer */
         .fade-down { animation: fadeDown 0.3s ease-out; }
         @keyframes fadeDown {
             from { opacity: 0; transform: translateY(-10px); }
@@ -19,9 +18,8 @@
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4">
 
     <div class="max-w-md mx-auto">
-        <header class="text-center mb-10 py-6">
-            <h1 class="text-5xl font-black text-yellow-500 uppercase italic tracking-tighter">Eclub</h1>
-            <p class="text-[10px] tracking-[0.3em] text-zinc-500 uppercase font-black">Official Booking</p>
+        <header class="flex justify-center mb-10 py-8">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Eclub Logo" class="h-20 w-auto object-contain">
         </header>
 
         <div id="listaEventos" class="space-y-12">
@@ -69,34 +67,55 @@
 
         async function carregarAgenda() {
             try {
-                // Consulta limpa para evitar travamento de índice no Firebase
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snap = await getDocs(q);
                 const container = document.getElementById('listaEventos');
                 container.innerHTML = '';
 
-                if (snap.empty) {
+                // Pegar data de hoje (zerando as horas para comparar só o dia)
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+
+                let eventosFiltrados = [];
+
+                snap.forEach(doc => {
+                    const dataEv = doc.data();
+                    // Converter a string YYYY-MM-DD para objeto Date
+                    const dataFesta = new Date(dataEv.data + 'T00:00:00');
+                    
+                    // SÓ ADICIONA SE A DATA DA FESTA FOR HOJE OU NO FUTURO
+                    if (dataFesta >= hoje) {
+                        eventosFiltrados.push({ id: doc.id, ...dataEv, dataObj: dataFesta });
+                    }
+                });
+
+                // ORDENAR POR DATA (Mais próxima primeiro)
+                eventosFiltrados.sort((a, b) => a.dataObj - b.dataObj);
+
+                if (eventosFiltrados.length === 0) {
                     container.innerHTML = '<p class="text-center text-zinc-600 uppercase font-bold text-xs mt-10">Nenhuma festa disponível no momento.</p>';
                     return;
                 }
 
-                snap.forEach(doc => {
-                    const ev = doc.data();
+                eventosFiltrados.forEach(ev => {
                     const card = document.createElement('div');
                     card.className = "flex flex-col mb-12 fade-down";
+                    
+                    // Formata a data para BR (DD/MM/YYYY)
+                    const dataBR = ev.data.split('-').reverse().join('/');
 
                     card.innerHTML = `
                         <div class="relative w-full h-80 rounded-[2.5rem] overflow-hidden border-2 border-zinc-800 shadow-2xl mb-4">
                             <img src="${ev.imagem}" class="w-full h-full object-cover" alt="${ev.nome}" onerror="this.src='https://via.placeholder.com/400x600?text=Eclub'">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent"></div>
                             <div class="absolute bottom-6 left-6 pr-6">
-                                <p class="text-[9px] text-yellow-500 font-black uppercase mb-1 tracking-widest">${ev.data || ''} • ${ev.hora || '22:00'}</p>
+                                <p class="text-[9px] text-yellow-500 font-black uppercase mb-1 tracking-widest">${dataBR} • ${ev.hora || '22:00'}</p>
                                 <h3 class="text-2xl font-black uppercase italic leading-none text-white">${ev.nome}</h3>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 gap-2 px-1">
-                            <button onclick="toggleForm('${doc.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action shadow-lg shadow-yellow-900/10">
+                            <button onclick="toggleForm('${ev.id}')" class="bg-yellow-500 hover:bg-yellow-600 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action shadow-lg shadow-yellow-900/10">
                                 Colocar Nome na Lista
                             </button>
                             
@@ -110,9 +129,9 @@
                             </div>
                         </div>
 
-                        <div id="form-${doc.id}" class="hidden mt-4 p-6 bg-zinc-900 rounded-[2rem] border border-zinc-800 fade-down">
+                        <div id="form-${ev.id}" class="hidden mt-4 p-6 bg-zinc-900 rounded-[2rem] border border-zinc-800 fade-down">
                             <h4 class="text-[10px] font-black uppercase text-zinc-500 mb-5 text-center tracking-[0.2em]">Cadastro de Lista VIP</h4>
-                            <form onsubmit="enviarLista(event, '${ev.nome}', '${doc.id}')" class="space-y-3">
+                            <form onsubmit="enviarLista(event, '${ev.nome}', '${ev.id}')" class="space-y-3">
                                 <input type="text" placeholder="Seu Nome Completo" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 font-bold text-white" required>
                                 <input type="tel" placeholder="Seu WhatsApp" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 font-bold text-white" required>
                                 <button type="submit" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest mt-2 hover:bg-zinc-200 transition">Enviar Reserva</button>
@@ -123,17 +142,13 @@
                 });
             } catch (error) {
                 console.error("Erro:", error);
-                document.getElementById('listaEventos').innerHTML = '<p class="text-center text-red-500 font-bold uppercase text-[10px]">Erro ao conectar com o servidor.</p>';
             }
         }
 
         window.toggleForm = (id) => {
             const form = document.getElementById(`form-${id}`);
             const estaEscondido = form.classList.contains('hidden');
-            
-            // Fecha todos os outros formulários para não poluir a tela
             document.querySelectorAll('[id^="form-"]').forEach(f => f.classList.add('hidden'));
-            
             if(estaEscondido) {
                 form.classList.remove('hidden');
                 form.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -144,10 +159,8 @@
             event.preventDefault();
             const inputs = event.target.querySelectorAll('input');
             const btn = event.target.querySelector('button');
-            
             btn.disabled = true;
-            btn.innerText = "ENVIANDO...";
-
+            btn.innerText = "PROCESSANDO...";
             try {
                 await addDoc(collection(db, "lista_eventos"), {
                     nome: inputs[0].value,
@@ -157,12 +170,11 @@
                     entrou: false,
                     data_cadastro: new Date()
                 });
-
                 document.getElementById('telaSucesso').classList.remove('hidden');
                 document.getElementById(`form-${formId}`).classList.add('hidden');
                 event.target.reset();
             } catch (e) {
-                alert("Erro ao enviar. Tente novamente.");
+                alert("Erro ao enviar.");
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Enviar Reserva";
