@@ -6,94 +6,47 @@
     <title>Lista VIP - Eclub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .radio-btn.active { background-color: #eab308; color: black; border-color: #eab308; box-shadow: 0 0 15px rgba(234, 179, 8, 0.3); }
-        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        #conteudoPrincipal { display: none; }
+        .btn-glow:active { transform: scale(0.95); }
     </style>
 </head>
-<body class="bg-zinc-900 text-white font-sans flex items-center justify-center min-h-screen p-4">
+<body class="bg-zinc-900 text-white font-sans min-h-screen">
 
-    <div id="telaCarregando" class="text-center">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-        <p class="text-zinc-500 text-[10px] uppercase font-bold tracking-widest text-white">Validando...</p>
-    </div>
+    <div class="max-w-md mx-auto p-6">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-black text-yellow-500 uppercase italic leading-none">Eclub</h1>
+            <p class="text-[10px] tracking-[0.2em] text-zinc-500 uppercase font-bold">Lista de Reservas</p>
+        </header>
 
-    <div id="telaErro" class="hidden text-center p-10 bg-zinc-800 rounded-3xl border border-red-900/50 shadow-2xl max-w-sm fade-in">
-        <div class="text-red-500 text-5xl mb-4">⚠️</div>
-        <h2 class="text-red-500 font-black text-xl mb-2 uppercase italic">Link Inválido</h2>
-        <p class="text-zinc-400 text-xs leading-relaxed">Solicite um link oficial com sua promoter.</p>
-    </div>
-
-    <div id="conteudoPrincipal" class="w-full max-w-md bg-zinc-800 p-8 rounded-3xl shadow-2xl border border-zinc-700 fade-in">
-        
-        <div class="flex justify-center mb-6">
-            <img src="https://raw.githubusercontent.com/andrezinhoeclub/lista-ecluboficial/main/logo-erotic.png" class="h-16 object-contain">
+        <div id="statusEnvio" class="hidden mb-6 p-4 rounded-2xl border text-center animate-bounce">
+            <p id="textoStatus" class="font-black uppercase text-sm"></p>
         </div>
 
-        <div id="containerBanner" class="mb-6 hidden bg-zinc-900 rounded-2xl border border-zinc-700/50 p-1 shadow-inner overflow-hidden">
-            <img id="imgBanner" src="" class="w-full h-auto rounded-xl object-contain max-h-[450px] mx-auto block">
-        </div>
-
-        <h1 class="text-xl font-black text-center mb-2 text-yellow-500 uppercase tracking-widest italic">Lista VIP</h1>
-        <p id="infoEvento" class="text-center text-[11px] text-zinc-400 mb-6 bg-zinc-900/80 py-3 rounded-xl border border-zinc-700/50 hidden font-bold"></p>
-        
-        <div class="space-y-4">
+        <form id="formReserva" class="space-y-4 bg-zinc-800 p-6 rounded-3xl border border-zinc-700 shadow-2xl">
             <div>
-                <label class="block text-[10px] mb-1 text-zinc-500 uppercase font-black ml-1">1. Escolha a Festa</label>
-                <select id="evento" class="w-full bg-zinc-700 border border-zinc-600 p-4 rounded-2xl text-white outline-none focus:border-yellow-500 text-sm font-bold">
-                    <option value="">Carregando...</option>
+                <label class="text-[10px] uppercase font-black text-zinc-500 ml-2">Evento Selecionado</label>
+                <select id="evento" class="w-full bg-zinc-900 border border-zinc-700 p-4 rounded-2xl outline-none focus:border-yellow-500 font-bold text-sm" required>
+                    <option value="">Carregando eventos...</option>
                 </select>
             </div>
-            
-            <div id="sessaoTipo" class="hidden fade-in">
-                <label class="block text-[10px] mb-2 text-zinc-500 uppercase font-black ml-1">2. Perfil</label>
-                <div class="flex gap-2">
-                    <button type="button" id="btnCasal" class="radio-btn flex-1 bg-zinc-700 border border-zinc-600 py-4 rounded-2xl text-xs font-black transition-all uppercase italic">👫 Casal</button>
-                    <button type="button" id="btnSolteiro" class="radio-btn flex-1 bg-zinc-700 border border-zinc-600 py-4 rounded-2xl text-xs font-black transition-all uppercase italic">👤 Solteiro</button>
-                </div>
-                <input type="hidden" id="tipoPublico" value="">
+
+            <div class="grid grid-cols-2 gap-3">
+                <input type="text" id="nome" placeholder="Seu Nome" class="bg-zinc-900 border border-zinc-700 p-4 rounded-2xl outline-none focus:border-yellow-500 text-sm" required>
+                <input type="tel" id="telefone" placeholder="WhatsApp" class="bg-zinc-900 border border-zinc-700 p-4 rounded-2xl outline-none focus:border-yellow-500 text-sm" required>
             </div>
 
-            <div id="sessaoDados" class="hidden fade-in space-y-4 pt-2">
-                <div id="containerPreco" class="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-2xl hidden text-center">
-                    <p id="textoPreco" class="text-xs text-yellow-500 font-black uppercase tracking-tighter"></p>
-                </div>
+            <button type="submit" id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-black py-5 rounded-2xl uppercase transition btn-glow shadow-lg shadow-yellow-900/20">
+                Confirmar na Lista
+            </button>
+        </form>
 
-                <div>
-                    <label class="block text-[10px] mb-1 text-zinc-500 uppercase font-black ml-1">3. Identificação</label>
-                    <input type="text" id="nome" placeholder="Nome Completo" class="w-full bg-zinc-700 border border-zinc-600 p-4 rounded-2xl mb-3 text-sm outline-none focus:border-yellow-500 font-bold">
-                    <input type="tel" id="telefone" placeholder="WhatsApp com DDD" class="w-full bg-zinc-700 border border-zinc-600 p-4 rounded-2xl text-sm outline-none focus:border-yellow-500 font-bold">
-                </div>
-
-                <button id="btnEnviar" class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-black py-5 rounded-2xl transition shadow-lg uppercase text-sm tracking-widest italic">Confirmar na Lista</button>
-            </div>
-
-            <p id="mensagem" class="text-center text-sm mt-4 hidden font-black italic"></p>
-
-            <div class="mt-10 pt-6 border-t border-zinc-700/50 space-y-4 text-center">
-                <div class="space-y-1">
-                    <p class="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Endereço</p>
-                    <p class="text-xs text-zinc-300">Rua Aníbal Goularte Maia Filho, 81<br>Bairro Alto - Curitiba/PR</p>
-                </div>
-
-                <div class="flex justify-center gap-6">
-                    <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="text-center">
-                        <p class="text-[9px] text-zinc-500 uppercase font-black mb-1">Instagram</p>
-                        <p class="text-xs text-yellow-500 font-bold">@eclubswingdance</p>
-                    </a>
-                    <a href="https://wa.me/5541995040506" target="_blank" class="text-center">
-                        <p class="text-[9px] text-zinc-500 uppercase font-black mb-1">WhatsApp</p>
-                        <p class="text-xs text-yellow-500 font-bold">(41) 99504-0506</p>
-                    </a>
-                </div>
-            </div>
-        </div>
+        <footer class="mt-10 text-center">
+            <p class="text-[9px] text-zinc-600 uppercase font-bold">Eclub Curitiba • @eclubswingdance</p>
+        </footer>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -106,120 +59,63 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        let eventosCache = [];
 
-        async function validarEIniciar() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const ref = urlParams.get('ref');
-            if (!ref) { mostrarErro(); return; }
-            try {
-                const promoterRef = doc(db, "promoters", ref.toLowerCase());
-                const promoterSnap = await getDoc(promoterRef);
-                if (promoterSnap.exists()) {
-                    document.getElementById('telaCarregando').style.display = 'none';
-                    document.getElementById('conteudoPrincipal').style.display = 'block';
-                    carregarEventos();
-                } else { mostrarErro(); }
-            } catch (error) { mostrarErro(); }
-        }
+        // PEGAR PROMOTER PELA URL
+        const params = new URLSearchParams(window.location.search);
+        const promoterRef = params.get('ref') || 'Direto';
 
-        function mostrarErro() {
-            document.getElementById('telaCarregando').style.display = 'none';
-            document.getElementById('telaErro').classList.remove('hidden');
-        }
-
+        // CARREGAR EVENTOS ATIVOS
         async function carregarEventos() {
-            const selectEvento = document.getElementById('evento');
-            try {
-                const snap = await getDocs(collection(db, "eventos"));
-                let brutos = [];
-                const hoje = new Date(); hoje.setHours(0,0,0,0);
-                
-                snap.forEach(doc => { 
-                    const d = doc.data();
-                    const dataEvento = new Date(d.data + "T00:00:00");
-                    if(dataEvento >= hoje) brutos.push(d); 
-                });
-
-                brutos.sort((a,b) => a.data.localeCompare(b.data));
-                selectEvento.innerHTML = '<option value="">Selecione...</option>';
-                eventosCache = brutos;
-                brutos.forEach(d => { 
-                    selectEvento.innerHTML += `<option value="${d.nome}">${d.nome}</option>`;
-                });
-            } catch (e) { 
-                console.error(e);
-                selectEvento.innerHTML = '<option value="">Erro ao carregar lista</option>'; 
-            }
+            const q = query(collection(db, "eventos"), where("ativo", "==", true));
+            const snap = await getDocs(q);
+            const select = document.getElementById('evento');
+            select.innerHTML = '<option value="">Escolha a Festa...</option>';
+            snap.forEach(doc => {
+                select.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome}</option>`;
+            });
         }
+        carregarEventos();
 
-        document.getElementById('evento').addEventListener('change', (e) => {
-            const nomeEvento = e.target.value;
-            const container = document.getElementById('containerBanner');
-            const banner = document.getElementById('imgBanner');
-            
-            if(nomeEvento) {
-                document.getElementById('sessaoTipo').classList.remove('hidden');
-                const ev = eventosCache.find(ev => ev.nome === nomeEvento);
-                if(ev) {
-                    if(ev.imagem && ev.imagem.trim() !== "") {
-                        banner.src = ev.imagem;
-                        container.classList.remove('hidden');
-                    } else { container.classList.add('hidden'); }
-                    const [a,m,d] = ev.data.split('-');
-                    document.getElementById('infoEvento').innerText = `FESTA: ${d}/${m}/${a} às ${ev.hora || '22:00'}h`;
-                    document.getElementById('infoEvento').classList.remove('hidden');
-                }
-            } else {
-                container.classList.add('hidden');
-                document.getElementById('sessaoTipo').classList.add('hidden');
-                document.getElementById('sessaoDados').classList.add('hidden');
-            }
-        });
-
-        document.getElementById('btnCasal').onclick = () => selecionarPerfil('Casal');
-        document.getElementById('btnSolteiro').onclick = () => selecionarPerfil('Solteiro');
-
-        function selecionarPerfil(tipo) {
-            document.getElementById('tipoPublico').value = tipo;
-            document.getElementById('btnCasal').classList.toggle('active', tipo === 'Casal');
-            document.getElementById('btnSolteiro').classList.toggle('active', tipo === 'Solteiro');
-            document.getElementById('sessaoDados').classList.remove('hidden');
-            const ev = eventosCache.find(e => e.nome === document.getElementById('evento').value);
-            if(ev) {
-                const preco = tipo === 'Casal' ? ev.valor_casal : ev.valor_solteiro;
-                if(preco) {
-                    document.getElementById('textoPreco').innerText = `${tipo}: ${preco}`;
-                    document.getElementById('containerPreco').classList.remove('hidden');
-                } else { document.getElementById('containerPreco').classList.add('hidden'); }
-            }
-        }
-
-        document.getElementById('btnEnviar').onclick = async () => {
+        // ENVIAR RESERVA
+        document.getElementById('formReserva').addEventListener('submit', async (e) => {
+            e.preventDefault();
             const btn = document.getElementById('btnEnviar');
-            const nome = document.getElementById('nome').value;
-            const telefone = document.getElementById('telefone').value;
-            const ref = new URLSearchParams(window.location.search).get('ref');
-            if(!nome || !telefone) return alert("Preencha seu nome e WhatsApp!");
-            btn.disabled = true; btn.innerText = "GRAVANDO...";
+            const statusDiv = document.getElementById('statusEnvio');
+            const textoStatus = document.getElementById('textoStatus');
+
+            btn.disabled = true;
+            btn.innerText = "ENVIANDO...";
+
             try {
                 await addDoc(collection(db, "lista_eventos"), {
-                    nome, telefone, 
+                    nome: document.getElementById('nome').value,
+                    telefone: document.getElementById('telefone').value,
                     evento: document.getElementById('evento').value,
-                    tipo: document.getElementById('tipoPublico').value,
-                    promoter: ref,
+                    promoter: promoterRef,
                     entrou: false,
                     data_cadastro: new Date()
                 });
-                document.getElementById('mensagem').innerText = "✅ NOME NA LISTA COM SUCESSO!";
-                document.getElementById('mensagem').className = "text-center text-sm mt-4 font-black text-green-500 italic";
-                document.getElementById('mensagem').classList.remove('hidden');
-                document.getElementById('nome').value = ""; document.getElementById('telefone').value = "";
-            } catch(e) { alert("Erro ao salvar."); }
-            finally { btn.disabled = false; btn.innerText = "Confirmar na Lista"; }
-        };
 
-        validarEIniciar();
+                // SUCESSO
+                statusDiv.className = "mb-6 p-4 rounded-2xl border border-green-500 bg-green-500/10 text-green-500 text-center animate-bounce";
+                textoStatus.innerText = "✅ Sucesso! Seu nome está na lista.";
+                statusDiv.classList.remove('hidden');
+
+                // LIMPAR CAMPOS
+                document.getElementById('formReserva').reset();
+                
+            } catch (error) {
+                statusDiv.className = "mb-6 p-4 rounded-2xl border border-red-500 bg-red-500/10 text-red-500 text-center";
+                textoStatus.innerText = "❌ Erro ao enviar. Tente novamente.";
+                statusDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Confirmar na Lista";
+                
+                // ESCONDER MENSAGEM APÓS 5 SEGUNDOS
+                setTimeout(() => { statusDiv.classList.add('hidden'); }, 5000);
+            }
+        });
     </script>
 </body>
 </html>
