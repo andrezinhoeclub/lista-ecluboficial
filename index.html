@@ -113,22 +113,28 @@
         async function carregarEventos() {
             const selectEvento = document.getElementById('evento');
             try {
-                const q = query(collection(db, "eventos"), where("ativo", "==", true));
-                const snap = await getDocs(q);
+                // Busca direta sem filtros pesados para garantir que tudo apareça
+                const snap = await getDocs(collection(db, "eventos"));
                 let brutos = [];
                 const hoje = new Date(); hoje.setHours(0,0,0,0);
+                
                 snap.forEach(doc => { 
                     const d = doc.data();
                     const dataEvento = new Date(d.data + "T00:00:00");
+                    // Mostra se o evento for de hoje em diante
                     if(dataEvento >= hoje) brutos.push(d); 
                 });
+
                 brutos.sort((a,b) => a.data.localeCompare(b.data));
                 selectEvento.innerHTML = '<option value="">Selecione...</option>';
                 eventosCache = brutos;
                 brutos.forEach(d => { 
                     selectEvento.innerHTML += `<option value="${d.nome}">${d.nome}</option>`;
                 });
-            } catch (e) { selectEvento.innerHTML = '<option value="">Erro ao carregar</option>'; }
+            } catch (e) { 
+                console.error(e);
+                selectEvento.innerHTML = '<option value="">Erro ao carregar lista</option>'; 
+            }
         }
 
         document.getElementById('evento').addEventListener('change', (e) => {
@@ -152,7 +158,6 @@
                 container.classList.add('hidden');
                 document.getElementById('sessaoTipo').classList.add('hidden');
                 document.getElementById('sessaoDados').classList.add('hidden');
-                document.getElementById('infoEvento').classList.add('hidden');
             }
         });
 
