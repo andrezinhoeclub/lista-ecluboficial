@@ -11,22 +11,27 @@
     <div id="loginPromoter" class="flex flex-col items-center justify-center min-h-[80vh]">
         <div class="w-full max-w-sm bg-zinc-800 p-8 rounded-3xl border border-zinc-700 shadow-2xl text-center">
             <h1 class="text-2xl font-bold mb-6 text-blue-500 uppercase italic">Acesso Promoter</h1>
-            <p class="text-zinc-500 text-[10px] mb-4 uppercase">Digite seu nome de usuário autorizado</p>
-            <input type="text" id="userPromoter" placeholder="Ex: fabi" class="w-full bg-zinc-700 border border-zinc-600 p-4 rounded-2xl mb-6 outline-none focus:border-blue-500 text-center font-bold">
-            <button onclick="acessarPainel()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase transition hover:bg-blue-700">Visualizar Minhas Listas</button>
+            <p class="text-zinc-500 text-[10px] mb-4 uppercase font-bold tracking-widest">Digite seu usuário autorizado</p>
+            <input type="text" id="userPromoter" placeholder="Ex: fabi" class="w-full bg-zinc-900 border border-zinc-700 p-4 rounded-2xl mb-6 outline-none focus:border-blue-500 text-center font-bold text-white">
+            <button onclick="acessarPainel()" id="btnAcessar" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase transition hover:bg-blue-700">Entrar no Painel</button>
         </div>
     </div>
 
     <div id="painelDados" class="max-w-md mx-auto hidden">
-        <header class="text-center mb-8">
-            <h1 id="boasVindas" class="text-2xl font-black text-blue-500 uppercase italic">Olá, Promoter</h1>
-            <p class="text-zinc-500 text-[10px] uppercase tracking-widest">Seu desempenho nos eventos ativos</p>
+        <header class="text-center mb-8 flex justify-between items-end">
+            <div class="text-left">
+                <h1 id="boasVindas" class="text-2xl font-black text-blue-500 uppercase italic leading-none">Olá, Promoter</h1>
+                <p class="text-zinc-500 text-[9px] uppercase font-bold mt-1">Status dos Eventos Ativos</p>
+            </div>
+            <button onclick="location.reload()" class="text-zinc-600 text-[10px] font-bold uppercase underline mb-1">Sair</button>
         </header>
 
-        <div id="listaEventosPromoter" class="space-y-4">
+        <div id="listaEventosPromoter" class="space-y-6">
             </div>
 
-        <button onclick="location.reload()" class="w-full mt-10 text-zinc-600 text-[10px] font-bold uppercase underline">Sair do Painel</button>
+        <footer class="mt-10 text-center border-t border-zinc-800 pt-6">
+            <p class="text-zinc-600 text-[9px] uppercase font-black tracking-widest italic">Eclub Swing Dance - Curitiba</p>
+        </footer>
     </div>
 
     <script type="module">
@@ -47,88 +52,94 @@
 
         window.acessarPainel = async function() {
             const nome = document.getElementById('userPromoter').value.trim().toLowerCase();
+            const btn = document.getElementById('btnAcessar');
             if(!nome) return alert("Digite seu nome!");
 
+            btn.innerText = "VALIDANDO...";
             try {
-                // Valida se ela existe na base de promoters que você gerencia
                 const snapP = await getDoc(doc(db, "promoters", nome));
                 if(snapP.exists()) {
                     document.getElementById('loginPromoter').classList.add('hidden');
                     document.getElementById('painelDados').classList.remove('hidden');
-                    document.getElementById('boasVindas').innerText = `Olá, ${nome}!`;
+                    document.getElementById('boasVindas').innerText = `Olá, ${nome}`;
                     carregarDesempenho(nome);
                 } else {
-                    alert("Promoter não autorizada. Fale com o André.");
+                    alert("Usuário não encontrado.");
+                    btn.innerText = "Entrar no Painel";
                 }
             } catch(e) { alert("Erro de conexão."); }
         }
 
         async function carregarDesempenho(nomePromoter) {
             const cont = document.getElementById('listaEventosPromoter');
-            cont.innerHTML = '<p class="text-center text-zinc-600 animate-pulse">Buscando dados...</p>';
+            cont.innerHTML = '<div class="text-center py-10"><div class="animate-spin h-6 w-6 border-b-2 border-blue-500 mx-auto"></div></div>';
 
             try {
-                // 1. Pega os eventos ativos (os mesmos que aparecem no site principal)
+                // 1. Pega os eventos ativos
                 const qEventos = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snapEventos = await getDocs(qEventos);
                 
-                // 2. Pega todos os cadastros feitos por essa promoter
-                const qReservas = query(collection(db, "lista_eventos"), where("promoter", "==", nomePromoter));
-                const snapReservas = await getDocs(qReservas);
-                const todasReservas = [];
-                snapReservas.forEach(d => todasReservas.push(d.data()));
+                // 2. Pega TODA a lista de eventos para calcular o total da casa
+                const snapTodasReservas = await getDocs(collection(db, "lista_eventos"));
+                const todasAsReservas = [];
+                snapTodasReservas.forEach(d => todasAsReservas.push(d.data()));
 
                 cont.innerHTML = '';
 
                 if(snapEventos.empty) {
-                    cont.innerHTML = '<p class="text-center text-zinc-500 text-xs">Nenhum evento ativo no momento.</p>';
+                    cont.innerHTML = '<p class="text-center text-zinc-500 text-xs uppercase font-bold italic">Nenhum evento ativo.</p>';
                     return;
                 }
 
                 snapEventos.forEach(docEv => {
                     const ev = docEv.data();
-                    const totalNomes = todasReservas.filter(r => r.evento === ev.nome).length;
-                    const confirmados = todasReservas.filter(r => r.evento === ev.nome && r.entrou === true).length;
+                    
+                    // Total de Nomes de TODOS na casa para este evento
+                    const totalCasa = todasAsReservas.filter(r => r.evento === ev.nome).length;
+                    
+                    // Total de Nomes apenas desta Promoter para este evento
+                    const meusNomes = todasAsReservas.filter(r => r.evento === ev.nome && r.promoter === nomePromoter).length;
+
+                    const [a,m,d] = ev.data.split('-');
 
                     cont.innerHTML += `
-                        <div class="bg-zinc-800 p-6 rounded-3xl border border-zinc-700 shadow-xl">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 class="text-lg font-black text-yellow-500 uppercase italic leading-tight">${ev.nome}</h3>
-                                    <p class="text-[10px] text-zinc-500">${ev.data.split('-').reverse().join('/')}</p>
-                                </div>
-                                <div class="text-right">
-                                    <span class="bg-blue-600/20 text-blue-500 text-[10px] px-2 py-1 rounded font-bold uppercase">Ativo</span>
-                                </div>
+                        <div class="bg-zinc-800 p-5 rounded-3xl border border-zinc-700 shadow-xl relative overflow-hidden">
+                            <div class="absolute top-0 right-0 p-2">
+                                <span class="bg-green-500/10 text-green-500 text-[8px] px-2 py-1 rounded-full font-black uppercase tracking-widest">Evento Aberto</span>
+                            </div>
+
+                            <div class="mb-5">
+                                <h3 class="text-lg font-black text-white uppercase italic leading-tight">${ev.nome}</h3>
+                                <p class="text-[10px] text-zinc-500 font-bold">${d}/${m}/${a} às ${ev.hora || '22:00'}h</p>
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-zinc-900 p-3 rounded-2xl border border-zinc-700/50">
-                                    <p class="text-[9px] text-zinc-500 uppercase font-bold">Na Lista</p>
-                                    <p class="text-2xl font-black">${totalNomes}</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-700/50 text-center">
+                                    <p class="text-[8px] text-zinc-500 uppercase font-black mb-1">Total da Casa</p>
+                                    <p class="text-2xl font-black text-blue-500">${totalCasa}</p>
                                 </div>
-                                <div class="bg-zinc-900 p-3 rounded-2xl border border-zinc-700/50">
-                                    <p class="text-[9px] text-green-500 uppercase font-bold">Check-in</p>
-                                    <p class="text-2xl font-black text-green-500">${confirmados}</p>
+                                <div class="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-700/50 text-center">
+                                    <p class="text-[8px] text-yellow-500 uppercase font-black mb-1">Meus Nomes</p>
+                                    <p class="text-2xl font-black text-yellow-500">${meusNomes}</p>
                                 </div>
                             </div>
 
-                            <button onclick="copiarLink('${nomePromoter}')" class="w-full mt-4 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 text-[10px] font-black py-2 rounded-xl uppercase transition">
+                            <button onclick="copiarLink('${nomePromoter}')" class="w-full mt-4 bg-zinc-700 hover:bg-zinc-600 text-white text-[9px] font-black py-3 rounded-xl uppercase transition tracking-widest">
                                 Copiar Meu Link de Divulgação
                             </button>
                         </div>
                     `;
                 });
             } catch(e) { 
-                console.error(e);
-                cont.innerHTML = '<p class="text-center text-red-500">Erro ao carregar dados.</p>'; 
+                cont.innerHTML = '<p class="text-center text-red-500 text-xs">Erro ao carregar os dados.</p>'; 
             }
         }
 
         window.copiarLink = (nome) => {
-            const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref=${nome}`;
+            const urlBase = window.location.href.replace('promoter.html', 'index.html');
+            const link = `${urlBase}?ref=${nome}`;
             navigator.clipboard.writeText(link);
-            alert("Link copiado! Agora é só divulgar.");
+            alert("Link copiado! Envie para seus clientes.");
         }
     </script>
 </body>
