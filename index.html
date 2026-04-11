@@ -14,14 +14,14 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .tipo-btn-active { background-color: white !important; color: black !important; border-color: white !important; }
-        /* Suaviza a aparição dos campos */
         .input-group { transition: all 0.4s ease; opacity: 0; transform: translateY(-10px); display: none; }
         .input-group.show { opacity: 1; transform: translateY(0); display: block; }
+        .btn-footer { background: #09090b; border: 1px solid #18181b; transition: all 0.3s ease; }
     </style>
 </head>
-<body class="bg-zinc-950 text-white font-sans min-h-screen p-4">
+<body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
 
-    <div class="max-w-md mx-auto">
+    <div class="max-w-md mx-auto w-full flex-grow">
         <header class="flex justify-center mb-10 py-8">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Eclub Logo" class="h-20 w-auto object-contain">
         </header>
@@ -33,21 +33,48 @@
             </div>
         </div>
 
-        <div id="telaSucesso" class="hidden fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 text-center">
-            <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-500/20">
-                <span class="text-4xl text-black font-bold">✓</span>
-            </div>
-            <h2 class="text-2xl font-black uppercase italic mb-2 text-white">Confirmado!</h2>
-            <p class="text-zinc-400 text-sm mb-8 px-10">Seu nome foi enviado com sucesso para a portaria da Eclub.</p>
-            <button onclick="fecharSucesso()" class="w-full max-w-xs bg-zinc-800 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-zinc-700 text-white">Voltar para a Agenda</button>
-        </div>
+        <footer class="mt-20 mb-12 border-t border-zinc-900 pt-10">
+            <div class="flex flex-col items-center space-y-6">
+                
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 opacity-20 grayscale mb-4">
 
-        <footer class="mt-20 text-center pb-12">
-            <p class="text-[10px] text-zinc-700 uppercase font-black tracking-widest leading-relaxed">
-                Eclub Curitiba • @eclubswingdance<br>
-                Rua Des. Westphalen, 1871
-            </p>
+                <div class="grid grid-cols-2 gap-3 w-full px-1">
+                    <a href="https://wa.me/5541995040506" target="_blank" class="btn-footer flex items-center justify-center p-4 rounded-2xl space-x-3">
+                        <span class="text-green-500 text-lg">●</span>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">WhatsApp</span>
+                    </a>
+                    
+                    <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="btn-footer flex items-center justify-center p-4 rounded-2xl space-x-3">
+                        <span class="text-pink-500 text-lg">●</span>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Instagram</span>
+                    </a>
+                </div>
+
+                <a href="https://www.google.com/maps/search/?api=1&query=Rua+Aníbal+Goularte+Maia+Filho,+81+-+Bairro+Alto,+Curitiba" target="_blank" class="w-full px-1">
+                    <div class="btn-footer p-6 rounded-[2.5rem] text-center border border-dashed border-zinc-800">
+                        <p class="text-[9px] text-zinc-500 font-black uppercase tracking-[0.2em] mb-2">Localização Oficial</p>
+                        <p class="text-[11px] text-zinc-300 font-bold leading-relaxed">
+                            Rua Aníbal Goularte Maia Filho, 81<br>
+                            Bairro Alto, Curitiba - PR
+                        </p>
+                        <p class="text-[8px] text-yellow-500/50 font-black uppercase mt-3 tracking-widest">Abrir no GPS / Google Maps</p>
+                    </div>
+                </a>
+
+                <p class="text-[8px] text-zinc-800 font-black uppercase tracking-[0.4em] pt-4">
+                    Eclub © 2026 • Exclusive Club
+                </p>
+            </div>
         </footer>
+    </div>
+
+    <div id="telaSucesso" class="hidden fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-6 text-center">
+        <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-500/20">
+            <span class="text-4xl text-black font-bold">✓</span>
+        </div>
+        <h2 class="text-2xl font-black uppercase italic mb-2 text-white">Confirmado!</h2>
+        <p class="text-zinc-400 text-sm mb-8 px-10">Seu nome foi enviado com sucesso para a portaria da Eclub.</p>
+        <button onclick="fecharSucesso()" class="w-full max-w-xs bg-zinc-800 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest border border-zinc-700 text-white">Voltar para a Agenda</button>
     </div>
 
     <script type="module">
@@ -92,11 +119,16 @@
 
                 eventosFiltrados.sort((a, b) => a.dataObj - b.dataObj);
 
+                if (eventosFiltrados.length === 0) {
+                    container.innerHTML = '<p class="text-center text-zinc-600 uppercase font-black text-xs mt-10">Nenhuma festa disponível no momento.</p>';
+                    return;
+                }
+
                 eventosFiltrados.forEach(ev => {
                     const dataBR = ev.data.split('-').reverse().join('/');
                     window.valoresEventos[ev.id] = {
-                        casal: ev.valor_casal || "Consultar portaria",
-                        solteiro: ev.valor_solteiro || "Consultar portaria"
+                        casal: ev.valor_casal || "Consultar na portaria",
+                        solteiro: ev.valor_solteiro || "Consultar na portaria"
                     };
 
                     const card = document.createElement('div');
@@ -116,8 +148,8 @@
                                 Colocar Nome na Lista
                             </button>
                             <div class="grid grid-cols-2 gap-2">
-                                <button onclick="alert('Módulo de Camarotes em breve!')" class="bg-zinc-900 hover:bg-zinc-800 text-white font-black py-3.5 rounded-2xl uppercase text-[9px] border border-zinc-800 btn-action tracking-wider">Camarotes</button>
-                                <button onclick="alert('Vendas em breve!')" class="bg-zinc-900 hover:bg-zinc-800 text-white font-black py-3.5 rounded-2xl uppercase text-[9px] border border-zinc-800 btn-action tracking-wider">Ingressos</button>
+                                <button onclick="alert('Camarotes: Fale com o WhatsApp no rodapé!')" class="bg-zinc-900 hover:bg-zinc-800 text-white font-black py-3.5 rounded-2xl uppercase text-[9px] border border-zinc-800 btn-action tracking-wider">Camarotes</button>
+                                <button onclick="alert('Vendas antecipadas em breve!')" class="bg-zinc-900 hover:bg-zinc-800 text-white font-black py-3.5 rounded-2xl uppercase text-[9px] border border-zinc-800 btn-action tracking-wider">Ingressos</button>
                             </div>
                         </div>
 
@@ -131,7 +163,7 @@
 
                             <div id="box-valor-${ev.id}" class="hidden mb-6 p-5 bg-black rounded-2xl border border-zinc-800 text-center fade-down">
                                 <p class="text-[9px] text-zinc-500 uppercase font-black mb-2 tracking-widest">Valor com nome na lista</p>
-                                <p id="valor-display-${ev.id}" class="text-sm font-bold text-yellow-500 uppercase leading-relaxed"></p>
+                                <p id="valor-display-${ev.id}" class="text-xs font-bold text-yellow-500 uppercase leading-relaxed"></p>
                             </div>
 
                             <div id="campos-dados-${ev.id}" class="input-group">
@@ -147,7 +179,7 @@
                     container.appendChild(card);
                 });
             } catch (error) {
-                console.error("Erro:", error);
+                console.error("Erro ao carregar agenda:", error);
             }
         }
 
@@ -161,8 +193,6 @@
             document.getElementById(`tipo-${id}`).value = tipo;
             document.getElementById(`box-valor-${id}`).classList.remove('hidden');
             document.getElementById(`valor-display-${id}`).innerText = valorTexto;
-            
-            // MOSTRA OS CAMPOS DE NOME E TELEFONE
             document.getElementById(`campos-dados-${id}`).classList.add('show');
         }
 
@@ -196,7 +226,6 @@
                 document.getElementById('telaSucesso').classList.remove('hidden');
                 document.getElementById(`form-${formId}`).classList.add('hidden');
                 event.target.reset();
-                // Oculta os campos novamente para a próxima vez
                 document.getElementById(`campos-dados-${formId}`).classList.remove('show');
             } catch (e) {
                 alert("Erro ao enviar.");
