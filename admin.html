@@ -10,9 +10,16 @@
         .btn-checkin { transition: all 0.2s ease; }
         .btn-checkin:active { transform: scale(0.95); }
         .checkin-done { opacity: 0.4; border-color: #22c55e !important; background: #09090b; }
-        /* Cores das Etiquetas */
-        .tag-casal { background-color: #eab308; color: black; }
-        .tag-solteiro { background-color: #f4f4f5; color: black; }
+        
+        /* CORES DAS ETIQUETAS - CORREÇÃO FINAL */
+        .tag-casal { 
+            background-color: #eab308 !important; /* AMARELO */
+            color: #000000 !important; 
+        }
+        .tag-solteiro { 
+            background-color: #ffffff !important; /* BRANCO */
+            color: #000000 !important; 
+        }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
@@ -38,7 +45,7 @@
         </div>
 
         <div class="relative mb-8">
-            <input type="text" id="inputBusca" autocomplete="off" placeholder="Pesquisar nome ou celular..." class="w-full bg-zinc-900 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-yellow-500 font-bold text-sm transition">
+            <input type="text" id="inputBusca" autocomplete="off" placeholder="Pesquisar nome ou celular..." class="w-full bg-zinc-900 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-yellow-500 font-bold text-sm transition text-white">
             <span class="absolute right-5 top-5 opacity-30 text-lg">🔍</span>
         </div>
 
@@ -84,16 +91,18 @@
                         const card = document.createElement('div');
                         card.className = `card-glass p-5 rounded-[2rem] flex justify-between items-center ${res.entrou ? 'checkin-done' : ''}`;
                         
-                        // Define a cor da tag baseada no tipo
+                        // Lógica de cores das Tags
                         const classeTag = res.tipo === 'casal' ? 'tag-casal' : 'tag-solteiro';
 
                         card.innerHTML = `
                             <div class="pr-2">
                                 <div class="flex items-center space-x-2 mb-1">
-                                    <span class="${classeTag} text-[7px] font-black px-1.5 py-0.5 rounded uppercase">${res.tipo}</span>
+                                    <span class="${classeTag} text-[8px] font-black px-2 py-0.5 rounded uppercase leading-none">
+                                        ${res.tipo}
+                                    </span>
                                     <h3 class="font-black uppercase italic text-xs text-white truncate max-w-[120px]">${res.nome}</h3>
                                 </div>
-                                <p class="text-[9px] text-zinc-500 font-bold tracking-wider">${res.telefone}</p>
+                                <p class="text-[10px] text-zinc-500 font-bold tracking-wider">${res.telefone}</p>
                                 <p class="text-[8px] text-zinc-600 font-black uppercase mt-1">P: ${res.promoter} | ${res.evento}</p>
                             </div>
                             
@@ -105,6 +114,7 @@
                     }
                 });
 
+                // Cálculo de Ocupação (Checkins / Reservas)
                 const ocupacao = totalReservas > 0 ? Math.round((totalNaCasa / totalReservas) * 100) : 0;
                 document.getElementById('countReservas').innerText = totalReservas;
                 document.getElementById('countNaCasa').innerText = totalNaCasa;
@@ -116,11 +126,13 @@
             if(!statusAtual || confirm("Deseja remover o check-in deste cliente?")) {
                 try {
                     await updateDoc(doc(db, "lista_eventos", id), { entrou: !statusAtual });
+                    
+                    // Limpar campo de busca e focar para o próximo
                     const input = document.getElementById('inputBusca');
                     input.value = '';
                     input.focus();
                 } catch (e) {
-                    alert("Erro ao processar.");
+                    console.error("Erro ao processar check-in:", e);
                 }
             }
         }
