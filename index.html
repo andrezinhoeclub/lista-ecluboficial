@@ -31,8 +31,8 @@
             <img src="https://raw.githubusercontent.com/andrezinhoeclub/lista-ecluboficial/main/logo-erotic.png" class="h-16 object-contain">
         </div>
 
-        <div id="containerBanner" class="mb-6 hidden">
-            <img id="imgBanner" src="" class="w-full h-auto rounded-2xl border border-zinc-600 shadow-lg object-cover max-h-64">
+        <div id="containerBanner" class="mb-6 hidden bg-zinc-900 rounded-2xl border border-zinc-700/50 p-1 shadow-inner overflow-hidden">
+            <img id="imgBanner" src="" class="w-full h-auto rounded-xl object-contain max-h-[450px] mx-auto block">
         </div>
 
         <h1 class="text-xl font-black text-center mb-2 text-yellow-500 uppercase tracking-widest italic">Lista VIP</h1>
@@ -93,13 +93,10 @@
         async function validarEIniciar() {
             const urlParams = new URLSearchParams(window.location.search);
             const ref = urlParams.get('ref');
-
             if (!ref) { mostrarErro(); return; }
-
             try {
                 const promoterRef = doc(db, "promoters", ref.toLowerCase());
                 const promoterSnap = await getDoc(promoterRef);
-
                 if (promoterSnap.exists()) {
                     document.getElementById('telaCarregando').style.display = 'none';
                     document.getElementById('conteudoPrincipal').style.display = 'block';
@@ -120,13 +117,11 @@
                 const snap = await getDocs(q);
                 let brutos = [];
                 const hoje = new Date(); hoje.setHours(0,0,0,0);
-
                 snap.forEach(doc => { 
                     const d = doc.data();
                     const dataEvento = new Date(d.data + "T00:00:00");
                     if(dataEvento >= hoje) brutos.push(d); 
                 });
-
                 brutos.sort((a,b) => a.data.localeCompare(b.data));
                 selectEvento.innerHTML = '<option value="">Selecione...</option>';
                 eventosCache = brutos;
@@ -138,29 +133,26 @@
 
         document.getElementById('evento').addEventListener('change', (e) => {
             const nomeEvento = e.target.value;
+            const container = document.getElementById('containerBanner');
+            const banner = document.getElementById('imgBanner');
+            
             if(nomeEvento) {
                 document.getElementById('sessaoTipo').classList.remove('hidden');
                 const ev = eventosCache.find(ev => ev.nome === nomeEvento);
                 if(ev) {
-                    // MOSTRAR BANNER
-                    const banner = document.getElementById('imgBanner');
-                    const container = document.getElementById('containerBanner');
                     if(ev.imagem && ev.imagem.trim() !== "") {
                         banner.src = ev.imagem;
                         container.classList.remove('hidden');
-                    } else {
-                        container.classList.add('hidden');
-                    }
-
-                    // MOSTRAR DATA
+                    } else { container.classList.add('hidden'); }
                     const [a,m,d] = ev.data.split('-');
                     document.getElementById('infoEvento').innerText = `FESTA: ${d}/${m}/${a} às ${ev.hora || '22:00'}h`;
                     document.getElementById('infoEvento').classList.remove('hidden');
                 }
             } else {
-                document.getElementById('containerBanner').classList.add('hidden');
+                container.classList.add('hidden');
                 document.getElementById('sessaoTipo').classList.add('hidden');
                 document.getElementById('sessaoDados').classList.add('hidden');
+                document.getElementById('infoEvento').classList.add('hidden');
             }
         });
 
@@ -172,16 +164,13 @@
             document.getElementById('btnCasal').classList.toggle('active', tipo === 'Casal');
             document.getElementById('btnSolteiro').classList.toggle('active', tipo === 'Solteiro');
             document.getElementById('sessaoDados').classList.remove('hidden');
-            
             const ev = eventosCache.find(e => e.nome === document.getElementById('evento').value);
             if(ev) {
                 const preco = tipo === 'Casal' ? ev.valor_casal : ev.valor_solteiro;
                 if(preco) {
                     document.getElementById('textoPreco').innerText = `${tipo}: ${preco}`;
                     document.getElementById('containerPreco').classList.remove('hidden');
-                } else {
-                    document.getElementById('containerPreco').classList.add('hidden');
-                }
+                } else { document.getElementById('containerPreco').classList.add('hidden'); }
             }
         }
 
@@ -190,11 +179,8 @@
             const nome = document.getElementById('nome').value;
             const telefone = document.getElementById('telefone').value;
             const ref = new URLSearchParams(window.location.search).get('ref');
-
             if(!nome || !telefone) return alert("Preencha seu nome e WhatsApp!");
-            
             btn.disabled = true; btn.innerText = "GRAVANDO...";
-            
             try {
                 await addDoc(collection(db, "lista_eventos"), {
                     nome, telefone, 
