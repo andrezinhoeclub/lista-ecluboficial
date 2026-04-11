@@ -10,6 +10,9 @@
         .btn-checkin { transition: all 0.2s ease; }
         .btn-checkin:active { transform: scale(0.95); }
         .checkin-done { opacity: 0.4; border-color: #22c55e !important; background: #09090b; }
+        /* Cores das Etiquetas */
+        .tag-casal { background-color: #eab308; color: black; }
+        .tag-solteiro { background-color: #f4f4f5; color: black; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
@@ -77,15 +80,17 @@
                     totalReservas++;
                     if (res.entrou) totalNaCasa++;
 
-                    // Filtro de busca em tempo real
                     if (res.nome.toLowerCase().includes(busca) || res.telefone.includes(busca)) {
                         const card = document.createElement('div');
                         card.className = `card-glass p-5 rounded-[2rem] flex justify-between items-center ${res.entrou ? 'checkin-done' : ''}`;
                         
+                        // Define a cor da tag baseada no tipo
+                        const classeTag = res.tipo === 'casal' ? 'tag-casal' : 'tag-solteiro';
+
                         card.innerHTML = `
                             <div class="pr-2">
                                 <div class="flex items-center space-x-2 mb-1">
-                                    <span class="bg-yellow-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded uppercase">${res.tipo}</span>
+                                    <span class="${classeTag} text-[7px] font-black px-1.5 py-0.5 rounded uppercase">${res.tipo}</span>
                                     <h3 class="font-black uppercase italic text-xs text-white truncate max-w-[120px]">${res.nome}</h3>
                                 </div>
                                 <p class="text-[9px] text-zinc-500 font-bold tracking-wider">${res.telefone}</p>
@@ -100,9 +105,7 @@
                     }
                 });
 
-                // CÁLCULO DA PORCENTAGEM (Taxa de ocupação)
                 const ocupacao = totalReservas > 0 ? Math.round((totalNaCasa / totalReservas) * 100) : 0;
-
                 document.getElementById('countReservas').innerText = totalReservas;
                 document.getElementById('countNaCasa').innerText = totalNaCasa;
                 document.getElementById('porcentagemOcupacao').innerText = ocupacao + '%';
@@ -110,26 +113,19 @@
         }
 
         window.fazerCheckin = async (id, statusAtual) => {
-            // Só faz o check-in se não estiver marcado, ou confirma para desmarcar
             if(!statusAtual || confirm("Deseja remover o check-in deste cliente?")) {
                 try {
                     await updateDoc(doc(db, "lista_eventos", id), { entrou: !statusAtual });
-                    
-                    // LIMPAR CAMPO DE BUSCA APÓS SUCESSO
                     const input = document.getElementById('inputBusca');
                     input.value = '';
-                    // Mantém o foco no input para o próximo
                     input.focus();
                 } catch (e) {
-                    alert("Erro ao processar check-in.");
+                    alert("Erro ao processar.");
                 }
             }
         }
 
-        // Listener para a busca
         document.getElementById('inputBusca').addEventListener('input', carregarPortaria);
-        
-        // Início
         carregarPortaria();
     </script>
 </body>
