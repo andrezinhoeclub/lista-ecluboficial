@@ -13,8 +13,8 @@
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* Estilo para os botões de seleção de tipo */
-        .tipo-btn.active { background-color: white; color: black; border-color: white; }
+        /* Estilo para destacar o botão selecionado */
+        .tipo-btn-active { background-color: white !important; color: black !important; border-color: white !important; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4">
@@ -122,17 +122,17 @@
                             <h4 class="text-[10px] font-black uppercase text-zinc-500 mb-6 text-center tracking-[0.2em]">Selecione o seu Tipo</h4>
                             
                             <div class="grid grid-cols-2 gap-3 mb-6">
-                                <button type="button" onclick="selecionarTipo('${ev.id}', 'casal', '${ev.valor_casal || 'Consultar'}')" class="tipo-btn border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Casal</button>
-                                <button type="button" onclick="selecionarTipo('${ev.id}', 'solteiro', '${ev.valor_solteiro || 'Consultar'}')" class="tipo-btn border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Solteiro</button>
+                                <button type="button" id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'casal', '${ev.valor_casal || 'Consultar'}')" class="border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Casal</button>
+                                <button type="button" id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'solteiro', '${ev.valor_solteiro || 'Consultar'}')" class="border border-zinc-700 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Solteiro</button>
                             </div>
 
                             <div id="box-valor-${ev.id}" class="hidden mb-6 p-4 bg-black rounded-2xl border border-zinc-800 text-center">
                                 <p class="text-[9px] text-zinc-500 uppercase font-black mb-1">Valor com nome na lista</p>
-                                <p id="valor-display-${ev.id}" class="text-xl font-black text-yellow-500 italic"></p>
+                                <p id="valor-display-${ev.id}" class="text-lg font-black text-yellow-500 italic leading-tight"></p>
                             </div>
 
                             <form onsubmit="enviarLista(event, '${ev.nome}', '${ev.id}')" class="space-y-3">
-                                <input type="hidden" id="tipo-${ev.id}" required>
+                                <input type="hidden" id="tipo-${ev.id}" value="">
                                 <input type="text" placeholder="Seu Nome Completo" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 font-bold text-white" required>
                                 <input type="tel" placeholder="Seu WhatsApp" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-sm outline-none focus:border-yellow-500 font-bold text-white" required>
                                 <button type="submit" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest mt-2 hover:bg-zinc-200 transition">Enviar Reserva</button>
@@ -146,16 +146,16 @@
             }
         }
 
+        // FUNÇÃO DE SELEÇÃO CORRIGIDA
         window.selecionarTipo = (id, tipo, valor) => {
-            // Resetar botoes
-            const botoes = document.querySelectorAll(`#form-${id} .tipo-btn`);
-            botoes.forEach(b => b.classList.remove('active'));
+            // Remove destaque de ambos os botões do formulário específico
+            document.getElementById(`btn-casal-${id}`).classList.remove('tipo-btn-active');
+            document.getElementById(`btn-solteiro-${id}`).classList.remove('tipo-btn-active');
             
-            // Ativar botao clicado
-            const target = event.currentTarget;
-            target.classList.add('active');
+            // Adiciona destaque ao botão clicado
+            document.getElementById(`btn-${tipo}-${id}`).classList.add('tipo-btn-active');
 
-            // Setar valor no input oculto e mostrar box de valor
+            // Atualiza o input oculto e exibe o valor
             document.getElementById(`tipo-${id}`).value = tipo;
             document.getElementById(`box-valor-${id}`).classList.remove('hidden');
             document.getElementById(`valor-display-${id}`).innerText = valor;
@@ -173,20 +173,20 @@
 
         window.enviarLista = async (event, nomeEvento, formId) => {
             event.preventDefault();
-            const inputs = event.target.querySelectorAll('input');
             const tipoSelecionado = document.getElementById(`tipo-${formId}`).value;
             
             if(!tipoSelecionado) {
-                alert("Por favor, selecione se é Casal ou Solteiro.");
+                alert("Por favor, selecione: CASAL ou SOLTEIRO antes de enviar.");
                 return;
             }
 
+            const inputs = event.target.querySelectorAll('input');
             const btn = event.target.querySelector('button');
             btn.disabled = true;
             btn.innerText = "PROCESSANDO...";
             try {
                 await addDoc(collection(db, "lista_eventos"), {
-                    nome: inputs[1].value, // Index 1 porque o 0 é o tipo oculto
+                    nome: inputs[1].value, 
                     telefone: inputs[2].value,
                     evento: nomeEvento,
                     tipo: tipoSelecionado,
@@ -197,6 +197,7 @@
                 document.getElementById('telaSucesso').classList.remove('hidden');
                 document.getElementById(`form-${formId}`).classList.add('hidden');
                 event.target.reset();
+                document.getElementById(`tipo-${formId}`).value = ""; // Reset do tipo
             } catch (e) {
                 alert("Erro ao enviar.");
             } finally {
