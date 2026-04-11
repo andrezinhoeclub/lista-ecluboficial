@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel da Promoter - Eclub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-zinc-900 text-white font-sans min-h-screen p-4">
+
+    <div id="loginPromoter" class="flex flex-col items-center justify-center min-h-[80vh]">
+        <div class="w-full max-w-sm bg-zinc-800 p-8 rounded-3xl border border-zinc-700 shadow-2xl text-center">
+            <h1 class="text-2xl font-bold mb-6 text-blue-500 uppercase italic">Acesso Promoter</h1>
+            <p class="text-zinc-500 text-[10px] mb-4 uppercase">Digite seu nome de usuário autorizado</p>
+            <input type="text" id="userPromoter" placeholder="Ex: fabi" class="w-full bg-zinc-700 border border-zinc-600 p-4 rounded-2xl mb-6 outline-none focus:border-blue-500 text-center font-bold">
+            <button onclick="acessarPainel()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase transition hover:bg-blue-700">Visualizar Minhas Listas</button>
+        </div>
+    </div>
+
+    <div id="painelDados" class="max-w-md mx-auto hidden">
+        <header class="text-center mb-8">
+            <h1 id="boasVindas" class="text-2xl font-black text-blue-500 uppercase italic">Olá, Promoter</h1>
+            <p class="text-zinc-500 text-[10px] uppercase tracking-widest">Seu desempenho nos eventos ativos</p>
+        </header>
+
+        <div id="listaEventosPromoter" class="space-y-4">
+            </div>
+
+        <button onclick="location.reload()" class="w-full mt-10 text-zinc-600 text-[10px] font-bold uppercase underline">Sair do Painel</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.acessarPainel = async function() {
+            const nome = document.getElementById('userPromoter').value.trim().toLowerCase();
+            if(!nome) return alert("Digite seu nome!");
+
+            try {
+                // Valida se ela existe na base de promoters que você gerencia
+                const snapP = await getDoc(doc(db, "promoters", nome));
+                if(snapP.exists()) {
+                    document.getElementById('loginPromoter').classList.add('hidden');
+                    document.getElementById('painelDados').classList.remove('hidden');
+                    document.getElementById('boasVindas').innerText = `Olá, ${nome}!`;
+                    carregarDesempenho(nome);
+                } else {
+                    alert("Promoter não autorizada. Fale com o André.");
+                }
+            } catch(e) { alert("Erro de conexão."); }
+        }
+
+        async function carregarDesempenho(nomePromoter) {
+            const cont = document.getElementById('listaEventosPromoter');
+            cont.innerHTML = '<p class="text-center text-zinc-600 animate-pulse">Buscando dados...</p>';
+
+            try {
+                // 1. Pega os eventos ativos (os mesmos que aparecem no site principal)
+                const qEventos = query(collection(db, "eventos"), where("ativo", "==", true));
+                const snapEventos = await getDocs(qEventos);
+                
+                // 2. Pega todos os cadastros feitos por essa promoter
+                const qReservas = query(collection(db, "lista_eventos"), where("promoter", "==", nomePromoter));
+                const snapReservas = await getDocs(qReservas);
+                const todasReservas = [];
+                snapReservas.forEach(d => todasReservas.push(d.data()));
+
+                cont.innerHTML = '';
+
+                if(snapEventos.empty) {
+                    cont.innerHTML = '<p class="text-center text-zinc-500 text-xs">Nenhum evento ativo no momento.</p>';
+                    return;
+                }
+
+                snapEventos.forEach(docEv => {
+                    const ev = docEv.data();
+                    const totalNomes = todasReservas.filter(r => r.evento === ev.nome).length;
+                    const confirmados = todasReservas.filter(r => r.evento === ev.nome && r.entrou === true).length;
+
+                    cont.innerHTML += `
+                        <div class="bg-zinc-800 p-6 rounded-3xl border border-zinc-700 shadow-xl">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="text-lg font-black text-yellow-500 uppercase italic leading-tight">${ev.nome}</h3>
+                                    <p class="text-[10px] text-zinc-500">${ev.data.split('-').reverse().join('/')}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="bg-blue-600/20 text-blue-500 text-[10px] px-2 py-1 rounded font-bold uppercase">Ativo</span>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-zinc-900 p-3 rounded-2xl border border-zinc-700/50">
+                                    <p class="text-[9px] text-zinc-500 uppercase font-bold">Na Lista</p>
+                                    <p class="text-2xl font-black">${totalNomes}</p>
+                                </div>
+                                <div class="bg-zinc-900 p-3 rounded-2xl border border-zinc-700/50">
+                                    <p class="text-[9px] text-green-500 uppercase font-bold">Check-in</p>
+                                    <p class="text-2xl font-black text-green-500">${confirmados}</p>
+                                </div>
+                            </div>
+
+                            <button onclick="copiarLink('${nomePromoter}')" class="w-full mt-4 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-300 text-[10px] font-black py-2 rounded-xl uppercase transition">
+                                Copiar Meu Link de Divulgação
+                            </button>
+                        </div>
+                    `;
+                });
+            } catch(e) { 
+                console.error(e);
+                cont.innerHTML = '<p class="text-center text-red-500">Erro ao carregar dados.</p>'; 
+            }
+        }
+
+        window.copiarLink = (nome) => {
+            const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref=${nome}`;
+            navigator.clipboard.writeText(link);
+            alert("Link copiado! Agora é só divulgar.");
+        }
+    </script>
+</body>
+</html>
