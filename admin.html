@@ -3,83 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eclub Admin - Dashboard</title>
+    <title>Eclub - Portaria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .card-glass { background: rgba(24, 24, 27, 0.8); backdrop-filter: blur(12px); border: 1px solid #27272a; }
-        .fade-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .card-glass { background: #18181b; border: 1px solid #27272a; }
+        .btn-checkin { transition: all 0.2s ease; }
+        .btn-checkin:active { transform: scale(0.95); }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4">
 
-    <div class="max-w-4xl mx-auto">
-        <header class="flex flex-col items-center mb-10 py-6">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Eclub Logo" class="h-16 w-auto mb-4 object-contain">
-            <div class="bg-yellow-500 text-black px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                Painel Administrativo
-            </div>
+    <div class="max-w-md mx-auto">
+        <header class="flex justify-center mb-10 py-6">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Eclub Logo" class="h-16 w-auto object-contain">
         </header>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10 fade-in">
+        <div class="grid grid-cols-2 gap-4 mb-8">
             <div class="card-glass p-6 rounded-[2rem] text-center">
-                <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-2">Reservas</p>
-                <p id="totalReservas" class="text-3xl font-black italic text-white">0%</p>
+                <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Reservas</p>
+                <p id="countReservas" class="text-3xl font-black italic text-white">0%</p>
             </div>
-
-            <div class="card-glass p-6 rounded-[2rem] text-center border-l-4 border-l-green-500">
-                <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-2">Check-ins</p>
-                <p id="totalCheckin" class="text-3xl font-black italic text-green-500">0%</p>
-            </div>
-
-            <div id="boxCasais" class="card-glass p-6 rounded-[2rem] text-center">
-                <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-2">Casais</p>
-                <p id="totalCasais" class="text-3xl font-black italic text-yellow-500">0</p>
-            </div>
-
-            <div id="boxSolteiros" class="card-glass p-6 rounded-[2rem] text-center">
-                <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-2">Solteiros</p>
-                <p id="totalSolteiros" class="text-3xl font-black italic text-yellow-500">0</p>
+            <div class="card-glass p-6 rounded-[2rem] text-center">
+                <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Na Casa</p>
+                <p id="countNaCasa" class="text-3xl font-black italic text-yellow-500">0%</p>
             </div>
         </div>
 
-        <div class="flex flex-col md:flex-row gap-4 mb-10">
-            <button onclick="window.location.href='cadastrar-evento.html'" class="flex-1 bg-white text-black font-black py-5 rounded-2xl uppercase text-xs tracking-widest hover:bg-zinc-200 transition">
-                + Novo Evento
-            </button>
-            <button onclick="exportarLista()" class="flex-1 border border-zinc-700 font-black py-5 rounded-2xl uppercase text-xs tracking-widest hover:bg-zinc-900 transition text-zinc-400">
-                Exportar CSV
-            </button>
+        <div class="relative mb-8">
+            <input type="text" id="inputBusca" placeholder="Pesquisar nome ou celular..." class="w-full bg-zinc-900 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-yellow-500 font-bold text-sm transition">
+            <span class="absolute right-5 top-5 opacity-30">🔍</span>
         </div>
 
-        <div class="card-glass rounded-[2.5rem] overflow-hidden mb-20">
-            <div class="p-6 border-b border-zinc-800 flex justify-between items-center">
-                <h2 class="font-black uppercase italic tracking-tighter">Reservas Ativas</h2>
-                <select id="filtroEvento" class="bg-black border border-zinc-700 text-[10px] font-black uppercase p-2 rounded-xl outline-none text-yellow-500">
-                    <option value="">Todos os Eventos</option>
-                </select>
+        <div id="listaPortaria" class="space-y-4">
             </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-zinc-900/50 text-[10px] font-black uppercase text-zinc-500 tracking-widest">
-                        <tr>
-                            <th class="p-6">Cliente</th>
-                            <th class="p-6">Tipo</th>
-                            <th class="p-6">Promoter</th>
-                            <th class="p-6 text-center">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaCorpo" class="text-sm">
-                        </tbody>
-                </table>
-            </div>
-        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -93,57 +54,63 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // ESCUTAR RESERVAS EM TEMPO REAL
-        function monitorarReservas() {
+        function carregarPortaria() {
             const q = query(collection(db, "lista_eventos"), orderBy("data_cadastro", "desc"));
             
             onSnapshot(q, (snapshot) => {
-                const tabela = document.getElementById('tabelaCorpo');
-                tabela.innerHTML = '';
+                const container = document.getElementById('listaPortaria');
+                const busca = document.getElementById('inputBusca').value.toLowerCase();
+                container.innerHTML = '';
                 
-                let countReserva = 0;
-                let countCheckin = 0;
-                let countCasais = 0;
-                let countSolteiros = 0;
+                let reservas = 0;
+                let naCasa = 0;
 
-                snapshot.forEach((doc) => {
-                    const res = doc.data();
-                    countReserva++;
-                    if (res.entrou) countCheckin++;
-                    if (res.tipo === 'casal') countCasais++;
-                    if (res.tipo === 'solteiro') countSolteiros++;
+                snapshot.forEach((d) => {
+                    const res = d.data();
+                    const id = d.id;
 
-                    const row = document.createElement('tr');
-                    row.className = "border-b border-zinc-900 hover:bg-zinc-900/30 transition";
-                    row.innerHTML = `
-                        <td class="p-6 font-bold uppercase text-xs">
-                            ${res.nome}<br>
-                            <span class="text-[10px] text-zinc-600 font-medium">${res.telefone}</span>
-                        </td>
-                        <td class="p-6">
-                            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase ${res.tipo === 'casal' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-zinc-800 text-zinc-400'}">
-                                ${res.tipo}
-                            </span>
-                        </td>
-                        <td class="p-6 text-[10px] font-black uppercase text-zinc-400">${res.promoter}</td>
-                        <td class="p-6 text-center">
-                            <span class="${res.entrou ? 'text-green-500' : 'text-zinc-700'} text-xs font-black">
-                                ${res.entrou ? '● PRESENTE' : '○ AUSENTE'}
-                            </span>
-                        </td>
-                    `;
-                    tabela.appendChild(row);
+                    reservas++;
+                    if (res.entrou) naCasa++;
+
+                    // Filtro de busca
+                    if (res.nome.toLowerCase().includes(busca) || res.telefone.includes(busca)) {
+                        const card = document.createElement('div');
+                        card.className = `card-glass p-6 rounded-[2rem] flex justify-between items-center ${res.entrou ? 'opacity-40 border-green-500/50' : ''}`;
+                        
+                        card.innerHTML = `
+                            <div>
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <span class="bg-yellow-500 text-black text-[8px] font-black px-2 py-0.5 rounded uppercase">${res.tipo}</span>
+                                    <h3 class="font-black uppercase italic text-sm text-white">${res.nome}</h3>
+                                </div>
+                                <p class="text-[10px] text-zinc-500 font-bold">${res.telefone}</p>
+                                <p class="text-[9px] text-yellow-500/50 font-black uppercase mt-1">P: ${res.promoter} | ${res.evento}</p>
+                            </div>
+                            
+                            <button onclick="fazerCheckin('${id}', ${res.entrou})" class="btn-checkin ${res.entrou ? 'bg-zinc-800 text-zinc-500' : 'bg-yellow-500 text-black'} font-black px-6 py-3 rounded-xl text-[10px] uppercase">
+                                ${res.entrou ? 'OK' : 'Check-in'}
+                            </button>
+                        `;
+                        container.appendChild(card);
+                    }
                 });
 
-                // ATUALIZAR MÉTRICAS COM O SÍMBOLO %
-                document.getElementById('totalReservas').innerText = countReserva + '%';
-                document.getElementById('totalCheckin').innerText = countCheckin + '%';
-                document.getElementById('totalCasais').innerText = countCasais;
-                document.getElementById('totalSolteiros').innerText = countSolteiros;
+                // Atualiza métricas com %
+                document.getElementById('countReservas').innerText = reservas + '%';
+                document.getElementById('countNaCasa').innerText = naCasa + '%';
             });
         }
 
-        monitorarReservas();
+        window.fazerCheckin = async (id, statusAtual) => {
+            const confirmacao = statusAtual ? "Remover check-in deste cliente?" : "Confirmar entrada do cliente?";
+            if(confirm(confirmacao)) {
+                await updateDoc(doc(db, "lista_eventos", id), { entrou: !statusAtual });
+            }
+        }
+
+        document.getElementById('inputBusca').addEventListener('input', carregarPortaria);
+        carregarAgenda(); // Inicia
+        carregarPortaria();
     </script>
 </body>
 </html>
