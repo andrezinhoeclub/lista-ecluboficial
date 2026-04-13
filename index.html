@@ -1,3 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eclub - Official Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .btn-action { transition: all 0.2s ease; }
+        .btn-action:active { transform: scale(0.96); }
+        .tipo-btn-active { background-color: #eab308 !important; color: black !important; border-color: #eab308 !important; }
+        .festa-card { background: #111113; border: 1px solid #27272a; border-radius: 2.5rem; overflow: hidden; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
+
+<div class="max-w-md mx-auto w-full flex-grow text-white">
+    <header class="flex justify-center mb-10 py-8">
+        <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-20">
+    </header>
+
+    <div id="listaEventos" class="space-y-12"></div>
+</div>
+
+<div id="telaPix" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-8 text-center">
+    <h2 class="text-yellow-500 text-2xl font-black mb-6">Pagamento via Pix</h2>
+    <div class="bg-white p-4 rounded-2xl mb-6">
+        <img id="qrCodeImg" class="w-64 h-64">
+    </div>
+    <textarea id="pixCopyPaste" readonly class="w-full bg-zinc-900 p-4 text-[9px] mb-6"></textarea>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = { /* seu config aqui */ };
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// 🔥 FUNÇÃO CORRIGIDA
 window.finalizar = async (id, nomeEvento) => {
     const modo = window[`modo_${id}`];
     const btn = document.getElementById(`btn-final-${id}`);
@@ -11,14 +52,15 @@ window.finalizar = async (id, nomeEvento) => {
         evento: nomeEvento
     };
 
-    if (!dados.nome) return alert("Preencha o nome");
+    if (!dados.nome) {
+        alert("Preencha o nome");
+        return;
+    }
 
     btn.disabled = true;
 
     if (modo === 'pix') {
         btn.innerText = "PROCESSANDO...";
-
-        let res;
 
         try {
             const response = await fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
@@ -28,27 +70,30 @@ window.finalizar = async (id, nomeEvento) => {
             });
 
             const text = await response.text();
-            console.log("RESPOSTA BRUTA:", text);
+            console.log("RESPOSTA:", text);
 
-            alert("RESPOSTA: " + text);
+            let res;
+            try {
+                res = JSON.parse(text);
+            } catch (e) {
+                alert("Erro: resposta inválida");
+                btn.disabled = false;
+                btn.innerText = "GERAR PIX AGORA";
+                return;
+            }
 
-            res = JSON.parse(text);
+            if (res && res.qr_code_base64) {
+                document.getElementById('qrCodeImg').src = "data:image/png;base64," + res.qr_code_base64;
+                document.getElementById('pixCopyPaste').value = res.qr_code;
+                document.getElementById('telaPix').classList.remove('hidden');
+            } else {
+                alert("QR Code não veio!");
+                console.log(res);
+            }
 
         } catch (err) {
-            alert("Erro ao gerar PIX. Aperte F12 e veja o console.");
             console.error(err);
-            btn.disabled = false;
-            btn.innerText = "GERAR PIX AGORA";
-            return;
-        }
-
-        if (res && res.qr_code_base64) {
-            document.getElementById('qrCodeImg').src = `data:image/png;base64,${res.qr_code_base64}`;
-            document.getElementById('pixCopyPaste').value = res.qr_code;
-            document.getElementById('telaPix').classList.remove('hidden');
-        } else {
-            alert("QR Code não veio na resposta!");
-            console.log(res);
+            alert("Erro ao gerar PIX");
         }
 
         btn.disabled = false;
@@ -59,3 +104,7 @@ window.finalizar = async (id, nomeEvento) => {
         document.getElementById('telaSucesso').classList.remove('hidden');
     }
 };
+</script>
+
+</body>
+</html>
