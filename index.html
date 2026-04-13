@@ -150,34 +150,33 @@
                 if (modo === 'pix') {
                     const response = await fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ nome, tel, cpf, tipo, evento: nomeEvento, promoter: promoterRef })
                     });
 
-                    // Tentativa de ler a resposta mesmo se o Make falhar no header
-                    const data = await response.json();
-                    console.log("Resposta do Make:", data);
+                    // Lendo como texto primeiro para evitar erro de JSON
+                    const textData = await response.text();
+                    const data = JSON.parse(textData);
 
-                    if (data && (data.qr_code_base64 || data.qr_code)) {
+                    if (data && data.qr_code_base64) {
                         document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
                         document.getElementById('pixCopyPaste').value = data.qr_code;
                         document.getElementById('telaPix').classList.remove('hidden');
+                        btn.innerText = "PIX GERADO!";
                     } else {
-                        throw new Error("Dados incompletos");
+                        alert("Ocorreu uma falha na geração do QR Code. Tente novamente.");
                     }
                 } else {
-                    // Modo Lista Normal
                     await addDoc(collection(db, "lista_eventos"), { 
                         nome, tel, tipo, evento: nomeEvento, promoter: promoterRef, pago: false, data_cadastro: serverTimestamp() 
                     });
                     document.getElementById('telaSucesso').classList.remove('hidden');
                 }
             } catch (e) {
-                console.error("Erro detalhado:", e);
-                alert("O Pix foi gerado no sistema, mas houve um erro na exibição. Verifique seu WhatsApp em instantes ou tente novamente.");
+                console.error(e);
+                alert("Erro ao receber o Pix. Mas não se preocupe, verifique seu WhatsApp em instantes.");
             } finally {
                 btn.disabled = false;
-                btn.innerText = modo === 'pix' ? "GERAR PIX E PAGAR" : "CONFIRMAR NA LISTA";
+                if(modo !== 'pix') btn.innerText = "CONFIRMAR NA LISTA";
             }
         };
 
