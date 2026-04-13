@@ -49,13 +49,13 @@
     </div>
 
     <div id="telaPix" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-8 text-center overflow-y-auto">
-        <h2 class="text-yellow-500 text-2xl font-black uppercase italic mb-6 text-white">Pagamento via Pix</h2>
+        <h2 class="text-yellow-500 text-2xl font-black uppercase italic mb-6">Pagamento via Pix</h2>
         <div class="bg-white p-4 rounded-[2rem] mb-6 shadow-[0_0_30px_rgba(234,179,8,0.3)]">
             <img id="qrCodeImg" src="" class="w-64 h-64 mx-auto text-black">
         </div>
         <p class="text-[10px] text-zinc-500 font-black uppercase mb-4 tracking-widest">Código Copia e Cola:</p>
         <textarea id="pixCopyPaste" readonly onclick="this.select()" class="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-[9px] text-zinc-300 font-mono mb-6 h-20 outline-none"></textarea>
-        <button onclick="copiarPix()" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[10px] mb-4 btn-action">Copiar Código Pix</button>
+        <button id="btnCopiar" onclick="copiarPix()" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[10px] mb-4 btn-action">Copiar Código Pix</button>
         <div class="flex items-center justify-center space-x-2 mt-4">
             <span class="flex h-2 w-2 rounded-full bg-yellow-500 animate-ping"></span>
             <p class="text-[10px] text-zinc-400 font-bold uppercase">Aguardando confirmação...</p>
@@ -72,7 +72,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -92,25 +92,18 @@
 
         async function carregarAgenda() {
             try {
-                // Filtra apenas eventos marcados como ATIVO (true)
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snap = await getDocs(q);
                 const container = document.getElementById('listaEventos');
                 container.innerHTML = '';
-                
-                // Data de hoje para Curitiba (UTC-3)
-                const hoje = new Date().toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
-                
+                const hoje = new Date().toLocaleDateString('en-CA');
                 let eventos = [];
                 snap.forEach(doc => {
                     const ev = doc.data();
-                    // Se a data do evento for maior ou igual a hoje, ou se não tiver data definida
                     if (!ev.data || ev.data >= hoje) {
                         eventos.push({ id: doc.id, ...ev });
                     }
                 });
-
-                // Ordena por data e renderiza os cards
                 eventos.sort((a, b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                     window.valoresEventos[ev.id] = { casal: ev.valor_casal || "", solteiro: ev.valor_solteiro || "" };
                     const card = document.createElement('div');
@@ -128,8 +121,8 @@
                         <div id="form-${ev.id}" class="hidden p-8 bg-black/50 border-t border-zinc-800">
                             <h4 class="text-[10px] font-black uppercase text-yellow-500 mb-6 text-center tracking-widest">Selecione o Tipo</h4>
                             <div class="grid grid-cols-2 gap-3 mb-6">
-                                <button type="button" id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'casal')" class="border-2 border-yellow-500 py-4 rounded-xl text-[11px] font-black uppercase">Casal</button>
-                                <button type="button" id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'solteiro')" class="border-2 border-yellow-500 py-4 rounded-xl text-[11px] font-black uppercase">Solteiro</button>
+                                <button type="button" id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'casal')" class="border-2 border-yellow-500 py-4 rounded-xl text-[11px] font-black uppercase text-white">Casal</button>
+                                <button type="button" id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'solteiro')" class="border-2 border-yellow-500 py-4 rounded-xl text-[11px] font-black uppercase text-white">Solteiro</button>
                             </div>
                             <div id="campos-dados-${ev.id}" class="input-group">
                                 <form onsubmit="processarEnvio(event, '${ev.nome}', '${ev.id}')" class="space-y-3">
@@ -178,74 +171,84 @@
             event.preventDefault();
             const modo = document.getElementById(`modo-${formId}`).value;
             const btn = document.getElementById(`btn-submit-${formId}`);
+            
             const dados = {
                 nome: document.getElementById(`nome-${formId}`).value,
                 tel: document.getElementById(`tel-${formId}`).value,
                 cpf: document.getElementById(`cpf-${formId}`).value,
                 tipo: document.getElementById(`tipo-${formId}`).value,
-                evento: nomeEvento, promoter: promoterRef
+                evento: nomeEvento, 
+                promoter: promoterRef,
+                data_cadastro: new Date().toISOString()
             };
+
             btn.disabled = true;
+            btn.innerText = "PROCESSANDO...";
 
-            if (modo === 'pix') {
-                btn.innerText = "GERANDO PIX...";
-                try {
-                    const resp = await fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
-                        method: "POST", headers: { "Content-Type": "application/json" },
+            try {
+                if (modo === 'pix') {
+                    btn.innerText = "GERANDO PIX...";
+                    
+                    // Envia para o Make (sem esperar o JSON para não travar)
+                    fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
+                        method: "POST", 
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(dados)
+                    }).catch(e => console.log("Webhook enviado."));
+
+                    // Vigia o Firebase pelo CPF e Evento
+                    const q = query(
+                        collection(db, "lista_eventos"), 
+                        where("cpf", "==", dados.cpf), 
+                        where("evento", "==", nomeEvento),
+                        orderBy("data_cadastro", "desc"),
+                        limit(1)
+                    );
+                    
+                    const unsubscribe = onSnapshot(q, (snapshot) => {
+                        snapshot.forEach((doc) => {
+                            const data = doc.data();
+                            if (data.qr_code && data.qr_code_base64) {
+                                document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
+                                document.getElementById('pixCopyPaste').value = data.qr_code;
+                                document.getElementById('telaPix').classList.remove('hidden');
+                                btn.innerText = "PIX GERADO!";
+                                unsubscribe();
+                            }
+                        });
                     });
-                    const text = await resp.text();
-                    let data;
-                    try { 
-                        data = JSON.parse(text); 
-                    } catch (e) { 
-                        console.error("Erro no JSON:", text);
-                        alert("Resposta inválida do servidor. Verifique o Make."); 
-                        btn.disabled = false; 
-                        return; 
-                    }
 
-                    if (data && data.qr_code_base64) {
-                        document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
-                        document.getElementById('pixCopyPaste').value = data.qr_code;
-                        document.getElementById('telaPix').classList.remove('hidden');
-                        if (data.id_reserva) escutarPagamento(data.id_reserva);
-                    } else { 
-                        alert("O Mercado Pago não retornou o Pix. Tente outro CPF."); 
-                        btn.disabled = false; 
-                    }
-                } catch (e) { 
-                    alert("Erro de conexão. Verifique sua internet."); 
-                    btn.disabled = false; 
-                }
-            } else {
-                btn.innerText = "ENVIANDO...";
-                try {
-                    await addDoc(collection(db, "lista_eventos"), { ...dados, pago: false, data_cadastro: new Date() });
+                    setTimeout(() => {
+                        if (document.getElementById('telaPix').classList.contains('hidden')) {
+                            alert("O Pix está demorando. Verifique o CPF ou tente novamente.");
+                            btn.disabled = false;
+                            btn.innerText = "TENTAR NOVAMENTE";
+                        }
+                    }, 30000);
+
+                } else {
+                    await addDoc(collection(db, "lista_eventos"), { 
+                        ...dados, 
+                        pago: false, 
+                        data_cadastro: serverTimestamp() 
+                    });
                     document.getElementById('telaSucesso').classList.remove('hidden');
-                } catch (e) { 
-                    alert("Erro ao enviar dados."); 
-                    btn.disabled = false; 
                 }
+            } catch (e) {
+                console.error(e);
+                alert("Erro ao enviar. Tente novamente.");
+                btn.disabled = false;
+                btn.innerText = "REVISE OS DADOS";
             }
-        }
-
-        function escutarPagamento(idReserva) {
-            onSnapshot(collection(db, "lista_eventos"), (snap) => {
-                snap.forEach(doc => {
-                    if(doc.id === idReserva && doc.data().pago === true) {
-                        document.getElementById('telaPix').classList.add('hidden');
-                        document.getElementById('telaSucesso').classList.remove('hidden');
-                    }
-                });
-            });
         }
 
         window.copiarPix = () => {
             const copyText = document.getElementById("pixCopyPaste");
             copyText.select();
             navigator.clipboard.writeText(copyText.value);
-            alert("Código Pix Copiado!");
+            const btnCopia = document.getElementById("btnCopiar");
+            btnCopia.innerText = "COPIADO!";
+            setTimeout(() => { btnCopia.innerText = "COPIAR CÓDIGO PIX"; }, 2000);
         }
 
         carregarAgenda();
