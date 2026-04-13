@@ -1,26 +1,19 @@
 <script type="module">
-    // Importações do Firebase (Certifique-se de que estas importações já existem no seu topo)
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Sua configuração do Firebase (Mantenha a sua que já funciona)
+    // --- CONFIGURAÇÃO DO FIREBASE (MANTENHA OS SEUS DADOS AQUI) ---
     const firebaseConfig = {
-        apiKey: "SUA_API_KEY",
-        authDomain: "SEU_DOMINIO",
-        projectId: "SEU_PROJETO",
-        storageBucket: "SEU_BUCKET",
-        messagingSenderId: "SEU_SENDER_ID",
-        appId: "SEU_APP_ID"
+        // COLE AQUI OS SEUS DADOS (apiKey, authDomain, etc.)
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Variável para capturar o promoter da URL se existir
     const urlParams = new URLSearchParams(window.location.search);
     const promoterRef = urlParams.get('p') || "Geral";
 
-    // FUNÇÃO PRINCIPAL: PROCESSAR ENVIO
+    // FUNÇÃO PARA PROCESSAR O ENVIO
     window.processarEnvio = async (event, nomeEvento, formId) => {
         event.preventDefault();
         
@@ -48,14 +41,14 @@
             if (modo === 'pix') {
                 btn.innerText = "GERANDO PIX...";
 
-                // 1. Dispara o Webhook do Make (sem esperar a resposta direta para evitar erro de CORS)
+                // Envia para o Make
                 fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(dados)
-                }).catch(err => console.log("Webhook enviado, aguardando Firestore..."));
+                }).catch(err => console.log("Webhook enviado."));
 
-                // 2. Escuta o Firestore em tempo real esperando o QR Code
+                // Ouve o banco de dados
                 const q = query(
                     collection(db, "lista_eventos"), 
                     where("cpf", "==", dados.cpf), 
@@ -67,64 +60,57 @@
                 const unsubscribe = onSnapshot(q, (snapshot) => {
                     snapshot.forEach((doc) => {
                         const data = doc.data();
-                        // Quando o Make preencher esses campos, a tela de Pix abre
                         if (data.qr_code && data.qr_code_base64) {
                             document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
                             document.getElementById('pixCopyPaste').value = data.qr_code;
                             document.getElementById('telaPix').classList.remove('hidden');
+                            btn.disabled = false;
                             btn.innerText = "PIX GERADO!";
-                            unsubscribe(); // Para de vigiar
+                            unsubscribe();
                         }
                     });
                 });
 
-                // Timeout de 25 segundos caso o Make falhe
                 setTimeout(() => {
                     if (document.getElementById('telaPix').classList.contains('hidden')) {
-                        alert("O Pix está demorando. Por favor, verifique se o CPF está correto ou tente novamente.");
+                        alert("O Pix está demorando. Verifique o CPF ou tente novamente.");
                         btn.disabled = false;
                         btn.innerText = "TENTAR NOVAMENTE";
                     }
-                }, 25000);
+                }, 30000);
 
             } else {
-                // MODO LISTA NORMAL (Free/Consumação)
+                // Modo Lista
                 await addDoc(collection(db, "lista_eventos"), { 
                     ...dados, 
                     pago: false, 
                     data_cadastro: serverTimestamp() 
                 });
                 document.getElementById('telaSucesso').classList.remove('hidden');
+                btn.disabled = false;
+                btn.innerText = "ENVIADO!";
             }
         } catch (e) {
-            console.error("Erro:", e);
-            alert("Erro ao processar. Tente novamente.");
+            console.error(e);
+            alert("Erro ao enviar. Tente novamente.");
             btn.disabled = false;
-            btn.innerText = "ENVIAR NOVAMENTE";
+            btn.innerText = "ENVIAR";
         }
     };
 
-    // FUNÇÃO AUXILIAR: COPIAR PIX
     window.copiarPix = () => {
         const copyText = document.getElementById("pixCopyPaste");
         copyText.select();
         copyText.setSelectionRange(0, 99999);
-        document.execCommand("copy");
+        navigator.clipboard.writeText(copyText.value);
         
         const btnCopia = document.getElementById("btnCopiar");
-        const originalText = btnCopia.innerText;
         btnCopia.innerText = "COPIADO!";
-        btnCopia.classList.replace('bg-green-600', 'bg-blue-600');
-        
-        setTimeout(() => {
-            btnCopia.innerText = originalText;
-            btnCopia.classList.replace('bg-blue-600', 'bg-green-600');
-        }, 2000);
+        setTimeout(() => { btnCopia.innerText = "COPIAR CÓDIGO PIX"; }, 2000);
     };
 
-    // FUNÇÃO AUXILIAR: FECHAR TELAS
     window.fecharTela = (id) => {
         document.getElementById(id).classList.add('hidden');
-        window.location.reload(); // Recarrega para limpar o formulário
+        window.location.reload();
     };
 </script>
