@@ -168,79 +168,42 @@
         }
 
         window.processarEnvio = async (event, nomeEvento, formId) => {
-            event.preventDefault();
-            const modo = document.getElementById(`modo-${formId}`).value;
-            const btn = document.getElementById(`btn-submit-${formId}`);
-            
-            const dados = {
-                nome: document.getElementById(`nome-${formId}`).value,
-                tel: document.getElementById(`tel-${formId}`).value,
-                cpf: document.getElementById(`cpf-${formId}`).value,
-                tipo: document.getElementById(`tipo-${formId}`).value,
-                evento: nomeEvento, 
-                promoter: promoterRef,
-                data_cadastro: new Date().toISOString()
-            };
+    event.preventDefault();
+    const btn = document.getElementById(`btn-submit-${formId}`);
+    const dados = {
+        nome: document.getElementById(`nome-${formId}`).value,
+        tel: document.getElementById(`tel-${formId}`).value,
+        cpf: document.getElementById(`cpf-${formId}`).value,
+        tipo: document.getElementById(`tipo-${formId}`).value,
+        evento: nomeEvento
+    };
 
-            btn.disabled = true;
-            btn.innerText = "PROCESSANDO...";
+    btn.disabled = true;
+    btn.innerText = "GERANDO PIX...";
 
-            try {
-                if (modo === 'pix') {
-                    btn.innerText = "GERANDO PIX...";
-                    
-                    // Envia para o Make (sem esperar o JSON para não travar)
-                    fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
-                        method: "POST", 
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(dados)
-                    }).catch(e => console.log("Webhook enviado."));
+    try {
+        const response = await fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(dados)
+        });
 
-                    // Vigia o Firebase pelo CPF e Evento
-                    const q = query(
-                        collection(db, "lista_eventos"), 
-                        where("cpf", "==", dados.cpf), 
-                        where("evento", "==", nomeEvento),
-                        orderBy("data_cadastro", "desc"),
-                        limit(1)
-                    );
-                    
-                    const unsubscribe = onSnapshot(q, (snapshot) => {
-                        snapshot.forEach((doc) => {
-                            const data = doc.data();
-                            if (data.qr_code && data.qr_code_base64) {
-                                document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
-                                document.getElementById('pixCopyPaste').value = data.qr_code;
-                                document.getElementById('telaPix').classList.remove('hidden');
-                                btn.innerText = "PIX GERADO!";
-                                unsubscribe();
-                            }
-                        });
-                    });
+        const data = await response.json();
 
-                    setTimeout(() => {
-                        if (document.getElementById('telaPix').classList.contains('hidden')) {
-                            alert("O Pix está demorando. Verifique o CPF ou tente novamente.");
-                            btn.disabled = false;
-                            btn.innerText = "TENTAR NOVAMENTE";
-                        }
-                    }, 30000);
-
-                } else {
-                    await addDoc(collection(db, "lista_eventos"), { 
-                        ...dados, 
-                        pago: false, 
-                        data_cadastro: serverTimestamp() 
-                    });
-                    document.getElementById('telaSucesso').classList.remove('hidden');
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Erro ao enviar. Tente novamente.");
-                btn.disabled = false;
-                btn.innerText = "REVISE OS DADOS";
-            }
+        if (data.qr_code_base64) {
+            document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
+            document.getElementById('pixCopyPaste').value = data.qr_code;
+            document.getElementById('telaPix').classList.remove('hidden');
+            btn.innerText = "PIX GERADO!";
+        } else {
+            alert("Erro ao gerar Pix. Tente novamente.");
+            btn.disabled = false;
         }
+    } catch (e) {
+        alert("Erro de conexão com o servidor.");
+        btn.disabled = false;
+    }
+};
 
         window.copiarPix = () => {
             const copyText = document.getElementById("pixCopyPaste");
