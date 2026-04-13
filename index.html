@@ -52,7 +52,7 @@
     <div id="telaPix" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-8 text-center overflow-y-auto">
         <h2 class="text-yellow-500 text-2xl font-black uppercase italic mb-6">Pagamento via Pix</h2>
         <div class="bg-white p-4 rounded-[2rem] mb-6 shadow-[0_0_30px_rgba(234,179,8,0.3)]">
-            <img id="qrCodeImg" src="" class="w-64 h-64 mx-auto text-black">
+            <img id="qrCodeImg" src="" class="w-64 h-64 mx-auto text-black border-0">
         </div>
         <p class="text-[10px] text-zinc-500 font-black uppercase mb-4 tracking-widest">Código Copia e Cola:</p>
         <textarea id="pixCopyPaste" readonly onclick="this.select()" class="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-[9px] text-zinc-300 font-mono mb-6 h-20 outline-none"></textarea>
@@ -203,11 +203,11 @@
                 btn.innerText = "GERANDO PIX...";
                 try {
                     const response = await fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
-                        method: "POST", headers: { "Content-Type": "application/json" },
+                        method: "POST", 
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(dados)
                     });
                     
-                    // LER COMO TEXTO PRIMEIRO PARA SEGURANÇA
                     const text = await response.text();
                     console.log("RESPOSTA DO WEBHOOK:", text);
 
@@ -221,17 +221,20 @@
                         return;
                     }
 
-                    // VERIFICAÇÃO SE O QR CODE EXISTE
                     if (data && data.qr_code_base64) {
                         document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
                         document.getElementById('pixCopyPaste').value = data.qr_code;
                         document.getElementById('telaPix').classList.remove('hidden');
-                        escutarPagamento(data.id_reserva); 
+                        
+                        // Escuta o pagamento no Firebase se o id_reserva existir
+                        if (data.id_reserva) {
+                            escutarPagamento(data.id_reserva); 
+                        }
                     } else {
-                        throw new Error("Dados do Pix incompletos");
+                        throw new Error("Dados incompletos");
                     }
                 } catch (e) { 
-                    alert("Erro ao gerar Pix."); 
+                    alert("Erro ao gerar Pix. Verifique os dados ou o Make."); 
                     btn.disabled = false; 
                     btn.innerText = "Gerar Pix e Pagar"; 
                 }
