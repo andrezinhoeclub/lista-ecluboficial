@@ -1,116 +1,254 @@
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eclub - Official Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .btn-action { transition: all 0.2s ease; }
+        .btn-action:active { transform: scale(0.96); }
+        .fade-down { animation: fadeDown 0.3s ease-out; }
+        @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .tipo-btn-active { background-color: #eab308 !important; color: black !important; border-color: #eab308 !important; }
+        .input-group { transition: all 0.4s ease; opacity: 0; transform: translateY(-10px); display: none; }
+        .input-group.show { opacity: 1; transform: translateY(0); display: block; }
+        .festa-card { background: #111113; border: 1px solid #27272a; border-radius: 2.5rem; overflow: hidden; }
+        .banner-container { background-color: #000; position: relative; width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; }
+        .banner-img { object-fit: contain !important; width: 100%; height: 100%; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
 
-    // --- CONFIGURAÇÃO DO FIREBASE (MANTENHA OS SEUS DADOS AQUI) ---
-    const firebaseConfig = {
-        // COLE AQUI OS SEUS DADOS (apiKey, authDomain, etc.)
-    };
+    <div class="max-w-md mx-auto w-full flex-grow">
+        <header class="flex justify-center mb-10 py-8">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Eclub Logo" class="h-20 w-auto object-contain">
+        </header>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+        <div id="listaEventos" class="space-y-12 text-white">
+            <div class="animate-pulse flex flex-col space-y-4 text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando Agenda...</div>
+        </div>
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const promoterRef = urlParams.get('p') || "Geral";
+        <footer class="mt-20 mb-12 border-t border-zinc-900 pt-10 text-center text-white">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 opacity-40 grayscale mx-auto mb-6">
+            <div class="grid grid-cols-2 gap-3 w-full px-1 mb-6">
+                <a href="https://wa.me/5541995040506" target="_blank" class="bg-zinc-900/50 border border-zinc-800 flex items-center justify-center p-5 rounded-2xl space-x-3 btn-action">
+                    <span class="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e]"></span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-white">WhatsApp</span>
+                </a>
+                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="bg-zinc-900/50 border border-zinc-800 flex items-center justify-center p-5 rounded-2xl space-x-3 btn-action">
+                    <span class="flex h-2 w-2 rounded-full bg-pink-500 shadow-[0_0_10px_#ec4899]"></span>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-white">Instagram</span>
+                </a>
+            </div>
+            <div class="border-2 border-yellow-500 p-8 rounded-[2.5rem] text-center bg-black">
+                <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest text-white">Localização Oficial</p>
+                <p class="text-sm font-black italic text-white leading-tight">Bairro Alto, Curitiba - PR</p>
+            </div>
+        </footer>
+    </div>
 
-    // FUNÇÃO PARA PROCESSAR O ENVIO
-    window.processarEnvio = async (event, nomeEvento, formId) => {
-        event.preventDefault();
-        
-        const modo = document.getElementById(`modo-${formId}`).value;
-        const btn = document.getElementById(`btn-submit-${formId}`);
-        const inputNome = document.getElementById(`nome-${formId}`).value;
-        const inputTel = document.getElementById(`tel-${formId}`).value;
-        const inputCpf = document.getElementById(`cpf-${formId}`).value;
-        const inputTipo = document.getElementById(`tipo-${formId}`).value;
+    <div id="telaPix" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-8 text-center overflow-y-auto">
+        <h2 class="text-yellow-500 text-2xl font-black uppercase italic mb-6 text-white">Pagamento via Pix</h2>
+        <div class="bg-white p-4 rounded-[2rem] mb-6 shadow-[0_0_30px_rgba(234,179,8,0.3)]">
+            <img id="qrCodeImg" src="" class="w-64 h-64 mx-auto text-black">
+        </div>
+        <p class="text-[10px] text-zinc-500 font-black uppercase mb-4 tracking-widest">Código Copia e Cola:</p>
+        <textarea id="pixCopyPaste" readonly onclick="this.select()" class="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl text-[9px] text-zinc-300 font-mono mb-6 h-20 outline-none"></textarea>
+        <button onclick="copiarPix()" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[10px] mb-4 btn-action">Copiar Código Pix</button>
+        <div class="flex items-center justify-center space-x-2 mt-4">
+            <span class="flex h-2 w-2 rounded-full bg-yellow-500 animate-ping"></span>
+            <p class="text-[10px] text-zinc-400 font-bold uppercase">Aguardando confirmação...</p>
+        </div>
+        <button onclick="location.reload()" class="mt-8 text-zinc-600 text-[9px] font-black uppercase border-b border-zinc-800">Cancelar</button>
+    </div>
 
-        const dados = {
-            nome: inputNome,
-            tel: inputTel,
-            cpf: inputCpf,
-            tipo: inputTipo,
-            evento: nomeEvento, 
-            promoter: promoterRef,
-            data_cadastro: new Date().toISOString()
+    <div id="telaSucesso" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center">
+        <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 text-3xl shadow-lg shadow-green-900/50">✓</div>
+        <h2 class="text-2xl font-black uppercase italic mb-2">Confirmado!</h2>
+        <p class="text-zinc-500 text-xs font-bold uppercase">Sua reserva foi concluída.</p>
+        <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action">Voltar</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
         };
 
-        btn.disabled = true;
-        btn.innerText = "PROCESSANDO...";
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-        try {
+        const params = new URLSearchParams(window.location.search);
+        const promoterRef = params.get('ref') || 'Direto';
+        window.valoresEventos = {};
+
+        async function carregarAgenda() {
+            try {
+                // Filtra apenas eventos marcados como ATIVO (true)
+                const q = query(collection(db, "eventos"), where("ativo", "==", true));
+                const snap = await getDocs(q);
+                const container = document.getElementById('listaEventos');
+                container.innerHTML = '';
+                
+                // Data de hoje para Curitiba (UTC-3)
+                const hoje = new Date().toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
+                
+                let eventos = [];
+                snap.forEach(doc => {
+                    const ev = doc.data();
+                    // Se a data do evento for maior ou igual a hoje, ou se não tiver data definida
+                    if (!ev.data || ev.data >= hoje) {
+                        eventos.push({ id: doc.id, ...ev });
+                    }
+                });
+
+                // Ordena por data e renderiza os cards
+                eventos.sort((a, b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+                    window.valoresEventos[ev.id] = { casal: ev.valor_casal || "", solteiro: ev.valor_solteiro || "" };
+                    const card = document.createElement('div');
+                    card.className = "festa-card fade-down mb-6";
+                    card.innerHTML = `
+                        <div class="banner-container"><img src="${ev.imagem}" class="banner-img"></div>
+                        <div class="p-6 space-y-3 text-center">
+                            <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data ? ev.data.split('-').reverse().join('/') : 'DATA A DEFINIR'}</p>
+                            <h3 class="text-2xl font-black uppercase italic text-white leading-tight">${ev.nome}</h3>
+                            <div class="flex flex-col gap-2 mt-4">
+                                <button onclick="toggleForm('${ev.id}', 'lista')" class="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl uppercase text-[11px] btn-action border border-zinc-700">Colocar nome na lista</button>
+                                <button onclick="toggleForm('${ev.id}', 'pix')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action">Comprar Antecipado (Pix)</button>
+                            </div>
+                        </div>
+                        <div id="form-${ev.id}" class="hidden p-8 bg-black/50 border-t border-zinc-800">
+                            <h4 class="text-[10px] font-black uppercase text-yellow-500 mb-6 text-center tracking-widest">Selecione o Tipo</h4>
+                            <div class="grid grid-cols-2 gap-3 mb-6">
+                                <button type="button" id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'casal')" class="border-2 border-yellow-500 py-4 rounded-xl text-[11px] font-black uppercase">Casal</button>
+                                <button type="button" id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'solteiro')" class="border-2 border-yellow-500 py-4 rounded-xl text-[11px] font-black uppercase">Solteiro</button>
+                            </div>
+                            <div id="campos-dados-${ev.id}" class="input-group">
+                                <form onsubmit="processarEnvio(event, '${ev.nome}', '${ev.id}')" class="space-y-3">
+                                    <input type="hidden" id="tipo-${ev.id}"><input type="hidden" id="modo-${ev.id}">
+                                    <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold" required>
+                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold" required>
+                                    <div id="campo-cpf-${ev.id}" class="hidden">
+                                        <input type="tel" id="cpf-${ev.id}" placeholder="CPF (SÓ NÚMEROS)" maxlength="11" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none mt-2 font-bold">
+                                    </div>
+                                    <button type="submit" id="btn-submit-${ev.id}" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] mt-4 tracking-widest btn-action">Confirmar</button>
+                                </form>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (e) { console.error("Erro ao carregar agenda:", e); }
+        }
+
+        window.toggleForm = (id, modo) => {
+            document.querySelectorAll('[id^="form-"]').forEach(f => f.classList.add('hidden'));
+            const form = document.getElementById(`form-${id}`);
+            form.classList.remove('hidden');
+            document.getElementById(`modo-${id}`).value = modo;
+            const campoCpf = document.getElementById(`campo-cpf-${id}`);
+            const btnSubmit = document.getElementById(`btn-submit-${id}`);
+            if (modo === 'pix') { 
+                campoCpf.classList.remove('hidden'); 
+                document.getElementById(`cpf-${id}`).required = true;
+                btnSubmit.innerText = "GERAR PIX E PAGAR";
+            } else { 
+                campoCpf.classList.add('hidden'); 
+                document.getElementById(`cpf-${id}`).required = false;
+                btnSubmit.innerText = "CONFIRMAR NA LISTA";
+            }
+        }
+
+        window.selecionarTipo = (id, tipo) => {
+            document.querySelectorAll(`#form-${id} button[type="button"]`).forEach(b => b.classList.remove('tipo-btn-active'));
+            document.getElementById(`btn-${tipo}-${id}`).classList.add('tipo-btn-active');
+            document.getElementById(`tipo-${id}`).value = tipo;
+            document.getElementById(`campos-dados-${id}`).classList.add('show');
+        }
+
+        window.processarEnvio = async (event, nomeEvento, formId) => {
+            event.preventDefault();
+            const modo = document.getElementById(`modo-${formId}`).value;
+            const btn = document.getElementById(`btn-submit-${formId}`);
+            const dados = {
+                nome: document.getElementById(`nome-${formId}`).value,
+                tel: document.getElementById(`tel-${formId}`).value,
+                cpf: document.getElementById(`cpf-${formId}`).value,
+                tipo: document.getElementById(`tipo-${formId}`).value,
+                evento: nomeEvento, promoter: promoterRef
+            };
+            btn.disabled = true;
+
             if (modo === 'pix') {
                 btn.innerText = "GERANDO PIX...";
-
-                // Envia para o Make
-                fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(dados)
-                }).catch(err => console.log("Webhook enviado."));
-
-                // Ouve o banco de dados
-                const q = query(
-                    collection(db, "lista_eventos"), 
-                    where("cpf", "==", dados.cpf), 
-                    where("evento", "==", nomeEvento),
-                    orderBy("data_cadastro", "desc"),
-                    limit(1)
-                );
-                
-                const unsubscribe = onSnapshot(q, (snapshot) => {
-                    snapshot.forEach((doc) => {
-                        const data = doc.data();
-                        if (data.qr_code && data.qr_code_base64) {
-                            document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
-                            document.getElementById('pixCopyPaste').value = data.qr_code;
-                            document.getElementById('telaPix').classList.remove('hidden');
-                            btn.disabled = false;
-                            btn.innerText = "PIX GERADO!";
-                            unsubscribe();
-                        }
+                try {
+                    const resp = await fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(dados)
                     });
-                });
-
-                setTimeout(() => {
-                    if (document.getElementById('telaPix').classList.contains('hidden')) {
-                        alert("O Pix está demorando. Verifique o CPF ou tente novamente.");
-                        btn.disabled = false;
-                        btn.innerText = "TENTAR NOVAMENTE";
+                    const text = await resp.text();
+                    let data;
+                    try { 
+                        data = JSON.parse(text); 
+                    } catch (e) { 
+                        console.error("Erro no JSON:", text);
+                        alert("Resposta inválida do servidor. Verifique o Make."); 
+                        btn.disabled = false; 
+                        return; 
                     }
-                }, 30000);
 
+                    if (data && data.qr_code_base64) {
+                        document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
+                        document.getElementById('pixCopyPaste').value = data.qr_code;
+                        document.getElementById('telaPix').classList.remove('hidden');
+                        if (data.id_reserva) escutarPagamento(data.id_reserva);
+                    } else { 
+                        alert("O Mercado Pago não retornou o Pix. Tente outro CPF."); 
+                        btn.disabled = false; 
+                    }
+                } catch (e) { 
+                    alert("Erro de conexão. Verifique sua internet."); 
+                    btn.disabled = false; 
+                }
             } else {
-                // Modo Lista
-                await addDoc(collection(db, "lista_eventos"), { 
-                    ...dados, 
-                    pago: false, 
-                    data_cadastro: serverTimestamp() 
-                });
-                document.getElementById('telaSucesso').classList.remove('hidden');
-                btn.disabled = false;
-                btn.innerText = "ENVIADO!";
+                btn.innerText = "ENVIANDO...";
+                try {
+                    await addDoc(collection(db, "lista_eventos"), { ...dados, pago: false, data_cadastro: new Date() });
+                    document.getElementById('telaSucesso').classList.remove('hidden');
+                } catch (e) { 
+                    alert("Erro ao enviar dados."); 
+                    btn.disabled = false; 
+                }
             }
-        } catch (e) {
-            console.error(e);
-            alert("Erro ao enviar. Tente novamente.");
-            btn.disabled = false;
-            btn.innerText = "ENVIAR";
         }
-    };
 
-    window.copiarPix = () => {
-        const copyText = document.getElementById("pixCopyPaste");
-        copyText.select();
-        copyText.setSelectionRange(0, 99999);
-        navigator.clipboard.writeText(copyText.value);
-        
-        const btnCopia = document.getElementById("btnCopiar");
-        btnCopia.innerText = "COPIADO!";
-        setTimeout(() => { btnCopia.innerText = "COPIAR CÓDIGO PIX"; }, 2000);
-    };
+        function escutarPagamento(idReserva) {
+            onSnapshot(collection(db, "lista_eventos"), (snap) => {
+                snap.forEach(doc => {
+                    if(doc.id === idReserva && doc.data().pago === true) {
+                        document.getElementById('telaPix').classList.add('hidden');
+                        document.getElementById('telaSucesso').classList.remove('hidden');
+                    }
+                });
+            });
+        }
 
-    window.fecharTela = (id) => {
-        document.getElementById(id).classList.add('hidden');
-        window.location.reload();
-    };
-</script>
+        window.copiarPix = () => {
+            const copyText = document.getElementById("pixCopyPaste");
+            copyText.select();
+            navigator.clipboard.writeText(copyText.value);
+            alert("Código Pix Copiado!");
+        }
+
+        carregarAgenda();
+    </script>
+</body>
+</html>
