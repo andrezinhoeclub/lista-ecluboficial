@@ -49,7 +49,7 @@
     </div>
 
     <div id="telaPix" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-8 text-center overflow-y-auto">
-        <h2 class="text-yellow-500 text-2xl font-black uppercase italic mb-6">Pagamento via Pix</h2>
+        <h2 class="text-yellow-500 text-2xl font-black uppercase italic mb-6 text-white">Pagamento via Pix</h2>
         <div class="bg-white p-4 rounded-[2rem] mb-6 shadow-[0_0_30px_rgba(234,179,8,0.3)]">
             <img id="qrCodeImg" src="" class="w-64 h-64 mx-auto text-black">
         </div>
@@ -92,17 +92,25 @@
 
         async function carregarAgenda() {
             try {
+                // Filtra apenas eventos marcados como ATIVO (true)
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snap = await getDocs(q);
                 const container = document.getElementById('listaEventos');
                 container.innerHTML = '';
-                const agora = new Date();
+                
+                // Data de hoje para Curitiba (UTC-3)
+                const hoje = new Date().toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
+                
                 let eventos = [];
                 snap.forEach(doc => {
                     const ev = doc.data();
-                    if (new Date(ev.data + 'T23:59:59') >= agora) eventos.push({ id: doc.id, ...ev });
+                    // Se a data do evento for maior ou igual a hoje, ou se não tiver data definida
+                    if (!ev.data || ev.data >= hoje) {
+                        eventos.push({ id: doc.id, ...ev });
+                    }
                 });
 
+                // Ordena por data e renderiza os cards
                 eventos.sort((a, b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                     window.valoresEventos[ev.id] = { casal: ev.valor_casal || "", solteiro: ev.valor_solteiro || "" };
                     const card = document.createElement('div');
@@ -110,12 +118,15 @@
                     card.innerHTML = `
                         <div class="banner-container"><img src="${ev.imagem}" class="banner-img"></div>
                         <div class="p-6 space-y-3 text-center">
-                            <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data.split('-').reverse().join('/')}</p>
-                            <h3 class="text-2xl font-black uppercase italic text-white">${ev.nome}</h3>
-                            <button onclick="toggleForm('${ev.id}', 'lista')" class="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl uppercase text-[11px] btn-action border border-zinc-700">Nome na lista</button>
-                            <button onclick="toggleForm('${ev.id}', 'pix')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action">Comprar Pix</button>
+                            <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data ? ev.data.split('-').reverse().join('/') : 'DATA A DEFINIR'}</p>
+                            <h3 class="text-2xl font-black uppercase italic text-white leading-tight">${ev.nome}</h3>
+                            <div class="flex flex-col gap-2 mt-4">
+                                <button onclick="toggleForm('${ev.id}', 'lista')" class="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl uppercase text-[11px] btn-action border border-zinc-700">Colocar nome na lista</button>
+                                <button onclick="toggleForm('${ev.id}', 'pix')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action">Comprar Antecipado (Pix)</button>
+                            </div>
                         </div>
                         <div id="form-${ev.id}" class="hidden p-8 bg-black/50 border-t border-zinc-800">
+                            <h4 class="text-[10px] font-black uppercase text-yellow-500 mb-6 text-center tracking-widest">Selecione o Tipo</h4>
                             <div class="grid grid-cols-2 gap-3 mb-6">
                                 <button type="button" id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'casal')" class="border-2 border-yellow-500 py-4 rounded-xl text-[11px] font-black uppercase">Casal</button>
                                 <button type="button" id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'solteiro')" class="border-2 border-yellow-500 py-4 rounded-xl text-[11px] font-black uppercase">Solteiro</button>
@@ -123,32 +134,41 @@
                             <div id="campos-dados-${ev.id}" class="input-group">
                                 <form onsubmit="processarEnvio(event, '${ev.nome}', '${ev.id}')" class="space-y-3">
                                     <input type="hidden" id="tipo-${ev.id}"><input type="hidden" id="modo-${ev.id}">
-                                    <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none" required>
-                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none" required>
+                                    <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold" required>
+                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold" required>
                                     <div id="campo-cpf-${ev.id}" class="hidden">
-                                        <input type="tel" id="cpf-${ev.id}" placeholder="CPF (SÓ NÚMEROS)" maxlength="11" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none mt-3">
+                                        <input type="tel" id="cpf-${ev.id}" placeholder="CPF (SÓ NÚMEROS)" maxlength="11" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none mt-2 font-bold">
                                     </div>
-                                    <button type="submit" id="btn-submit-${ev.id}" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] mt-4">Confirmar</button>
+                                    <button type="submit" id="btn-submit-${ev.id}" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] mt-4 tracking-widest btn-action">Confirmar</button>
                                 </form>
                             </div>
                         </div>
                     `;
                     container.appendChild(card);
                 });
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Erro ao carregar agenda:", e); }
         }
 
         window.toggleForm = (id, modo) => {
             document.querySelectorAll('[id^="form-"]').forEach(f => f.classList.add('hidden'));
-            document.getElementById(`form-${id}`).classList.remove('hidden');
+            const form = document.getElementById(`form-${id}`);
+            form.classList.remove('hidden');
             document.getElementById(`modo-${id}`).value = modo;
             const campoCpf = document.getElementById(`campo-cpf-${id}`);
-            if (modo === 'pix') { campoCpf.classList.remove('hidden'); document.getElementById(`cpf-${id}`).required = true; }
-            else { campoCpf.classList.add('hidden'); document.getElementById(`cpf-${id}`).required = false; }
+            const btnSubmit = document.getElementById(`btn-submit-${id}`);
+            if (modo === 'pix') { 
+                campoCpf.classList.remove('hidden'); 
+                document.getElementById(`cpf-${id}`).required = true;
+                btnSubmit.innerText = "GERAR PIX E PAGAR";
+            } else { 
+                campoCpf.classList.add('hidden'); 
+                document.getElementById(`cpf-${id}`).required = false;
+                btnSubmit.innerText = "CONFIRMAR NA LISTA";
+            }
         }
 
         window.selecionarTipo = (id, tipo) => {
-            document.querySelectorAll(`#form-${id} button`).forEach(b => b.classList.remove('tipo-btn-active'));
+            document.querySelectorAll(`#form-${id} button[type="button"]`).forEach(b => b.classList.remove('tipo-btn-active'));
             document.getElementById(`btn-${tipo}-${id}`).classList.add('tipo-btn-active');
             document.getElementById(`tipo-${id}`).value = tipo;
             document.getElementById(`campos-dados-${id}`).classList.add('show');
@@ -176,21 +196,37 @@
                     });
                     const text = await resp.text();
                     let data;
-                    try { data = JSON.parse(text); } catch (e) { alert("Erro: resposta inválida do servidor"); btn.disabled = false; return; }
+                    try { 
+                        data = JSON.parse(text); 
+                    } catch (e) { 
+                        console.error("Erro no JSON:", text);
+                        alert("Resposta inválida do servidor. Verifique o Make."); 
+                        btn.disabled = false; 
+                        return; 
+                    }
 
                     if (data && data.qr_code_base64) {
                         document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
                         document.getElementById('pixCopyPaste').value = data.qr_code;
                         document.getElementById('telaPix').classList.remove('hidden');
                         if (data.id_reserva) escutarPagamento(data.id_reserva);
-                    } else { alert("Erro ao gerar Pix."); btn.disabled = false; }
-                } catch (e) { alert("Erro de conexão."); btn.disabled = false; }
+                    } else { 
+                        alert("O Mercado Pago não retornou o Pix. Tente outro CPF."); 
+                        btn.disabled = false; 
+                    }
+                } catch (e) { 
+                    alert("Erro de conexão. Verifique sua internet."); 
+                    btn.disabled = false; 
+                }
             } else {
                 btn.innerText = "ENVIANDO...";
                 try {
                     await addDoc(collection(db, "lista_eventos"), { ...dados, pago: false, data_cadastro: new Date() });
                     document.getElementById('telaSucesso').classList.remove('hidden');
-                } catch (e) { alert("Erro ao enviar."); btn.disabled = false; }
+                } catch (e) { 
+                    alert("Erro ao enviar dados."); 
+                    btn.disabled = false; 
+                }
             }
         }
 
