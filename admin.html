@@ -3,59 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eclub - Portaria</title>
+    <title>E-CLUB | Portaria Oficial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .card-glass { background: #111113; border: 1px solid #27272a; transition: all 0.3s ease; }
-        .btn-checkin { transition: all 0.2s ease; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; }
+        .client-card { background: #111; border: 1px solid #222; transition: 0.2s; }
+        .client-card.entrou { border-color: #16a34a; opacity: 0.6; background: #061a0c; }
+        .btn-checkin { background: #16a34a; transition: 0.2s; }
         .btn-checkin:active { transform: scale(0.95); }
-        .checkin-done { opacity: 0.4; border-color: #22c55e !important; background: #09090b; }
-        
-        /* CORES DAS ETIQUETAS - CORREÇÃO FINAL */
-        .tag-casal { 
-            background-color: #eab308 !important; /* AMARELO */
-            color: #000000 !important; 
-        }
-        .tag-solteiro { 
-            background-color: #ffffff !important; /* BRANCO */
-            color: #000000 !important; 
-        }
+        input, select { background: #111 !important; border: 1px solid #333 !important; color: white !important; }
+        input:focus { border-color: #eab308 !important; outline: none; }
+        .badge-casal { background: #eab308; color: #000; }
+        .badge-solteiro { background: #3b82f6; color: #fff; }
     </style>
 </head>
-<body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
+<body class="p-4">
 
-    <div class="max-w-md mx-auto w-full">
-        <header class="flex justify-center mb-10 py-6">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Eclub Logo" class="h-16 w-auto object-contain">
+    <div class="max-w-2xl mx-auto">
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-black uppercase italic text-yellow-500">Portaria E-Club</h1>
+                <p id="contador-live" class="text-[10px] font-bold text-zinc-500 uppercase">Aguardando dados...</p>
+            </div>
+            <button onclick="location.reload()" class="bg-zinc-800 p-3 rounded-xl text-xs">🔄</button>
         </header>
 
-        <div class="grid grid-cols-3 gap-2 mb-8">
-            <div class="card-glass p-4 rounded-3xl text-center">
-                <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Reservas</p>
-                <p id="countReservas" class="text-xl font-black italic text-white">0</p>
-            </div>
-            <div class="card-glass p-4 rounded-3xl text-center border-l-2 border-l-yellow-500">
-                <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Na Casa</p>
-                <p id="countNaCasa" class="text-xl font-black italic text-yellow-500">0</p>
-            </div>
-            <div class="card-glass p-4 rounded-3xl text-center bg-zinc-900/50">
-                <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-1">Ocupação</p>
-                <p id="porcentagemOcupacao" class="text-xl font-black italic text-green-500">0%</p>
+        <div class="space-y-4 mb-8">
+            <select id="filtro-evento" class="w-full p-4 rounded-2xl font-bold text-sm uppercase" onchange="carregarLista()">
+                <option value="">Selecione o Evento</option>
+            </select>
+            <div class="relative">
+                <input type="text" id="busca-nome" placeholder="BUSCAR NOME DO CLIENTE..." 
+                       class="w-full p-5 rounded-2xl font-bold uppercase text-sm pl-12" 
+                       oninput="filtrarNomes()">
+                <span class="absolute left-4 top-5 opacity-30">🔍</span>
             </div>
         </div>
 
-        <div class="relative mb-8">
-            <input type="text" id="inputBusca" autocomplete="off" placeholder="Pesquisar nome ou celular..." class="w-full bg-zinc-900 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-yellow-500 font-bold text-sm transition text-white">
-            <span class="absolute right-5 top-5 opacity-30 text-lg">🔍</span>
-        </div>
-
-        <div id="listaPortaria" class="space-y-4 mb-20">
+        <div id="lista-clientes" class="space-y-3">
+            <div class="text-center py-20 text-zinc-700 font-black uppercase italic">
+                Selecione um evento para carregar a lista
             </div>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -69,76 +64,103 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        function carregarPortaria() {
-            const q = query(collection(db, "lista_eventos"), orderBy("data_cadastro", "desc"));
+        let clientesRaw = [];
+
+        // 1. Carregar os eventos no Select
+        onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
+            const select = document.getElementById('filtro-evento');
+            const atual = select.value;
+            select.innerHTML = '<option value="">Selecione o Evento</option>';
+            snap.docs.forEach(d => {
+                const ev = d.data();
+                select.innerHTML += `<option value="${ev.nome}">${ev.nome.toUpperCase()}</option>`;
+            });
+            select.value = atual;
+        });
+
+        // 2. Carregar Lista de Clientes baseada no evento selecionado
+        window.carregarLista = () => {
+            const eventoNome = document.getElementById('filtro-evento').value;
+            const container = document.getElementById('lista-clientes');
+
+            if (!eventoNome) {
+                container.innerHTML = '<div class="text-center py-20 text-zinc-700 font-black uppercase italic">Selecione um evento</div>';
+                return;
+            }
+
+            const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoNome));
             
-            onSnapshot(q, (snapshot) => {
-                const container = document.getElementById('listaPortaria');
-                const busca = document.getElementById('inputBusca').value.toLowerCase();
-                container.innerHTML = '';
+            onSnapshot(q, (snap) => {
+                clientesRaw = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 
-                let totalReservas = 0;
-                let totalNaCasa = 0;
-
-                snapshot.forEach((d) => {
-                    const res = d.data();
-                    const id = d.id;
-
-                    totalReservas++;
-                    if (res.entrou) totalNaCasa++;
-
-                    if (res.nome.toLowerCase().includes(busca) || res.telefone.includes(busca)) {
-                        const card = document.createElement('div');
-                        card.className = `card-glass p-5 rounded-[2rem] flex justify-between items-center ${res.entrou ? 'checkin-done' : ''}`;
-                        
-                        // Lógica de cores das Tags
-                        const classeTag = res.tipo === 'casal' ? 'tag-casal' : 'tag-solteiro';
-
-                        card.innerHTML = `
-                            <div class="pr-2">
-                                <div class="flex items-center space-x-2 mb-1">
-                                    <span class="${classeTag} text-[8px] font-black px-2 py-0.5 rounded uppercase leading-none">
-                                        ${res.tipo}
-                                    </span>
-                                    <h3 class="font-black uppercase italic text-xs text-white truncate max-w-[120px]">${res.nome}</h3>
-                                </div>
-                                <p class="text-[10px] text-zinc-500 font-bold tracking-wider">${res.telefone}</p>
-                                <p class="text-[8px] text-zinc-600 font-black uppercase mt-1">P: ${res.promoter} | ${res.evento}</p>
-                            </div>
-                            
-                            <button onclick="fazerCheckin('${id}', ${res.entrou})" class="btn-checkin ${res.entrou ? 'bg-zinc-800 text-zinc-600' : 'bg-yellow-500 text-black'} font-black px-5 py-3 rounded-xl text-[9px] uppercase shadow-lg shadow-black/50">
-                                ${res.entrou ? 'CHECKED' : 'CHECK-IN'}
-                            </button>
-                        `;
-                        container.appendChild(card);
-                    }
+                // Ordenar: Quem NÃO entrou primeiro, e depois por ordem alfabética
+                clientesRaw.sort((a, b) => {
+                    if (a.entrou === b.entrou) return a.nome.localeCompare(b.nome);
+                    return a.entrou ? 1 : -1;
                 });
 
-                // Cálculo de Ocupação (Checkins / Reservas)
-                const ocupacao = totalReservas > 0 ? Math.round((totalNaCasa / totalReservas) * 100) : 0;
-                document.getElementById('countReservas').innerText = totalReservas;
-                document.getElementById('countNaCasa').innerText = totalNaCasa;
-                document.getElementById('porcentagemOcupacao').innerText = ocupacao + '%';
+                atualizarContador();
+                renderizarLista(clientesRaw);
+            });
+        };
+
+        // 3. Renderizar a Lista na tela
+        function renderizarLista(lista) {
+            const container = document.getElementById('lista-clientes');
+            container.innerHTML = '';
+
+            lista.forEach(c => {
+                const card = document.createElement('div');
+                card.className = `client-card p-4 rounded-3xl flex justify-between items-center ${c.entrou ? 'entrou' : ''}`;
+                
+                const badgeClass = c.tipo === 'casal' ? 'badge-casal' : 'badge-solteiro';
+
+                card.innerHTML = `
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[8px] font-black uppercase px-2 py-0.5 rounded ${badgeClass}">${c.tipo}</span>
+                            <span class="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">${c.promoter || 'Direto'}</span>
+                        </div>
+                        <h3 class="font-black uppercase text-sm italic">${c.nome}</h3>
+                        <p class="text-[10px] text-zinc-500 font-mono">${c.tel || c.telefone || ''}</p>
+                    </div>
+                    <div>
+                        ${c.entrou 
+                            ? '<span class="text-green-500 font-black text-[10px] mr-4 uppercase italic">Confirmado ✓</span>' 
+                            : `<button onclick="confirmarEntrada('${c.id}')" class="btn-checkin text-white px-6 py-3 rounded-2xl font-black text-xs uppercase italic shadow-lg shadow-green-900/20">Check-in</button>`
+                        }
+                    </div>
+                `;
+                container.appendChild(card);
             });
         }
 
-        window.fazerCheckin = async (id, statusAtual) => {
-            if(!statusAtual || confirm("Deseja remover o check-in deste cliente?")) {
-                try {
-                    await updateDoc(doc(db, "lista_eventos", id), { entrou: !statusAtual });
-                    
-                    // Limpar campo de busca e focar para o próximo
-                    const input = document.getElementById('inputBusca');
-                    input.value = '';
-                    input.focus();
-                } catch (e) {
-                    console.error("Erro ao processar check-in:", e);
-                }
+        // 4. Função de busca em tempo real
+        window.filtrarNomes = () => {
+            const busca = document.getElementById('busca-nome').value.toUpperCase();
+            const filtrados = clientesRaw.filter(c => c.nome.toUpperCase().includes(busca));
+            renderizarLista(filtrados);
+        };
+
+        // 5. Confirmar Entrada (Check-in)
+        window.confirmarEntrada = async (id) => {
+            const docRef = doc(db, "lista_eventos", id);
+            try {
+                await updateDoc(docRef, { 
+                    entrou: true,
+                    data_entrada: new Date().toISOString() 
+                });
+            } catch (e) {
+                alert("Erro ao confirmar entrada!");
             }
+        };
+
+        function atualizarContador() {
+            const total = clientesRaw.length;
+            const dentro = clientesRaw.filter(c => c.entrou).length;
+            document.getElementById('contador-live').innerText = `${dentro} de ${total} clientes já entraram`;
         }
 
-        document.getElementById('inputBusca').addEventListener('input', carregarPortaria);
-        carregarPortaria();
     </script>
 </body>
 </html>
