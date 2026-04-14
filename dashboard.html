@@ -16,7 +16,6 @@
         .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; }
         .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; }
 
-        /* Correção dos Selects */
         select {
             background-color: #09090b !important;
             border: 1px solid #27272a !important;
@@ -76,7 +75,7 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div class="glass-card p-8">
-                    <h2 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 text-blue-500">Eficiência por Promoter</h2>
+                    <h2 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 text-blue-500 italic">Ranking de Performance (Top Promoters)</h2>
                     <div id="lista-ranking-promoters" class="space-y-4"></div>
                 </div>
 
@@ -203,55 +202,56 @@
                     </div>`;
             });
 
-            // --- ATUALIZAÇÃO DO RANKING (NÚMERO MAIOR) ---
+            // --- RANKING AGRUPADO COM TROFÉUS ---
             const listaRank = document.getElementById('lista-ranking-promoters');
             listaRank.innerHTML = '';
             let statsP = {};
+            
             dadosReservas.forEach(r => {
-                if(!statsP[r.promoter]) statsP[r.promoter] = { res: 0, ent: 0 };
-                statsP[r.promoter].res++;
-                if(r.entrou) statsP[r.promoter].ent++;
+                const nomeLimpo = r.promoter ? r.promoter.trim().toUpperCase() : "DIRETO";
+                if(!statsP[nomeLimpo]) statsP[nomeLimpo] = { res: 0, ent: 0 };
+                statsP[nomeLimpo].res++;
+                if(r.entrou) statsP[nomeLimpo].ent++;
             });
 
-            Object.entries(statsP).sort((a,b) => b[1].ent - a[1].ent).forEach(([nome, stat]) => {
+            const rankingOrdenado = Object.entries(statsP).sort((a,b) => b[1].ent - a[1].ent);
+
+            rankingOrdenado.forEach(([nome, stat], index) => {
                 const conv = Math.round((stat.ent / stat.res) * 100);
+                let medalha = "";
+                if(index === 0) medalha = "🏆 ";
+                else if(index === 1) medalha = "🥈 ";
+                else if(index === 2) medalha = "🥉 ";
+                else medalha = `<span class="text-zinc-600 mr-2">${index + 1}º</span> `;
+
                 listaRank.innerHTML += `
-                    <div class="flex justify-between items-center p-5 bg-zinc-900/40 rounded-2xl border border-zinc-800/50">
-                        <div>
-                            <span class="text-[11px] font-black uppercase text-white">${nome}</span>
-                            <div class="flex items-baseline gap-1 mt-1">
-                                <span class="text-2xl font-black text-white">${stat.res}</span>
-                                <span class="text-[8px] text-zinc-500 uppercase font-bold">Reservas</span>
+                    <div class="flex justify-between items-center p-5 bg-zinc-900/40 rounded-2xl border ${index < 3 ? 'border-yellow-500/30 bg-yellow-500/5' : 'border-zinc-800/50'}">
+                        <div class="flex items-center">
+                            <span class="text-lg">${medalha}</span>
+                            <div>
+                                <span class="text-[11px] font-black uppercase text-white">${nome}</span>
+                                <div class="flex items-baseline gap-1 mt-1">
+                                    <span class="text-2xl font-black text-white">${stat.res}</span>
+                                    <span class="text-[8px] text-zinc-500 uppercase font-bold">Reservas</span>
+                                </div>
                             </div>
                         </div>
                         <div class="flex items-center gap-6">
-                            <div class="text-center"><p class="text-[8px] text-zinc-500 font-black">Eficiência</p><p class="text-xs font-black text-yellow-500">${conv}%</p></div>
-                            <div class="bg-green-500 text-black px-5 py-3 rounded-2xl font-black text-xl italic shadow-lg shadow-green-500/20">${stat.ent}</div>
+                            <div class="text-center"><p class="text-[8px] text-zinc-500 font-black">Conversão</p><p class="text-xs font-black text-yellow-500">${conv}%</p></div>
+                            <div class="${index < 3 ? 'bg-yellow-500 text-black' : 'bg-green-500 text-black'} px-5 py-3 rounded-2xl font-black text-xl italic shadow-lg">${stat.ent}</div>
                         </div>
                     </div>`;
             });
 
-            // --- CORREÇÃO DOS FILTROS (SELECTS) ---
             const fEv = document.getElementById('rel-filtro-evento');
             const fPr = document.getElementById('rel-filtro-promoter');
-            const vE = fEv.value; 
-            const vP = fPr.value;
-
-            // Limpa e preenche eventos
+            const vE = fEv.value; const vP = fPr.value;
             fEv.innerHTML = '<option value="">Filtrar Evento</option>';
-            dadosEventos.forEach(e => {
-                fEv.innerHTML += `<option value="${e.nome}">${e.nome}</option>`;
-            });
-
-            // Limpa e preenche promoters (Puxando da equipe cadastrada + Direto)
+            dadosEventos.forEach(e => fEv.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
             fPr.innerHTML = '<option value="">Filtrar Promoter</option>';
-            const listaPromotersFiltro = [...new Set([...dadosEquipe.map(p => p.nome), "Direto"])].sort();
-            listaPromotersFiltro.forEach(nome => {
-                fPr.innerHTML += `<option value="${nome}">${nome}</option>`;
-            });
-
-            fEv.value = vE; 
-            fPr.value = vP;
+            const listaPromotersFiltro = [...new Set([...dadosEquipe.map(p => p.nome.trim().toUpperCase()), "DIRETO"])].sort();
+            listaPromotersFiltro.forEach(nome => fPr.innerHTML += `<option value="${nome}">${nome}</option>`);
+            fEv.value = vE; fPr.value = vP;
             gerarRelatorioCruzado();
         }
 
@@ -260,7 +260,7 @@
             const pr = document.getElementById('rel-filtro-promoter').value;
             let filtrados = dadosReservas.filter(r => r.entrou);
             if(ev) filtrados = filtrados.filter(r => r.evento === ev);
-            if(pr) filtrados = filtrados.filter(r => r.promoter === pr);
+            if(pr) filtrados = filtrados.filter(r => (r.promoter || "DIRETO").trim().toUpperCase() === pr);
             document.getElementById('num-cruzado').innerText = filtrados.length;
             document.getElementById('txt-cruzado').innerText = `${ev || 'Todos'} | ${pr || 'Toda Equipe'}`;
         };
