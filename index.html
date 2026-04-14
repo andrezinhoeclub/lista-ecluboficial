@@ -33,7 +33,7 @@
         </header>
 
         <div id="listaEventos" class="space-y-12">
-            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando Agenda...</div>
+            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Sincronizando Agenda...</div>
         </div>
 
         <footer class="mt-20 mb-12 border-t border-zinc-900 pt-10 text-center text-white">
@@ -75,7 +75,6 @@
         const params = new URLSearchParams(window.location.search);
         const promoterRef = params.get('ref') || 'Direto';
 
-        // Função para aplicar máscara no telefone (Ex: (41) 99999-9999)
         window.mascaraTelefone = (input) => {
             let v = input.value.replace(/\D/g, "");
             if (v.length > 11) v = v.substring(0, 11);
@@ -90,42 +89,51 @@
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snap = await getDocs(q);
                 const container = document.getElementById('listaEventos');
-                container.innerHTML = '';
                 const hoje = new Date().toLocaleDateString('en-CA');
                 
+                let eventosValidos = [];
                 snap.forEach(doc => {
-                    const ev = doc.data();
-                    if (!ev.data || ev.data >= hoje) {
-                        const card = document.createElement('div');
-                        card.className = "festa-card fade-down mb-6";
-                        
-                        const valorC = ev.valor_casal ? ev.valor_casal : 'Consulte Portaria';
-                        const valorS = ev.valor_solteiro ? ev.valor_solteiro : 'Consulte Portaria';
-
-                        card.innerHTML = `
-                            <div class="banner-container"><img src="${ev.imagem}" class="banner-img"></div>
-                            <div class="p-6 space-y-3 text-center">
-                                <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data ? ev.data.split('-').reverse().join('/') : ''}</p>
-                                <h3 class="text-2xl font-black uppercase italic text-white leading-tight mb-4">${ev.nome}</h3>
-                                
-                                <div id="selecao-tipo-${doc.id}" class="grid grid-cols-2 gap-4 mt-6">
-                                    <button onclick="selecionarTipo('${doc.id}', 'casal', \`${valorC}\`)" class="type-btn p-5 rounded-2xl font-black uppercase text-xs btn-action" id="btn-casal-${doc.id}">Casal</button>
-                                    <button onclick="selecionarTipo('${doc.id}', 'solteiro', \`${valorS}\`)" class="type-btn p-5 rounded-2xl font-black uppercase text-xs btn-action" id="btn-solteiro-${doc.id}">Solteiro</button>
-                                </div>
-
-                                <div id="form-contato-${doc.id}" class="hidden space-y-4 mt-6 pt-6 border-t border-zinc-900 text-left">
-                                    <div class="bg-zinc-900/50 p-4 rounded-2xl text-center mb-4">
-                                        <p class="text-[10px] text-zinc-500 uppercase font-black mb-1 italic">Condição na Lista</p>
-                                        <p id="display-valor-${doc.id}" class="text-[11px] font-bold text-white uppercase leading-relaxed"></p>
-                                    </div>
-                                    <input type="text" id="nome-${doc.id}" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-xl outline-none font-bold text-xs uppercase">
-                                    <input type="tel" id="tel-${doc.id}" oninput="mascaraTelefone(this)" maxlength="15" placeholder="(DDD) 99999-9999" class="w-full site-input p-4 rounded-xl outline-none font-bold text-xs">
-                                    <button id="btn-submit-${doc.id}" onclick="processarEnvio('${ev.nome}', '${doc.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action mt-2">Finalizar Reserva</button>
-                                </div>
-                            </div>
-                        `;
-                        container.appendChild(card);
+                    const data = doc.data();
+                    if (!data.data || data.data >= hoje) {
+                        eventosValidos.push({ id: doc.id, ...data });
                     }
+                });
+
+                // ORDENAÇÃO CRONOLÓGICA (Mais próximo primeiro)
+                eventosValidos.sort((a, b) => new Date(a.data) - new Date(b.data));
+
+                container.innerHTML = '';
+                
+                eventosValidos.forEach(ev => {
+                    const card = document.createElement('div');
+                    card.className = "festa-card fade-down mb-6";
+                    
+                    const valorC = ev.valor_casal || 'Consulte Portaria';
+                    const valorS = ev.valor_solteiro || 'Consulte Portaria';
+
+                    card.innerHTML = `
+                        <div class="banner-container"><img src="${ev.imagem}" class="banner-img"></div>
+                        <div class="p-6 space-y-3 text-center">
+                            <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data ? ev.data.split('-').reverse().join('/') : ''}</p>
+                            <h3 class="text-2xl font-black uppercase italic text-white leading-tight mb-4">${ev.nome}</h3>
+                            
+                            <div id="selecao-tipo-${ev.id}" class="grid grid-cols-2 gap-4 mt-6">
+                                <button onclick="selecionarTipo('${ev.id}', 'casal', \`${valorC}\`)" class="type-btn p-5 rounded-2xl font-black uppercase text-xs btn-action" id="btn-casal-${ev.id}">Casal</button>
+                                <button onclick="selecionarTipo('${ev.id}', 'solteiro', \`${valorS}\`)" class="type-btn p-5 rounded-2xl font-black uppercase text-xs btn-action" id="btn-solteiro-${ev.id}">Solteiro</button>
+                            </div>
+
+                            <div id="form-contato-${ev.id}" class="hidden space-y-4 mt-6 pt-6 border-t border-zinc-900 text-left">
+                                <div class="bg-zinc-900/50 p-4 rounded-2xl text-center mb-4">
+                                    <p class="text-[10px] text-zinc-500 uppercase font-black mb-1 italic">Condição na Lista</p>
+                                    <p id="display-valor-${ev.id}" class="text-[11px] font-bold text-white uppercase leading-relaxed"></p>
+                                </div>
+                                <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-xl outline-none font-bold text-xs uppercase">
+                                <input type="tel" id="tel-${ev.id}" oninput="mascaraTelefone(this)" maxlength="15" placeholder="(DDD) 99999-9999" class="w-full site-input p-4 rounded-xl outline-none font-bold text-xs">
+                                <button id="btn-submit-${ev.id}" onclick="processarEnvio('${ev.nome}', '${ev.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action mt-2">Finalizar Reserva</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
                 });
             } catch (e) { console.error(e); }
         }
@@ -141,7 +149,6 @@
             const form = document.getElementById('form-contato-' + id);
             form.classList.remove('hidden');
             form.setAttribute('data-tipo', tipo);
-
             setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
         };
 
@@ -151,27 +158,16 @@
             const nome = document.getElementById(`nome-${id}`).value.trim();
             const telRaw = document.getElementById(`tel-${id}`).value.trim();
             const tipo = form.getAttribute('data-tipo');
-
-            // Limpa a máscara para contar os números reais (apenas dígitos)
             const telNumeros = telRaw.replace(/\D/g, "");
 
             if (!nome) return alert("Por favor, preencha o seu nome completo.");
-            
-            // VALIDAÇÃO OBRIGATÓRIA DE 11 DÍGITOS
-            if (telNumeros.length < 11) {
-                return alert("Número de telefone incompleto! Digite o DDD + 9 números.");
-            }
+            if (telNumeros.length < 11) return alert("Número incompleto! Use DDD + 9 números.");
             
             btn.disabled = true;
             btn.innerText = "VERIFICANDO...";
 
             try {
-                const qBusca = query(
-                    collection(db, "lista_eventos"), 
-                    where("tel", "==", telRaw), 
-                    where("evento", "==", nomeEvento)
-                );
-                
+                const qBusca = query(collection(db, "lista_eventos"), where("tel", "==", telRaw), where("evento", "==", nomeEvento));
                 const snapBusca = await getDocs(qBusca);
 
                 if (!snapBusca.empty) {
@@ -186,9 +182,7 @@
                     nome, tel: telRaw, tipo, evento: nomeEvento, promoter: promoterRef, status: "Lista", data_cadastro: serverTimestamp() 
                 });
                 document.getElementById('telaSucesso').classList.remove('hidden');
-            } catch (e) { 
-                alert("Erro ao processar reserva."); 
-            } finally { 
+            } catch (e) { alert("Erro ao processar reserva."); } finally { 
                 btn.disabled = false; 
                 btn.innerText = "Finalizar Reserva"; 
             }
