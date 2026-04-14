@@ -29,14 +29,14 @@
             box-shadow: -10px 0 20px -10px #eab308;
         }
         
-        /* --- ESTADO DE CHECK-IN (Diferenciação Visual Forte) --- */
+        /* ESTADO DE CHECK-IN */
         .client-card.entrou { 
-            opacity: 0.20 !important; /* Fica bem clarinho */
-            filter: grayscale(1);      /* Remove todas as cores */
-            transform: scale(0.97);    /* Encolhe levemente */
-            pointer-events: none;      /* Bloqueia novos cliques */
-            border-color: #27272a;     /* Borda neutra */
-            background: #050505;       /* Fundo mais escuro */
+            opacity: 0.20 !important;
+            filter: grayscale(1);
+            transform: scale(0.97);
+            pointer-events: none;
+            border-color: #27272a;
+            background: #050505;
         }
         
         /* Tipografia */
@@ -60,12 +60,12 @@
 
     <aside class="sidebar w-80 h-full flex flex-col p-6 bg-black/50">
         <div class="mb-10 text-white">
-            <h2 class="text-yellow-500 font-black italic uppercase text-xl tracking-tighter">E-Club</h2>
+            <h2 class="text-yellow-500 font-black italic uppercase text-xl tracking-tighter text-white">E-Club</h2>
             <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-white">Gestão Portaria (DEV)</p>
         </div>
         <div class="flex-grow overflow-y-auto">
             <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-6 tracking-widest text-white">Eventos Ativos</h3>
-            <div id="lista-eventos-sidebar" class="space-y-4"></div>
+            <div id="lista-eventos-sidebar" class="space-y-4 text-white"></div>
         </div>
     </aside>
 
@@ -118,8 +118,6 @@
             bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
             atualizarContadorGlobal();
             renderizarSidebar();
-            // Se houver algo digitado na busca, atualiza a lista visualmente na hora
-            if (document.getElementById('input-busca').value.length >= 2) processarPesquisa();
         });
 
         onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
@@ -150,7 +148,10 @@
             const container = document.getElementById('container-resultados');
             if (busca.length < 2) {
                 container.innerHTML = '';
-                container.appendChild(document.getElementById('placeholder-busca') || '');
+                const ph = document.createElement('div');
+                ph.className = "h-full flex flex-col items-center justify-center opacity-20 py-40";
+                ph.innerHTML = '<p class="font-black uppercase italic tracking-widest text-sm text-white">Digite para pesquisar clientes</p>';
+                container.appendChild(ph);
                 return;
             }
             const filtrados = bancoClientes.filter(c => 
@@ -168,7 +169,6 @@
                 container.innerHTML = '<p class="py-40 font-black uppercase text-zinc-800 italic text-white text-center text-sm">Nenhum cliente encontrado.</p>';
                 return;
             }
-            // Ordena: Quem NÃO entrou fica no topo
             lista.sort((a,b) => (a.entrou === b.entrou) ? a.nome.localeCompare(b.nome) : a.entrou ? 1 : -1).forEach(c => {
                 const badgeColor = c.tipo === 'casal' ? 'badge-casal' : 'badge-solteiro';
                 const card = document.createElement('div');
@@ -199,7 +199,14 @@
 
         window.confirmarCheckin = async (id) => {
             const docRef = doc(db, "lista_eventos", id);
-            try { await updateDoc(docRef, { entrou: true, data_entrada: new Date().toISOString() });
+            const inputBusca = document.getElementById('input-busca');
+            try { 
+                await updateDoc(docRef, { entrou: true, data_entrada: new Date().toISOString() });
+                
+                // LIMPA A BARRA DE PESQUISA E VOLTA AO ESTADO INICIAL
+                inputBusca.value = "";
+                processarPesquisa(); 
+                
             } catch (e) { alert("Erro no check-in!"); }
         };
 
