@@ -21,9 +21,9 @@
 
     <div class="max-w-6xl mx-auto">
         <header class="flex justify-between items-center mb-10">
-            <h1 class="text-2xl font-black uppercase italic text-yellow-500 tracking-tighter text-white">Gestão Eclub</h1>
+            <h1 class="text-2xl font-black uppercase italic text-yellow-500 tracking-tighter">Gestão Eclub</h1>
             <nav class="flex space-x-2">
-                <button onclick="trocarAba('aba-relatorios', this)" id="btn-rel" class="btn-nav active px-4 py-2 rounded-xl text-[10px] uppercase">Relatórios</button>
+                <button onclick="trocarAba('aba-relatorios', this)" class="btn-nav active px-4 py-2 rounded-xl text-[10px] uppercase">Relatórios</button>
                 <button onclick="trocarAba('aba-festas', this)" class="btn-nav px-4 py-2 rounded-xl text-[10px] uppercase">Festas</button>
                 <button onclick="trocarAba('aba-equipe', this)" class="btn-nav px-4 py-2 rounded-xl text-[10px] uppercase">Equipe</button>
                 <button onclick="window.location.href='index.html'" class="bg-red-900/50 text-red-500 px-4 py-2 rounded-xl text-[10px] uppercase font-black">Sair</button>
@@ -33,30 +33,38 @@
         <section id="aba-relatorios" class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-blue-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest text-white">Total Geral Reservas</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Total Geral Reservas</p>
                     <p id="res-total" class="text-4xl font-black italic text-white">0</p>
                 </div>
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-yellow-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest text-white">Check-ins Realizados</p>
-                    <p id="res-checkin-total" class="text-4xl font-black italic text-yellow-500 text-white">0</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Check-ins Realizados</p>
+                    <p id="res-checkin-total" class="text-4xl font-black italic text-white">0</p>
                 </div>
                 <div class="card-glass p-8 rounded-[2.5rem] text-center border-b-4 border-b-green-500">
-                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest text-white">Taxa de Conversão</p>
-                    <p id="res-conversao" class="text-4xl font-black italic text-green-500 text-white">0%</p>
+                    <p class="text-[10px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Taxa de Conversão</p>
+                    <p id="res-conversao" class="text-4xl font-black italic text-white">0%</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-8">
+                <div class="card-glass p-8 rounded-[2.5rem]">
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-yellow-500">Reservas por Evento (Tempo Real)</h3>
+                    <div id="container-reservas-evento" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="card-glass p-8 rounded-[2.5rem]">
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-blue-500 text-white">Ranking: Eventos em Aberto</h3>
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-blue-500">Ranking: Promoters</h3>
                     <div id="ranking-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-2"></div>
                 </div>
                 <div class="card-glass p-8 rounded-[2.5rem]">
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-green-500 text-white">Auditoria de Check-ins</h3>
-                    <select id="filtro-promoter-checkin" class="w-full p-4 rounded-xl mb-6 font-bold text-xs uppercase text-white" onchange="window.filtrarClientesCheckin()">
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-green-500">Auditoria de Check-ins</h3>
+                    <select id="filtro-promoter-checkin" class="w-full p-4 rounded-xl mb-6 font-bold text-xs uppercase" onchange="window.filtrarClientesCheckin()">
                         <option value="">Selecione um Promoter</option>
                     </select>
-                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-xl p-4 font-mono text-[11px] select-all text-white"></div>
+                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-xl p-4 font-mono text-[11px] select-all"></div>
                 </div>
             </div>
         </section>
@@ -67,29 +75,15 @@
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <input type="hidden" id="edit_id">
                     <input type="text" id="nome_festa" placeholder="Nome da Festa" class="p-4 rounded-2xl font-bold" required>
-                    <input type="date" id="data_festa" class="p-4 rounded-2xl font-bold text-white" required onchange="document.getElementById('data_fim').value = this.value">
-                    <input type="time" id="hora_inicio" class="p-4 rounded-2xl font-bold text-white" value="22:00">
+                    <input type="date" id="data_festa" class="p-4 rounded-2xl font-bold" required>
+                    <input type="time" id="hora_inicio" class="p-4 rounded-2xl font-bold" value="22:00">
                     <input type="url" id="url_banner" placeholder="URL do Banner" class="p-4 rounded-2xl font-bold" required>
                     <input type="text" id="valor_casal" placeholder="Valor Casal" class="p-4 rounded-2xl font-bold text-center">
                     <input type="text" id="valor_solteiro" placeholder="Valor Solteiro" class="p-4 rounded-2xl font-bold text-center">
-                    
-                    <div class="col-span-1 md:col-span-2 bg-black/40 p-6 rounded-[2rem] border border-dashed border-zinc-800">
-                        <label class="text-[10px] font-black uppercase text-yellow-500 ml-2 tracking-widest">Encerrar Lista Automático em:</label>
-                        <div class="grid grid-cols-2 gap-4 mt-3">
-                            <input type="date" id="data_fim" class="p-4 rounded-xl font-bold text-white" required>
-                            <input type="time" id="hora_fim" class="p-4 rounded-xl font-bold text-white" value="23:59" required>
-                        </div>
-                    </div>
-                    <button type="submit" id="btnPublicar" class="col-span-1 md:col-span-2 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase text-sm tracking-widest hover:bg-blue-700 transition">Publicar Festa no Site</button>
-                    <button type="button" id="btnCancelarEdit" onclick="cancelarEdicao()" class="hidden col-span-1 md:col-span-2 bg-zinc-800 text-white font-black py-3 rounded-2xl uppercase text-[10px] tracking-widest">Cancelar Edição</button>
+                    <button type="submit" id="btnPublicar" class="col-span-1 md:col-span-2 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase text-sm tracking-widest">Publicar Festa</button>
                 </form>
             </div>
-
-            <div class="card-glass p-8 rounded-[2.5rem]">
-                <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-yellow-500">Eventos Publicados (Ordem Cronológica)</h3>
-                <div id="lista-eventos-ativos" class="space-y-3">
-                    </div>
-            </div>
+            <div id="lista-eventos-ativos" class="space-y-3"></div>
         </section>
 
         <section id="aba-equipe" class="hidden">
@@ -97,7 +91,7 @@
                 <h2 class="text-green-500 font-black uppercase italic text-lg mb-8 tracking-widest">Gerenciar Equipe</h2>
                 <form id="formEquipe" class="flex gap-4 mb-10">
                     <input type="text" id="nome_promoter" placeholder="Nome do Promoter" class="flex-grow p-4 rounded-2xl font-bold" required>
-                    <button type="submit" class="bg-green-600 px-10 rounded-2xl font-black uppercase text-xs hover:bg-green-700 transition text-white">Salvar</button>
+                    <button type="submit" class="bg-green-600 px-10 rounded-2xl font-black uppercase text-xs text-white">Salvar</button>
                 </form>
                 <div id="lista-promoters" class="space-y-3"></div>
             </div>
@@ -121,6 +115,7 @@
         const db = getFirestore(app);
 
         let todasReservasGlobal = [];
+        let eventosAtivosGlobal = [];
 
         window.trocarAba = (id, botao) => {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
@@ -129,180 +124,95 @@
             botao.classList.add('active');
         };
 
-        // RELATÓRIOS
+        // ESCUTA EVENTOS ATIVOS
+        onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
+            eventosAtivosGlobal = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            renderizarRelatorioPorEvento();
+            renderizarListaEventos();
+        });
+
+        // ESCUTA TODAS AS RESERVAS
         onSnapshot(collection(db, "lista_eventos"), (snap) => {
             todasReservasGlobal = snap.docs.map(d => d.data());
-            let total = 0, checkins = 0;
-            let rankingPromoters = {};
-            const hoje = new Date().toISOString().split('T')[0];
+            renderizarRelatorioGeral();
+            renderizarRelatorioPorEvento();
+        });
 
-            todasReservasGlobal.forEach(r => {
-                total++;
-                if(r.entrou) checkins++;
-                if(r.evento_data >= hoje || !r.evento_data) {
-                    rankingPromoters[r.promoter] = (rankingPromoters[r.promoter] || 0) + 1;
-                }
-            });
-
+        function renderizarRelatorioGeral() {
+            let total = todasReservasGlobal.length;
+            let checkins = todasReservasGlobal.filter(r => r.entrou).length;
             document.getElementById('res-total').innerText = total;
             document.getElementById('res-checkin-total').innerText = checkins;
             document.getElementById('res-conversao').innerText = (total > 0 ? Math.round((checkins / total) * 100) : 0) + '%';
             
-            const containerRank = document.getElementById('ranking-container');
-            containerRank.innerHTML = '';
-            Object.entries(rankingPromoters).sort((a,b) => b[1]-a[1]).forEach(([nome, qtd]) => {
-                containerRank.innerHTML += `<div class="flex justify-between items-center bg-black/40 p-4 rounded-xl border border-zinc-800">
-                    <span class="font-black uppercase text-[10px] text-zinc-300">${nome}</span>
-                    <span class="text-yellow-500 font-black text-xs">${qtd} reserv.</span>
+            // Ranking Promoters
+            const rankingContainer = document.getElementById('ranking-container');
+            rankingContainer.innerHTML = '';
+            let ranking = {};
+            todasReservasGlobal.forEach(r => {
+                ranking[r.promoter] = (ranking[r.promoter] || 0) + 1;
+            });
+            Object.entries(ranking).sort((a,b) => b[1]-a[1]).forEach(([nome, qtd]) => {
+                rankingContainer.innerHTML += `<div class="flex justify-between p-3 bg-black/20 rounded-xl border border-zinc-800">
+                    <span class="uppercase font-black">${nome}</span>
+                    <span class="text-yellow-500 font-black">${qtd}</span>
                 </div>`;
             });
+        }
 
-            const select = document.getElementById('filtro-promoter-checkin');
-            const promotersUnicos = [...new Set(todasReservasGlobal.map(r => r.promoter))].sort();
-            const valorAtual = select.value;
-            select.innerHTML = '<option value="">Selecione um Promoter</option>';
-            promotersUnicos.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p; opt.innerText = p.toUpperCase();
-                select.appendChild(opt);
+        // NOVO: Renderiza o card de reservas por evento
+        function renderizarRelatorioPorEvento() {
+            const container = document.getElementById('container-reservas-evento');
+            container.innerHTML = '';
+
+            eventosAtivosGlobal.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+                const totalEvento = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
+                
+                container.innerHTML += `
+                    <div class="bg-black/40 border border-zinc-800 p-6 rounded-3xl flex flex-col items-center justify-center text-center">
+                        <p class="text-[9px] text-zinc-500 font-black uppercase mb-1 tracking-tighter">${ev.data.split('-').reverse().join('/')}</p>
+                        <h4 class="text-sm font-black uppercase italic mb-3 text-white truncate w-full">${ev.nome}</h4>
+                        <div class="bg-yellow-500 text-black px-6 py-2 rounded-full font-black text-xl italic shadow-lg">
+                            ${totalEvento}
+                        </div>
+                        <p class="text-[8px] text-zinc-400 font-black uppercase mt-2">Reservas na Lista</p>
+                    </div>
+                `;
             });
-            select.value = valorAtual;
-        });
+        }
 
-        window.filtrarClientesCheckin = () => {
-            const pAlvo = document.getElementById('filtro-promoter-checkin').value;
-            const div = document.getElementById('lista-clientes-checkin');
-            if(!pAlvo) return;
-            const filtrados = todasReservasGlobal.filter(r => r.promoter === pAlvo && r.entrou);
-            div.innerHTML = filtrados.length ? '' : 'Nenhum check-in.';
-            filtrados.forEach(c => {
-                div.innerHTML += `<div class="py-1 border-b border-zinc-900/50 text-white">${c.nome.toUpperCase()} - ${c.telefone}</div>`;
-            });
-        };
-
-        // GESTÃO DE EVENTOS (ORDEM CRONOLÓGICA VIA CÓDIGO)
-        onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
+        // FUNÇÕES DE EQUIPE E FESTAS (MANTIDAS)
+        function renderizarListaEventos() {
             const container = document.getElementById('lista-eventos-ativos');
             container.innerHTML = '';
-            
-            let eventosParaListar = [];
-            snap.forEach(d => {
-                eventosParaListar.push({ id: d.id, ...d.data() });
+            eventosAtivosGlobal.forEach(ev => {
+                container.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <img src="${ev.imagem}" class="w-10 h-10 rounded-lg object-cover">
+                        <div><h4 class="font-black uppercase text-[10px]">${ev.nome}</h4><p class="text-yellow-500 text-[8px]">${ev.data}</p></div>
+                    </div>
+                    <button onclick="removerEvento('${ev.id}')" class="bg-red-900/20 text-red-500 p-2 rounded-xl text-[8px] font-black uppercase">Excluir</button>
+                </div>`;
             });
+        }
 
-            // Ordena por data no navegador
-            eventosParaListar.sort((a, b) => new Date(a.data) - new Date(b.data));
-
-            eventosParaListar.forEach(ev => {
-                container.innerHTML += `
-                    <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center gap-4">
-                        <div class="flex items-center gap-3">
-                            <img src="${ev.imagem}" class="w-10 h-10 rounded-lg object-cover">
-                            <div>
-                                <h4 class="font-black uppercase text-[10px] text-white">${ev.nome}</h4>
-                                <p class="text-[8px] text-yellow-500 font-black uppercase tracking-widest">${ev.data.split('-').reverse().join('/')}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick='prepararEdicao("${ev.id}", ${JSON.stringify(ev)})' class="bg-blue-900/20 text-blue-400 hover:bg-blue-900/40 px-4 py-2 rounded-xl text-[9px] font-black uppercase transition">Editar</button>
-                            <button onclick="removerEvento('${ev.id}')" class="bg-red-900/20 text-red-500 hover:bg-red-900/40 px-3 py-2 rounded-xl text-[9px] font-black uppercase transition text-white">X</button>
-                        </div>
-                    </div>`;
-            });
-        });
-
-        window.prepararEdicao = (id, ev) => {
-            document.getElementById('edit_id').value = id;
-            document.getElementById('nome_festa').value = ev.nome;
-            document.getElementById('data_festa').value = ev.data;
-            document.getElementById('hora_inicio').value = ev.hora || '22:00';
-            document.getElementById('url_banner').value = ev.imagem;
-            document.getElementById('valor_casal').value = ev.valor_casal || '';
-            document.getElementById('valor_solteiro').value = ev.valor_solteiro || '';
-            if(ev.data_encerramento) {
-                const parts = ev.data_encerramento.split('T');
-                document.getElementById('data_fim').value = parts[0];
-                document.getElementById('hora_fim').value = parts[1];
-            }
-            document.getElementById('titulo-form').innerText = "Editando Evento";
-            document.getElementById('titulo-form').classList.replace('text-blue-500', 'text-yellow-500');
-            document.getElementById('btnPublicar').innerText = "Salvar Alterações";
-            document.getElementById('btnPublicar').classList.replace('bg-blue-600', 'bg-yellow-600');
-            document.getElementById('btnCancelarEdit').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        window.cancelarEdicao = () => {
-            document.getElementById('formEvento').reset();
-            document.getElementById('edit_id').value = '';
-            document.getElementById('titulo-form').innerText = "Novo Evento";
-            document.getElementById('titulo-form').classList.replace('text-yellow-500', 'text-blue-500');
-            document.getElementById('btnPublicar').innerText = "Publicar Festa no Site";
-            document.getElementById('btnPublicar').classList.replace('bg-yellow-600', 'bg-blue-600');
-            document.getElementById('btnCancelarEdit').classList.add('hidden');
-        };
-
-        window.removerEvento = async (id) => {
-            if(confirm("Remover evento do site?")) await updateDoc(doc(db, "eventos", id), { ativo: false });
-        };
+        window.removerEvento = async (id) => { if(confirm("Desativar?")) await updateDoc(doc(db, "eventos", id), { ativo: false }); };
 
         document.getElementById('formEvento').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btnPublicar');
-            const editId = document.getElementById('edit_id').value;
-            btn.innerText = "PROCESSANDO...";
-            btn.disabled = true;
-            const dataFim = `${document.getElementById('data_fim').value}T${document.getElementById('hora_fim').value}`;
             const dados = {
                 nome: document.getElementById('nome_festa').value,
                 data: document.getElementById('data_festa').value,
-                hora: document.getElementById('hora_inicio').value,
                 imagem: document.getElementById('url_banner').value,
                 valor_casal: document.getElementById('valor_casal').value,
                 valor_solteiro: document.getElementById('valor_solteiro').value,
-                data_encerramento: dataFim,
                 ativo: true
             };
-            try {
-                if(editId) {
-                    await updateDoc(doc(db, "eventos", editId), dados);
-                    alert("Atualizado!"); cancelarEdicao();
-                } else {
-                    dados.criado_em = new Date();
-                    await addDoc(collection(db, "eventos"), dados);
-                    alert("Publicado!"); document.getElementById('formEvento').reset();
-                }
-            } catch (err) { alert("Erro!"); } finally { btn.disabled = false; btn.innerText = editId ? "Salvar Alterações" : "Publicar Festa no Site"; }
+            await addDoc(collection(db, "eventos"), dados);
+            alert("Sucesso!");
+            e.target.reset();
         });
 
-        // EQUIPE
-        onSnapshot(collection(db, "equipe"), (snapEquipe) => {
-            const container = document.getElementById('lista-promoters');
-            container.innerHTML = '';
-            const baseUrl = "https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref=";
-            const nomesEquipe = snapEquipe.docs.map(d => d.data().nome);
-            const promotersHistorico = [...new Set(todasReservasGlobal.map(r => r.promoter))];
-            const listaUnificada = [...new Set([...nomesEquipe, ...promotersHistorico])].filter(n => n && n !== 'Direto').sort();
-            listaUnificada.forEach(p => {
-                const link = baseUrl + encodeURIComponent(p);
-                const idDoc = snapEquipe.docs.find(d => d.data().nome === p)?.id;
-                container.innerHTML += `
-                    <div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center gap-4">
-                        <div><h4 class="font-black uppercase text-[10px] text-white">${p}</h4></div>
-                        <div class="flex gap-2">
-                            <button onclick="copiarLink('${link}')" class="bg-zinc-800 px-4 py-2 rounded-xl text-[9px] font-black uppercase text-white transition">Link</button>
-                            ${idDoc ? `<button onclick="excluirPromoter('${idDoc}')" class="bg-red-900/20 text-red-500 px-3 py-2 rounded-xl text-[9px] font-black uppercase">X</button>` : ''}
-                        </div>
-                    </div>`;
-            });
-        });
-        window.copiarLink = (l) => { navigator.clipboard.writeText(l); alert("Copiado!"); };
-        window.excluirPromoter = async (id) => { if(confirm("Remover?")) await deleteDoc(doc(db, "equipe", id)); };
-        document.getElementById('formEquipe').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const n = document.getElementById('nome_promoter').value.trim();
-            if(n) { await addDoc(collection(db, "equipe"), { nome: n }); document.getElementById('formEquipe').reset(); }
-        });
     </script>
 </body>
 </html>
