@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eclub - Lista Oficial</title>
+    <title>Eclub - Official Booking</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .btn-action { transition: all 0.2s ease; }
@@ -31,16 +31,18 @@
                 <a href="https://wa.me/5541995040506" target="_blank" class="bg-zinc-900/50 border border-zinc-800 flex items-center justify-center p-5 rounded-2xl btn-action text-[10px] font-black uppercase tracking-widest">WhatsApp</a>
                 <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="bg-zinc-900/50 border border-zinc-800 flex items-center justify-center p-5 rounded-2xl btn-action text-[10px] font-black uppercase tracking-widest">Instagram</a>
             </div>
-            <div class="border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black">
-                <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Localização Oficial</p>
-                <p class="text-sm font-black italic text-white">Bairro Alto, Curitiba - PR</p>
-            </div>
+
+            <a href="https://www.google.com/maps/dir/?api=1&destination=Eclub+Curitiba+Bairro+Alto" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
+                <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Clique para ver a localização</p>
+                <p class="text-sm font-black italic text-white mb-1">Bairro Alto, Curitiba - PR</p>
+                <p class="text-[10px] text-zinc-500 font-bold uppercase underline tracking-tighter">Abrir no Google Maps ou Waze</p>
+            </a>
         </footer>
     </div>
 
     <div id="telaSucesso" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center">
         <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mb-6 text-2xl shadow-lg text-black">✓</div>
-        <h2 class="text-xl font-black uppercase italic mb-2 text-white">Reserva Solicitada!</h2>
+        <h2 class="text-xl font-black uppercase italic mb-2 text-white">Solicitado!</h2>
         <p class="text-zinc-500 text-[10px] font-bold uppercase">Seu nome foi enviado para a lista oficial.</p>
         <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action">Voltar à Agenda</button>
     </div>
@@ -89,14 +91,14 @@
                                 <div id="form-${ev.id}" class="hidden mt-6 space-y-3 pt-6 border-t border-zinc-800 text-left">
                                     <label class="text-[9px] font-black uppercase text-zinc-500 ml-1">Dados para Reserva</label>
                                     <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold uppercase text-xs">
-                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP (COM DDD)" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
+                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP COM DDD" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
                                     
                                     <select id="tipo-${ev.id}" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs uppercase">
                                         <option value="casal">Casal</option>
                                         <option value="solteiro">Solteiro</option>
                                     </select>
 
-                                    <button id="btn-submit-${ev.id}" onclick="processarEnvio('${ev.nome}', '${ev.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action">Confirmar Reserva</button>
+                                    <button id="btn-submit-${ev.id}" onclick="processarEnvio('${ev.nome}', '${ev.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action">Confirmar na Lista</button>
                                 </div>
                             </div>
                         `;
@@ -112,20 +114,18 @@
             const tel = document.getElementById(`tel-${id}`).value;
             const tipo = document.getElementById(`tipo-${id}`).value;
 
-            if (!nome || !tel) return alert("Por favor, preencha Nome e WhatsApp.");
+            if (!nome || !tel) return alert("Preencha Nome e WhatsApp.");
             
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
 
             try {
-                // Salva no Firebase (Sua Lista no Google Sheets via Make/Zapier lerá daqui)
                 await addDoc(collection(db, "lista_eventos"), { 
                     nome, 
                     tel, 
                     tipo, 
                     evento: nomeEvento, 
                     promoter: promoterRef, 
-                    pago: false, 
                     status: "Reserva",
                     data_cadastro: serverTimestamp() 
                 });
@@ -133,11 +133,10 @@
                 document.getElementById('telaSucesso').classList.remove('hidden');
                 
             } catch (e) {
-                alert("Erro ao enviar reserva. Tente novamente.");
-                console.error(e);
+                alert("Erro ao enviar. Tente novamente.");
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Confirmar Reserva";
+                btn.innerText = "Confirmar na Lista";
             }
         };
 
