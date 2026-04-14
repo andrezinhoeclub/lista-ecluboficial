@@ -47,7 +47,7 @@
             </div>
 
             <div class="card-glass p-8 rounded-[2.5rem]">
-                <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-yellow-500">Reservas por Evento</h3>
+                <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-yellow-500">Reservas por Evento (Mais próximo primeiro)</h3>
                 <div id="container-reservas-evento" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
             </div>
 
@@ -122,30 +122,28 @@
             botao.classList.add('active');
         };
 
-        // ESCUTA EVENTOS
         onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
             eventosAtivosGlobal = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             renderizarRelatorios();
             renderizarListaEventos();
         });
 
-        // ESCUTA RESERVAS
         onSnapshot(collection(db, "lista_eventos"), (snap) => {
             todasReservasGlobal = snap.docs.map(d => d.data());
             renderizarRelatorios();
         });
 
-        // ESCUTA EQUIPE
         onSnapshot(collection(db, "equipe"), (snap) => {
             const container = document.getElementById('lista-promoters');
             const selectCheckin = document.getElementById('filtro-promoter-checkin');
             container.innerHTML = '';
             const baseUrl = "https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref=";
+            selectCheckin.innerHTML = '<option value="">Selecione um Promoter</option>';
             
             snap.docs.forEach(d => {
                 const p = d.data().nome;
                 const link = baseUrl + encodeURIComponent(p);
-                container.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                container.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center mb-2">
                     <span class="font-black uppercase">${p}</span>
                     <div class="flex gap-2">
                         <button onclick="navigator.clipboard.writeText('${link}'); alert('Copiado!')" class="bg-zinc-800 px-3 py-2 rounded-xl text-[9px] font-black uppercase">Link</button>
@@ -160,45 +158,46 @@
         });
 
         function renderizarRelatorios() {
-            // Totais
             const total = todasReservasGlobal.length;
             const checkins = todasReservasGlobal.filter(r => r.entrou).length;
             document.getElementById('res-total').innerText = total;
             document.getElementById('res-checkin-total').innerText = checkins;
             document.getElementById('res-conversao').innerText = (total > 0 ? Math.round((checkins / total) * 100) : 0) + '%';
 
-            // Reservas por Evento
+            // ORGANIZAÇÃO CRONOLÓGICA DOS CARDS (Esquerda para Direita)
             const containerEv = document.getElementById('container-reservas-evento');
             containerEv.innerHTML = '';
-            eventosAtivosGlobal.forEach(ev => {
+            
+            // Ordenamos a lista antes de criar os cards
+            const eventosOrdenados = [...eventosAtivosGlobal].sort((a, b) => new Date(a.data) - new Date(b.data));
+
+            eventosOrdenados.forEach(ev => {
                 const qtd = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
                 containerEv.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 text-center">
-                    <p class="text-[8px] text-zinc-500 uppercase font-black">${ev.data}</p>
+                    <p class="text-[8px] text-zinc-500 uppercase font-black">${ev.data.split('-').reverse().join('/')}</p>
                     <h4 class="font-black uppercase text-white truncate">${ev.nome}</h4>
                     <p class="text-2xl font-black text-yellow-500 mt-1">${qtd}</p>
                 </div>`;
             });
 
-            // Ranking
             const containerRank = document.getElementById('ranking-container');
             containerRank.innerHTML = '';
             let rank = {};
             todasReservasGlobal.forEach(r => rank[r.promoter] = (rank[r.promoter] || 0) + 1);
             Object.entries(rank).sort((a,b) => b[1]-a[1]).forEach(([n, q]) => {
-                containerRank.innerHTML += `<div class="flex justify-between p-3 bg-black/20 rounded-xl border border-zinc-800 uppercase font-black">
+                containerRank.innerHTML += `<div class="flex justify-between p-3 bg-black/20 rounded-xl border border-zinc-800 uppercase font-black mb-1">
                     <span>${n}</span><span class="text-yellow-500">${q}</span>
                 </div>`;
             });
         }
 
-        // FUNÇÃO DE LIMPEZA VOLTOU
         window.limparDadosClientes = async () => {
-            if(confirm("ATENÇÃO: Isso apagará TODAS as reservas e check-ins permanentemente. Confirma?")) {
+            if(confirm("ATENÇÃO: Apagar TODAS as reservas?")) {
                 const snap = await getDocs(collection(db, "lista_eventos"));
                 const batch = writeBatch(db);
                 snap.docs.forEach(d => batch.delete(d.ref));
                 await batch.commit();
-                alert("Banco de dados resetado com sucesso!");
+                alert("Resetado!");
             }
         };
 
@@ -227,9 +226,10 @@
         function renderizarListaEventos() {
             const container = document.getElementById('lista-eventos-ativos');
             container.innerHTML = '';
-            eventosAtivosGlobal.forEach(ev => {
+            const eventosOrdenadosLista = [...eventosAtivosGlobal].sort((a, b) => new Date(a.data) - new Date(b.data));
+            eventosOrdenadosLista.forEach(ev => {
                 container.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center mb-2">
-                    <span class="font-black uppercase">${ev.nome} (${ev.data})</span>
+                    <span class="font-black uppercase">${ev.nome} (${ev.data.split('-').reverse().join('/')})</span>
                     <button onclick="removerEvento('${ev.id}')" class="text-red-500 font-black text-[9px] uppercase">Excluir</button>
                 </div>`;
             });
