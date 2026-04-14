@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB | Portaria Master</title>
+
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <meta property="og:title" content="E-CLUB | Portaria Oficial">
+    <meta property="og:description" content="Sistema interno de controle de acesso e check-in E-Club Curitiba.">
+    <meta property="og:image" content="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <meta property="og:type" content="website">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
@@ -25,6 +32,9 @@
 
     <div id="tela-login" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6">
         <div class="bg-zinc-900 p-10 w-full max-w-sm text-center border border-zinc-800 rounded-[3rem]">
+            <header class="flex justify-center mb-8">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12 w-auto">
+            </header>
             <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest text-sm">Acesso Portaria</h2>
             <div class="space-y-4">
                 <input type="text" id="user_login" placeholder="USUÁRIO" class="w-full p-5 rounded-2xl bg-black border border-zinc-800 text-white font-bold text-center uppercase text-xs">
@@ -36,18 +46,29 @@
     </div>
 
     <aside class="sidebar w-80 h-full flex flex-col p-6 bg-black/50">
-        <div class="mb-10 text-white"><h2 class="text-yellow-500 font-black italic uppercase text-xl">E-Club</h2><p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-white">Portaria</p></div>
+        <div class="mb-10 text-white">
+            <h2 class="text-yellow-500 font-black italic uppercase text-xl">E-Club</h2>
+            <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Portaria Digital</p>
+        </div>
         <div class="flex-grow overflow-y-auto"><div id="lista-eventos-sidebar" class="space-y-4 text-white"></div></div>
     </aside>
 
     <main class="flex-grow flex flex-col">
         <header class="p-8 border-b border-zinc-900 text-white">
             <div class="max-w-5xl mx-auto flex gap-6 items-center">
-                <div class="relative flex-grow"><span class="absolute left-5 top-5 opacity-30 text-white">🔍</span><input type="text" id="input-busca" placeholder="PESQUISAR CLIENTE..." class="w-full p-6 pl-14 rounded-3xl bg-zinc-900 border border-zinc-800 text-sm font-bold uppercase text-white transition-all" oninput="processarPesquisa()"></div>
-                <div class="text-right"><p id="total-confirmado" class="text-3xl font-black italic text-white leading-none">0</p><p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest text-white">Check-ins Noite</p></div>
+                <div class="relative flex-grow">
+                    <span class="absolute left-5 top-5 opacity-30 text-white">🔍</span>
+                    <input type="text" id="input-busca" placeholder="PESQUISAR CLIENTE..." class="w-full p-6 pl-14 rounded-3xl bg-zinc-900 border border-zinc-800 text-sm font-bold uppercase text-white transition-all" oninput="processarPesquisa()">
+                </div>
+                <div class="text-right">
+                    <p id="total-confirmado" class="text-3xl font-black italic text-white leading-none">0</p>
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Check-ins Noite</p>
+                </div>
             </div>
         </header>
-        <section class="flex-grow p-8 overflow-y-auto"><div id="container-resultados" class="max-w-5xl mx-auto grid grid-cols-1 gap-4"></div></section>
+        <section class="flex-grow p-8 overflow-y-auto">
+            <div id="container-resultados" class="max-w-5xl mx-auto grid grid-cols-1 gap-4"></div>
+        </section>
     </main>
 
     <script type="module">
@@ -68,13 +89,10 @@
 
         let bancoClientes = []; let bancoEventos = [];
 
-        // LOGIN CORRIGIDO (CASE INSENSITIVE NO USER)
         window.autenticarPortaria = async () => {
             const userRaw = document.getElementById('user_login').value.trim();
-            const user = userRaw.toLowerCase(); // Transforma o digitado em minúsculo para comparar
+            const user = userRaw.toLowerCase();
             const pass = document.getElementById('user_pass').value;
-            
-            // Busca o documento pelo nome de usuário em minúsculo
             const docRef = doc(db, "configuracoes", user);
             const docSnap = await getDoc(docRef);
 
