@@ -10,7 +10,6 @@
         
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
         
-        /* Layout Sidebar e Glass */
         .sidebar { border-right: 1px solid #1a1a1a; }
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         
@@ -22,21 +21,22 @@
             cursor: pointer;
         }
 
-        /* Efeito de Hover: Marcar a linha ao passar o mouse */
-        .client-card:hover { 
+        /* Efeito de Hover: Marcar a linha */
+        .client-card:not(.entrou):hover { 
             border-color: #eab308; 
             background: #111; 
             transform: translateX(8px);
             box-shadow: -10px 0 20px -10px #eab308;
         }
         
-        /* Efeito de Check-in: Opaco e reduzido */
+        /* --- ESTADO DE CHECK-IN (Diferenciação Visual Forte) --- */
         .client-card.entrou { 
-            opacity: 0.25; 
-            filter: grayscale(1);
-            transform: scale(0.98);
-            pointer-events: none; /* Impede cliques repetidos */
-            border-color: #27272a;
+            opacity: 0.20 !important; /* Fica bem clarinho */
+            filter: grayscale(1);      /* Remove todas as cores */
+            transform: scale(0.97);    /* Encolhe levemente */
+            pointer-events: none;      /* Bloqueia novos cliques */
+            border-color: #27272a;     /* Borda neutra */
+            background: #050505;       /* Fundo mais escuro */
         }
         
         /* Tipografia */
@@ -44,7 +44,6 @@
         .tel-cliente { font-size: 1.1rem; color: #a1a1aa; font-family: 'JetBrains Mono', monospace; }
         .badge-perfil { font-size: 14px; font-weight: 900; padding: 4px 12px; border-radius: 8px; text-transform: uppercase; letter-spacing: 1px; }
         
-        /* Badges de Cores */
         .badge-casal { background: #eab308; color: #000; }
         .badge-solteiro { background: #3b82f6; color: #fff; }
 
@@ -62,9 +61,8 @@
     <aside class="sidebar w-80 h-full flex flex-col p-6 bg-black/50">
         <div class="mb-10 text-white">
             <h2 class="text-yellow-500 font-black italic uppercase text-xl tracking-tighter">E-Club</h2>
-            <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Gestão Portaria (DEV)</p>
+            <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-white">Gestão Portaria (DEV)</p>
         </div>
-
         <div class="flex-grow overflow-y-auto">
             <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-6 tracking-widest text-white">Eventos Ativos</h3>
             <div id="lista-eventos-sidebar" class="space-y-4"></div>
@@ -72,7 +70,6 @@
     </aside>
 
     <main class="flex-grow flex flex-col">
-        
         <header class="p-8 border-b border-zinc-900 text-white">
             <div class="max-w-5xl mx-auto flex gap-6 items-center">
                 <div class="relative flex-grow">
@@ -84,7 +81,7 @@
                 </div>
                 <div class="text-right">
                     <p id="total-confirmado" class="text-3xl font-black italic leading-none">0</p>
-                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Check-ins Realizados</p>
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest text-white">Check-ins Efetuados</p>
                 </div>
             </div>
         </header>
@@ -92,11 +89,10 @@
         <section class="flex-grow p-8 overflow-y-auto">
             <div id="container-resultados" class="max-w-5xl mx-auto grid grid-cols-1 gap-4">
                 <div id="placeholder-busca" class="h-full flex flex-col items-center justify-center opacity-20 py-40">
-                    <p class="font-black uppercase italic tracking-widest text-sm text-white">Digite para buscar clientes</p>
+                    <p class="font-black uppercase italic tracking-widest text-sm text-white">Digite para pesquisar clientes</p>
                 </div>
             </div>
         </section>
-
     </main>
 
     <script type="module">
@@ -122,6 +118,8 @@
             bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
             atualizarContadorGlobal();
             renderizarSidebar();
+            // Se houver algo digitado na busca, atualiza a lista visualmente na hora
+            if (document.getElementById('input-busca').value.length >= 2) processarPesquisa();
         });
 
         onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
@@ -131,16 +129,13 @@
 
         function renderizarSidebar() {
             const container = document.getElementById('lista-eventos-sidebar');
-            if(!container) return;
-            container.innerHTML = '';
-
+            if(!container) return; container.innerHTML = '';
             const eventosOrdenados = [...bancoEventos].sort((a,b) => new Date(a.data) - new Date(b.data));
-
             eventosOrdenados.forEach(ev => {
                 const totalReservas = bancoClientes.filter(c => c.evento === ev.nome).length;
                 container.innerHTML += `
                     <div class="p-4 rounded-2xl glass border-l-4 border-l-yellow-500">
-                        <p class="text-[8px] font-black text-zinc-500 uppercase mb-1">${ev.data.split('-').reverse().join('/')}</p>
+                        <p class="text-[8px] font-black text-zinc-500 uppercase mb-1 text-white">${ev.data.split('-').reverse().join('/')}</p>
                         <h4 class="text-[11px] font-black uppercase text-white leading-tight mb-2">${ev.nome}</h4>
                         <div class="flex justify-between items-end">
                             <span class="text-[9px] font-bold text-zinc-600 uppercase">Reservas:</span>
@@ -153,31 +148,27 @@
         window.processarPesquisa = () => {
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const container = document.getElementById('container-resultados');
-
             if (busca.length < 2) {
-                container.innerHTML = '<div class="py-40 opacity-30 text-white font-black uppercase italic text-sm text-center">Digite para pesquisar...</div>';
+                container.innerHTML = '';
+                container.appendChild(document.getElementById('placeholder-busca') || '');
                 return;
             }
-
             const filtrados = bancoClientes.filter(c => 
                 (c.nome && c.nome.toUpperCase().includes(busca)) || 
                 (c.tel && c.tel.includes(busca)) ||
                 (c.telefone && c.telefone.includes(busca))
             );
-
             renderizarResultados(filtrados);
         };
 
         function renderizarResultados(lista) {
             const container = document.getElementById('container-resultados');
             container.innerHTML = '';
-
             if (lista.length === 0) {
                 container.innerHTML = '<p class="py-40 font-black uppercase text-zinc-800 italic text-white text-center text-sm">Nenhum cliente encontrado.</p>';
                 return;
             }
-
-            // Ordena: Quem não entrou primeiro, depois por nome
+            // Ordena: Quem NÃO entrou fica no topo
             lista.sort((a,b) => (a.entrou === b.entrou) ? a.nome.localeCompare(b.nome) : a.entrou ? 1 : -1).forEach(c => {
                 const badgeColor = c.tipo === 'casal' ? 'badge-casal' : 'badge-solteiro';
                 const card = document.createElement('div');
@@ -188,22 +179,16 @@
                         <span class="${badgeColor} badge-perfil mb-2">${c.tipo}</span>
                         <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Promoter: ${c.promoter || 'Direto'}</span>
                     </div>
-
                     <div class="flex-grow px-8 flex flex-col justify-center">
-                        <h3 class="nome-cliente font-black uppercase italic text-white mb-1">
-                            ${c.nome}
-                        </h3>
+                        <h3 class="nome-cliente font-black uppercase italic text-white mb-1">${c.nome}</h3>
                         <div class="flex items-center gap-4">
                             <span class="tel-cliente font-bold tracking-tighter">${c.tel || c.telefone || '(00) 00000-0000'}</span>
                         </div>
-                        <p class="text-[9px] text-zinc-600 font-black uppercase mt-2 tracking-widest italic border-t border-zinc-900 pt-1 w-fit">
-                            📅 Evento: ${c.evento}
-                        </p>
+                        <p class="text-[9px] text-zinc-600 font-black uppercase mt-2 tracking-widest italic border-t border-zinc-900 pt-1 w-fit">📅 Evento: ${c.evento}</p>
                     </div>
-
                     <div class="w-1/4 flex justify-end">
                         ${c.entrou 
-                            ? `<span class="text-green-500 font-black uppercase italic text-xs mr-4">Check-in Realizado</span>`
+                            ? `<span class="text-green-500 font-black uppercase italic text-[11px] mr-4 tracking-widest">Confirmado ✓</span>`
                             : `<button onclick="confirmarCheckin('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-sm hover:bg-yellow-500 transition-all shadow-xl active:scale-95">Check-in</button>`
                         }
                     </div>
@@ -214,21 +199,14 @@
 
         window.confirmarCheckin = async (id) => {
             const docRef = doc(db, "lista_eventos", id);
-            try {
-                await updateDoc(docRef, { 
-                    entrou: true, 
-                    data_entrada: new Date().toISOString() 
-                });
-            } catch (e) {
-                alert("Erro ao confirmar entrada!");
-            }
+            try { await updateDoc(docRef, { entrou: true, data_entrada: new Date().toISOString() });
+            } catch (e) { alert("Erro no check-in!"); }
         };
 
         function atualizarContadorGlobal() {
             const confirmados = bancoClientes.filter(c => c.entrou).length;
             document.getElementById('total-confirmado').innerText = confirmados;
         }
-
     </script>
 </body>
 </html>
