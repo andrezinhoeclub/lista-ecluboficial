@@ -17,7 +17,6 @@
         .btn-whatsapp { background: #25D366; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); }
         .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); box-shadow: 0 4px 15px rgba(220, 39, 67, 0.3); }
         
-        /* Estilo para as opções de seleção */
         .option-card { background: #000; border: 1px solid #27272a; transition: all 0.3s ease; }
         .option-card.active { border-color: #eab308; background: #1a1a1d; }
     </style>
@@ -39,7 +38,7 @@
                 <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="btn-instagram flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-white">Instagram</a>
             </div>
 
-            <a href="https://www.google.com/maps/search/?api=1&query=Eclub+Curitiba" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
+            <a href="https://www.google.com/maps/dir/?api=1&destination=Eclub+Curitiba" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
                 <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Clique para ver a localização</p>
                 <p class="text-sm font-black italic text-white mb-1">Bairro Alto, Curitiba - PR</p>
                 <p class="text-[10px] text-zinc-500 font-bold uppercase underline tracking-tighter">Abrir no Google Maps ou Waze</p>
@@ -85,32 +84,37 @@
                     if (!ev.data || ev.data >= hoje) {
                         const card = document.createElement('div');
                         card.className = "festa-card fade-down mb-6";
+                        
+                        // Puxa os valores direto do seu Dashboard/Firebase
+                        const valorC = ev.valorCasal ? `R$ ${ev.valorCasal}` : 'Consulte';
+                        const valorS = ev.valorSolteiro ? `R$ ${ev.valorSolteiro}` : 'Consulte';
+
                         card.innerHTML = `
                             <div class="banner-container"><img src="${ev.imagem}" class="banner-img"></div>
                             <div class="p-6 space-y-3 text-center">
                                 <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data ? ev.data.split('-').reverse().join('/') : 'DATA A DEFINIR'}</p>
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-tight">${ev.nome}</h3>
                                 
-                                <button id="btn-abrir-${ev.id}" onclick="document.getElementById('step-1-${ev.id}').classList.toggle('hidden'); this.classList.add('hidden')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action mt-4">Colocar nome na lista</button>
+                                <button id="btn-abrir-${doc.id}" onclick="document.getElementById('step-1-${doc.id}').classList.remove('hidden'); this.classList.add('hidden')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action mt-4">Colocar nome na lista</button>
 
-                                <div id="step-1-${ev.id}" class="hidden pt-6 border-t border-zinc-800 mt-4 space-y-4">
+                                <div id="step-1-${doc.id}" class="hidden pt-6 border-t border-zinc-800 mt-4 space-y-4">
                                     <p class="text-[10px] font-black uppercase text-zinc-400">Selecione uma opção:</p>
                                     <div class="grid grid-cols-2 gap-3">
-                                        <button onclick="selecionarTipo('${ev.id}', 'casal', '${ev.valorCasal || 'Consulte'}')" class="option-card p-4 rounded-2xl text-center btn-action" id="opt-casal-${ev.id}">
+                                        <button onclick="selecionarTipo('${doc.id}', 'casal')" class="option-card p-4 rounded-2xl text-center btn-action" id="opt-casal-${doc.id}">
                                             <span class="block text-[10px] font-black uppercase text-yellow-500">Casal</span>
-                                            <span class="text-xs font-bold text-white">${ev.valorCasal ? 'R$ ' + ev.valorCasal : 'Valor na Portaria'}</span>
+                                            <span class="text-xs font-bold text-white">${valorC}</span>
                                         </button>
-                                        <button onclick="selecionarTipo('${ev.id}', 'solteiro', '${ev.valorSolteiro || 'Consulte'}')" class="option-card p-4 rounded-2xl text-center btn-action" id="opt-solteiro-${ev.id}">
+                                        <button onclick="selecionarTipo('${doc.id}', 'solteiro')" class="option-card p-4 rounded-2xl text-center btn-action" id="opt-solteiro-${doc.id}">
                                             <span class="block text-[10px] font-black uppercase text-yellow-500">Solteiro</span>
-                                            <span class="text-xs font-bold text-white">${ev.valorSolteiro ? 'R$ ' + ev.valorSolteiro : 'Valor na Portaria'}</span>
+                                            <span class="text-xs font-bold text-white">${valorS}</span>
                                         </button>
                                     </div>
                                 </div>
 
-                                <div id="step-2-${ev.id}" class="hidden space-y-3 pt-4 text-left">
-                                    <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold uppercase text-xs">
-                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
-                                    <button id="btn-submit-${ev.id}" onclick="processarEnvio('${ev.nome}', '${ev.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action">Finalizar Cadastro</button>
+                                <div id="step-2-${doc.id}" class="hidden space-y-3 pt-4 text-left">
+                                    <input type="text" id="nome-${doc.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold uppercase text-xs">
+                                    <input type="tel" id="tel-${doc.id}" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
+                                    <button id="btn-submit-${doc.id}" onclick="processarEnvio('${ev.nome}', '${doc.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action">Finalizar Cadastro</button>
                                 </div>
                             </div>
                         `;
@@ -120,19 +124,15 @@
             } catch (e) { console.error(e); }
         }
 
-        window.selecionarTipo = (id, tipo, valor) => {
-            // Marca o selecionado visualmente
+        window.selecionarTipo = (id, tipo) => {
             document.getElementById(`opt-casal-${id}`).classList.remove('active');
             document.getElementById(`opt-solteiro-${id}`).classList.remove('active');
             document.getElementById(`opt-${tipo}-${id}`).classList.add('active');
             
-            // Abre o formulário e guarda o tipo
             const step2 = document.getElementById(`step-2-${id}`);
             step2.classList.remove('hidden');
             step2.setAttribute('data-tipo-selecionado', tipo);
-            
-            // Scroll suave para os campos
-            step2.scrollIntoView({ behavior: 'smooth' });
+            step2.scrollIntoView({ behavior: 'smooth', block: 'center' });
         };
 
         window.processarEnvio = async (nomeEvento, id) => {
@@ -149,15 +149,8 @@
 
             try {
                 await addDoc(collection(db, "lista_eventos"), { 
-                    nome, 
-                    tel, 
-                    tipo, 
-                    evento: nomeEvento, 
-                    promoter: promoterRef, 
-                    status: "Lista",
-                    data_cadastro: serverTimestamp() 
+                    nome, tel, tipo, evento: nomeEvento, promoter: promoterRef, status: "Lista", data_cadastro: serverTimestamp() 
                 });
-
                 document.getElementById('telaSucesso').classList.remove('hidden');
             } catch (e) {
                 alert("Erro ao enviar. Tente novamente.");
