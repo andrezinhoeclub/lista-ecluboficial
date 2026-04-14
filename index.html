@@ -17,8 +17,8 @@
         .btn-whatsapp { background: #25D366; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); }
         .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); box-shadow: 0 4px 15px rgba(220, 39, 67, 0.3); }
         
-        .option-card { background: #000; border: 1px solid #27272a; transition: all 0.3s ease; }
-        .option-card.active { border-color: #eab308; background: #131316; box-shadow: inset 0 0 10px rgba(234, 179, 8, 0.1); }
+        .option-button { background: #000; border: 1px solid #27272a; transition: all 0.3s ease; color: #71717a; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
+        .option-button.active { border-color: #eab308; background: #eab308; color: #000; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
@@ -85,8 +85,8 @@
                         const card = document.createElement('div');
                         card.className = "festa-card fade-down mb-6";
                         
-                        const valorC = ev.valor_casal ? `R$ ${ev.valor_casal}` : 'Consulte';
-                        const valorS = ev.valor_solteiro ? `R$ ${ev.valor_solteiro}` : 'Consulte';
+                        const valorC = ev.valor_casal ? `R$ ${ev.valor_casal}` : 'Portaria';
+                        const valorS = ev.valor_solteiro ? `R$ ${ev.valor_solteiro}` : 'Portaria';
 
                         card.innerHTML = `
                             <div class="banner-container"><img src="${ev.imagem}" class="banner-img"></div>
@@ -94,27 +94,23 @@
                                 <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data ? ev.data.split('-').reverse().join('/') : 'DATA A DEFINIR'}</p>
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-tight">${ev.nome}</h3>
                                 
-                                <button id="btn-abrir-${doc.id}" onclick="document.getElementById('step-1-${doc.id}').classList.remove('hidden'); this.classList.add('hidden')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action mt-4">Colocar nome na lista</button>
+                                <button id="btn-abrir-${doc.id}" onclick="document.getElementById('step-main-${doc.id}').classList.remove('hidden'); this.classList.add('hidden')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action mt-4">Colocar nome na lista</button>
 
-                                <div id="step-1-${doc.id}" class="hidden pt-6 border-t border-zinc-800 mt-4 space-y-6">
-                                    <p class="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Escolha seu perfil:</p>
+                                <div id="step-main-${doc.id}" class="hidden pt-6 border-t border-zinc-800 mt-4 space-y-4">
                                     <div class="grid grid-cols-2 gap-3">
-                                        <button onclick="selecionarTipo('${doc.id}', 'casal')" class="option-card p-5 rounded-2xl text-center btn-action" id="opt-casal-${doc.id}">
-                                            <span class="block text-sm font-black uppercase text-white mb-1">Casal</span>
-                                            <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">${valorC}</span>
-                                        </button>
-                                        <button onclick="selecionarTipo('${doc.id}', 'solteiro')" class="option-card p-5 rounded-2xl text-center btn-action" id="opt-solteiro-${doc.id}">
-                                            <span class="block text-sm font-black uppercase text-white mb-1">Solteiro</span>
-                                            <span class="block text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">${valorS}</span>
-                                        </button>
+                                        <button onclick="selecionarTipo('${doc.id}', 'casal')" class="option-button py-4 rounded-xl text-[11px] btn-action" id="btn-casal-${doc.id}">Casal</button>
+                                        <button onclick="selecionarTipo('${doc.id}', 'solteiro')" class="option-button py-4 rounded-xl text-[11px] btn-action" id="btn-solteiro-${doc.id}">Solteiro</button>
                                     </div>
 
-                                    <div id="step-2-${doc.id}" class="hidden space-y-3 pt-2 text-left animate-fade-in">
-                                        <div class="h-px bg-zinc-900 w-full my-4"></div>
-                                        <label class="text-[9px] font-black uppercase text-yellow-500 ml-1">Preencha seus dados:</label>
+                                    <div id="info-valores-${doc.id}" class="hidden bg-zinc-900/30 py-3 px-4 rounded-xl border border-zinc-900">
+                                        <p class="text-[9px] font-black uppercase text-zinc-500">Valor na Lista:</p>
+                                        <p id="txt-valor-${doc.id}" class="text-sm font-black italic text-yellow-500 uppercase" data-val-c="${valorC}" data-val-s="${valorS}"></p>
+                                    </div>
+
+                                    <div id="form-campos-${doc.id}" class="hidden space-y-3 pt-2 text-left">
                                         <input type="text" id="nome-${doc.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold uppercase text-xs">
                                         <input type="tel" id="tel-${doc.id}" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
-                                        <button id="btn-submit-${doc.id}" onclick="processarEnvio('${ev.nome}', '${doc.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action mt-2 shadow-lg">Confirmar Reserva</button>
+                                        <button id="btn-submit-${doc.id}" onclick="processarEnvio('${ev.nome}', '${doc.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action mt-2">Confirmar Reserva</button>
                                     </div>
                                 </div>
                             </div>
@@ -126,26 +122,36 @@
         }
 
         window.selecionarTipo = (id, tipo) => {
-            document.getElementById(`opt-casal-${id}`).classList.remove('active');
-            document.getElementById(`opt-solteiro-${id}`).classList.remove('active');
-            document.getElementById(`opt-${tipo}-${id}`).classList.add('active');
+            // UI Botões
+            document.getElementById(`btn-casal-${id}`).classList.remove('active');
+            document.getElementById(`btn-solteiro-${id}`).classList.remove('active');
+            document.getElementById(`btn-${tipo}-${id}`).classList.add('active');
             
-            const step2 = document.getElementById(`step-2-${id}`);
-            step2.classList.remove('hidden');
-            step2.setAttribute('data-tipo-selecionado', tipo);
+            // UI Valores
+            const infoBox = document.getElementById(`info-valores-${id}`);
+            const txtValor = document.getElementById(`txt-valor-${id}`);
+            const valC = txtValor.getAttribute('data-val-c');
+            const valS = txtValor.getAttribute('data-val-s');
             
-            // Centraliza o formulário na tela
+            txtValor.innerText = tipo === 'casal' ? valC : valS;
+            infoBox.classList.remove('hidden');
+
+            // UI Formulário
+            const formCampos = document.getElementById(`form-campos-${id}`);
+            formCampos.classList.remove('hidden');
+            formCampos.setAttribute('data-tipo-selecionado', tipo);
+            
             setTimeout(() => {
-                step2.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                formCampos.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
         };
 
         window.processarEnvio = async (nomeEvento, id) => {
-            const step2 = document.getElementById(`step-2-${id}`);
+            const formCampos = document.getElementById(`form-campos-${id}`);
             const btn = document.getElementById(`btn-submit-${id}`);
             const nome = document.getElementById(`nome-${id}`).value;
             const tel = document.getElementById(`tel-${id}`).value;
-            const tipo = step2.getAttribute('data-tipo-selecionado');
+            const tipo = formCampos.getAttribute('data-tipo-selecionado');
 
             if (!nome || !tel) return alert("Por favor, preencha todos os campos.");
             
