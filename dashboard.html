@@ -89,7 +89,7 @@
                     <h2 class="text-yellow-500 font-black uppercase italic text-lg mb-6 tracking-tight">Novo Acesso Portaria</h2>
                     <form id="formAcessoPortaria" class="space-y-4">
                         <input type="text" id="login_portaria" placeholder="Usuário" class="w-full p-4 rounded-2xl font-bold text-white text-sm" required>
-                        <input type="password" id="senha_portaria" placeholder="Senha" class="w-full p-4 rounded-2xl font-bold text-white text-sm" required>
+                        <input type="text" id="senha_portaria" placeholder="Senha" class="w-full p-4 rounded-2xl font-bold text-white text-sm" required>
                         <button type="submit" class="w-full bg-yellow-600 text-black font-black py-4 rounded-2xl uppercase text-xs hover:bg-yellow-500 transition">Salvar Acesso</button>
                     </form>
                 </div>
@@ -100,31 +100,14 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 gap-8">
                 <div class="glass-card p-8 border-l-4 border-l-blue-500">
                     <h2 class="text-blue-500 font-black uppercase italic text-lg mb-6">Promoters (Listas VIP)</h2>
                     <form id="formPromoter" class="flex gap-2 mb-6">
                         <input type="text" id="nome_promoter" placeholder="Nome" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
-                        <button type="submit" class="bg-blue-600 px-6 rounded-2xl font-black uppercase text-xs text-white">Add</button>
+                        <button type="submit" class="bg-blue-600 px-6 rounded-2xl font-black uppercase text-xs text-white">Add Promoter</button>
                     </form>
-                    <div id="lista-promoters" class="space-y-3 max-h-[400px] overflow-y-auto"></div>
-                </div>
-
-                <div class="glass-card p-8 border-l-4 border-l-green-500">
-                    <h2 class="text-green-500 font-black uppercase italic text-lg mb-6">Staff (Por Setor)</h2>
-                    <form id="formStaffSetor" class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6">
-                        <input type="text" id="nome_staff_setor" placeholder="Nome" class="p-4 rounded-2xl font-bold text-sm" required>
-                        <select id="setor_staff_setor" class="p-4 rounded-2xl font-bold text-sm text-white" required>
-                            <option value="">Setor</option>
-                            <option value="Bar">Bar</option>
-                            <option value="Caixa">Caixa</option>
-                            <option value="Segurança">Segurança</option>
-                            <option value="Cozinha">Cozinha</option>
-                            <option value="Gerência">Gerência</option>
-                        </select>
-                        <button type="submit" class="md:col-span-2 bg-green-600 py-4 rounded-2xl font-black uppercase text-xs text-white">Cadastrar Staff</button>
-                    </form>
-                    <div id="lista-staff-setor" class="space-y-3 max-h-[400px] overflow-y-auto"></div>
+                    <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
                 </div>
             </div>
         </section>
@@ -153,7 +136,6 @@
         onSnapshot(collection(db, "lista_eventos"), snap => { dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()})); atualizarInterfaceInteligencia(); });
         onSnapshot(collection(db, "eventos"), snap => { dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(e => e.ativo); renderizarEventos(); atualizarInterfaceInteligencia(); });
         onSnapshot(collection(db, "equipe"), snap => { dadosEquipe = snap.docs.map(d => ({id: d.id, ...d.data()})); renderizarPromoters(); atualizarInterfaceInteligencia(); });
-        onSnapshot(collection(db, "staff_setor"), snap => renderizarStaffSetor(snap.docs.map(d => ({id: d.id, ...d.data()}))));
         onSnapshot(collection(db, "configuracoes"), snap => renderizarLogins(snap.docs.map(d => ({id: d.id, ...d.data()}))));
 
         function atualizarInterfaceInteligencia() {
@@ -184,7 +166,7 @@
             document.getElementById('num-cruzado').innerText = res.length;
         };
 
-        // ACESSOS
+        // ACESSOS PORTARIA
         document.getElementById('formAcessoPortaria').addEventListener('submit', async e => {
             e.preventDefault();
             const login = document.getElementById('login_portaria').value;
@@ -194,21 +176,11 @@
         });
 
         function renderizarLogins(logins) {
-            document.getElementById('lista-logins-portaria').innerHTML = logins.map(l => `<div class="bg-zinc-900/50 p-4 rounded-2xl flex justify-between items-center border border-zinc-800"><div><p class="text-xs font-black uppercase text-white">${l.login}</p></div><div class="flex gap-2"><button onclick="editarLogin('${l.login}')" class="text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-lg text-[10px] font-bold">EDITAR</button><button onclick="removerItem('configuracoes', '${l.id}')" class="text-red-500 bg-red-900/10 px-3 py-1 rounded-lg text-xs font-bold">X</button></div></div>`).join('');
+            document.getElementById('lista-logins-portaria').innerHTML = logins.map(l => `<div class="bg-zinc-900/50 p-4 rounded-2xl flex justify-between items-center border border-zinc-800"><div><p class="text-xs font-black uppercase text-white">Login: ${l.login}</p><p class="text-[11px] text-yellow-500 font-bold">Senha: ${l.senha}</p></div><div class="flex gap-2"><button onclick="editarLogin('${l.login}')" class="text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-lg text-[10px] font-bold">EDITAR</button><button onclick="removerItem('configuracoes', '${l.id}')" class="text-red-500 bg-red-900/10 px-3 py-1 rounded-lg text-xs font-bold">X</button></div></div>`).join('');
         }
         window.editarLogin = async (l) => { const s = await getDoc(doc(db, "configuracoes", l)); if(s.exists()){ const d = s.data(); document.getElementById('login_portaria').value = d.login; document.getElementById('senha_portaria').value = d.senha; } };
 
-        // STAFF
-        document.getElementById('formStaffSetor').addEventListener('submit', async e => {
-            e.preventDefault();
-            await addDoc(collection(db, "staff_setor"), { nome: document.getElementById('nome_staff_setor').value, setor: document.getElementById('setor_staff_setor').value });
-            e.target.reset();
-        });
-        function renderizarStaffSetor(staff) {
-            document.getElementById('lista-staff-setor').innerHTML = staff.map(s => `<div class="bg-zinc-900/50 p-4 rounded-2xl flex justify-between items-center border border-zinc-800"><div><p class="text-xs font-black uppercase text-white">${s.nome}</p><p class="text-[8px] text-green-500 font-black uppercase">${s.setor}</p></div><button onclick="removerItem('staff_setor', '${s.id}')" class="text-red-500 bg-red-900/10 p-2 rounded-lg text-xs font-bold">X</button></div>`).join('');
-        }
-
-        // AUX
+        // AUXILIARES
         function renderizarEventos() { document.getElementById('lista-eventos-ativos').innerHTML = dadosEventos.map(ev => `<div class="bg-zinc-900 p-4 rounded-2xl flex justify-between items-center border border-zinc-800"><span class="font-black uppercase text-[10px] text-white">${ev.nome}</span><button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 bg-red-900/10 px-3 py-1 rounded-lg text-[10px] font-black">X</button></div>`).join(''); }
         function renderizarPromoters() { const b = "https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref="; document.getElementById('lista-promoters').innerHTML = dadosEquipe.map(p => `<div class="bg-zinc-900/50 p-4 rounded-2xl flex justify-between items-center border border-zinc-800"><div><p class="text-xs font-black uppercase text-white">${p.nome}</p></div><div class="flex gap-2"><button onclick="navigator.clipboard.writeText('${b + encodeURIComponent(p.nome)}'); alert('Copiado!')" class="bg-zinc-800 p-2 rounded-lg text-[8px] font-black text-yellow-500">LINK</button><button onclick="removerItem('equipe', '${p.id}')" class="text-red-500 bg-red-900/10 p-2 rounded-lg text-xs font-bold">X</button></div></div>`).join(''); }
         document.getElementById('formEvento').addEventListener('submit', async e => { e.preventDefault(); await addDoc(collection(db, "eventos"), { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, ativo: true }); e.target.reset(); });
