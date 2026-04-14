@@ -14,15 +14,12 @@
         .banner-container { background-color: #000; position: relative; width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; }
         .banner-img { object-fit: contain !important; width: 100%; height: 100%; }
         
-        /* Botões Redes Sociais Chamativos */
-        .btn-whatsapp { 
-            background: #25D366; 
-            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
-        }
-        .btn-instagram { 
-            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); 
-            box-shadow: 0 4px 15px rgba(220, 39, 67, 0.3);
-        }
+        .btn-whatsapp { background: #25D366; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); }
+        .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); box-shadow: 0 4px 15px rgba(220, 39, 67, 0.3); }
+        
+        /* Estilo para as opções de seleção */
+        .option-card { background: #000; border: 1px solid #27272a; transition: all 0.3s ease; }
+        .option-card.active { border-color: #eab308; background: #1a1a1d; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
@@ -38,15 +35,11 @@
 
         <footer class="mt-20 mb-12 border-t border-zinc-900 pt-10 text-center text-white">
             <div class="grid grid-cols-2 gap-4 w-full px-1 mb-8">
-                <a href="https://wa.me/5541995040506" target="_blank" class="btn-whatsapp flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-black">
-                    WhatsApp
-                </a>
-                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="btn-instagram flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-white">
-                    Instagram
-                </a>
+                <a href="https://wa.me/5541995040506" target="_blank" class="btn-whatsapp flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-black">WhatsApp</a>
+                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="btn-instagram flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-white">Instagram</a>
             </div>
 
-            <a href="https://www.google.com/maps/dir/?api=1&destination=Eclub+Curitiba" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
+            <a href="https://www.google.com/maps/search/?api=1&query=Eclub+Curitiba" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
                 <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Clique para ver a localização</p>
                 <p class="text-sm font-black italic text-white mb-1">Bairro Alto, Curitiba - PR</p>
                 <p class="text-[10px] text-zinc-500 font-bold uppercase underline tracking-tighter">Abrir no Google Maps ou Waze</p>
@@ -55,10 +48,10 @@
     </div>
 
     <div id="telaSucesso" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center">
-        <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mb-6 text-2xl shadow-lg text-black">✓</div>
-        <h2 class="text-xl font-black uppercase italic mb-2 text-white">Solicitado!</h2>
-        <p class="text-zinc-500 text-[10px] font-bold uppercase">Seu nome foi enviado para a lista oficial.</p>
-        <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action">Voltar à Agenda</button>
+        <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 text-4xl shadow-lg text-white">✓</div>
+        <h2 class="text-2xl font-black uppercase italic mb-2 text-white">Sucesso!</h2>
+        <p class="text-zinc-400 text-xs font-bold uppercase px-4 leading-relaxed">Sua reserva foi confirmada na lista da Eclub. Te esperamos para uma noite inesquecível!</p>
+        <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action shadow-xl">Voltar à Agenda</button>
     </div>
 
     <script type="module">
@@ -98,21 +91,26 @@
                                 <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data ? ev.data.split('-').reverse().join('/') : 'DATA A DEFINIR'}</p>
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-tight">${ev.nome}</h3>
                                 
-                                <div class="flex flex-col gap-2 mt-4">
-                                    <button onclick="document.getElementById('form-${ev.id}').classList.toggle('hidden')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action">Colocar nome na lista</button>
+                                <button id="btn-abrir-${ev.id}" onclick="document.getElementById('step-1-${ev.id}').classList.toggle('hidden'); this.classList.add('hidden')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action mt-4">Colocar nome na lista</button>
+
+                                <div id="step-1-${ev.id}" class="hidden pt-6 border-t border-zinc-800 mt-4 space-y-4">
+                                    <p class="text-[10px] font-black uppercase text-zinc-400">Selecione uma opção:</p>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <button onclick="selecionarTipo('${ev.id}', 'casal', '${ev.valorCasal || 'Consulte'}')" class="option-card p-4 rounded-2xl text-center btn-action" id="opt-casal-${ev.id}">
+                                            <span class="block text-[10px] font-black uppercase text-yellow-500">Casal</span>
+                                            <span class="text-xs font-bold text-white">${ev.valorCasal ? 'R$ ' + ev.valorCasal : 'Valor na Portaria'}</span>
+                                        </button>
+                                        <button onclick="selecionarTipo('${ev.id}', 'solteiro', '${ev.valorSolteiro || 'Consulte'}')" class="option-card p-4 rounded-2xl text-center btn-action" id="opt-solteiro-${ev.id}">
+                                            <span class="block text-[10px] font-black uppercase text-yellow-500">Solteiro</span>
+                                            <span class="text-xs font-bold text-white">${ev.valorSolteiro ? 'R$ ' + ev.valorSolteiro : 'Valor na Portaria'}</span>
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div id="form-${ev.id}" class="hidden mt-6 space-y-3 pt-6 border-t border-zinc-800 text-left">
-                                    <label class="text-[9px] font-black uppercase text-zinc-500 ml-1">Dados para Reserva</label>
+                                <div id="step-2-${ev.id}" class="hidden space-y-3 pt-4 text-left">
                                     <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold uppercase text-xs">
-                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP COM DDD" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
-                                    
-                                    <select id="tipo-${ev.id}" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs uppercase">
-                                        <option value="casal">Casal</option>
-                                        <option value="solteiro">Solteiro</option>
-                                    </select>
-
-                                    <button id="btn-submit-${ev.id}" onclick="processarEnvio('${ev.nome}', '${ev.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action">Confirmar na Lista</button>
+                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
+                                    <button id="btn-submit-${ev.id}" onclick="processarEnvio('${ev.nome}', '${ev.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action">Finalizar Cadastro</button>
                                 </div>
                             </div>
                         `;
@@ -122,13 +120,29 @@
             } catch (e) { console.error(e); }
         }
 
+        window.selecionarTipo = (id, tipo, valor) => {
+            // Marca o selecionado visualmente
+            document.getElementById(`opt-casal-${id}`).classList.remove('active');
+            document.getElementById(`opt-solteiro-${id}`).classList.remove('active');
+            document.getElementById(`opt-${tipo}-${id}`).classList.add('active');
+            
+            // Abre o formulário e guarda o tipo
+            const step2 = document.getElementById(`step-2-${id}`);
+            step2.classList.remove('hidden');
+            step2.setAttribute('data-tipo-selecionado', tipo);
+            
+            // Scroll suave para os campos
+            step2.scrollIntoView({ behavior: 'smooth' });
+        };
+
         window.processarEnvio = async (nomeEvento, id) => {
+            const step2 = document.getElementById(`step-2-${id}`);
             const btn = document.getElementById(`btn-submit-${id}`);
             const nome = document.getElementById(`nome-${id}`).value;
             const tel = document.getElementById(`tel-${id}`).value;
-            const tipo = document.getElementById(`tipo-${id}`).value;
+            const tipo = step2.getAttribute('data-tipo-selecionado');
 
-            if (!nome || !tel) return alert("Preencha Nome e WhatsApp.");
+            if (!nome || !tel) return alert("Por favor, preencha todos os campos.");
             
             btn.disabled = true;
             btn.innerText = "ENVIANDO...";
@@ -140,17 +154,16 @@
                     tipo, 
                     evento: nomeEvento, 
                     promoter: promoterRef, 
-                    status: "Reserva",
+                    status: "Lista",
                     data_cadastro: serverTimestamp() 
                 });
 
                 document.getElementById('telaSucesso').classList.remove('hidden');
-                
             } catch (e) {
                 alert("Erro ao enviar. Tente novamente.");
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Confirmar na Lista";
+                btn.innerText = "Finalizar Cadastro";
             }
         };
 
