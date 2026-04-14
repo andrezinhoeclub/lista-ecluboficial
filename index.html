@@ -89,7 +89,6 @@
                         const card = document.createElement('div');
                         card.className = "festa-card fade-down mb-6";
                         
-                        // LIMPEZA ABSOLUTA: Puxa o texto puro, sem adicionar nada
                         const valorC = ev.valor_casal ? ev.valor_casal : 'Consulte Portaria';
                         const valorS = ev.valor_solteiro ? ev.valor_solteiro : 'Consulte Portaria';
 
@@ -139,21 +138,42 @@
         window.processarEnvio = async (nomeEvento, id) => {
             const form = document.getElementById(`form-contato-${id}`);
             const btn = document.getElementById(`btn-submit-${id}`);
-            const nome = document.getElementById(`nome-${id}`).value;
-            const tel = document.getElementById(`tel-${id}`).value;
+            const nome = document.getElementById(`nome-${id}`).value.trim();
+            const tel = document.getElementById(`tel-${id}`).value.trim();
             const tipo = form.getAttribute('data-tipo');
 
             if (!nome || !tel) return alert("Preencha todos os campos!");
             
             btn.disabled = true;
-            btn.innerText = "ENVIANDO...";
+            btn.innerText = "VERIFICANDO...";
 
             try {
+                // TRAVA DE SEGURANÇA: Verifica se já existe reserva deste número para este evento
+                const qBusca = query(
+                    collection(db, "lista_eventos"), 
+                    where("tel", "==", tel), 
+                    where("evento", "==", nomeEvento)
+                );
+                
+                const snapBusca = await getDocs(qBusca);
+
+                if (!snapBusca.empty) {
+                    alert("Atenção: Este número já possui uma reserva cadastrada para este evento!");
+                    btn.disabled = false;
+                    btn.innerText = "Finalizar Reserva";
+                    return;
+                }
+
+                // Se não existir, envia a reserva
+                btn.innerText = "ENVIANDO...";
                 await addDoc(collection(db, "lista_eventos"), { 
                     nome, tel, tipo, evento: nomeEvento, promoter: promoterRef, status: "Lista", data_cadastro: serverTimestamp() 
                 });
                 document.getElementById('telaSucesso').classList.remove('hidden');
-            } catch (e) { alert("Erro ao enviar."); } finally { 
+            } catch (e) { 
+                alert("Erro ao processar reserva. Tente novamente."); 
+                console.error(e);
+            } finally { 
                 btn.disabled = false; 
                 btn.innerText = "Finalizar Reserva"; 
             }
