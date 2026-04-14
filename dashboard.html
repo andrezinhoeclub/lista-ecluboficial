@@ -16,7 +16,7 @@
         .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; }
         .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; }
 
-        /* Correção Visual dos Selects (Fundo Escuro, Texto Branco) */
+        /* Correção dos Selects */
         select {
             background-color: #09090b !important;
             border: 1px solid #27272a !important;
@@ -27,6 +27,7 @@
             background-position: right 1rem center;
             background-size: 1em;
         }
+        select option { background-color: #111 !important; color: white !important; }
         select:focus { border-color: #eab308 !important; outline: none; }
         
         ::-webkit-scrollbar { width: 5px; }
@@ -87,10 +88,10 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <select id="rel-filtro-evento" class="p-4 rounded-xl text-[10px] uppercase font-black" onchange="gerarRelatorioCruzado()">
-                            <option value="">Todos os Eventos</option>
+                            <option value="">Filtrar Evento</option>
                         </select>
                         <select id="rel-filtro-promoter" class="p-4 rounded-xl text-[10px] uppercase font-black" onchange="gerarRelatorioCruzado()">
-                            <option value="">Todos os Promoters</option>
+                            <option value="">Filtrar Promoter</option>
                         </select>
                     </div>
 
@@ -202,6 +203,7 @@
                     </div>`;
             });
 
+            // --- ATUALIZAÇÃO DO RANKING (NÚMERO MAIOR) ---
             const listaRank = document.getElementById('lista-ranking-promoters');
             listaRank.innerHTML = '';
             let statsP = {};
@@ -214,23 +216,42 @@
             Object.entries(statsP).sort((a,b) => b[1].ent - a[1].ent).forEach(([nome, stat]) => {
                 const conv = Math.round((stat.ent / stat.res) * 100);
                 listaRank.innerHTML += `
-                    <div class="flex justify-between items-center p-4 bg-zinc-900/40 rounded-2xl border border-zinc-800/50">
-                        <div><span class="text-[10px] font-black uppercase text-white">${nome}</span><p class="text-[8px] text-zinc-500 uppercase">${stat.res} Reservas</p></div>
-                        <div class="flex items-center gap-4">
+                    <div class="flex justify-between items-center p-5 bg-zinc-900/40 rounded-2xl border border-zinc-800/50">
+                        <div>
+                            <span class="text-[11px] font-black uppercase text-white">${nome}</span>
+                            <div class="flex items-baseline gap-1 mt-1">
+                                <span class="text-2xl font-black text-white">${stat.res}</span>
+                                <span class="text-[8px] text-zinc-500 uppercase font-bold">Reservas</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-6">
                             <div class="text-center"><p class="text-[8px] text-zinc-500 font-black">Eficiência</p><p class="text-xs font-black text-yellow-500">${conv}%</p></div>
-                            <div class="bg-green-500 text-black px-4 py-2 rounded-xl font-black text-sm italic">${stat.ent}</div>
+                            <div class="bg-green-500 text-black px-5 py-3 rounded-2xl font-black text-xl italic shadow-lg shadow-green-500/20">${stat.ent}</div>
                         </div>
                     </div>`;
             });
 
+            // --- CORREÇÃO DOS FILTROS (SELECTS) ---
             const fEv = document.getElementById('rel-filtro-evento');
             const fPr = document.getElementById('rel-filtro-promoter');
-            const vE = fEv.value; const vP = fPr.value;
+            const vE = fEv.value; 
+            const vP = fPr.value;
+
+            // Limpa e preenche eventos
             fEv.innerHTML = '<option value="">Filtrar Evento</option>';
-            dadosEventos.forEach(e => fEv.innerHTML += `<option value="${e.nome}">${e.nome}</option>`);
+            dadosEventos.forEach(e => {
+                fEv.innerHTML += `<option value="${e.nome}">${e.nome}</option>`;
+            });
+
+            // Limpa e preenche promoters (Puxando da equipe cadastrada + Direto)
             fPr.innerHTML = '<option value="">Filtrar Promoter</option>';
-            dadosEquipe.forEach(p => fPr.innerHTML += `<option value="${p.nome}">${p.nome}</option>`);
-            fEv.value = vE; fPr.value = vP;
+            const listaPromotersFiltro = [...new Set([...dadosEquipe.map(p => p.nome), "Direto"])].sort();
+            listaPromotersFiltro.forEach(nome => {
+                fPr.innerHTML += `<option value="${nome}">${nome}</option>`;
+            });
+
+            fEv.value = vE; 
+            fPr.value = vP;
             gerarRelatorioCruzado();
         }
 
