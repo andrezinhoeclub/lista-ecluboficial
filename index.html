@@ -6,24 +6,27 @@
     <title>Eclub - Official Booking</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* Transições suaves para os botões */
         .btn-action { transition: all 0.2s ease; }
         .btn-action:active { transform: scale(0.96); }
         .fade-down { animation: fadeDown 0.3s ease-out; }
         @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .festa-card { background: #111113; border: 1px solid #27272a; border-radius: 2.5rem; overflow: hidden; }
+        
+        /* Estilos do Card e Banner */
+        .festa-card { background: #000; border: 1px solid #1a1a1a; border-radius: 2.5rem; overflow: hidden; }
         .banner-container { background-color: #000; position: relative; width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; }
         .banner-img { object-fit: contain !important; width: 100%; height: 100%; }
         
+        /* Botões de Rodapé (WhatsApp/Instagram) */
         .btn-whatsapp { background: #25D366; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3); }
         .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); box-shadow: 0 4px 15px rgba(220, 39, 67, 0.3); }
         
-        /* Botões de Opção */
-        .type-button { background: #000; border: 1px solid #27272a; transition: all 0.3s ease; }
-        .type-button.active { border-color: #eab308; background: #eab308; color: black !important; }
-        .type-button.active span { color: black !important; }
+        /* Inputs do Site */
+        .site-input { background: #000 !important; border: 1px solid #1a1a1a !important; color: #71717a !important; font-weight: bold; }
+        .site-input::placeholder { color: #52525b; }
     </style>
 </head>
-<body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
+<body class="bg-black text-white font-sans min-h-screen p-4 flex flex-col">
 
     <div class="max-w-md mx-auto w-full flex-grow">
         <header class="flex justify-center mb-10 py-8">
@@ -31,7 +34,7 @@
         </header>
 
         <div id="listaEventos" class="space-y-12">
-            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando Agenda de Reservas...</div>
+            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando Agenda...</div>
         </div>
 
         <footer class="mt-20 mb-12 border-t border-zinc-900 pt-10 text-center text-white">
@@ -40,7 +43,7 @@
                 <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="btn-instagram flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-white">Instagram</a>
             </div>
 
-            <a href="http://maps.google.com/?q=Eclub+Curitiba" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
+            <a href="http://googleusercontent.com/maps.google.com/7" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
                 <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Localização</p>
                 <p class="text-sm font-black italic text-white mb-1">Bairro Alto, Curitiba - PR</p>
                 <p class="text-[10px] text-zinc-500 font-bold uppercase underline tracking-tighter">Abrir GPS</p>
@@ -51,7 +54,7 @@
     <div id="telaSucesso" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center">
         <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 text-4xl shadow-lg text-white">✓</div>
         <h2 class="text-2xl font-black uppercase italic mb-2 text-white">Sucesso!</h2>
-        <p class="text-zinc-400 text-xs font-bold uppercase px-4 leading-relaxed">Reserva confirmada. Te esperamos na Eclub!</p>
+        <p class="text-zinc-400 text-xs font-bold uppercase px-4 leading-relaxed">Sua reserva foi confirmada na lista da Eclub. Te esperamos!</p>
         <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action shadow-xl">Voltar à Agenda</button>
     </div>
 
@@ -59,6 +62,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // Sua configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
             authDomain: "teste-de-reserva.firebaseapp.com",
@@ -75,6 +79,7 @@
 
         async function carregarAgenda() {
             try {
+                // Busca eventos ativos no Firebase
                 const q = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snap = await getDocs(q);
                 const container = document.getElementById('listaEventos');
@@ -87,6 +92,7 @@
                         const card = document.createElement('div');
                         card.className = "festa-card fade-down mb-6";
                         
+                        // Lendo os campos valor_casal e valor_solteiro da Dashboard
                         const valorC = ev.valor_casal ? `R$ ${ev.valor_casal}` : 'Portaria';
                         const valorS = ev.valor_solteiro ? `R$ ${ev.valor_solteiro}` : 'Portaria';
 
@@ -98,18 +104,18 @@
                                 
                                 <button id="btn-abrir-${doc.id}" onclick="document.getElementById('step-main-${doc.id}').classList.remove('hidden'); this.classList.add('hidden')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action mt-4">Colocar nome na lista</button>
 
-                                <div id="step-main-${doc.id}" class="hidden pt-6 border-t border-zinc-800 mt-4 space-y-6">
+                                <div id="step-main-${doc.id}" class="hidden pt-6 border-t border-zinc-900 mt-4 space-y-6">
                                     <div class="grid grid-cols-2 gap-4">
                                         <div class="flex flex-col gap-2">
-                                            <button onclick="selecionarTipo('${doc.id}', 'casal')" class="type-button p-5 rounded-2xl btn-action" id="btn-casal-${doc.id}">
-                                                <span class="block text-sm font-black uppercase text-white">Casal</span>
+                                            <button onclick="selecionarTipo('${doc.id}', 'casal')" class="bg-yellow-500 text-black p-5 rounded-2xl btn-action border border-yellow-500 hover:bg-yellow-600 transition" id="btn-casal-${doc.id}">
+                                                <span class="block text-sm font-black uppercase text-black">Casal</span>
                                             </button>
                                             <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">${valorC}</span>
                                         </div>
 
                                         <div class="flex flex-col gap-2">
-                                            <button onclick="selecionarTipo('${doc.id}', 'solteiro')" class="type-button p-5 rounded-2xl btn-action" id="btn-solteiro-${doc.id}">
-                                                <span class="block text-sm font-black uppercase text-white">Solteiro</span>
+                                            <button onclick="selecionarTipo('${doc.id}', 'solteiro')" class="bg-yellow-500 text-black p-5 rounded-2xl btn-action border border-yellow-500 hover:bg-yellow-600 transition" id="btn-solteiro-${doc.id}">
+                                                <span class="block text-sm font-black uppercase text-black">Solteiro</span>
                                             </button>
                                             <span class="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">${valorS}</span>
                                         </div>
@@ -117,8 +123,8 @@
 
                                     <div id="form-campos-${doc.id}" class="hidden space-y-3 pt-2 text-left">
                                         <div class="h-px bg-zinc-900 w-full mb-4"></div>
-                                        <input type="text" id="nome-${doc.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold uppercase text-xs">
-                                        <input type="tel" id="tel-${doc.id}" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
+                                        <input type="text" id="nome-${doc.id}" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-xl outline-none text-xs uppercase">
+                                        <input type="tel" id="tel-${doc.id}" placeholder="WHATSAPP COM DDD" class="w-full site-input p-4 rounded-xl outline-none text-xs">
                                         <button id="btn-submit-${doc.id}" onclick="processarEnvio('${ev.nome}', '${doc.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action mt-2">Finalizar Reserva</button>
                                     </div>
                                 </div>
@@ -130,20 +136,20 @@
             } catch (e) { console.error(e); }
         }
 
+        // Função para lidar com a seleção de Casal/Solteiro
         window.selecionarTipo = (id, tipo) => {
-            document.getElementById(`btn-casal-${id}`).classList.remove('active');
-            document.getElementById(`btn-solteiro-${id}`).classList.remove('active');
-            document.getElementById(`btn-${tipo}-${id}`).classList.add('active');
-            
+            // UI do Formulário
             const formCampos = document.getElementById(`form-campos-${id}`);
             formCampos.classList.remove('hidden');
             formCampos.setAttribute('data-tipo-selecionado', tipo);
             
+            // Scroll suave para os campos de entrada
             setTimeout(() => {
                 formCampos.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 100);
         };
 
+        // Função para processar o envio do cadastro
         window.processarEnvio = async (nomeEvento, id) => {
             const formCampos = document.getElementById(`form-campos-${id}`);
             const btn = document.getElementById(`btn-submit-${id}`);
@@ -157,6 +163,7 @@
             btn.innerText = "ENVIANDO...";
 
             try {
+                // Salva na coleção lista_eventos no Firebase
                 await addDoc(collection(db, "lista_eventos"), { 
                     nome, tel, tipo, evento: nomeEvento, promoter: promoterRef, status: "Lista", data_cadastro: serverTimestamp() 
                 });
@@ -169,6 +176,7 @@
             }
         };
 
+        // Inicia o carregamento da agenda ao abrir a página
         carregarAgenda();
     </script>
 </body>
