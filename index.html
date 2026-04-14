@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eclub - Official Booking</title>
+    <title>Eclub - Lista Oficial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .btn-action { transition: all 0.2s ease; }
@@ -13,15 +13,6 @@
         .festa-card { background: #111113; border: 1px solid #27272a; border-radius: 2.5rem; overflow: hidden; }
         .banner-container { background-color: #000; position: relative; width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; }
         .banner-img { object-fit: contain !important; width: 100%; height: 100%; }
-        
-        /* Ajuste do QR Code para tamanho ideal */
-        #qrCodeImg { 
-            display: block;
-            margin: 0 auto;
-            width: 220px; /* Tamanho fixo menor para facilitar visualização */
-            height: 220px;
-            border-radius: 1.5rem;
-        }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4 flex flex-col">
@@ -32,7 +23,7 @@
         </header>
 
         <div id="listaEventos" class="space-y-12">
-            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando Agenda...</div>
+            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando Agenda de Reservas...</div>
         </div>
 
         <footer class="mt-20 mb-12 border-t border-zinc-900 pt-10 text-center text-white">
@@ -47,32 +38,10 @@
         </footer>
     </div>
 
-    <div id="telaPix" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center overflow-y-auto">
-        
-        <button onclick="fecharTelaPix()" class="absolute top-6 right-6 w-10 h-10 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center btn-action shadow-lg">
-            <span class="text-zinc-400 text-xl font-light">✕</span>
-        </button>
-
-        <h2 class="text-yellow-500 text-xl font-black uppercase italic mb-4">Pagamento via Pix</h2>
-        
-        <div class="bg-white p-3 rounded-[2rem] mb-4 inline-block">
-            <img id="qrCodeImg" src="" alt="QR Code Pix">
-        </div>
-
-        <p class="text-[9px] text-zinc-500 font-black uppercase mb-2 tracking-widest">Código Copia e Cola:</p>
-        <textarea id="pixCopyPaste" readonly class="w-full max-w-xs bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-[9px] text-zinc-400 font-mono mb-4 h-12 outline-none text-center resize-none"></textarea>
-        
-        <button id="btnCopiar" onclick="copiarPix()" class="w-full max-w-xs bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[10px] btn-action shadow-lg">Copiar Código Pix</button>
-        
-        <button onclick="fecharTelaPix()" class="mt-6 text-zinc-600 text-[9px] font-black uppercase tracking-widest border-b border-zinc-800 pb-1">
-            Voltar para Agenda
-        </button>
-    </div>
-
     <div id="telaSucesso" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center">
-        <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-6 text-2xl shadow-lg">✓</div>
-        <h2 class="text-xl font-black uppercase italic mb-2">Confirmado!</h2>
-        <p class="text-zinc-500 text-[10px] font-bold uppercase">Sua solicitação foi processada.</p>
+        <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mb-6 text-2xl shadow-lg text-black">✓</div>
+        <h2 class="text-xl font-black uppercase italic mb-2 text-white">Reserva Solicitada!</h2>
+        <p class="text-zinc-500 text-[10px] font-bold uppercase">Seu nome foi enviado para a lista oficial.</p>
         <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action">Voltar à Agenda</button>
     </div>
 
@@ -112,20 +81,22 @@
                             <div class="p-6 space-y-3 text-center">
                                 <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data ? ev.data.split('-').reverse().join('/') : 'DATA A DEFINIR'}</p>
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-tight">${ev.nome}</h3>
+                                
                                 <div class="flex flex-col gap-2 mt-4">
-                                    <button onclick="abrirForm('${ev.id}', 'lista')" class="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl uppercase text-[11px] btn-action border border-zinc-700">Colocar nome na lista</button>
-                                    <button onclick="abrirForm('${ev.id}', 'pix')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action">Comprar Antecipado (Pix)</button>
+                                    <button onclick="document.getElementById('form-${ev.id}').classList.toggle('hidden')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[11px] btn-action">Colocar nome na lista</button>
                                 </div>
+
                                 <div id="form-${ev.id}" class="hidden mt-6 space-y-3 pt-6 border-t border-zinc-800 text-left">
-                                    <label class="text-[9px] font-black uppercase text-zinc-500 ml-1">Seus Dados</label>
+                                    <label class="text-[9px] font-black uppercase text-zinc-500 ml-1">Dados para Reserva</label>
                                     <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold uppercase text-xs">
-                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
-                                    <input type="tel" id="cpf-${ev.id}" placeholder="CPF (SÓ NÚMEROS)" maxlength="11" class="hidden w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
+                                    <input type="tel" id="tel-${ev.id}" placeholder="WHATSAPP (COM DDD)" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs">
+                                    
                                     <select id="tipo-${ev.id}" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white outline-none font-bold text-xs uppercase">
                                         <option value="casal">Casal</option>
                                         <option value="solteiro">Solteiro</option>
                                     </select>
-                                    <button id="btn-submit-${ev.id}" onclick="processarEnvio('${ev.nome}', '${ev.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action">Confirmar</button>
+
+                                    <button id="btn-submit-${ev.id}" onclick="processarEnvio('${ev.nome}', '${ev.id}')" class="w-full bg-white text-black font-black py-4 rounded-xl uppercase text-[10px] tracking-widest btn-action">Confirmar Reserva</button>
                                 </div>
                             </div>
                         `;
@@ -135,74 +106,39 @@
             } catch (e) { console.error(e); }
         }
 
-        window.abrirForm = (id, modo) => {
-            const form = document.getElementById(`form-${id}`);
-            form.classList.toggle('hidden');
-            const campoCpf = document.getElementById(`cpf-${id}`);
-            const btn = document.getElementById(`btn-submit-${id}`);
-            btn.setAttribute('data-modo', modo);
-            if (modo === 'pix') {
-                campoCpf.classList.remove('hidden');
-                btn.innerText = "GERAR PIX E PAGAR";
-            } else {
-                campoCpf.classList.add('hidden');
-                btn.innerText = "CONFIRMAR NA LISTA";
-            }
-        };
-
         window.processarEnvio = async (nomeEvento, id) => {
             const btn = document.getElementById(`btn-submit-${id}`);
-            const modo = btn.getAttribute('data-modo');
             const nome = document.getElementById(`nome-${id}`).value;
             const tel = document.getElementById(`tel-${id}`).value;
-            const cpf = document.getElementById(`cpf-${id}`).value;
             const tipo = document.getElementById(`tipo-${id}`).value;
 
-            if (!nome || !tel) return alert("Preencha nome e WhatsApp.");
-            if (modo === 'pix' && !cpf) return alert("CPF obrigatório para Pix.");
+            if (!nome || !tel) return alert("Por favor, preencha Nome e WhatsApp.");
             
             btn.disabled = true;
-            btn.innerText = "PROCESSANDO...";
+            btn.innerText = "ENVIANDO...";
 
             try {
-                if (modo === 'pix') {
-                    const resp = await fetch("https://hook.us2.make.com/ge642pupzpqk7l4uoh4znggg228ynqqh", {
-                        method: "POST",
-                        body: JSON.stringify({ nome, tel, cpf, tipo, evento: nomeEvento, promoter: promoterRef })
-                    });
-                    const data = await resp.json();
-                    if (data && data.qr_code_base64) {
-                        document.getElementById('qrCodeImg').src = `data:image/png;base64,${data.qr_code_base64}`;
-                        document.getElementById('pixCopyPaste').value = data.qr_code;
-                        document.getElementById('telaPix').classList.remove('hidden');
-                    } else {
-                        alert("Erro ao gerar Pix. Tente novamente.");
-                    }
-                } else {
-                    await addDoc(collection(db, "lista_eventos"), { 
-                        nome, tel, tipo, evento: nomeEvento, promoter: promoterRef, pago: false, data_cadastro: serverTimestamp() 
-                    });
-                    document.getElementById('telaSucesso').classList.remove('hidden');
-                }
+                // Salva no Firebase (Sua Lista no Google Sheets via Make/Zapier lerá daqui)
+                await addDoc(collection(db, "lista_eventos"), { 
+                    nome, 
+                    tel, 
+                    tipo, 
+                    evento: nomeEvento, 
+                    promoter: promoterRef, 
+                    pago: false, 
+                    status: "Reserva",
+                    data_cadastro: serverTimestamp() 
+                });
+
+                document.getElementById('telaSucesso').classList.remove('hidden');
+                
             } catch (e) {
-                alert("Erro de conexão.");
+                alert("Erro ao enviar reserva. Tente novamente.");
+                console.error(e);
             } finally {
                 btn.disabled = false;
-                btn.innerText = modo === 'pix' ? "GERAR PIX E PAGAR" : "CONFIRMAR NA LISTA";
+                btn.innerText = "Confirmar Reserva";
             }
-        };
-
-        window.fecharTelaPix = () => {
-            document.getElementById('telaPix').classList.add('hidden');
-        };
-
-        window.copiarPix = () => {
-            const copyText = document.getElementById("pixCopyPaste");
-            copyText.select();
-            navigator.clipboard.writeText(copyText.value);
-            const btn = document.getElementById("btnCopiar");
-            btn.innerText = "COPIADO!";
-            setTimeout(() => { btn.innerText = "COPIAR CÓDIGO PIX"; }, 2000);
         };
 
         carregarAgenda();
