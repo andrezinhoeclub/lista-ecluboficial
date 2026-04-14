@@ -15,7 +15,6 @@
         .banner-container { background-color: #000; position: relative; width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; }
         .banner-img { object-fit: contain !important; width: 100%; height: 100%; }
         
-        /* Botões de Seleção */
         .type-btn { background: #111; border: 1px solid #27272a; color: white; transition: all 0.3s; }
         .type-btn.active { background: #eab308; border-color: #eab308; color: black; box-shadow: 0 0 15px rgba(234, 179, 8, 0.3); }
 
@@ -90,8 +89,9 @@
                         const card = document.createElement('div');
                         card.className = "festa-card fade-down mb-6";
                         
-                        const valorC = ev.valor_casal ? `R$ ${ev.valor_casal}` : 'Consulte Portaria';
-                        const valorS = ev.valor_solteiro ? `R$ ${ev.valor_solteiro}` : 'Consulte Portaria';
+                        // LIMPEZA ABSOLUTA: Puxa o texto puro, sem adicionar nada
+                        const valorC = ev.valor_casal ? ev.valor_casal : 'Consulte Portaria';
+                        const valorS = ev.valor_solteiro ? ev.valor_solteiro : 'Consulte Portaria';
 
                         card.innerHTML = `
                             <div class="banner-container"><img src="${ev.imagem}" class="banner-img"></div>
@@ -100,14 +100,14 @@
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-tight mb-4">${ev.nome}</h3>
                                 
                                 <div id="selecao-tipo-${doc.id}" class="grid grid-cols-2 gap-4 mt-6">
-                                    <button onclick="selecionarTipo('${doc.id}', 'casal', '${valorC}')" class="type-btn p-5 rounded-2xl font-black uppercase text-xs btn-action" id="btn-casal-${doc.id}">Casal</button>
-                                    <button onclick="selecionarTipo('${doc.id}', 'solteiro', '${valorS}')" class="type-btn p-5 rounded-2xl font-black uppercase text-xs btn-action" id="btn-solteiro-${doc.id}">Solteiro</button>
+                                    <button onclick="selecionarTipo('${doc.id}', 'casal', \`${valorC}\`)" class="type-btn p-5 rounded-2xl font-black uppercase text-xs btn-action" id="btn-casal-${doc.id}">Casal</button>
+                                    <button onclick="selecionarTipo('${doc.id}', 'solteiro', \`${valorS}\`)" class="type-btn p-5 rounded-2xl font-black uppercase text-xs btn-action" id="btn-solteiro-${doc.id}">Solteiro</button>
                                 </div>
 
                                 <div id="form-contato-${doc.id}" class="hidden space-y-4 mt-6 pt-6 border-t border-zinc-900 text-left">
                                     <div class="bg-zinc-900/50 p-4 rounded-2xl text-center mb-4">
-                                        <p class="text-[10px] text-zinc-500 uppercase font-black mb-1">Valor na Lista</p>
-                                        <p id="display-valor-${doc.id}" class="text-lg font-black text-white italic"></p>
+                                        <p class="text-[10px] text-zinc-500 uppercase font-black mb-1 italic">Condição na Lista</p>
+                                        <p id="display-valor-${doc.id}" class="text-[11px] font-bold text-white uppercase leading-relaxed"></p>
                                     </div>
                                     <input type="text" id="nome-${doc.id}" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-xl outline-none font-bold text-xs uppercase">
                                     <input type="tel" id="tel-${doc.id}" placeholder="WHATSAPP COM DDD" class="w-full site-input p-4 rounded-xl outline-none font-bold text-xs">
@@ -122,17 +122,14 @@
         }
 
         window.selecionarTipo = (id, tipo, valor) => {
-            // Destaca o botão selecionado
             document.getElementById(`btn-casal-${id}`).classList.remove('active');
             document.getElementById(`btn-solteiro-${id}`).classList.remove('active');
             document.getElementById(`btn-${tipo}-${id}`).classList.add('active');
             
-            // Mostra o valor de forma clara
             const displayValor = document.getElementById(`display-valor-${id}`);
             displayValor.innerText = valor;
             
-            // Abre o formulário
-            const form = document.getElementById(`form-contato-${id}`);
+            const form = document.getElementById('form-contato-' + id);
             form.classList.remove('hidden');
             form.setAttribute('data-tipo', tipo);
 
