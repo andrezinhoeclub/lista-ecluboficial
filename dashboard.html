@@ -46,47 +46,45 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-8">
-                <div class="card-glass p-8 rounded-[2.5rem]">
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-yellow-500">Reservas por Evento (Tempo Real)</h3>
-                    <div id="container-reservas-evento" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        </div>
-                </div>
+            <div class="card-glass p-8 rounded-[2.5rem]">
+                <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-yellow-500">Reservas por Evento</h3>
+                <div id="container-reservas-evento" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div class="card-glass p-8 rounded-[2.5rem]">
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-blue-500">Ranking: Promoters</h3>
-                    <div id="ranking-container" class="space-y-3 max-h-[400px] overflow-y-auto pr-2"></div>
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-blue-500">Ranking Promoters</h3>
+                    <div id="ranking-container" class="space-y-3"></div>
                 </div>
                 <div class="card-glass p-8 rounded-[2.5rem]">
-                    <h3 class="text-xs font-black uppercase tracking-widest mb-6 border-b border-zinc-800 pb-4 italic text-green-500">Auditoria de Check-ins</h3>
+                    <div class="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
+                        <h3 class="text-xs font-black uppercase tracking-widest italic text-green-500">Auditoria</h3>
+                        <button onclick="limparDadosClientes()" class="bg-red-900/30 text-red-500 px-3 py-1 rounded-lg text-[8px] font-black uppercase border border-red-900/50">Limpar Dados</button>
+                    </div>
                     <select id="filtro-promoter-checkin" class="w-full p-4 rounded-xl mb-6 font-bold text-xs uppercase" onchange="window.filtrarClientesCheckin()">
                         <option value="">Selecione um Promoter</option>
                     </select>
-                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 bg-black/20 rounded-xl p-4 font-mono text-[11px] select-all"></div>
+                    <div id="lista-clientes-checkin" class="max-h-[300px] overflow-y-auto pr-2 font-mono text-[11px]"></div>
                 </div>
             </div>
         </section>
 
         <section id="aba-festas" class="hidden space-y-8">
             <div class="card-glass p-8 rounded-[2.5rem]">
-                <h2 id="titulo-form" class="text-blue-500 font-black uppercase italic text-lg mb-8 tracking-widest">Novo Evento</h2>
+                <h2 class="text-blue-500 font-black uppercase italic text-lg mb-8 tracking-widest">Novo Evento</h2>
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <input type="hidden" id="edit_id">
                     <input type="text" id="nome_festa" placeholder="Nome da Festa" class="p-4 rounded-2xl font-bold" required>
                     <input type="date" id="data_festa" class="p-4 rounded-2xl font-bold" required>
-                    <input type="time" id="hora_inicio" class="p-4 rounded-2xl font-bold" value="22:00">
                     <input type="url" id="url_banner" placeholder="URL do Banner" class="p-4 rounded-2xl font-bold" required>
-                    <input type="text" id="valor_casal" placeholder="Valor Casal" class="p-4 rounded-2xl font-bold text-center">
-                    <input type="text" id="valor_solteiro" placeholder="Valor Solteiro" class="p-4 rounded-2xl font-bold text-center">
-                    <button type="submit" id="btnPublicar" class="col-span-1 md:col-span-2 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase text-sm tracking-widest">Publicar Festa</button>
+                    <input type="text" id="valor_casal" placeholder="Valor Casal" class="p-4 rounded-2xl font-bold">
+                    <input type="text" id="valor_solteiro" placeholder="Valor Solteiro" class="p-4 rounded-2xl font-bold">
+                    <button type="submit" class="col-span-1 md:col-span-2 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase text-sm tracking-widest">Publicar Festa</button>
                 </form>
             </div>
             <div id="lista-eventos-ativos" class="space-y-3"></div>
         </section>
 
-        <section id="aba-equipe" class="hidden">
+        <section id="aba-equipe" class="hidden space-y-8">
             <div class="card-glass p-8 rounded-[2.5rem]">
                 <h2 class="text-green-500 font-black uppercase italic text-lg mb-8 tracking-widest">Gerenciar Equipe</h2>
                 <form id="formEquipe" class="flex gap-4 mb-10">
@@ -100,7 +98,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, deleteDoc, updateDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -124,94 +122,120 @@
             botao.classList.add('active');
         };
 
-        // ESCUTA EVENTOS ATIVOS
+        // ESCUTA EVENTOS
         onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
             eventosAtivosGlobal = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            renderizarRelatorioPorEvento();
+            renderizarRelatorios();
             renderizarListaEventos();
         });
 
-        // ESCUTA TODAS AS RESERVAS
+        // ESCUTA RESERVAS
         onSnapshot(collection(db, "lista_eventos"), (snap) => {
             todasReservasGlobal = snap.docs.map(d => d.data());
-            renderizarRelatorioGeral();
-            renderizarRelatorioPorEvento();
+            renderizarRelatorios();
         });
 
-        function renderizarRelatorioGeral() {
-            let total = todasReservasGlobal.length;
-            let checkins = todasReservasGlobal.filter(r => r.entrou).length;
+        // ESCUTA EQUIPE
+        onSnapshot(collection(db, "equipe"), (snap) => {
+            const container = document.getElementById('lista-promoters');
+            const selectCheckin = document.getElementById('filtro-promoter-checkin');
+            container.innerHTML = '';
+            const baseUrl = "https://andrezinhoeclub.github.io/lista-ecluboficial/index.html?ref=";
+            
+            snap.docs.forEach(d => {
+                const p = d.data().nome;
+                const link = baseUrl + encodeURIComponent(p);
+                container.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                    <span class="font-black uppercase">${p}</span>
+                    <div class="flex gap-2">
+                        <button onclick="navigator.clipboard.writeText('${link}'); alert('Copiado!')" class="bg-zinc-800 px-3 py-2 rounded-xl text-[9px] font-black uppercase">Link</button>
+                        <button onclick="excluirPromoter('${d.id}')" class="bg-red-900/20 text-red-500 px-3 py-2 rounded-xl text-[9px] font-black uppercase">X</button>
+                    </div>
+                </div>`;
+                
+                const opt = document.createElement('option');
+                opt.value = p; opt.innerText = p.toUpperCase();
+                selectCheckin.appendChild(opt);
+            });
+        });
+
+        function renderizarRelatorios() {
+            // Totais
+            const total = todasReservasGlobal.length;
+            const checkins = todasReservasGlobal.filter(r => r.entrou).length;
             document.getElementById('res-total').innerText = total;
             document.getElementById('res-checkin-total').innerText = checkins;
             document.getElementById('res-conversao').innerText = (total > 0 ? Math.round((checkins / total) * 100) : 0) + '%';
-            
-            // Ranking Promoters
-            const rankingContainer = document.getElementById('ranking-container');
-            rankingContainer.innerHTML = '';
-            let ranking = {};
-            todasReservasGlobal.forEach(r => {
-                ranking[r.promoter] = (ranking[r.promoter] || 0) + 1;
-            });
-            Object.entries(ranking).sort((a,b) => b[1]-a[1]).forEach(([nome, qtd]) => {
-                rankingContainer.innerHTML += `<div class="flex justify-between p-3 bg-black/20 rounded-xl border border-zinc-800">
-                    <span class="uppercase font-black">${nome}</span>
-                    <span class="text-yellow-500 font-black">${qtd}</span>
-                </div>`;
-            });
-        }
 
-        // NOVO: Renderiza o card de reservas por evento
-        function renderizarRelatorioPorEvento() {
-            const container = document.getElementById('container-reservas-evento');
-            container.innerHTML = '';
-
-            eventosAtivosGlobal.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
-                const totalEvento = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
-                
-                container.innerHTML += `
-                    <div class="bg-black/40 border border-zinc-800 p-6 rounded-3xl flex flex-col items-center justify-center text-center">
-                        <p class="text-[9px] text-zinc-500 font-black uppercase mb-1 tracking-tighter">${ev.data.split('-').reverse().join('/')}</p>
-                        <h4 class="text-sm font-black uppercase italic mb-3 text-white truncate w-full">${ev.nome}</h4>
-                        <div class="bg-yellow-500 text-black px-6 py-2 rounded-full font-black text-xl italic shadow-lg">
-                            ${totalEvento}
-                        </div>
-                        <p class="text-[8px] text-zinc-400 font-black uppercase mt-2">Reservas na Lista</p>
-                    </div>
-                `;
-            });
-        }
-
-        // FUNÇÕES DE EQUIPE E FESTAS (MANTIDAS)
-        function renderizarListaEventos() {
-            const container = document.getElementById('lista-eventos-ativos');
-            container.innerHTML = '';
+            // Reservas por Evento
+            const containerEv = document.getElementById('container-reservas-evento');
+            containerEv.innerHTML = '';
             eventosAtivosGlobal.forEach(ev => {
-                container.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <img src="${ev.imagem}" class="w-10 h-10 rounded-lg object-cover">
-                        <div><h4 class="font-black uppercase text-[10px]">${ev.nome}</h4><p class="text-yellow-500 text-[8px]">${ev.data}</p></div>
-                    </div>
-                    <button onclick="removerEvento('${ev.id}')" class="bg-red-900/20 text-red-500 p-2 rounded-xl text-[8px] font-black uppercase">Excluir</button>
+                const qtd = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
+                containerEv.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 text-center">
+                    <p class="text-[8px] text-zinc-500 uppercase font-black">${ev.data}</p>
+                    <h4 class="font-black uppercase text-white truncate">${ev.nome}</h4>
+                    <p class="text-2xl font-black text-yellow-500 mt-1">${qtd}</p>
+                </div>`;
+            });
+
+            // Ranking
+            const containerRank = document.getElementById('ranking-container');
+            containerRank.innerHTML = '';
+            let rank = {};
+            todasReservasGlobal.forEach(r => rank[r.promoter] = (rank[r.promoter] || 0) + 1);
+            Object.entries(rank).sort((a,b) => b[1]-a[1]).forEach(([n, q]) => {
+                containerRank.innerHTML += `<div class="flex justify-between p-3 bg-black/20 rounded-xl border border-zinc-800 uppercase font-black">
+                    <span>${n}</span><span class="text-yellow-500">${q}</span>
                 </div>`;
             });
         }
 
-        window.removerEvento = async (id) => { if(confirm("Desativar?")) await updateDoc(doc(db, "eventos", id), { ativo: false }); };
+        // FUNÇÃO DE LIMPEZA VOLTOU
+        window.limparDadosClientes = async () => {
+            if(confirm("ATENÇÃO: Isso apagará TODAS as reservas e check-ins permanentemente. Confirma?")) {
+                const snap = await getDocs(collection(db, "lista_eventos"));
+                const batch = writeBatch(db);
+                snap.docs.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+                alert("Banco de dados resetado com sucesso!");
+            }
+        };
+
+        window.excluirPromoter = async (id) => { if(confirm("Remover?")) await deleteDoc(doc(db, "equipe", id)); };
 
         document.getElementById('formEvento').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const dados = {
+            await addDoc(collection(db, "eventos"), {
                 nome: document.getElementById('nome_festa').value,
                 data: document.getElementById('data_festa').value,
                 imagem: document.getElementById('url_banner').value,
                 valor_casal: document.getElementById('valor_casal').value,
                 valor_solteiro: document.getElementById('valor_solteiro').value,
                 ativo: true
-            };
-            await addDoc(collection(db, "eventos"), dados);
-            alert("Sucesso!");
+            });
+            e.target.reset();
+            alert("Festa Publicada!");
+        });
+
+        document.getElementById('formEquipe').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "equipe"), { nome: document.getElementById('nome_promoter').value.trim() });
             e.target.reset();
         });
+
+        function renderizarListaEventos() {
+            const container = document.getElementById('lista-eventos-ativos');
+            container.innerHTML = '';
+            eventosAtivosGlobal.forEach(ev => {
+                container.innerHTML += `<div class="bg-black/40 p-4 rounded-2xl border border-zinc-800 flex justify-between items-center mb-2">
+                    <span class="font-black uppercase">${ev.nome} (${ev.data})</span>
+                    <button onclick="removerEvento('${ev.id}')" class="text-red-500 font-black text-[9px] uppercase">Excluir</button>
+                </div>`;
+            });
+        }
+
+        window.removerEvento = async (id) => { if(confirm("Desativar?")) await updateDoc(doc(db, "eventos", id), { ativo: false }); };
 
     </script>
 </body>
