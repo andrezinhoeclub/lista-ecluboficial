@@ -10,9 +10,11 @@
         
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
         
+        /* Layout Sidebar e Glass */
         .sidebar { border-right: 1px solid #1a1a1a; }
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         
+        /* Client Cards - Interatividade */
         .client-card { 
             background: #0a0a0a; 
             border: 1px solid #1a1a1a; 
@@ -20,6 +22,7 @@
             cursor: pointer;
         }
 
+        /* Efeito de Hover: Marcar a linha */
         .client-card:not(.entrou):hover { 
             border-color: #eab308; 
             background: #111; 
@@ -27,6 +30,7 @@
             box-shadow: -10px 0 20px -10px #eab308;
         }
         
+        /* Estado de Check-in */
         .client-card.entrou { 
             opacity: 0.20 !important;
             filter: grayscale(1);
@@ -36,6 +40,7 @@
             background: #050505;
         }
         
+        /* Tipografia */
         .nome-cliente { font-size: 1.5rem; line-height: 1; letter-spacing: -0.02em; }
         .tel-cliente { font-size: 1.1rem; color: #a1a1aa; font-family: 'JetBrains Mono', monospace; }
         .badge-perfil { font-size: 14px; font-weight: 900; padding: 4px 12px; border-radius: 8px; text-transform: uppercase; letter-spacing: 1px; }
@@ -54,13 +59,25 @@
 </head>
 <body class="flex h-screen">
 
+    <div id="tela-login" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6">
+        <div class="bg-zinc-900 p-10 w-full max-w-sm text-center border border-zinc-800 rounded-[3rem] shadow-2xl">
+            <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest text-sm">Acesso Portaria</h2>
+            <div class="space-y-4">
+                <input type="text" id="user_login" placeholder="USUÁRIO" class="w-full p-5 rounded-2xl bg-black border border-zinc-800 text-white font-bold text-center uppercase text-xs">
+                <input type="password" id="user_pass" placeholder="SENHA" class="w-full p-5 rounded-2xl bg-black border border-zinc-800 text-white font-bold text-center uppercase text-xs">
+                <button onclick="autenticarPortaria()" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs hover:bg-yellow-400 transition shadow-xl">Entrar no Sistema</button>
+            </div>
+            <p id="erro-login" class="text-red-500 text-[10px] font-black uppercase mt-4 hidden">Usuário ou Senha incorretos</p>
+        </div>
+    </div>
+
     <aside class="sidebar w-80 h-full flex flex-col p-6 bg-black/50">
         <div class="mb-10 text-white">
             <h2 class="text-yellow-500 font-black italic uppercase text-xl tracking-tighter">E-Club</h2>
             <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest text-white">Controle de Portaria</p>
         </div>
-        <div class="flex-grow overflow-y-auto text-white">
-            <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-6 tracking-widest">Eventos da Semana</h3>
+        <div class="flex-grow overflow-y-auto">
+            <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-6 tracking-widest text-white">Eventos da Semana</h3>
             <div id="lista-eventos-sidebar" class="space-y-4"></div>
         </div>
     </aside>
@@ -77,7 +94,7 @@
                 </div>
                 <div class="text-right">
                     <p id="total-confirmado" class="text-3xl font-black italic leading-none">0</p>
-                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Check-ins Noite Atual</p>
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest text-white">Check-ins Noite Atual</p>
                 </div>
             </div>
         </header>
@@ -93,7 +110,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -110,25 +127,41 @@
         let bancoClientes = [];
         let bancoEventos = [];
 
-        // --- VALIDAÇÃO DE HORÁRIO ---
+        // --- AUTENTICAÇÃO ---
+        window.autenticarPortaria = async () => {
+            const user = document.getElementById('user_login').value;
+            const pass = document.getElementById('user_pass').value;
+            const msgErro = document.getElementById('erro-login');
+
+            const docRef = doc(db, "configuracoes", "portaria");
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists() && user === docSnap.data().login && pass === docSnap.data().senha) {
+                document.getElementById('tela-login').style.display = 'none';
+                sessionStorage.setItem('eclub_auth', 'true');
+            } else {
+                msgErro.classList.remove('hidden');
+            }
+        };
+
+        if (sessionStorage.getItem('eclub_auth') === 'true') {
+            document.getElementById('tela-login').style.display = 'none';
+        }
+
+        // --- LÓGICA DE JANELA OPERACIONAL ---
         const validarJanelaAcesso = (dataEvento) => {
             const agora = new Date();
             const dataHoje = agora.toLocaleDateString('en-CA');
             const hora = agora.getHours();
 
-            if (dataHoje === dataEvento) {
-                return hora >= 21; 
-            }
+            if (dataHoje === dataEvento) return hora >= 21;
 
             const dataEventoObj = new Date(dataEvento + 'T12:00:00');
             const amanha = new Date(dataEventoObj);
             amanha.setDate(amanha.getDate() + 1);
             const dataAmanha = amanha.toLocaleDateString('en-CA');
 
-            if (dataHoje === dataAmanha) {
-                return hora < 5; 
-            }
-
+            if (dataHoje === dataAmanha) return hora < 5;
             return false;
         };
 
@@ -144,28 +177,22 @@
             atualizarContadorOperacional();
         });
 
-        // --- CONTADOR RESPEITANDO O BLOQUEIO ---
         function atualizarContadorOperacional() {
-            // Só conta check-ins de clientes cujo evento está na janela de acesso agora
             const confirmadosAgora = bancoClientes.filter(c => {
-                const eventoRelacionado = bancoEventos.find(e => e.nome === c.evento);
-                const estaNaJanela = eventoRelacionado ? validarJanelaAcesso(eventoRelacionado.data) : false;
-                return c.entrou === true && estaNaJanela;
+                const evInfo = bancoEventos.find(e => e.nome === c.evento);
+                return c.entrou === true && evInfo && validarJanelaAcesso(evInfo.data);
             }).length;
-
             document.getElementById('total-confirmado').innerText = confirmadosAgora;
         }
 
         function renderizarSidebar() {
             const container = document.getElementById('lista-eventos-sidebar');
             if(!container) return; container.innerHTML = '';
-            const eventosOrdenados = [...bancoEventos].sort((a,b) => new Date(a.data) - new Date(b.data));
-            eventosOrdenados.forEach(ev => {
+            [...bancoEventos].sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const totalReservas = bancoClientes.filter(c => c.evento === ev.nome).length;
                 const aberto = validarJanelaAcesso(ev.data);
-                
                 container.innerHTML += `
-                    <div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'}">
+                    <div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500' : 'border-l-zinc-800 opacity-40'}">
                         <p class="text-[8px] font-black text-zinc-500 uppercase mb-1 text-white">${ev.data.split('-').reverse().join('/')}</p>
                         <h4 class="text-[11px] font-black uppercase text-white leading-tight mb-2">${ev.nome}</h4>
                         <div class="flex justify-between items-end">
@@ -179,19 +206,15 @@
         window.processarPesquisa = () => {
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const container = document.getElementById('container-resultados');
-            
             if (busca.length < 2) {
                 container.innerHTML = '<div class="py-40 opacity-20 text-white font-black uppercase italic text-sm text-center">Aguardando pesquisa...</div>';
                 return;
             }
-
             const filtrados = bancoClientes.filter(c => {
                 const bateBusca = (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
-                const eventoRelacionado = bancoEventos.find(e => e.nome === c.evento);
-                const estaNaHora = eventoRelacionado ? validarJanelaAcesso(eventoRelacionado.data) : false;
-                return bateBusca && estaNaHora;
+                const evInfo = bancoEventos.find(e => e.nome === c.evento);
+                return bateBusca && evInfo && validarJanelaAcesso(evInfo.data);
             });
-
             renderizarResultados(filtrados);
         };
 
@@ -203,13 +226,11 @@
             }
             container.innerHTML = '';
             lista.sort((a,b) => (a.entrou === b.entrou) ? a.nome.localeCompare(b.nome) : a.entrou ? 1 : -1).forEach(c => {
-                const badgeColor = c.tipo === 'casal' ? 'badge-casal' : 'badge-solteiro';
                 const card = document.createElement('div');
                 card.className = `client-card p-6 rounded-[2rem] flex items-center animate-in ${c.entrou ? 'entrou' : ''}`;
-                
                 card.innerHTML = `
                     <div class="w-1/4 flex flex-col items-start border-r border-zinc-800 pr-4">
-                        <span class="${badgeColor} badge-perfil mb-2">${c.tipo}</span>
+                        <span class="${c.tipo === 'casal' ? 'badge-casal' : 'badge-solteiro'} badge-perfil mb-2">${c.tipo}</span>
                         <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Promoter: ${c.promoter || 'Direto'}</span>
                     </div>
                     <div class="flex-grow px-8 flex flex-col justify-center">
@@ -220,20 +241,15 @@
                         <p class="text-[9px] text-zinc-600 font-black uppercase mt-2 tracking-widest italic border-t border-zinc-900 pt-1 w-fit">📅 Evento: ${c.evento}</p>
                     </div>
                     <div class="w-1/4 flex justify-end">
-                        ${c.entrou 
-                            ? `<span class="text-green-500 font-black uppercase italic text-[11px] mr-4 tracking-widest">Confirmado ✓</span>`
-                            : `<button onclick="confirmarCheckin('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-sm hover:bg-yellow-500 transition-all shadow-xl active:scale-95">Check-in</button>`
-                        }
-                    </div>
-                `;
+                        ${c.entrou ? `<span class="text-green-500 font-black uppercase italic text-[11px] mr-4 tracking-widest">Confirmado ✓</span>` : `<button onclick="confirmarCheckin('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-sm hover:bg-yellow-500 transition-all shadow-xl active:scale-95">Check-in</button>`}
+                    </div>`;
                 container.appendChild(card);
             });
         }
 
         window.confirmarCheckin = async (id) => {
-            const docRef = doc(db, "lista_eventos", id);
             try { 
-                await updateDoc(docRef, { entrou: true, data_entrada: new Date().toISOString() });
+                await updateDoc(doc(db, "lista_eventos", id), { entrou: true, data_entrada: new Date().toISOString() });
                 document.getElementById('input-busca').value = "";
                 processarPesquisa();
             } catch (e) { alert("Erro no check-in!"); }
