@@ -57,7 +57,7 @@
 
         <div class="mt-16 mb-8 px-1">
             <p class="text-[9px] text-zinc-500 font-black uppercase mb-4 tracking-[0.2em] text-center italic">E-Club Beats • Spotify Playlist</p>
-            <iframe data-testid="embed-iframe" style="border-radius:24px" src="https://open.spotify.com/embed/playlist/37i9dQZF1DXa8u6S9H097S?utm_source=generator&theme=0" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+            <iframe style="border-radius:24px" src="https://open.spotify.com/intl-pt/artist/5huLErnSl12r2IkhO81Hqa" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
         </div>
 
         <footer class="mt-12 mb-12 border-t border-zinc-900 pt-10 text-center text-white">
@@ -66,7 +66,7 @@
                 <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="btn-instagram flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-white">Instagram</a>
             </div>
 
-            <a href="https://maps.app.goo.gl/uXv7YV6Tz8A2" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
+            <a href="https://maps.app.goo.gl/YourNewLinkHere" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
                 <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Localização</p>
                 <p class="text-sm font-black italic text-white mb-1">Bairro Alto, Curitiba - PR</p>
                 <p class="text-[10px] text-zinc-500 font-bold uppercase underline tracking-tighter">Abrir GPS</p>
@@ -96,6 +96,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        
         const params = new URLSearchParams(window.location.search);
         const promoterRef = params.get('ref') || 'Direto';
 
@@ -126,6 +127,11 @@
                 eventosValidos.sort((a, b) => new Date(a.data) - new Date(b.data));
                 container.innerHTML = '';
                 
+                if (eventosValidos.length === 0) {
+                    container.innerHTML = '<p class="text-center py-20 text-zinc-500 font-bold uppercase text-xs">Nenhum evento programado.</p>';
+                    return;
+                }
+
                 eventosValidos.forEach(ev => {
                     const card = document.createElement('div');
                     card.className = "festa-card fade-down mb-6";
@@ -181,7 +187,7 @@
         window.processarEnvio = async (nomeEvento, id) => {
             const form = document.getElementById(`form-contato-${id}`);
             const btn = document.getElementById(`btn-submit-${id}`);
-            const nome = document.getElementById(`nome-${id}`).value.trim();
+            const nome = document.getElementById(`nome-${id}`).value.trim().toUpperCase();
             const telRaw = document.getElementById(`tel-${id}`).value.trim();
             const tipo = form.getAttribute('data-tipo');
             const telNumeros = telRaw.replace(/\D/g, "");
