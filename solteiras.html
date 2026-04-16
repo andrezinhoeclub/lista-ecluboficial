@@ -174,42 +174,60 @@
 
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const form = document.getElementById('formSolteira');
             const btn = document.getElementById('btnSalvar');
             const tel = document.getElementById('tel').value;
             const cpf = document.getElementById('cpf').value;
             const nome = document.getElementById('nome').value.trim().toUpperCase();
 
-            // Validação de preenchimento completo
-            if (tel.replace(/\D/g,"").length < 11) return alert("Telefone incompleto!");
-            if (cpf.replace(/\D/g,"").length < 11) return alert("CPF incompleto!");
+            const limparForm = () => {
+                form.reset();
+                document.getElementById('idadeDisplay').innerText = "--";
+                document.getElementById('nome').focus();
+            };
+
+            if (tel.replace(/\D/g,"").length < 11) {
+                alert("Telefone incompleto!");
+                limparForm();
+                return;
+            }
+            if (cpf.replace(/\D/g,"").length < 11) {
+                alert("CPF incompleto!");
+                limparForm();
+                return;
+            }
 
             btn.disabled = true;
             btn.innerText = "VERIFICANDO...";
 
-            // Verificação de duplicados
-            const qDuplicado = query(colRef, where("tel", "==", tel));
-            const qCpf = query(colRef, where("cpf", "==", cpf));
-            const [snapTel, snapCpf] = await Promise.all([getDocs(qDuplicado), getDocs(qCpf)]);
+            try {
+                const qDuplicado = query(colRef, where("tel", "==", tel));
+                const qCpf = query(colRef, where("cpf", "==", cpf));
+                const [snapTel, snapCpf] = await Promise.all([getDocs(qDuplicado), getDocs(qCpf)]);
 
-            if (!snapTel.empty || !snapCpf.empty) {
-                alert("ERRO: Esta solteira (Telefone ou CPF) já está cadastrada na base!");
+                if (!snapTel.empty || !snapCpf.empty) {
+                    alert("ERRO: Esta solteira (Telefone ou CPF) já está cadastrada na base!");
+                    limparForm();
+                    return;
+                }
+
+                await addDoc(colRef, {
+                    nome, tel, cpf,
+                    nascimento: document.getElementById('nascimento').value,
+                    obs: document.getElementById('obs').value.toUpperCase(),
+                    data_cadastro: serverTimestamp(),
+                    ultima_visita: serverTimestamp() 
+                });
+                
+                limparForm();
+                alert("Cadastro realizado com sucesso!");
+            } catch (err) {
+                alert("Erro ao processar cadastro.");
+                limparForm();
+            } finally {
                 btn.disabled = false;
                 btn.innerText = "Salvar e Confirmar";
-                return;
             }
-
-            await addDoc(colRef, {
-                nome, tel, cpf,
-                nascimento: document.getElementById('nascimento').value,
-                obs: document.getElementById('obs').value.toUpperCase(),
-                data_cadastro: serverTimestamp(),
-                ultima_visita: serverTimestamp() 
-            });
-            
-            e.target.reset();
-            document.getElementById('idadeDisplay').innerText = "--";
-            btn.disabled = false;
-            btn.innerText = "Salvar e Confirmar";
         });
 
         window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
