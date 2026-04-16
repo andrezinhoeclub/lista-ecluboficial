@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB | Cadastro de Solteiras</title>
-    
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -32,7 +30,7 @@
                 </div>
             </div>
             <div class="relative w-full md:w-80">
-                <input type="text" id="buscaCliente" placeholder="BUSCAR NOME, CPF OU TEL..." class="w-full p-4 rounded-2xl input-field text-xs font-bold uppercase pl-12" oninput="filtrarClientes()">
+                <input type="text" id="buscaCliente" placeholder="PESQUISAR..." class="w-full p-4 rounded-2xl input-field text-xs font-bold uppercase pl-12" oninput="filtrarClientes()">
                 <span class="absolute left-4 top-4 opacity-30">🔍</span>
             </div>
         </header>
@@ -40,37 +38,31 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <aside class="lg:col-span-1">
                 <div class="glass-card p-6 rounded-[2.5rem] sticky top-8">
-                    <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6 tracking-widest">Novo Cadastro</h2>
+                    <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Cadastro</h2>
                     <form id="formSolteira" class="space-y-4">
                         <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" required>
-                        <input type="tel" id="tel" placeholder="WHATSAPP (00) 00000-0000" class="w-full p-4 rounded-xl input-field font-bold text-xs" required>
-                        <input type="text" id="cpf" placeholder="CPF (SÓ NÚMEROS)" class="w-full p-4 rounded-xl input-field font-bold text-xs" required>
-                        
+                        <input type="tel" id="tel" placeholder="WHATSAPP" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" required>
+                        <input type="text" id="cpf" placeholder="CPF" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskCPF(this)" required>
                         <div class="flex items-center gap-3">
-                            <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" onchange="calcularIdadeVisual(this.value)" required>
+                            <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" onchange="updateIdade(this.value)" required>
                             <div class="bg-zinc-900 px-4 py-3 rounded-xl border border-zinc-800 text-center min-w-[70px]">
                                 <p class="text-[7px] font-black text-zinc-500 uppercase">Idade</p>
                                 <p id="idadeDisplay" class="text-sm font-black text-yellow-500">--</p>
                             </div>
                         </div>
-                        
                         <button type="submit" class="w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-4">Salvar Cadastro</button>
                     </form>
                 </div>
             </aside>
 
-            <main class="lg:col-span-2">
+            <main class="lg:col-span-2 space-y-6">
                 <div class="glass-card rounded-[2.5rem] overflow-hidden">
                     <div class="p-6 border-b border-zinc-800 bg-zinc-900/30 flex justify-between items-center">
-                        <h2 class="text-xs font-black uppercase text-zinc-400 tracking-widest italic">Solteiras Cadastradas</h2>
+                        <h2 class="text-xs font-black uppercase text-zinc-400 italic">Solteiras Cadastradas</h2>
                         <span id="contadorClientes" class="bg-yellow-500 text-black px-3 py-1 rounded-full text-[10px] font-black">0</span>
                     </div>
-                    <div id="listaSolteiras" class="divide-y divide-zinc-900 max-h-[600px] overflow-y-auto">
+                    <div id="listaSolteiras" class="divide-y divide-zinc-900 max-h-[700px] overflow-y-auto">
                         </div>
-                </div>
-
-                <div class="mt-8">
-                    <iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/playlist/37i9dQZF1DX8a1td9COH2T" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
                 </div>
             </main>
         </div>
@@ -95,62 +87,61 @@
 
         let clientesCache = [];
 
-        function calcularIdade(dataNasc) {
-            if(!dataNasc) return "--";
+        window.maskCPF = (i) => {
+            let v = i.value.replace(/\D/g,"");
+            v = v.replace(/(\d{3})(\d)/,"$1.$2");
+            v = v.replace(/(\d{3})(\d)/,"$1.$2");
+            v = v.replace(/(\d{3})(\d{1,2})$/,"$1-$2");
+            i.value = v;
+        };
+
+        window.maskTel = (i) => {
+            let v = i.value.replace(/\D/g,"");
+            v = v.replace(/^(\d{2})(\d)/g,"($1) $2");
+            v = v.replace(/(\d)(\d{4})$/,"$1-$2");
+            i.value = v;
+        };
+
+        function calcIdade(d) {
+            if(!d) return "--";
             const hoje = new Date();
-            const nasc = new Date(dataNasc);
+            const nasc = new Date(d + "T12:00:00");
             let idade = hoje.getFullYear() - nasc.getFullYear();
             const m = hoje.getMonth() - nasc.getMonth();
             if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--;
             return idade;
         }
 
-        window.calcularIdadeVisual = (val) => {
-            document.getElementById('idadeDisplay').innerText = calcularIdade(val);
-        };
+        window.updateIdade = (v) => { document.getElementById('idadeDisplay').innerText = calcIdade(v); };
 
-        async function executarFaxina() {
+        async function limparInativos() {
             const limite = new Date();
             limite.setDate(limite.getDate() - 90);
             const q = query(colRef);
             const snap = await getDocs(q);
             snap.forEach(async (d) => {
                 const data = d.data();
-                const ultimaV = data.ultima_visita ? data.ultima_visita.toDate() : data.data_cadastro.toDate();
-                if (ultimaV < limite) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
+                const ultima = data.ultima_visita ? data.ultima_visita.toDate() : data.data_cadastro.toDate();
+                if (ultima < limite) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
             });
         }
-        executarFaxina();
+        limparInativos();
 
         onSnapshot(colRef, (snap) => {
             clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             document.getElementById('contadorClientes').innerText = clientesCache.length;
-            renderizar(clientesCache);
+            render(clientesCache);
         });
 
-        function renderizar(dados) {
+        function render(dados) {
             const container = document.getElementById('listaSolteiras');
-            container.innerHTML = dados.length ? '' : '<p class="p-20 text-center text-zinc-700 font-bold uppercase text-xs">Nenhum cadastro localizado</p>';
-            
+            container.innerHTML = dados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Sem cadastros</p>';
             dados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
-                const idade = calcularIdade(c.nascimento);
-                const ultima = c.ultima_visita ? c.ultima_visita.toDate().toLocaleString('pt-BR') : "Sem registros";
-                
+                const idade = calcIdade(c.nascimento);
+                const u = c.ultima_visita ? c.ultima_visita.toDate().toLocaleDateString('pt-BR') : "Nunca";
                 const div = document.createElement('div');
-                div.className = "item-cliente p-6 flex flex-col md:flex-row justify-between items-center gap-4";
-                div.innerHTML = `
-                    <div class="flex-grow">
-                        <h3 class="text-sm font-black uppercase text-white">${c.nome}</h3>
-                        <div class="flex flex-wrap gap-4 mt-1 opacity-50">
-                            <span class="text-[10px] font-bold uppercase">🎂 ${idade} ANOS</span>
-                            <span class="text-[10px] font-bold uppercase">🆔 ${c.cpf}</span>
-                            <span class="text-[10px] font-bold uppercase">📱 ${c.tel}</span>
-                        </div>
-                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-3 tracking-widest italic">Última Entrada: ${ultima}</p>
-                    </div>
-                    <button onclick="registrarVisita('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500 transition shadow-lg">Confirmar Entrada</button>
-                    <button onclick="remover('${c.id}')" class="text-zinc-700 hover:text-red-500 p-2 transition">✕</button>
-                `;
+                div.className = "item-cliente p-6 flex justify-between items-center";
+                div.innerHTML = `<div><h3 class="text-sm font-black uppercase text-white">${c.nome}</h3><p class="text-[10px] text-zinc-500 font-bold uppercase mt-1">🎂 ${idade} anos | 🆔 ${c.cpf}</p><p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">Vinda: ${u}</p></div><button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Check-in</button>`;
                 container.appendChild(div);
             });
         }
@@ -167,22 +158,13 @@
             });
             e.target.reset();
             document.getElementById('idadeDisplay').innerText = "--";
-            alert("Cadastro realizado!");
         });
 
-        window.registrarVisita = async (id) => {
-            if(confirm("Registrar entrada dessa cliente agora?")) {
-                await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
-            }
-        };
-
-        window.remover = async (id) => {
-            if(confirm("Excluir cadastro permanentemente?")) await deleteDoc(doc(db, "cadastro_solteiras", id));
-        };
+        window.checkin = async (id) => { await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() }); alert("Entrada registrada!"); };
 
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase();
-            renderizar(clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || c.tel.includes(b)));
+            render(clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || c.tel.includes(b)));
         };
     </script>
 </body>
