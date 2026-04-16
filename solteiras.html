@@ -19,6 +19,9 @@
         .bday-anim { animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .tel-destaque { font-family: 'JetBrains Mono', monospace; }
+        
+        /* TRAVA DE SEGURANÇA: Esconde tudo por padrão */
+        #conteudo-sistema { display: none; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -38,7 +41,7 @@
         </div>
     </div>
 
-    <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto">
+    <div id="conteudo-sistema" class="max-w-6xl mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center gap-4">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12">
@@ -66,8 +69,8 @@
                     <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Cadastro</h2>
                     <form id="formSolteira" class="space-y-4">
                         <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" required>
-                        <input type="tel" id="tel" placeholder="WHATSAPP (DDD + 9 NÚMEROS)" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" required>
-                        <input type="text" id="cpf" placeholder="CPF (11 DÍGITOS)" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskCPF(this)" required>
+                        <input type="tel" id="tel" placeholder="WHATSAPP" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" required>
+                        <input type="text" id="cpf" placeholder="CPF" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskCPF(this)" required>
                         <div class="flex items-center gap-3">
                             <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" onchange="updateIdade(this.value)" required>
                             <div class="bg-zinc-900 px-4 py-3 rounded-xl border border-zinc-800 text-center min-w-[70px]">
@@ -139,8 +142,8 @@
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists() && docSnap.data().senha === pass) {
-                    document.getElementById('tela-login').classList.add('hidden');
-                    document.getElementById('conteudo-sistema').classList.remove('hidden');
+                    document.getElementById('tela-login').style.display = 'none';
+                    document.getElementById('conteudo-sistema').style.display = 'block';
                     sessionStorage.setItem('eclub_solteiras_auth', 'true');
                     inicializarSistema();
                 } else {
@@ -156,10 +159,10 @@
 
         document.getElementById('btnEntrar').onclick = window.autenticar;
 
-        // Verifica sessão ativa
+        // Verifica sessão ativa ao carregar
         if (sessionStorage.getItem('eclub_solteiras_auth') === 'true') {
-            document.getElementById('tela-login').classList.add('hidden');
-            document.getElementById('conteudo-sistema').classList.remove('hidden');
+            document.getElementById('tela-login').style.display = 'none';
+            document.getElementById('conteudo-sistema').style.display = 'block';
             inicializarSistema();
         }
 
