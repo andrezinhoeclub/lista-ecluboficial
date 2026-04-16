@@ -45,7 +45,10 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <aside class="lg:col-span-1">
                 <div class="glass-card p-6 rounded-[2.5rem] sticky top-8">
-                    <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Cadastro</h2>
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                        <h2 class="text-yellow-500 font-black uppercase italic text-sm">Novo Cadastro</h2>
+                    </div>
                     <form id="formSolteira" class="space-y-4">
                         <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" required>
                         <input type="tel" id="tel" placeholder="WHATSAPP" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" required>
@@ -57,7 +60,8 @@
                                 <p id="idadeDisplay" class="text-sm font-black text-yellow-500">--</p>
                             </div>
                         </div>
-                        <button type="submit" class="w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-4">Salvar Cadastro</button>
+                        <p class="text-[8px] text-zinc-500 font-bold uppercase italic text-center px-2">Ao salvar, a entrada de hoje será registrada automaticamente.</p>
+                        <button type="submit" class="w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-2">Salvar e Confirmar</button>
                     </form>
                 </div>
             </aside>
@@ -122,23 +126,17 @@
 
         window.updateIdade = (v) => { document.getElementById('idadeDisplay').innerText = calcIdade(v); };
 
-        // REGRAS DE LIMPEZA E CONTADOR DIÁRIO
         function obterDataCorteEvento() {
             const agora = new Date();
             const corte = new Date();
-            corte.setHours(5, 0, 0, 0); // 5 da manhã de hoje
-            
-            // Se agora for antes das 5h, o evento começou ontem à noite
-            if (agora < corte) {
-                corte.setDate(corte.getDate() - 1);
-            }
+            corte.setHours(5, 0, 0, 0); 
+            if (agora < corte) corte.setDate(corte.getDate() - 1);
             return corte;
         }
 
         async function faxinaSistemas() {
             const limite90d = new Date();
             limite90d.setDate(limite90d.getDate() - 90);
-            
             const snap = await getDocs(query(colRef));
             snap.forEach(async (d) => {
                 const data = d.data();
@@ -148,7 +146,6 @@
         }
         faxinaSistemas();
 
-        // MONITORAMENTO EM TEMPO REAL
         onSnapshot(colRef, (snap) => {
             clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             atualizarContadores();
@@ -158,13 +155,9 @@
         function atualizarContadores() {
             const dataCorte = obterDataCorteEvento();
             let totalEvento = 0;
-
             clientesCache.forEach(c => {
-                if (c.ultima_visita && c.ultima_visita.toDate() > dataCorte) {
-                    totalEvento++;
-                }
+                if (c.ultima_visita && c.ultima_visita.toDate() > dataCorte) totalEvento++;
             });
-
             document.getElementById('contagemEvento').innerText = totalEvento;
             document.getElementById('contadorTotal').innerText = clientesCache.length;
         }
@@ -172,7 +165,6 @@
         function render(dados) {
             const container = document.getElementById('listaSolteiras');
             container.innerHTML = dados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Sem cadastros localizados</p>';
-            
             const dataCorte = obterDataCorteEvento();
 
             dados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
@@ -187,12 +179,12 @@
                         <h3 class="text-sm font-black uppercase ${estaNoEvento ? 'text-green-400' : 'text-white'}">${c.nome}</h3>
                         <p class="text-[10px] text-zinc-500 font-bold uppercase">🎂 ${idade} ANOS | 🆔 ${c.cpf}</p>
                         <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">
-                            ${estaNoEvento ? '● DENTRO DA CASA AGORA' : 'ÚLTIMA VISITA: ' + (uDate ? uDate.toLocaleDateString('pt-BR') : 'NUNCA')}
+                            ${estaNoEvento ? '● CONFIRMADA NO EVENTO' : 'ÚLTIMA VISITA: ' + (uDate ? uDate.toLocaleDateString('pt-BR') : 'NUNCA')}
                         </p>
                     </div>
                     <div class="flex items-center gap-3">
                         ${estaNoEvento ? 
-                            '<span class="text-green-500 text-[10px] font-black uppercase mr-2 tracking-tighter">CONFIRMADA ✓</span>' : 
+                            '<span class="text-green-500 text-[10px] font-black uppercase mr-2 tracking-tighter">NA CASA ✓</span>' : 
                             `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500 shadow-lg">Check-in</button>`
                         }
                         <button onclick="remover('${c.id}')" class="text-zinc-800 hover:text-red-500 p-2 transition">✕</button>
@@ -202,18 +194,27 @@
             });
         }
 
+        // CADASTRO COM AUTO CHECK-IN
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.innerText = "PROCESSANDO...";
+
             await addDoc(colRef, {
                 nome: document.getElementById('nome').value.toUpperCase(),
                 tel: document.getElementById('tel').value,
                 cpf: document.getElementById('cpf').value,
                 nascimento: document.getElementById('nascimento').value,
                 data_cadastro: serverTimestamp(),
-                ultima_visita: null
+                ultima_visita: serverTimestamp() // AQUI O SEGREDO: JÁ SALVA COM DATA DE HOJE
             });
+            
             e.target.reset();
             document.getElementById('idadeDisplay').innerText = "--";
+            btn.disabled = false;
+            btn.innerText = "Salvar e Confirmar";
+            alert("Cliente cadastrada e entrada confirmada!");
         });
 
         window.checkin = async (id) => { 
@@ -229,7 +230,6 @@
             render(clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || c.tel.includes(b)));
         };
 
-        // Atualiza os contadores a cada minuto (para o caso de virar 5h da manhã com a página aberta)
         setInterval(atualizarContadores, 60000);
     </script>
 </body>
