@@ -164,9 +164,8 @@
                         <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">${naCasa ? '● NA CASA AGORA' : 'ÚLTIMA VISITA: ' + (u ? u.toLocaleDateString('pt-BR') : 'NUNCA')}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase">Obs</button>
-                        ${naCasa ? '<span class="text-green-500 text-[10px] font-black uppercase px-4">OK</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase">Check-in</button>`}
-                        <button onclick="remover('${c.id}')" class="text-zinc-800 p-2">✕</button>
+                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700 transition">Obs</button>
+                        ${naCasa ? '<span class="text-green-500 text-[10px] font-black uppercase px-4 tracking-tighter">NA CASA ✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500 shadow-lg">Check-in</button>`}
                     </div>`;
                 container.appendChild(div);
             });
@@ -186,16 +185,8 @@
                 document.getElementById('nome').focus();
             };
 
-            if (tel.replace(/\D/g,"").length < 11) {
-                alert("Telefone incompleto!");
-                limparForm();
-                return;
-            }
-            if (cpf.replace(/\D/g,"").length < 11) {
-                alert("CPF incompleto!");
-                limparForm();
-                return;
-            }
+            if (tel.replace(/\D/g,"").length < 11) { alert("Telefone incompleto!"); limparForm(); return; }
+            if (cpf.replace(/\D/g,"").length < 11) { alert("CPF incompleto!"); limparForm(); return; }
 
             btn.disabled = true;
             btn.innerText = "VERIFICANDO...";
@@ -206,7 +197,7 @@
                 const [snapTel, snapCpf] = await Promise.all([getDocs(qDuplicado), getDocs(qCpf)]);
 
                 if (!snapTel.empty || !snapCpf.empty) {
-                    alert("ERRO: Esta solteira (Telefone ou CPF) já está cadastrada na base!");
+                    alert("ERRO: Esta solteira já está cadastrada na base!");
                     limparForm();
                     return;
                 }
@@ -220,9 +211,9 @@
                 });
                 
                 limparForm();
-                alert("Cadastro realizado com sucesso!");
+                alert("Cadastro e entrada confirmados!");
             } catch (err) {
-                alert("Erro ao processar cadastro.");
+                alert("Erro ao salvar.");
                 limparForm();
             } finally {
                 btn.disabled = false;
@@ -234,7 +225,18 @@
         window.abrirModal = (id, obs) => { document.getElementById('editId').value = id; document.getElementById('editObsField').value = obs; document.getElementById('modalEdit').classList.remove('hidden'); };
         window.fecharModal = () => document.getElementById('modalEdit').classList.add('hidden');
         window.salvarObs = async () => { await updateDoc(doc(db, "cadastro_solteiras", document.getElementById('editId').value), { obs: document.getElementById('editObsField').value.toUpperCase() }); fecharModal(); };
-        window.remover = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "cadastro_solteiras", id)); };
+
+        async function faxinaSistemas() {
+            const limite90d = new Date();
+            limite90d.setDate(limite90d.getDate() - 90);
+            const snap = await getDocs(query(colRef));
+            snap.forEach(async (d) => {
+                const data = d.data();
+                const ultima = data.ultima_visita ? data.ultima_visita.toDate() : data.data_cadastro.toDate();
+                if (ultima < limite90d) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
+            });
+        }
+        faxinaSistemas();
         
         function isBday(d) { if(!d) return false; const h = new Date(); const n = new Date(d + "T12:00:00"); return h.getDate() === n.getDate() && h.getMonth() === n.getMonth(); }
         function obterDataCorteEvento() { const a = new Date(); const c = new Date(); c.setHours(5, 0, 0, 0); if (a < c) c.setDate(c.getDate() - 1); return c; }
