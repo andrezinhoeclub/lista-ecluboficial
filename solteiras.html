@@ -16,17 +16,19 @@
         .btn-gold:hover { transform: scale(1.02); }
         .item-cliente { border-bottom: 1px solid #1a1a1a; transition: 0.3s; }
         .item-cliente:hover { background: rgba(234, 179, 8, 0.05); }
+        .bday-anim { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div class="max-w-5xl mx-auto">
+    <div class="max-w-6xl mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center gap-4">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12">
                 <div>
                     <h1 class="text-2xl font-black uppercase italic text-yellow-500 leading-none">VIP Single Ladies</h1>
-                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 text-center md:text-left">Gestão de Portaria</p>
+                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1">Gestão de Portaria</p>
                 </div>
             </div>
             
@@ -45,10 +47,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <aside class="lg:col-span-1">
                 <div class="glass-card p-6 rounded-[2.5rem] sticky top-8">
-                    <div class="flex items-center gap-2 mb-6">
-                        <div class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                        <h2 class="text-yellow-500 font-black uppercase italic text-sm">Novo Cadastro</h2>
-                    </div>
+                    <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Cadastro</h2>
                     <form id="formSolteira" class="space-y-4">
                         <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" required>
                         <input type="tel" id="tel" placeholder="WHATSAPP (00) 00000-0000" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" required>
@@ -60,7 +59,7 @@
                                 <p id="idadeDisplay" class="text-sm font-black text-yellow-500">--</p>
                             </div>
                         </div>
-                        <p class="text-[8px] text-zinc-500 font-bold uppercase italic text-center px-2">Ao salvar, a entrada de hoje será registrada automaticamente.</p>
+                        <textarea id="obs" placeholder="OBSERVAÇÕES (OPCIONAL)" class="w-full p-4 rounded-xl input-field font-bold text-[10px] uppercase h-20 resize-none"></textarea>
                         <button type="submit" class="w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-2">Salvar e Confirmar</button>
                     </form>
                 </div>
@@ -77,6 +76,18 @@
                         </div>
                 </div>
             </main>
+        </div>
+    </div>
+
+    <div id="modalEdit" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
+        <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-md border-yellow-500/30 border-2">
+            <h2 class="text-yellow-500 font-black uppercase italic mb-6">Editar Observações</h2>
+            <input type="hidden" id="editId">
+            <textarea id="editObsField" class="w-full p-4 rounded-xl input-field font-bold text-[11px] uppercase h-40 resize-none mb-6"></textarea>
+            <div class="flex gap-4">
+                <button onclick="fecharModal()" class="flex-grow bg-zinc-800 py-4 rounded-xl uppercase text-[10px] font-black">Cancelar</button>
+                <button onclick="salvarObs()" class="flex-grow btn-gold py-4 rounded-xl uppercase text-[10px] font-black">Salvar Obs</button>
+            </div>
         </div>
     </div>
 
@@ -124,6 +135,13 @@
             return idade;
         }
 
+        function ehAniversario(dataNasc) {
+            if(!dataNasc) return false;
+            const hoje = new Date();
+            const nasc = new Date(dataNasc + "T12:00:00");
+            return hoje.getDate() === nasc.getDate() && hoje.getMonth() === nasc.getMonth();
+        }
+
         window.updateIdade = (v) => { document.getElementById('idadeDisplay').innerText = calcIdade(v); };
 
         function obterDataCorteEvento() {
@@ -133,18 +151,6 @@
             if (agora < corte) corte.setDate(corte.getDate() - 1);
             return corte;
         }
-
-        async function faxinaSistemas() {
-            const limite90d = new Date();
-            limite90d.setDate(limite90d.getDate() - 90);
-            const snap = await getDocs(query(colRef));
-            snap.forEach(async (d) => {
-                const data = d.data();
-                const ultima = data.ultima_visita ? data.ultima_visita.toDate() : data.data_cadastro.toDate();
-                if (ultima < limite90d) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
-            });
-        }
-        faxinaSistemas();
 
         onSnapshot(colRef, (snap) => {
             clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -169,27 +175,33 @@
 
             dados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
                 const idade = calcIdade(c.nascimento);
+                const niver = ehAniversario(c.nascimento);
                 const uDate = c.ultima_visita ? c.ultima_visita.toDate() : null;
                 const estaNoEvento = uDate && uDate > dataCorte;
                 
                 const div = document.createElement('div');
-                div.className = `item-cliente p-6 flex justify-between items-center ${estaNoEvento ? 'bg-green-500/5' : ''}`;
+                div.className = `item-cliente p-6 flex flex-col md:flex-row justify-between items-center gap-4 ${estaNoEvento ? 'bg-green-500/5' : ''}`;
                 div.innerHTML = `
-                    <div>
-                        <h3 class="text-sm font-black uppercase ${estaNoEvento ? 'text-green-400' : 'text-white'}">${c.nome}</h3>
+                    <div class="flex-grow">
+                        <div class="flex items-center flex-wrap gap-2">
+                            <h3 class="text-lg font-black uppercase ${estaNoEvento ? 'text-green-400' : 'text-white'}">${c.nome}</h3>
+                            <span class="text-lg font-black text-green-500"> — ${c.tel || '(00) 00000-0000'}</span>
+                            ${niver ? '<span class="bg-pink-600 text-white text-[9px] font-black px-2 py-1 rounded bday-anim">🎂 ANIVERSARIANTE!</span>' : ''}
+                        </div>
                         <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 opacity-70">
                             <span class="text-[10px] font-bold uppercase text-zinc-300">🎂 ${idade} ANOS</span>
                             <span class="text-[10px] font-bold uppercase text-zinc-300">🆔 ${c.cpf}</span>
-                            <span class="text-[10px] font-black uppercase text-green-500">📱 ${c.tel || '---'}</span>
                         </div>
-                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-3 tracking-widest italic">
+                        ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase">⚠️ OBS: ${c.obs}</p>` : ''}
+                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 tracking-widest italic">
                             ${estaNoEvento ? '● CONFIRMADA NO EVENTO' : 'ÚLTIMA VISITA: ' + (uDate ? uDate.toLocaleDateString('pt-BR') : 'NUNCA')}
                         </p>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700">Obs</button>
                         ${estaNoEvento ? 
-                            '<span class="text-green-500 text-[10px] font-black uppercase mr-2 tracking-tighter">NA CASA ✓</span>' : 
-                            `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500 shadow-lg transition-all">Check-in</button>`
+                            '<span class="text-green-500 text-[10px] font-black uppercase px-4">NA CASA ✓</span>' : 
+                            `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500">Check-in</button>`
                         }
                         <button onclick="remover('${c.id}')" class="text-zinc-800 hover:text-red-500 p-2 transition">✕</button>
                     </div>
@@ -200,40 +212,45 @@
 
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = e.target.querySelector('button');
-            btn.disabled = true;
-            btn.innerText = "PROCESSANDO...";
-
             await addDoc(colRef, {
                 nome: document.getElementById('nome').value.toUpperCase(),
                 tel: document.getElementById('tel').value,
                 cpf: document.getElementById('cpf').value,
                 nascimento: document.getElementById('nascimento').value,
+                obs: document.getElementById('obs').value.toUpperCase(),
                 data_cadastro: serverTimestamp(),
                 ultima_visita: serverTimestamp() 
             });
-            
             e.target.reset();
             document.getElementById('idadeDisplay').innerText = "--";
-            btn.disabled = false;
-            btn.innerText = "Salvar e Confirmar";
         });
 
         window.checkin = async (id) => { 
             await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() }); 
         };
 
+        window.abrirModal = (id, obs) => {
+            document.getElementById('editId').value = id;
+            document.getElementById('editObsField').value = obs;
+            document.getElementById('modalEdit').classList.remove('hidden');
+        };
+
+        window.fecharModal = () => document.getElementById('modalEdit').classList.add('hidden');
+
+        window.salvarObs = async () => {
+            const id = document.getElementById('editId').value;
+            const novaObs = document.getElementById('editObsField').value.toUpperCase();
+            await updateDoc(doc(db, "cadastro_solteiras", id), { obs: novaObs });
+            fecharModal();
+        };
+
         window.remover = async (id) => {
-            if(confirm("Excluir cadastro permanentemente?")) await deleteDoc(doc(db, "cadastro_solteiras", id));
+            if(confirm("Excluir permanentemente?")) await deleteDoc(doc(db, "cadastro_solteiras", id));
         };
 
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase();
-            render(clientesCache.filter(c => 
-                c.nome.toUpperCase().includes(b) || 
-                c.cpf.includes(b) || 
-                (c.tel && c.tel.includes(b))
-            ));
+            render(clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || (c.tel && c.tel.includes(b))));
         };
 
         setInterval(atualizarContadores, 60000);
