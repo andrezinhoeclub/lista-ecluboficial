@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB | Cadastro de Solteiras</title>
+    <title>E-CLUB | Portaria Solteiras</title>
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -26,12 +26,19 @@
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12">
                 <div>
                     <h1 class="text-2xl font-black uppercase italic text-yellow-500 leading-none">VIP Single Ladies</h1>
-                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1">Gestão de Cadastro e Recorrência</p>
+                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 text-center md:text-left">Gestão de Portaria</p>
                 </div>
             </div>
-            <div class="relative w-full md:w-80">
-                <input type="text" id="buscaCliente" placeholder="PESQUISAR..." class="w-full p-4 rounded-2xl input-field text-xs font-bold uppercase pl-12" oninput="filtrarClientes()">
-                <span class="absolute left-4 top-4 opacity-30">🔍</span>
+            
+            <div class="flex gap-4">
+                <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-center min-w-[120px]">
+                    <p class="text-[8px] font-black text-zinc-500 uppercase">No Evento Hoje</p>
+                    <p id="contagemEvento" class="text-xl font-black text-green-500">0</p>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-center min-w-[120px]">
+                    <p class="text-[8px] font-black text-zinc-500 uppercase">Total na Base</p>
+                    <p id="contadorTotal" class="text-xl font-black text-white">0</p>
+                </div>
             </div>
         </header>
 
@@ -56,11 +63,12 @@
             </aside>
 
             <main class="lg:col-span-2 space-y-6">
+                <div class="relative w-full">
+                    <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase pl-14 shadow-2xl" oninput="filtrarClientes()">
+                    <span class="absolute left-6 top-5 opacity-30 text-xl">🔍</span>
+                </div>
+
                 <div class="glass-card rounded-[2.5rem] overflow-hidden">
-                    <div class="p-6 border-b border-zinc-800 bg-zinc-900/30 flex justify-between items-center">
-                        <h2 class="text-xs font-black uppercase text-zinc-400 italic">Solteiras Cadastradas</h2>
-                        <span id="contadorClientes" class="bg-yellow-500 text-black px-3 py-1 rounded-full text-[10px] font-black">0</span>
-                    </div>
                     <div id="listaSolteiras" class="divide-y divide-zinc-900 max-h-[700px] overflow-y-auto">
                         </div>
                 </div>
@@ -114,34 +122,82 @@
 
         window.updateIdade = (v) => { document.getElementById('idadeDisplay').innerText = calcIdade(v); };
 
-        async function limparInativos() {
-            const limite = new Date();
-            limite.setDate(limite.getDate() - 90);
-            const q = query(colRef);
-            const snap = await getDocs(q);
+        // REGRAS DE LIMPEZA E CONTADOR DIÁRIO
+        function obterDataCorteEvento() {
+            const agora = new Date();
+            const corte = new Date();
+            corte.setHours(5, 0, 0, 0); // 5 da manhã de hoje
+            
+            // Se agora for antes das 5h, o evento começou ontem à noite
+            if (agora < corte) {
+                corte.setDate(corte.getDate() - 1);
+            }
+            return corte;
+        }
+
+        async function faxinaSistemas() {
+            const limite90d = new Date();
+            limite90d.setDate(limite90d.getDate() - 90);
+            
+            const snap = await getDocs(query(colRef));
             snap.forEach(async (d) => {
                 const data = d.data();
                 const ultima = data.ultima_visita ? data.ultima_visita.toDate() : data.data_cadastro.toDate();
-                if (ultima < limite) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
+                if (ultima < limite90d) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
             });
         }
-        limparInativos();
+        faxinaSistemas();
 
+        // MONITORAMENTO EM TEMPO REAL
         onSnapshot(colRef, (snap) => {
             clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            document.getElementById('contadorClientes').innerText = clientesCache.length;
+            atualizarContadores();
             render(clientesCache);
         });
 
+        function atualizarContadores() {
+            const dataCorte = obterDataCorteEvento();
+            let totalEvento = 0;
+
+            clientesCache.forEach(c => {
+                if (c.ultima_visita && c.ultima_visita.toDate() > dataCorte) {
+                    totalEvento++;
+                }
+            });
+
+            document.getElementById('contagemEvento').innerText = totalEvento;
+            document.getElementById('contadorTotal').innerText = clientesCache.length;
+        }
+
         function render(dados) {
             const container = document.getElementById('listaSolteiras');
-            container.innerHTML = dados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Sem cadastros</p>';
+            container.innerHTML = dados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Sem cadastros localizados</p>';
+            
+            const dataCorte = obterDataCorteEvento();
+
             dados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
                 const idade = calcIdade(c.nascimento);
-                const u = c.ultima_visita ? c.ultima_visita.toDate().toLocaleDateString('pt-BR') : "Nunca";
+                const uDate = c.ultima_visita ? c.ultima_visita.toDate() : null;
+                const estaNoEvento = uDate && uDate > dataCorte;
+                
                 const div = document.createElement('div');
-                div.className = "item-cliente p-6 flex justify-between items-center";
-                div.innerHTML = `<div><h3 class="text-sm font-black uppercase text-white">${c.nome}</h3><p class="text-[10px] text-zinc-500 font-bold uppercase mt-1">🎂 ${idade} anos | 🆔 ${c.cpf}</p><p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">Vinda: ${u}</p></div><button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Check-in</button>`;
+                div.className = `item-cliente p-6 flex justify-between items-center ${estaNoEvento ? 'bg-green-500/5' : ''}`;
+                div.innerHTML = `
+                    <div>
+                        <h3 class="text-sm font-black uppercase ${estaNoEvento ? 'text-green-400' : 'text-white'}">${c.nome}</h3>
+                        <p class="text-[10px] text-zinc-500 font-bold uppercase">🎂 ${idade} ANOS | 🆔 ${c.cpf}</p>
+                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">
+                            ${estaNoEvento ? '● DENTRO DA CASA AGORA' : 'ÚLTIMA VISITA: ' + (uDate ? uDate.toLocaleDateString('pt-BR') : 'NUNCA')}
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        ${estaNoEvento ? 
+                            '<span class="text-green-500 text-[10px] font-black uppercase mr-2 tracking-tighter">CONFIRMADA ✓</span>' : 
+                            `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500 shadow-lg">Check-in</button>`
+                        }
+                        <button onclick="remover('${c.id}')" class="text-zinc-800 hover:text-red-500 p-2 transition">✕</button>
+                    </div>
+                `;
                 container.appendChild(div);
             });
         }
@@ -160,12 +216,21 @@
             document.getElementById('idadeDisplay').innerText = "--";
         });
 
-        window.checkin = async (id) => { await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() }); alert("Entrada registrada!"); };
+        window.checkin = async (id) => { 
+            await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() }); 
+        };
+
+        window.remover = async (id) => {
+            if(confirm("Excluir cadastro permanentemente?")) await deleteDoc(doc(db, "cadastro_solteiras", id));
+        };
 
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase();
             render(clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || c.tel.includes(b)));
         };
+
+        // Atualiza os contadores a cada minuto (para o caso de virar 5h da manhã com a página aberta)
+        setInterval(atualizarContadores, 60000);
     </script>
 </body>
 </html>
