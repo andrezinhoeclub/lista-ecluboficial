@@ -68,6 +68,10 @@
                     <div id="listaSolteiras" class="divide-y divide-zinc-900 max-h-[600px] overflow-y-auto">
                         </div>
                 </div>
+
+                <div class="mt-8">
+                    <iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/playlist/37i9dQZF1DX8a1td9COH2T" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+                </div>
             </main>
         </div>
     </div>
@@ -91,7 +95,6 @@
 
         let clientesCache = [];
 
-        // FUNÇÃO PARA CALCULAR IDADE
         function calcularIdade(dataNasc) {
             if(!dataNasc) return "--";
             const hoje = new Date();
@@ -106,7 +109,6 @@
             document.getElementById('idadeDisplay').innerText = calcularIdade(val);
         };
 
-        // LIMPEZA AUTOMÁTICA DE 90 DIAS
         async function executarFaxina() {
             const limite = new Date();
             limite.setDate(limite.getDate() - 90);
@@ -120,7 +122,6 @@
         }
         executarFaxina();
 
-        // MONITORAR DADOS
         onSnapshot(colRef, (snap) => {
             clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             document.getElementById('contadorClientes').innerText = clientesCache.length;
@@ -129,7 +130,7 @@
 
         function renderizar(dados) {
             const container = document.getElementById('listaSolteiras');
-            container.innerHTML = dados.length ? '' : '<p class="p-20 text-center text-zinc-700 font-bold uppercase text-xs tracking-tighter">Nenhum cadastro localizado</p>';
+            container.innerHTML = dados.length ? '' : '<p class="p-20 text-center text-zinc-700 font-bold uppercase text-xs">Nenhum cadastro localizado</p>';
             
             dados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
                 const idade = calcularIdade(c.nascimento);
@@ -154,7 +155,6 @@
             });
         }
 
-        // SALVAR NOVO CADASTRO
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
             await addDoc(colRef, {
