@@ -7,7 +7,7 @@
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; }
         .glass-card { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .input-field { background: #0f0f10 !important; border: 1px solid #27272a !important; color: #fff !important; }
@@ -18,11 +18,27 @@
         .item-cliente { border-bottom: 1px solid #1a1a1a; transition: 0.3s; }
         .bday-anim { animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .tel-destaque { font-family: 'JetBrains Mono', monospace; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div class="max-w-6xl mx-auto">
+    <div id="tela-login" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6">
+        <div class="bg-zinc-900 p-10 w-full max-w-sm text-center border border-zinc-800 rounded-[3.5rem] shadow-2xl">
+            <header class="flex justify-center mb-8">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12 w-auto">
+            </header>
+            <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest text-sm">Acesso Solteiras</h2>
+            <div class="space-y-4">
+                <input type="text" id="user_login" placeholder="USUÁRIO" class="w-full p-5 rounded-2xl bg-black border border-zinc-800 text-white font-bold text-center uppercase text-xs outline-none focus:border-yellow-500">
+                <input type="password" id="user_pass" placeholder="SENHA" class="w-full p-5 rounded-2xl bg-black border border-zinc-800 text-white font-bold text-center uppercase text-xs outline-none focus:border-yellow-500">
+                <button id="btnEntrar" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-lg active:scale-95 transition-all">Entrar no Sistema</button>
+            </div>
+            <p id="erro-login" class="text-red-500 text-[10px] font-black uppercase mt-4 hidden">Usuário ou senha inválidos</p>
+        </div>
+    </div>
+
+    <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center gap-4">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12">
@@ -70,7 +86,6 @@
                     <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase pl-14 shadow-2xl" oninput="filtrarClientes()">
                     <span class="absolute left-6 top-5 opacity-30 text-xl">🔍</span>
                 </div>
-
                 <div class="glass-card rounded-[2.5rem] overflow-hidden">
                     <div id="listaSolteiras" class="divide-y divide-zinc-900 max-h-[700px] overflow-y-auto"></div>
                 </div>
@@ -79,8 +94,8 @@
     </div>
 
     <div id="modalEdit" class="hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-6">
-        <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-md border-yellow-500/30 border-2">
-            <h2 class="text-yellow-500 font-black uppercase italic mb-6">Editar Observações</h2>
+        <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-md border-yellow-500/30 border-2 text-center">
+            <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest">Editar Observações</h2>
             <input type="hidden" id="editId">
             <textarea id="editObsField" class="w-full p-4 rounded-xl input-field font-bold text-[11px] uppercase h-40 resize-none mb-6"></textarea>
             <div class="flex gap-4">
@@ -92,7 +107,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, getDocs, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, getDocs, where, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -109,6 +124,55 @@
 
         let clientesCache = [];
 
+        // LÓGICA DE LOGIN
+        window.autenticar = async () => {
+            const user = document.getElementById('user_login').value.trim().toLowerCase();
+            const pass = document.getElementById('user_pass').value;
+            const btn = document.getElementById('btnEntrar');
+            
+            if(!user || !pass) return;
+            btn.disabled = true;
+            btn.innerText = "VERIFICANDO...";
+
+            try {
+                const docRef = doc(db, "configuracoes", user);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists() && docSnap.data().senha === pass) {
+                    document.getElementById('tela-login').classList.add('hidden');
+                    document.getElementById('conteudo-sistema').classList.remove('hidden');
+                    sessionStorage.setItem('eclub_solteiras_auth', 'true');
+                    inicializarSistema();
+                } else {
+                    document.getElementById('erro-login').classList.remove('hidden');
+                    btn.disabled = false;
+                    btn.innerText = "Entrar no Sistema";
+                }
+            } catch (e) {
+                alert("Erro na conexão");
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('btnEntrar').onclick = window.autenticar;
+
+        // Verifica sessão ativa
+        if (sessionStorage.getItem('eclub_solteiras_auth') === 'true') {
+            document.getElementById('tela-login').classList.add('hidden');
+            document.getElementById('conteudo-sistema').classList.remove('hidden');
+            inicializarSistema();
+        }
+
+        function inicializarSistema() {
+            onSnapshot(colRef, (snap) => {
+                clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                atualizarContadores();
+                render(clientesCache);
+            });
+            faxinaAutomatica();
+        }
+
+        // MÁSCARAS E AUXILIARES
         window.maskCPF = (i) => {
             let v = i.value.replace(/\D/g,"").substring(0,11);
             v = v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2");
@@ -133,15 +197,9 @@
 
         window.updateIdade = (v) => { document.getElementById('idadeDisplay').innerText = calcIdade(v); };
 
-        onSnapshot(colRef, (snap) => {
-            clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            atualizarContadores();
-            render(clientesCache);
-        });
-
         function render(dados) {
             const container = document.getElementById('listaSolteiras');
-            container.innerHTML = dados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Sem cadastros</p>';
+            container.innerHTML = dados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Nenhum registro</p>';
             const corte = obterDataCorteEvento();
 
             dados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
@@ -156,16 +214,16 @@
                     <div class="flex-grow">
                         <div class="flex items-center flex-wrap gap-2">
                             <h3 class="text-lg font-black uppercase ${naCasa ? 'text-green-400' : 'text-white'}">${c.nome}</h3>
-                            <span class="text-xl font-black text-green-500"> — ${c.tel}</span>
+                            <span class="text-xl font-black text-green-500 tel-destaque"> — ${c.tel}</span>
                             ${niver ? '<span class="bg-pink-600 text-white text-[9px] font-black px-2 py-1 rounded bday-anim">🎂 ANIVERSARIANTE!</span>' : ''}
                         </div>
                         <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase">🎂 ${idade} ANOS | 🆔 ${c.cpf}</p>
                         ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase">⚠️ OBS: ${c.obs}</p>` : ''}
-                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">${naCasa ? '● NA CASA AGORA' : 'ÚLTIMA VISITA: ' + (u ? u.toLocaleDateString('pt-BR') : 'NUNCA')}</p>
+                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">${naCasa ? '● CONFIRMADA NA CASA' : 'ÚLTIMA VISITA: ' + (u ? u.toLocaleDateString('pt-BR') : 'NUNCA')}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700 transition">Obs</button>
-                        ${naCasa ? '<span class="text-green-500 text-[10px] font-black uppercase px-4 tracking-tighter">NA CASA ✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500 shadow-lg">Check-in</button>`}
+                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700">Obs</button>
+                        ${naCasa ? '<span class="text-green-500 text-[10px] font-black uppercase px-4">NA CASA ✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500">Check-in</button>`}
                     </div>`;
                 container.appendChild(div);
             });
@@ -179,25 +237,23 @@
             const cpf = document.getElementById('cpf').value;
             const nome = document.getElementById('nome').value.trim().toUpperCase();
 
-            const limparForm = () => {
-                form.reset();
-                document.getElementById('idadeDisplay').innerText = "--";
-                document.getElementById('nome').focus();
-            };
+            const limparForm = () => { form.reset(); document.getElementById('idadeDisplay').innerText = "--"; document.getElementById('nome').focus(); };
 
-            if (tel.replace(/\D/g,"").length < 11) { alert("Telefone incompleto!"); limparForm(); return; }
-            if (cpf.replace(/\D/g,"").length < 11) { alert("CPF incompleto!"); limparForm(); return; }
+            if (tel.replace(/\D/g,"").length < 11 || cpf.replace(/\D/g,"").length < 11) {
+                alert("Preencha Telefone e CPF completos!");
+                return;
+            }
 
             btn.disabled = true;
             btn.innerText = "VERIFICANDO...";
 
             try {
-                const qDuplicado = query(colRef, where("tel", "==", tel));
+                const qTel = query(colRef, where("tel", "==", tel));
                 const qCpf = query(colRef, where("cpf", "==", cpf));
-                const [snapTel, snapCpf] = await Promise.all([getDocs(qDuplicado), getDocs(qCpf)]);
+                const [snapTel, snapCpf] = await Promise.all([getDocs(qTel), getDocs(qCpf)]);
 
                 if (!snapTel.empty || !snapCpf.empty) {
-                    alert("ERRO: Esta solteira já está cadastrada na base!");
+                    alert("Esta solteira já está cadastrada na base!");
                     limparForm();
                     return;
                 }
@@ -226,18 +282,17 @@
         window.fecharModal = () => document.getElementById('modalEdit').classList.add('hidden');
         window.salvarObs = async () => { await updateDoc(doc(db, "cadastro_solteiras", document.getElementById('editId').value), { obs: document.getElementById('editObsField').value.toUpperCase() }); fecharModal(); };
 
-        async function faxinaSistemas() {
-            const limite90d = new Date();
-            limite90d.setDate(limite90d.getDate() - 90);
+        async function faxinaAutomatica() {
+            const limite = new Date();
+            limite.setDate(limite.getDate() - 90);
             const snap = await getDocs(query(colRef));
             snap.forEach(async (d) => {
                 const data = d.data();
                 const ultima = data.ultima_visita ? data.ultima_visita.toDate() : data.data_cadastro.toDate();
-                if (ultima < limite90d) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
+                if (ultima < limite) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
             });
         }
-        faxinaSistemas();
-        
+
         function isBday(d) { if(!d) return false; const h = new Date(); const n = new Date(d + "T12:00:00"); return h.getDate() === n.getDate() && h.getMonth() === n.getMonth(); }
         function obterDataCorteEvento() { const a = new Date(); const c = new Date(); c.setHours(5, 0, 0, 0); if (a < c) c.setDate(c.getDate() - 1); return c; }
         function atualizarContadores() {
