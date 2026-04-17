@@ -3,72 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB | Portaria Inteligente</title>
+    <title>E-CLUB | Promoter Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
-        .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; min-height: 100vh; }
+        .glass-card { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); border-radius: 2rem; }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
-        .client-card { background: #0a0a0a; border: 1px solid #1a1a1c; transition: 0.25s; cursor: pointer; }
-        .client-card:not(.entrou):hover { border-color: #eab308; background: #111; transform: translateX(8px); box-shadow: -10px 0 20px -10px #eab308; }
-        .client-card.entrou { opacity: 0.2 !important; filter: grayscale(1); pointer-events: none; }
-        input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; text-transform: uppercase; }
+        input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
-        .badge-casal { background: #eab308; color: #000; }
-        .badge-solteiro { background: #3b82f6; color: #fff; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
-<body class="flex h-screen">
+<body class="min-h-screen">
 
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
-        <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border">
+        <div class="w-full max-w-sm p-10 glass-card text-center border-yellow-500/20 border">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
-            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">ACESSO <span class="text-yellow-500">PORTARIA</span></h1>
+            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PROMOTER <span class="text-yellow-500">ACCESS</span></h1>
             <div class="space-y-4">
-                <input type="text" id="inputNomeUsuario" placeholder="DIGITE SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold text-xs">
+                <input type="text" id="inputNomePromoter" placeholder="SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
                 <div id="areaSenha" class="hidden">
-                    <input type="password" id="senhaUsuario" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold text-xs mt-2 border-yellow-500/50">
+                    <input type="password" id="senhaPromoter" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
                 </div>
                 <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all mt-4">CONTINUAR</button>
             </div>
-            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Nome localizado! Defina sua senha acima</p>
+            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Defina sua senha de acesso</p>
             <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden">Operador não cadastrado ou senha incorreta</p>
         </div>
     </div>
 
-    <div id="interfacePrincipal" class="hidden flex w-full h-full">
-        <aside class="w-80 h-full flex flex-col p-6 bg-black/50 border-r border-zinc-900">
-            <div class="mb-10 text-center">
-                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter leading-none text-white">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-2 border border-zinc-800 py-1 rounded-lg">---</p>
+    <div id="interfacePrincipal" class="hidden max-w-4xl mx-auto p-6 md:p-10 space-y-10">
+        <header class="flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10">
+                <div>
+                    <h2 class="text-yellow-500 font-black italic uppercase text-lg leading-none">E-CLUB</h2>
+                    <p id="nomeExibicao" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">---</p>
+                </div>
             </div>
-            <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Turno Atual</h3>
-                <div id="lista-eventos-sidebar" class="space-y-3"></div>
-            </div>
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white">Trocar Usuário</button>
-        </aside>
+            <button onclick="location.reload()" class="text-zinc-600 text-[10px] font-black uppercase hover:text-white transition-colors">Sair</button>
+        </header>
 
-        <main class="flex-grow flex flex-col">
-            <header class="p-8 border-b border-zinc-900 bg-black/20 text-white">
-                <div class="max-w-5xl mx-auto flex gap-8 items-center">
-                    <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="PESQUISAR CLIENTE..." class="flex-grow p-6 rounded-[2rem] text-sm font-bold uppercase text-white">
-                    <div class="text-right border-l border-zinc-800 pl-8">
-                        <p id="total-checkins" class="text-4xl font-black italic leading-none text-green-500">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2">Check-ins realizados</p>
-                    </div>
-                </div>
-            </header>
-            <section class="flex-grow p-8 overflow-y-auto bg-[#030303]">
-                <div id="container-resultados" class="max-w-5xl mx-auto grid grid-cols-1 gap-4">
-                    <div class="py-40 opacity-10 text-center text-white font-black uppercase italic tracking-[0.5em]">Aguardando Pesquisa</div>
-                </div>
-            </section>
-        </main>
+        <section class="space-y-6">
+            <div class="flex justify-between items-end border-b border-zinc-900 pb-4">
+                <h3 class="text-xs font-black uppercase text-purple-500 tracking-widest italic leading-none">Minhas Listas de Aniversário</h3>
+                <span class="text-[8px] text-zinc-600 font-bold uppercase leading-none">Limpeza: Pós-evento às 05h</span>
+            </div>
+            <div id="container-links-aniversario" class="space-y-4">
+                <p class="text-zinc-700 text-[10px] font-black uppercase text-center py-20 italic animate-pulse">Carregando listas...</p>
+            </div>
+        </section>
     </div>
 
     <script type="module">
@@ -86,117 +72,129 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioTemp = null;
 
-        // LOGIN
+        let dadosAniversarios = [];
+        let dadosEventos = [];
+        let promoterLogado = "";
+        let stepLogin = 0;
+        let usuarioTemp = null;
+
         window.verificarOuLogar = async () => {
-            const nome = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
-            const senha = document.getElementById('senhaUsuario').value.trim();
+            const nomeInput = document.getElementById('inputNomePromoter').value.trim().toLowerCase();
+            const senhaInput = document.getElementById('senhaPromoter').value.trim();
+            const areaSenha = document.getElementById('areaSenha');
+            const btn = document.getElementById('btnAcao');
+            const erro = document.getElementById('erroLogin');
+
+            erro.classList.add('hidden');
+
             if (stepLogin === 0) {
-                const userDoc = await getDoc(doc(db, "configuracoes", nome));
-                if (userDoc.exists()) {
-                    usuarioTemp = userDoc.data();
+                if (!nomeInput) return;
+                const docSnap = await getDoc(doc(db, "promoters", nomeInput));
+                if (docSnap.exists()) {
+                    usuarioTemp = docSnap.data();
                     stepLogin = 1;
-                    document.getElementById('areaSenha').classList.remove('hidden');
-                    document.getElementById('inputNomeUsuario').readOnly = true;
-                    if (usuarioTemp.senha === "") {
-                        document.getElementById('btnAcao').innerText = "CADASTRAR E ENTRAR";
+                    areaSenha.classList.remove('hidden');
+                    document.getElementById('inputNomePromoter').readOnly = true;
+                    if (!usuarioTemp.senha) {
+                        btn.innerText = "CADASTRAR E ENTRAR";
                         document.getElementById('msgStatus').classList.remove('hidden');
-                    } else { document.getElementById('btnAcao').innerText = "ENTRAR"; }
-                } else { document.getElementById('erroLogin').classList.remove('hidden'); }
+                    } else {
+                        btn.innerText = "ENTRAR NO SISTEMA";
+                    }
+                } else {
+                    erro.innerText = "PROMOTER NÃO CADASTRADO";
+                    erro.classList.remove('hidden');
+                }
             } else {
-                if (usuarioTemp.senha === "") {
-                    await updateDoc(doc(db, "configuracoes", nome), { senha: senha });
-                    logarSucesso(nome);
-                } else if (usuarioTemp.senha === senha) {
-                    logarSucesso(nome);
-                } else { document.getElementById('erroLogin').classList.remove('hidden'); }
+                if (!senhaInput) return;
+                if (!usuarioTemp.senha) {
+                    await updateDoc(doc(db, "promoters", nomeInput), { senha: senhaInput });
+                    logarSucesso(nomeInput);
+                } else if (usuarioTemp.senha === senhaInput) {
+                    logarSucesso(nomeInput);
+                } else {
+                    erro.innerText = "SENHA INCORRETA";
+                    erro.classList.remove('hidden');
+                }
             }
         };
 
-        function logarSucesso(n) {
-            operadorLogado = n;
-            document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
+        function logarSucesso(nome) {
+            promoterLogado = nome;
+            document.getElementById('nomeExibicao').innerText = "PROMOTER: " + nome.toUpperCase();
             document.getElementById('telaLogin').classList.add('hidden');
             document.getElementById('interfacePrincipal').classList.remove('hidden');
             iniciarEscutas();
         }
 
-        // LÓGICA DE TEMPO (CORRIGIDA)
-        const validarTurno = (dataEvento) => {
+        function iniciarEscutas() {
+            // Carrega eventos primeiro
+            onSnapshot(collection(db, "eventos"), snapEv => {
+                dadosEventos = snapEv.docs.map(d => d.data());
+                
+                // Só carrega as listas depois que temos os eventos para filtrar
+                onSnapshot(query(collection(db, "links_aniversario"), where("promoter_pai", "==", promoterLogado)), snapLinks => {
+                    dadosAniversarios = snapLinks.docs.map(d => ({id: d.id, ...d.data()}));
+                    renderizarInterface();
+                });
+            });
+        }
+
+        function renderizarInterface() {
+            const container = document.getElementById('container-links-aniversario');
             const agora = new Date();
             const hora = agora.getHours();
             
-            // Data do Evento em Objeto (YYYY-MM-DD)
-            const evData = new Date(dataEvento + "T12:00:00");
+            const hojeData = new Date();
+            hojeData.setHours(0,0,0,0);
             
-            // Hoje à meia-noite (para comparação pura de data)
-            const hoje = new Date();
-            hoje.setHours(0,0,0,0);
-            
-            const ontem = new Date(hoje);
-            ontem.setDate(ontem.getDate() - 1);
+            const ontemData = new Date(hojeData);
+            ontemData.setDate(ontemData.getDate() - 1);
 
-            // Regra: Se a data do evento é hoje, libera se for >= 21h ou se já passou da meia noite (00h-05h)
-            if (evData.getTime() === hoje.getTime()) {
-                return true; // Se for o dia da festa, sempre mostra para evitar erro
-            }
-            
-            // Regra: Se a data do evento foi "ontem", ainda libera se for madrugada (antes das 05h)
-            if (evData.getTime() === ontem.getTime() && hora < 5) {
-                return true;
-            }
+            const linksFiltrados = dadosAniversarios.filter(link => {
+                const evento = dadosEventos.find(e => e.nome === link.evento);
+                if (!evento) return true; // Se o evento sumiu da db, mantém por segurança
 
-            return false;
-        };
+                const dataEv = new Date(evento.data + "T12:00:00");
+                dataEv.setHours(0,0,0,0);
 
-        function iniciarEscutas() {
-            onSnapshot(collection(db, "lista_eventos"), (snap) => {
-                bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou).length;
-                processarPesquisa();
+                // REGRA: Se o evento é HOJE ou no FUTURO, mostra.
+                if (dataEv.getTime() >= hojeData.getTime()) return true;
+
+                // REGRA MADRUGADA: Se o evento foi ONTEM e agora é antes das 05h, mostra.
+                if (dataEv.getTime() === ontemData.getTime() && hora < 5) return true;
+
+                return false;
             });
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
-                bancoEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                renderizarSidebar();
-            });
+
+            if (linksFiltrados.length === 0) {
+                container.innerHTML = `<p class="text-zinc-700 text-[10px] font-black uppercase text-center py-20 italic">Nenhuma lista ativa no momento.</p>`;
+                return;
+            }
+
+            container.innerHTML = linksFiltrados.map(link => `
+                <div class="glass-card p-6 border-l-4 border-purple-500 flex justify-between items-center">
+                    <div class="flex-grow pr-4">
+                        <h3 class="text-white font-black uppercase italic text-sm md:text-base leading-none mb-2">${link.nome_aniversariante}</h3>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase truncate max-w-[180px] md:max-w-md">${link.evento}</p>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="text-center min-w-[60px]">
+                            <p class="text-[7px] text-zinc-600 font-black uppercase mb-1">Convidados</p>
+                            <p class="text-xl font-black text-white leading-none">${link.total_convidados || 0}</p>
+                        </div>
+                        <button onclick="copiarLink('${link.id}')" class="bg-zinc-800 text-[10px] font-black px-6 py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all">Copiar</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
-        function renderizarSidebar() {
-            const cont = document.getElementById('lista-eventos-sidebar');
-            cont.innerHTML = '';
-            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
-                const aberto = validarTurno(ev.data);
-                const total = bancoClientes.filter(c => c.evento === ev.nome).length;
-                if(aberto) {
-                    cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]"><p class="text-[8px] font-black text-white uppercase">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4><div class="flex justify-between items-end mt-2"><span class="text-[8px] font-bold text-green-500">🔥 NO AR</span><span class="text-lg font-black italic text-yellow-500">${total}</span></div></div>`;
-                }
+        window.copiarLink = (id) => {
+            const url = `https://andrezinhoeclub.github.io/lista-ecluboficial/aniversario.html?id=${id}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert("Link copiado com sucesso!");
             });
-        }
-
-        window.processarPesquisa = () => {
-            const busca = document.getElementById('input-busca').value.trim().toUpperCase();
-            const cont = document.getElementById('container-resultados');
-            if (busca.length < 2) return;
-
-            const filtrados = bancoClientes.filter(c => {
-                const termo = (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
-                const evRel = bancoEventos.find(e => e.nome === c.evento);
-                return termo && (evRel ? validarTurno(evRel.data) : false);
-            });
-
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum registro encontrado</div>' : '';
-            filtrados.forEach(c => {
-                const typeColor = c.tipo_entrada === 'CASAL' ? 'badge-casal' : 'badge-solteiro';
-                const div = document.createElement('div');
-                div.className = `client-card p-6 rounded-[2rem] flex items-center mb-2 ${c.entrou ? 'entrou' : ''}`;
-                div.innerHTML = `<div class="w-40 border-r border-zinc-900 pr-6"><span class="px-4 py-1.5 ${typeColor} text-[10px] font-black rounded-lg uppercase block text-center">${c.tipo_entrada || 'LISTA'}</span><p class="text-[8px] font-black text-zinc-600 uppercase mt-2 text-center truncate">${c.promoter || 'DIRETO'}</p></div><div class="flex-grow px-10"><h3 class="text-xl font-black uppercase italic text-white">${c.nome}</h3><p class="text-sm font-bold text-zinc-500 font-mono">${c.tel || '---'}</p></div><div class="w-48 text-right">${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-xs tracking-widest">OK ✓</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-xs hover:bg-yellow-500 transition-all">ENTRADA</button>`}</div>`;
-                cont.appendChild(div);
-            });
-        };
-
-        window.confirmarCheckin = async (id) => {
-            await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
         };
     </script>
 </body>
