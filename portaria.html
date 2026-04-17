@@ -10,7 +10,7 @@
     <link rel="apple-touch-icon" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <link rel="manifest" href="manifest.json">
     
-    <title>E-CLUB | Portaria Inteligente</title>
+    <title>E-CLUB | Portaria Oficial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
@@ -70,38 +70,38 @@
                     </div>
                     <div class="text-right border-l border-zinc-800 pl-8 min-w-[120px]">
                         <p id="total-checkins" class="text-4xl font-black italic leading-none text-green-500">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2">Check-ins Hoje</p>
+                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2 text-white">Check-ins Hoje</p>
                     </div>
                 </div>
             </header>
             
-            <section class="flex-grow p-8 overflow-y-auto bg-[#030303]">
-                <div id="container-resultados" class="max-w-5xl mx-auto">
-                    <div id="painel-informativo" class="hidden py-20 flex flex-col items-center text-center">
-                        <div class="w-24 h-24 mb-10 opacity-20 bg-gradient-to-b from-yellow-500 to-transparent rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-zinc-500 font-black uppercase italic text-sm tracking-widest mb-12">Protocolo de Operação E-CLUB</h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-4xl opacity-40">
-                            <div class="space-y-3">
-                                <p class="text-yellow-500 font-black text-[10px] uppercase">Abertura de Lista</p>
-                                <p class="text-zinc-500 text-[11px] leading-relaxed">As listas são desbloqueadas automaticamente às <b>21:00h</b>.</p>
-                            </div>
-                            <div class="space-y-3 border-x border-zinc-900 px-8">
-                                <p class="text-yellow-500 font-black text-[10px] uppercase">Encerramento</p>
-                                <p class="text-zinc-500 text-[11px] leading-relaxed">O sistema oculta os nomes e encerra o turno às <b>05:00h</b>.</p>
-                            </div>
-                            <div class="space-y-3">
-                                <p class="text-yellow-500 font-black text-[10px] uppercase">Identificação</p>
-                                <p class="text-zinc-500 text-[11px] leading-relaxed">Confirme Nome e Celular antes de realizar a liberação.</p>
-                            </div>
-                        </div>
-                        <p class="mt-20 text-[9px] text-zinc-700 font-bold uppercase tracking-[0.4em]">SISTEMA AGUARDANDO LIBERAÇÃO POR HORÁRIO</p>
+            <section class="flex-grow p-8 overflow-y-auto bg-[#030303] relative">
+                <div id="painel-informativo" class="absolute inset-0 flex flex-col items-center justify-center text-center p-10">
+                    <div class="w-20 h-20 mb-8 opacity-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                     </div>
+                    <h3 class="text-zinc-600 font-black uppercase italic text-xs tracking-[0.3em] mb-10">Protocolo de Operação E-CLUB</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl opacity-30">
+                        <div class="p-6">
+                            <p class="text-yellow-500 font-black text-[9px] uppercase mb-2">Check-in Liberado</p>
+                            <p class="text-zinc-500 text-[10px] leading-relaxed">As listas são desbloqueadas para busca automaticamente às <b>21:00h</b>.</p>
+                        </div>
+                        <div class="p-6 border-x border-zinc-900">
+                            <p class="text-yellow-500 font-black text-[9px] uppercase mb-2">Fim do Turno</p>
+                            <p class="text-zinc-500 text-[10px] leading-relaxed">O sistema encerra as operações e oculta os registros às <b>05:00h</b>.</p>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-yellow-500 font-black text-[9px] uppercase mb-2">Segurança</p>
+                            <p class="text-zinc-500 text-[10px] leading-relaxed">Confirme sempre os dados do cliente antes de realizar a liberação.</p>
+                        </div>
+                    </div>
+                    <p class="mt-16 text-[8px] text-zinc-800 font-bold uppercase tracking-[0.5em]">Aguardando liberação do próximo evento</p>
                 </div>
+
+                <div id="container-resultados" class="max-w-5xl mx-auto relative z-10"></div>
             </section>
         </main>
     </div>
@@ -109,8 +109,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('service-worker.js'); }
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -179,39 +177,34 @@
 
         function renderizarSidebar() {
             const cont = document.getElementById('lista-eventos-sidebar');
+            const info = document.getElementById('painel-informativo');
             cont.innerHTML = '';
             
-            // Controle do Painel Informativo Central
-            const painelInfo = document.getElementById('painel-informativo');
-            // Se não houver nenhum evento LIBERADO agora, mostra o painel informativo
             const algumLiberado = bancoEventos.some(ev => obterStatusEvento(ev.data) === "LIBERADO");
             
-            if (painelInfo) {
+            // Controle do Painel Informativo Central
+            if (info) {
+                // Se NÃO tem evento liberado, mostra o informativo
                 if (!algumLiberado) {
-                    painelInfo.classList.remove('hidden');
+                    info.classList.remove('hidden');
                 } else {
-                    painelInfo.classList.add('hidden');
+                    info.classList.add('hidden');
                 }
-            }
-
-            if(bancoEventos.length === 0) {
-                cont.innerHTML = '<p class="text-[10px] text-zinc-600 font-bold uppercase italic mt-4">Nenhum evento ativo.</p>';
-                return;
             }
 
             bancoEventos.forEach(ev => {
                 const totalReservas = bancoClientes.filter(c => c.evento === ev.nome).length;
                 const status = obterStatusEvento(ev.data);
                 const isLiberado = status === "LIBERADO";
-                const dataFormatada = new Date(ev.data + "T00:00:00").toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
+                const d = new Date(ev.data + "T00:00:00").toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'});
                 
                 cont.innerHTML += `
                     <div class="p-4 rounded-2xl glass border-l-4 ${isLiberado ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-700'} mb-2">
-                        <div class="flex justify-between items-start mb-1 text-white">
+                        <div class="flex justify-between items-start mb-1">
                             <h4 class="text-[10px] font-black uppercase text-white truncate w-40">${ev.nome}</h4>
-                            <span class="text-[8px] font-mono text-zinc-500 font-bold">${dataFormatada}</span>
+                            <span class="text-[8px] font-mono text-zinc-500 font-bold">${d}</span>
                         </div>
-                        <div class="flex justify-between items-end mt-2 text-white">
+                        <div class="flex justify-between items-end mt-2">
                             <span class="text-[8px] font-bold ${isLiberado ? 'text-green-500' : 'text-zinc-500'} uppercase">
                                 ${isLiberado ? '● LIBERADO' : '🔒 BLOQUEADO'}
                             </span>
@@ -227,18 +220,18 @@
         window.processarPesquisa = () => {
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
-            const painelInfo = document.getElementById('painel-informativo');
+            const info = document.getElementById('painel-informativo');
 
             if (busca.length < 2) { 
                 cont.innerHTML = ''; 
-                // Volta a mostrar o painel se o sistema estiver bloqueado e não houver busca
+                // Se a busca for limpa, reavalia se deve mostrar o informativo
                 const algumLiberado = bancoEventos.some(ev => obterStatusEvento(ev.data) === "LIBERADO");
-                if (painelInfo && !algumLiberado) painelInfo.classList.remove('hidden');
+                if (info && !algumLiberado) info.classList.remove('hidden');
                 return; 
             }
             
-            // Esconde o painel informatico ao pesquisar
-            if (painelInfo) painelInfo.classList.add('hidden');
+            // Esconde informativo se o operador começar a pesquisar
+            if (info) info.classList.add('hidden');
 
             const filtrados = bancoClientes.filter(c => {
                 const evRel = bancoEventos.find(e => e.nome === c.evento);
@@ -248,7 +241,7 @@
                 return status === "LIBERADO" && termo;
             });
 
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic text-white">Nenhum registro encontrado para este horário</div>' : '';
+            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic text-white text-white">Nenhum registro liberado ou encontrado</div>' : '';
             
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
@@ -257,7 +250,7 @@
                 const isCasal = c.tipo_entrada === "CASAL";
                 let valorTexto = ""; let corValor = "text-yellow-500";
 
-                if (isAnivPai) { valorTexto = "FREE (ANIVERSARIANTE)"; corValor = "animate-free"; } 
+                if (isAnivPai) { valorTexto = "FREE"; corValor = "animate-free"; } 
                 else {
                     let v = isConviteAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
                     valorTexto = "R$ " + (v || "---");
@@ -268,22 +261,22 @@
                 div.className = `client-card p-8 rounded-[2.5rem] mb-4 ${c.entrou ? 'entrou' : ''}`;
                 div.innerHTML = `
                     <div class="flex flex-col gap-4 text-white">
-                        <div class="flex justify-between items-center">
-                            <div class="flex items-center gap-4">
+                        <div class="flex justify-between items-center text-white text-white">
+                            <div class="flex items-center gap-4 text-white text-white">
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-none">${c.nome}</h3>
-                                <div class="flex items-center bg-zinc-900/50 rounded-xl px-3 py-2 gap-3 border border-white/5">
+                                <div class="flex items-center bg-zinc-900/50 rounded-xl px-3 py-2 gap-3 border border-white/5 text-white text-white">
                                     <p class="text-lg font-bold text-zinc-400 font-mono italic tracking-tighter leading-none">${c.tel || ''}</p>
-                                    <button onclick="copiarTexto('${c.tel}')" class="btn-copy p-1.5 rounded-lg text-zinc-500 hover:text-yellow-500 transition-all"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg></button>
+                                    <button onclick="copiarTexto('${c.tel}')" class="btn-copy p-1.5 rounded-lg text-zinc-500 hover:text-yellow-500 transition-all text-white"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg></button>
                                 </div>
                             </div>
                             <div>${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-4 py-2 rounded-xl">✓ OK</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)]">LIBERAR</button>`}</div>
                         </div>
-                        <div class="h-[1px] bg-zinc-900 w-full"></div>
-                        <div class="flex flex-wrap items-center gap-6">
-                            <span class="text-xs text-zinc-400 font-black uppercase italic text-white">${c.promoter || 'DIRETO'}</span>
-                            <span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase text-white">${c.tipo_entrada || 'LISTA'}</span>
-                            <div class="flex items-center gap-2 border-l border-zinc-800 pl-6 text-white text-white"><span class="text-[8px] text-zinc-500 font-black uppercase tracking-widest text-white">PAGAR:</span><span class="text-xl font-black italic ${corValor}">${valorTexto}</span></div>
-                            ${isConviteAniv ? `<div class="flex items-center gap-2 border-l border-zinc-800 pl-6 text-white text-white"><span class="text-xs text-purple-400 font-black uppercase italic tracking-tighter text-white">🎂 Aniv: ${c.aniversariante || ''}</span></div>` : ''}
+                        <div class="h-[1px] bg-zinc-900 w-full text-white"></div>
+                        <div class="flex flex-wrap items-center gap-6 text-white text-white">
+                            <span class="text-xs text-zinc-400 font-black uppercase italic">${c.promoter || 'DIRETO'}</span>
+                            <span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase">${c.tipo_entrada || 'LISTA'}</span>
+                            <div class="flex items-center gap-2 border-l border-zinc-800 pl-6 text-white text-white"><span class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">PAGAR:</span><span class="text-xl font-black italic ${corValor}">${valorTexto}</span></div>
+                            ${isConviteAniv ? `<div class="flex items-center gap-2 border-l border-zinc-800 pl-6 text-white text-white"><span class="text-xs text-purple-400 font-black uppercase italic tracking-tighter">🎂 Aniv: ${c.aniversariante || ''}</span></div>` : ''}
                         </div>
                     </div>`;
                 cont.appendChild(div);
