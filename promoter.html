@@ -44,7 +44,7 @@
 
         <section class="space-y-8">
             <div id="secaoMeusLinks" class="hidden">
-                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2 italic">Links Ativos (Curto)</h3>
+                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2 italic">Links de Aniversário</h3>
                 <div id="listaLinksAniv" class="space-y-3"></div>
             </div>
             <div>
@@ -74,7 +74,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        // ADICIONADO addDoc NO IMPORT ABAIXO PARA NÃO TRAVAR O BOTÃO
         import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -95,7 +94,6 @@
 
         window.validarUsuario = async function() {
             const n = document.getElementById('userPromoter').value.trim().toLowerCase();
-            if(!n) return;
             const snap = await getDoc(doc(db, "promoters", n));
             if(snap.exists()) {
                 currentPromoter = n;
@@ -158,7 +156,7 @@
                                 <p class="text-[7px] text-purple-400 font-black uppercase">Convidados</p>
                                 <p class="text-lg font-black text-white leading-none">${qtd}</p>
                             </div>
-                            <button onclick="copiarLinkCurto('${link.id}')" class="bg-purple-500/20 text-purple-400 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Copiar</button>
+                            <button onclick="copiarLinkInteligente('${link.id}', '${link.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Copiar</button>
                         </div>
                     </div>`;
             });
@@ -191,30 +189,31 @@
             if(!nome) return alert("Digite o nome!");
             const btn = document.getElementById('btnGerar');
             btn.disabled = true; btn.innerText = "GERANDO...";
-
             try {
-                // AGORA COM addDoc IMPORTADO CORRETAMENTE
                 await addDoc(collection(db, "links_aniversario"), {
                     promoter: currentPromoter,
                     aniversariante: nome,
                     festa: festa,
                     data_criacao: new Date().toISOString()
                 });
-
                 fecharModalAniv();
                 btn.disabled = false; btn.innerText = "Gerar Link Curto";
-                document.getElementById('nomeAniversariante').value = ""; // Limpa o campo
+                document.getElementById('nomeAniversariante').value = "";
                 alert("Link criado! Use o botão COPIAR na lista.");
             } catch (error) {
-                console.error("Erro ao gerar link:", error);
-                alert("Erro ao salvar no banco de dados.");
-                btn.disabled = false; btn.innerText = "Gerar Link Curto";
+                btn.disabled = false;
+                alert("Erro ao criar link.");
             }
         }
 
-        window.copiarLinkCurto = (id) => {
+        // --- FUNÇÃO DE COPIAR ATUALIZADA ---
+        window.copiarLinkInteligente = (id, aniversariante) => {
             const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?id=' + id;
-            navigator.clipboard.writeText(url).then(() => alert("Link Curto Copiado!"));
+            const textoMensagem = `*Convite VIP: Aniversário de ${aniversariante}* 🎂\n\n*Clique no link abaixo para confirmar seu nome na lista:*\n${url}`;
+            
+            navigator.clipboard.writeText(textoMensagem).then(() => {
+                alert("Texto completo para WhatsApp copiado com sucesso!");
+            });
         }
 
         window.copiarLinkReservas = () => {
