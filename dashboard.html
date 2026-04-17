@@ -14,10 +14,9 @@
         .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
         .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
         input, select { background-color: #09090b !important; border: 1px solid #27272a !important; color: #ffffff !important; transition: 0.3s; }
-        input:focus, select:focus { border-color: #eab308 !important; outline: none; }
-        .event-card { background: linear-gradient(145deg, #0f0f10 0%, #050505 100%); border: 1px solid #1a1a1c; transition: 0.3s; cursor: pointer; }
-        .event-card:hover { border-color: #eab308; transform: translateY(-3px); }
-        .aniv-badge { background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.3); }
+        .event-row { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .event-row:hover { background: rgba(255,255,255,0.05); border-color: #eab308; }
+        .ranking-card { background: linear-gradient(145deg, #0f0f10 0%, #050505 100%); border: 1px solid #1a1a1c; }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
     </style>
@@ -41,46 +40,32 @@
         </header>
 
         <section id="aba-relatorios" class="space-y-8">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="glass-card p-6 stat-card"><span class="text-[9px] font-black uppercase text-zinc-500">Reservas Totais</span><p id="total-reservas" class="text-3xl font-black italic text-white">0</p></div>
-                <div class="glass-card p-6 stat-card border-l-green-500"><span class="text-[9px] font-black uppercase text-zinc-500">Total Entradas</span><p id="total-entradas" class="text-3xl font-black italic text-green-500">0</p></div>
-                <div class="glass-card p-6 stat-card border-l-purple-500"><span class="text-[9px] font-black uppercase text-zinc-500">Conversão</span><p id="conversao-geral" class="text-3xl font-black italic text-purple-400">0%</p></div>
-                <div class="glass-card p-6 stat-card border-l-blue-500"><span class="text-[9px] font-black uppercase text-zinc-500">Melhor Evento</span><p id="melhor-evento" class="text-sm font-black uppercase text-blue-400 mt-2">---</p></div>
-            </div>
-
             <div class="glass-card p-8">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <h2 class="text-xs font-black uppercase text-yellow-500 italic">Cruzamento de Dados & Filtros</h2>
-                    <div class="flex gap-2 w-full md:w-auto">
-                        <select id="filtro-evento" class="p-3 rounded-xl text-[10px] font-black uppercase" onchange="processarFiltros()"><option value="">Todos Eventos</option></select>
-                        <select id="filtro-promoter" class="p-3 rounded-xl text-[10px] font-black uppercase" onchange="processarFiltros()"><option value="">Todos Promoters</option></select>
+                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Agenda e Performance de Eventos</h2>
+                <div class="space-y-3" id="lista-performance-eventos">
                     </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                    <div class="bg-black/40 p-6 rounded-3xl border border-zinc-900"><p class="text-[8px] font-black uppercase text-zinc-500">Filtrado: Reservas</p><p id="filtro-res" class="text-4xl font-black text-white italic">0</p></div>
-                    <div class="bg-black/40 p-6 rounded-3xl border border-zinc-900"><p class="text-[8px] font-black uppercase text-zinc-500">Filtrado: Entrou</p><p id="filtro-ent" class="text-4xl font-black text-green-500 italic">0</p></div>
-                    <div class="bg-black/40 p-6 rounded-3xl border border-zinc-900"><p class="text-[8px] font-black uppercase text-zinc-500">Filtrado: %</p><p id="filtro-conv" class="text-4xl font-black text-blue-500 italic">0%</p></div>
-                </div>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="lg:col-span-1 glass-card p-8">
-                    <h2 class="text-xs font-black uppercase mb-6 border-b border-zinc-800 pb-4 text-yellow-500 italic">Ranking Promoters</h2>
-                    <div id="lista-ranking-promoters" class="space-y-4"></div>
+                    <h2 class="text-xs font-black uppercase mb-6 border-b border-zinc-800 pb-4 text-yellow-500 italic">Pódio de Performance</h2>
+                    <div id="lista-ranking-podio" class="space-y-4">
+                        </div>
                 </div>
+
                 <div class="lg:col-span-2 glass-card p-8">
-                    <h2 class="text-xs font-black uppercase mb-6 border-b border-zinc-800 pb-4 text-blue-500 italic text-white">Monitor de Reservas (Tempo Real)</h2>
+                    <h2 class="text-xs font-black uppercase mb-6 border-b border-zinc-800 pb-4 text-blue-500 italic text-white">Últimos Check-ins</h2>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-[11px] font-bold uppercase">
                             <thead class="text-zinc-500 border-b border-zinc-800 text-white">
                                 <tr>
                                     <th class="py-3">Nome</th>
-                                    <th class="py-3">Tipo</th>
+                                    <th class="py-3">Evento</th>
                                     <th class="py-3">Promoter</th>
-                                    <th class="py-3">Lista</th>
+                                    <th class="py-3">Check-in</th>
                                 </tr>
                             </thead>
-                            <tbody id="tabela-reservas-realtime" class="divide-y divide-zinc-900"></tbody>
+                            <tbody id="tabela-monitor-real" class="divide-y divide-zinc-900 text-white"></tbody>
                         </table>
                     </div>
                 </div>
@@ -115,7 +100,7 @@
                         <option value="padrao">Padrão</option>
                         <option value="aniversario">Aniversário (VIP)</option>
                     </select>
-                    <button type="submit" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black">Salvar</button>
+                    <button type="submit" id="btn-submit-promoter" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black">Salvar</button>
                 </form>
                 <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
@@ -148,6 +133,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = [];
 
         window.trocarAba = (id, b) => { 
@@ -157,88 +143,101 @@
             b.classList.add('active'); 
         };
 
-        // ESCUTA RESERVAS (RELATÓRIOS)
+        // ESCUTAS FIREBASE
         onSnapshot(query(collection(db, "lista_eventos"), orderBy("data_reserva", "desc")), snap => { 
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()})); 
-            atualizarRelatorios(); 
+            renderizarRelatorios(); 
         });
-
-        function atualizarRelatorios() {
-            const ent = dadosReservas.filter(r => r.entrou).length;
-            document.getElementById('total-reservas').innerText = dadosReservas.length;
-            document.getElementById('total-entradas').innerText = ent;
-            document.getElementById('conversao-geral').innerText = dadosReservas.length > 0 ? Math.round((ent / dadosReservas.length) * 100) + "%" : "0%";
-
-            // Ranking
-            const statsP = {};
-            dadosReservas.forEach(r => { const n = (r.promoter || "DIRETO").trim().toUpperCase(); statsP[n] = (statsP[n] || 0) + 1; });
-            document.getElementById('lista-ranking-promoters').innerHTML = Object.entries(statsP).sort((a,b)=>b[1]-a[1]).map(([n,s], i) => `
-                <div class="flex justify-between items-center p-4 bg-zinc-900/40 rounded-2xl">
-                    <p class="text-[11px] font-black text-white">${i+1}º ${n}</p><p class="text-xl font-black text-yellow-500">${s}</p>
-                </div>`).join('');
-
-            // Monitor
-            document.getElementById('tabela-reservas-realtime').innerHTML = dadosReservas.slice(0, 10).map(r => `
-                <tr class="text-white border-b border-zinc-900">
-                    <td class="py-4 font-black">${r.nome}</td>
-                    <td class="py-4 text-[9px] text-zinc-400">${r.tipo_entrada || '---'}</td>
-                    <td class="py-4 text-blue-400 font-bold">${r.promoter || 'DIRETO'}</td>
-                    <td class="py-4 italic font-bold">${r.tipo_lista === 'ANIVERSARIO' ? `<span class="aniv-badge px-2 py-1 rounded-lg text-[8px]">🎂 ${r.aniversariante}</span>` : 'NORMAL'}</td>
-                </tr>`).join('');
-            
-            processarFiltros();
-        }
-
-        window.processarFiltros = () => {
-            const ev = document.getElementById('filtro-evento').value;
-            const pr = document.getElementById('filtro-promoter').value;
-            let filtered = dadosReservas;
-            if(ev) filtered = filtered.filter(r => r.evento === ev);
-            if(pr) filtered = filtered.filter(r => (r.promoter || "DIRETO").trim().toUpperCase() === pr);
-            
-            const ent = filtered.filter(r => r.entrou).length;
-            document.getElementById('filtro-res').innerText = filtered.length;
-            document.getElementById('filtro-ent').innerText = ent;
-            document.getElementById('filtro-conv').innerText = filtered.length > 0 ? Math.round((ent / filtered.length) * 100) + "%" : "0%";
-        };
-
-        // ESCUTA EVENTOS
         onSnapshot(collection(db, "eventos"), snap => { 
-            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()})); 
-            const activeEventos = dadosEventos.filter(e => e.ativo);
-            
-            // Filtro de Relatórios
-            document.getElementById('filtro-evento').innerHTML = '<option value="">Todos Eventos</option>' + activeEventos.map(e => `<option value="${e.nome}">${e.nome}</option>`).join('');
-            
-            document.getElementById('grid-eventos-ativos').innerHTML = activeEventos.map(ev => `
-                <div class="event-card p-6 rounded-[2rem]" onclick="prepararEdicaoEvento('${ev.id}')">
-                    <p class="text-[10px] font-black text-yellow-500 uppercase">${ev.data ? ev.data.split('-').reverse().join('/') : ''}</p>
-                    <h4 class="text-lg font-black uppercase text-white mt-1">${ev.nome}</h4>
-                    <button onclick="event.stopPropagation(); removerItem('eventos', '${ev.id}')" class="text-red-500 font-black mt-4 text-[10px]">REMOVER</button>
-                </div>`).join('');
+            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(e => e.ativo); 
+            renderizarEventos(); 
+            renderizarRelatorios();
         });
-
-        // ESCUTA PROMOTERS
         onSnapshot(collection(db, "promoters"), snap => { 
             dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
-            document.getElementById('filtro-promoter').innerHTML = '<option value="">Todos Promoters</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
+            renderizarPromoters(); 
+        });
+        onSnapshot(collection(db, "configuracoes"), snap => {
+            renderizarPortaria(snap.docs.map(d => ({id: d.id, ...d.data()})));
+        });
+
+        function renderizarRelatorios() {
+            // 1. PERFORMANCE DE EVENTOS (ORDEM CRONOLÓGICA)
+            const eventosOrdenados = [...dadosEventos].sort((a,b) => new Date(a.data) - new Date(b.data));
+            document.getElementById('lista-performance-eventos').innerHTML = eventosOrdenados.map(ev => {
+                const res = dadosReservas.filter(r => r.evento === ev.nome);
+                const ent = res.filter(r => r.entrou).length;
+                return `
+                <div class="event-row p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="flex-grow">
+                        <p class="text-[8px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
+                        <h4 class="text-sm font-black uppercase text-white">${ev.nome}</h4>
+                    </div>
+                    <div class="flex gap-10">
+                        <div class="text-center"><p class="text-[8px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-xl font-black text-white">${res.length}</p></div>
+                        <div class="text-center"><p class="text-[8px] text-zinc-500 uppercase font-black">Check-ins</p><p class="text-xl font-black text-green-500">${ent}</p></div>
+                        <div class="text-center"><p class="text-[8px] text-zinc-500 uppercase font-black">Conv.</p><p class="text-xl font-black text-blue-500">${res.length > 0 ? Math.round((ent/res.length)*100) : 0}%</p></div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // 2. RANKING PROMOTERS (PODIO)
+            const statsP = {};
+            dadosReservas.forEach(r => { 
+                const n = (r.promoter || "DIRETO").trim().toUpperCase(); 
+                if(!statsP[n]) statsP[n] = { res: 0, ent: 0 };
+                statsP[n].res++;
+                if(r.entrou) statsP[n].ent++;
+            });
+            
+            const trofeus = ["🥇", "🥈", "🥉"];
+            document.getElementById('lista-ranking-podio').innerHTML = Object.entries(statsP)
+                .sort((a,b)=>b[1].res - a[1].res)
+                .map(([n, s], i) => `
+                <div class="ranking-card p-4 rounded-2xl flex justify-between items-center ${i < 3 ? 'border-l-2 border-yellow-500' : ''}">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg">${trofeus[i] || '👤'}</span>
+                        <div><p class="text-[10px] font-black text-white uppercase">${n}</p><p class="text-[8px] text-zinc-500 uppercase">Check-ins: ${s.ent}</p></div>
+                    </div>
+                    <p class="text-xl font-black text-yellow-500">${s.res}</p>
+                </div>`).join('');
+
+            // 3. MONITOR REALTIME
+            document.getElementById('tabela-monitor-real').innerHTML = dadosReservas.slice(0, 10).map(r => `
+                <tr>
+                    <td class="py-4 text-[10px] font-black">${r.nome}</td>
+                    <td class="py-4 text-[9px] text-zinc-500">${r.evento.slice(0, 20)}...</td>
+                    <td class="py-4 text-blue-500 text-[9px]">${r.promoter || 'DIRETO'}</td>
+                    <td class="py-4">${r.entrou ? '✅' : '⏳'}</td>
+                </tr>`).join('');
+        }
+
+        // CRUD E RENDERERS (MANTIDOS)
+        function renderizarEventos() {
+            document.getElementById('grid-eventos-ativos').innerHTML = dadosEventos.map(ev => `
+                <div class="event-card p-6 rounded-[2rem]" onclick="prepararEdicaoEvento('${ev.id}')">
+                    <p class="text-[10px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
+                    <h4 class="text-lg font-black text-white mt-1">${ev.nome}</h4>
+                    <button onclick="event.stopPropagation(); removerItem('eventos', '${ev.id}')" class="text-red-500 font-black mt-4 text-[10px]">REMOVER</button>
+                </div>`).join('');
+        }
+
+        function renderizarPromoters() {
             document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `
                 <div class="glass-card p-6 border-l-4 ${p.tipo === 'aniversario' ? 'border-purple-500' : 'border-blue-500'} flex justify-between items-center">
                     <div><p class="text-xs font-black text-white uppercase">${p.nome || p.id}</p><p class="text-[9px] text-zinc-500 font-bold uppercase">${p.tipo}</p></div>
                     <div class="flex gap-4"><button onclick="prepararEdicaoPromoter('${p.id}')" class="text-blue-500 text-[10px] font-black">EDITAR</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 font-black">✕</button></div>
                 </div>`).join('');
-        });
+        }
 
-        // PORTARIA
-        onSnapshot(collection(db, "configuracoes"), snap => {
-            document.getElementById('lista-acessos-portaria').innerHTML = snap.docs.map(d => ({id: d.id, ...d.data()})).map(l => `
+        function renderizarPortaria(logins) {
+            document.getElementById('lista-acessos-portaria').innerHTML = logins.map(l => `
                 <div class="glass-card p-4 flex justify-between items-center">
                     <div><p class="text-xs font-black text-white uppercase">${l.login}</p><p class="text-xs font-bold text-yellow-500">${l.senha}</p></div>
                     <button onclick="removerItem('configuracoes', '${l.id}')" class="text-red-500 font-black">✕</button>
                 </div>`).join('');
-        });
+        }
 
-        // CRUD FORMULÁRIOS
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault();
             const id = document.getElementById('edit_evento_id').value;
@@ -262,6 +261,8 @@
             e.target.reset();
         });
 
+        window.removerItem = async (c, i) => { if(confirm("Remover?")) await deleteDoc(doc(db, c, i)); };
+        
         window.prepararEdicaoPromoter = (id) => {
             const p = dadosPromoters.find(item => item.id === id);
             document.getElementById('edit_promoter_id').value = p.id;
@@ -281,11 +282,8 @@
             document.getElementById('desc_casal').value = ev.desc_casal || "";
             document.getElementById('desc_solteiro').value = ev.desc_solteiro || "";
             document.getElementById('url_banner').value = ev.imagem || "";
-            document.getElementById('titulo-form-evento').innerText = "Editando: " + ev.nome;
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
-
-        window.removerItem = async (c, i) => { if(confirm("Remover?")) await deleteDoc(doc(db, c, i)); };
     </script>
 </body>
 </html>
