@@ -18,6 +18,8 @@
         input:focus { border-color: #eab308 !important; outline: none; }
         .event-card { background: linear-gradient(145deg, #0f0f10 0%, #050505 100%); border: 1px solid #1a1a1c; transition: 0.3s; cursor: pointer; }
         .event-card:hover { border-color: #eab308; transform: translateY(-3px); }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -68,10 +70,7 @@
 
         <section id="aba-festas" class="hidden space-y-8">
              <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                <div class="flex justify-between items-center mb-8">
-                    <h2 id="titulo-form-evento" class="text-blue-500 font-black uppercase italic text-xl tracking-tighter">Criar Nova Festa</h2>
-                    <button id="btn-cancelar-edicao" onclick="cancelarEdicaoEvento()" class="hidden text-zinc-500 hover:text-white text-[10px] font-black uppercase tracking-widest">Cancelar Edição</button>
-                </div>
+                <h2 id="titulo-form-evento" class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Criar Nova Festa</h2>
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input type="hidden" id="edit_evento_id">
                     <input type="text" id="nome_festa" placeholder="Nome do Evento" class="p-4 rounded-2xl font-bold md:col-span-3 text-white" required>
@@ -79,8 +78,8 @@
                     <input type="text" id="valor_casal" placeholder="Valor Casal" class="p-4 rounded-2xl font-bold text-white">
                     <input type="text" id="valor_solteiro" placeholder="Valor Solteiro" class="p-4 rounded-2xl font-bold text-white">
                     <input type="time" id="hora_encerramento" class="p-4 rounded-2xl font-bold text-white text-xs">
-                    <input type="url" id="url_banner" placeholder="Link da Imagem (Banner)" class="p-4 rounded-2xl font-bold text-white">
-                    <button type="submit" id="btn-submit-evento" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-700 transition shadow-xl">Publicar Evento</button>
+                    <input type="url" id="url_banner" placeholder="Link do Banner" class="p-4 rounded-2xl font-bold text-white">
+                    <button type="submit" id="btn-submit-evento" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm">Publicar Evento</button>
                 </form>
             </div>
             <div id="lista-eventos-ativos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
@@ -90,21 +89,25 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div class="lg:col-span-2 space-y-6">
                     <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                        <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Promoters (Listas VIP)</h2>
+                        <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Promoters</h2>
                         <form id="formPromoter" class="flex flex-col md:flex-row gap-3 mb-8">
-                            <input type="text" id="nome_promoter" placeholder="Nome do Promoter" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
-                            <button type="submit" class="bg-blue-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white text-white">Adicionar</button>
+                            <input type="text" id="nome_promoter" placeholder="Nome" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
+                            <select id="tipo_promoter" class="p-4 rounded-2xl font-bold text-[10px] uppercase">
+                                <option value="padrao">Padrão (Fixo)</option>
+                                <option value="aniversario">Aniversário (Desconto)</option>
+                            </select>
+                            <button type="submit" class="bg-blue-600 px-8 py-4 rounded-2xl font-black uppercase text-xs text-white">Adicionar</button>
                         </form>
                         <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto"></div>
                     </div>
                 </div>
                 <div class="space-y-6">
                     <div class="glass-card p-6 border-l-4 border-l-yellow-500">
-                        <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Acesso Portaria</h2>
+                        <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6">Acesso Portaria</h2>
                         <form id="formAcessoPortaria" class="space-y-3">
-                            <input type="text" id="login_portaria" placeholder="Usuário" class="w-full p-4 rounded-xl font-bold text-white text-xs" required>
-                            <input type="text" id="senha_portaria" placeholder="Senha" class="w-full p-4 rounded-xl font-bold text-white text-xs" required>
-                            <button type="submit" class="w-full bg-yellow-600 text-black font-black py-4 rounded-xl uppercase text-[10px]">Gerar</button>
+                            <input type="text" id="login_portaria" placeholder="Usuário" class="w-full p-4 rounded-xl font-bold text-xs" required>
+                            <input type="text" id="senha_portaria" placeholder="Senha" class="w-full p-4 rounded-xl font-bold text-xs" required>
+                            <button type="submit" class="w-full bg-yellow-600 text-black font-black py-4 rounded-xl uppercase text-[10px]">Criar Acesso</button>
                         </form>
                     </div>
                     <div id="lista-logins-portaria" class="space-y-3"></div>
@@ -115,7 +118,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, where, doc, deleteDoc, setDoc, getDoc, writeBatch, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -131,12 +134,15 @@
 
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = [];
 
-        window.trocarAba = (id, b) => { document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active')); document.getElementById(id).classList.remove('hidden'); b.classList.add('active'); };
+        window.trocarAba = (id, b) => { 
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
+            document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active')); 
+            document.getElementById(id).classList.remove('hidden'); 
+            b.classList.add('active'); 
+        };
 
-        onSnapshot(collection(db, "lista_eventos"), snap => { dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()})); atualizarInterfaceInteligencia(); });
+        onSnapshot(collection(db, "lista_eventos"), snap => { dadosReservas = snap.docs.map(d => d.data()); atualizarInterfaceInteligencia(); });
         onSnapshot(collection(db, "eventos"), snap => { dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(e => e.ativo); renderizarEventos(); atualizarInterfaceInteligencia(); });
-        
-        // CORREÇÃO: Puxar da coleção "promoters" para bater com o login
         onSnapshot(collection(db, "promoters"), snap => { dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); renderizarPromoters(); atualizarInterfaceInteligencia(); });
         onSnapshot(collection(db, "configuracoes"), snap => renderizarLogins(snap.docs.map(d => ({id: d.id, ...d.data()}))));
 
@@ -146,7 +152,7 @@
             document.getElementById('total-entradas').innerText = ent;
             document.getElementById('conversao-geral').innerText = dadosReservas.length > 0 ? Math.round((ent / dadosReservas.length) * 100) + "%" : "0%";
 
-            document.getElementById('grid-eventos').innerHTML = dadosEventos.sort((a,b)=>new Date(a.data)-new Date(b.data)).map(ev => {
+            document.getElementById('grid-eventos').innerHTML = dadosEventos.map(ev => {
                 const res = dadosReservas.filter(r => r.evento === ev.nome);
                 return `<div class="bg-zinc-900/40 border border-zinc-800 p-6 rounded-3xl">
                     <p class="text-[8px] font-black text-zinc-500 uppercase mb-1">${ev.data.split('-').reverse().join('/')}</p>
@@ -176,54 +182,45 @@
         };
 
         function renderizarEventos() {
-            const ordenados = [...dadosEventos].sort((a, b) => new Date(a.data) - new Date(b.data));
-            document.getElementById('lista-eventos-ativos').innerHTML = ordenados.map(ev => `
+            document.getElementById('lista-eventos-ativos').innerHTML = dadosEventos.map(ev => `
                 <div class="event-card p-6 rounded-[2rem] flex flex-col gap-4 relative overflow-hidden" onclick="prepararEdicaoEvento('${ev.id}')">
                     <div class="flex justify-between items-start">
                         <div><p class="text-[10px] font-black text-yellow-500 uppercase tracking-widest">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-lg font-black uppercase text-white leading-tight mt-1">${ev.nome}</h4></div>
-                        <button onclick="event.stopPropagation(); removerItem('eventos', '${ev.id}')" class="bg-red-900/20 text-red-500 p-2 rounded-xl hover:bg-red-600">✕</button>
+                        <button onclick="event.stopPropagation(); removerItem('eventos', '${ev.id}')" class="bg-red-900/20 text-red-500 p-2 rounded-xl">✕</button>
                     </div>
                 </div>`).join('');
         }
 
-        // CORREÇÃO: Salvar na coleção "promoters" com ID fixo e campo ativo
         document.getElementById('formPromoter').addEventListener('submit', async e => { 
             e.preventDefault(); 
             const nomeRaw = document.getElementById('nome_promoter').value.trim();
+            const tipo = document.getElementById('tipo_promoter').value;
             const idPromoter = nomeRaw.toLowerCase();
-            
-            // Salva na coleção certa para o login ler
-            await setDoc(doc(db, "promoters", idPromoter), { 
-                nome: nomeRaw,
-                ativo: true 
-            }); 
+            await setDoc(doc(db, "promoters", idPromoter), { nome: nomeRaw, tipo: tipo, ativo: true }); 
             e.target.reset(); 
         });
 
-       function renderizarPromoters() { 
-    // Link da página onde o promoter faz o login (promoter.html)
-    const linkPainel = "https://andrezinhoeclub.github.io/lista-ecluboficial/promoter.html"; 
-    
-    document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `
-        <div class="event-card p-4 rounded-2xl flex justify-between items-center">
-            <div>
-                <p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p>
-                <p class="text-[9px] font-bold text-yellow-500 uppercase mt-1">Senha: ${p.senha || 'Não cadastrada'}</p>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="navigator.clipboard.writeText('${linkPainel}'); alert('Link do Painel Copiado!')" class="bg-blue-600/10 text-blue-500 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">Link Painel</button>
-                <button onclick="removerItem('promoters', '${p.id}')" class="bg-red-600/10 text-red-500 px-3 py-1.5 rounded-lg text-[9px]">✕</button>
-            </div>
-        </div>`).join(''); 
-}
-        window.removerItem = async (c, i) => { if(confirm("Remover?")) await deleteDoc(doc(db, c, i)); };
-        
-        // Restante das funções do formulário de eventos (addDoc/updateDoc) permanecem iguais.
+        function renderizarPromoters() { 
+            const linkPainel = "https://andrezinhoeclub.github.io/lista-ecluboficial/promoter.html"; 
+            document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `
+                <div class="event-card p-4 rounded-2xl flex justify-between items-center ${p.tipo === 'aniversario' ? 'border-l-4 border-l-purple-500' : ''}">
+                    <div>
+                        <p class="text-xs font-black uppercase text-white">${p.nome || p.id} ${p.tipo === 'aniversario' ? '🎂' : ''}</p>
+                        <p class="text-[9px] font-bold text-yellow-500 uppercase mt-1">Senha: ${p.senha || '---'}</p>
+                        <p class="text-[8px] text-zinc-500 uppercase">${p.tipo === 'aniversario' ? 'Acesso a Descontos' : 'Valor Fixo'}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="navigator.clipboard.writeText('${linkPainel}'); alert('Copiado!')" class="bg-blue-600/10 text-blue-500 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">Link</button>
+                        <button onclick="removerItem('promoters', '${p.id}')" class="bg-red-600/10 text-red-500 px-3 py-1.5 rounded-lg text-[9px]">✕</button>
+                    </div>
+                </div>`).join(''); 
+        }
+
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault();
             const id = document.getElementById('edit_evento_id').value;
             const dados = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, encerramento: document.getElementById('hora_encerramento').value, imagem: document.getElementById('url_banner').value, ativo: true };
-            if(id) { await updateDoc(doc(db, "eventos", id), dados); cancelarEdicaoEvento(); } 
+            if(id) { await updateDoc(doc(db, "eventos", id), dados); e.target.reset(); document.getElementById('edit_evento_id').value = ""; } 
             else { await addDoc(collection(db, "eventos"), dados); e.target.reset(); }
         });
 
@@ -235,7 +232,20 @@
         });
 
         function renderizarLogins(logins) { document.getElementById('lista-logins-portaria').innerHTML = logins.map(l => `<div class="bg-black/60 p-4 rounded-2xl flex justify-between items-center border border-zinc-800"><div><p class="text-[10px] font-black uppercase text-white">${l.login}</p><p class="text-[10px] font-bold text-yellow-500">${l.senha}</p></div><button onclick="removerItem('configuracoes', '${l.id}')" class="text-zinc-500">✕</button></div>`).join(''); }
-
+        window.removerItem = async (c, i) => { if(confirm("Remover?")) await deleteDoc(doc(db, c, i)); };
+        
+        window.prepararEdicaoEvento = (id) => {
+            const ev = dadosEventos.find(e => e.id === id);
+            document.getElementById('edit_evento_id').value = ev.id;
+            document.getElementById('nome_festa').value = ev.nome;
+            document.getElementById('data_festa').value = ev.data;
+            document.getElementById('valor_casal').value = ev.valor_casal || "";
+            document.getElementById('valor_solteiro').value = ev.valor_solteiro || "";
+            document.getElementById('hora_encerramento').value = ev.encerramento || "";
+            document.getElementById('url_banner').value = ev.imagem || "";
+            document.getElementById('titulo-form-evento').innerText = "Editando Evento";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
     </script>
 </body>
 </html>
