@@ -31,11 +31,11 @@
                 <input type="password" id="passPromoter" placeholder="SUA SENHA" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-blue-500 text-center font-bold uppercase text-xs mb-4 text-white">
                 <button onclick="entrarComSenha()" id="btnEntrar" class="w-full blue-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all">Entrar</button>
             </div>
-            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden italic tracking-widest">Usuário não encontrado ou senha inválida</p>
+            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden italic tracking-widest text-center">Usuário não encontrado ou senha inválida</p>
         </div>
     </div>
 
-    <div id="painelDados" class="max-w-md mx-auto hidden content-wrapper">
+    <div id="interfacePrincipal" class="hidden max-w-md mx-auto content-wrapper">
         <header class="flex justify-between items-center mb-10">
             <div>
                 <p class="text-blue-500 text-[10px] font-black uppercase tracking-[0.3em] mb-1">E-Club Oficial</p>
@@ -46,31 +46,31 @@
 
         <section class="space-y-8">
             <div id="secaoMeusLinks" class="hidden">
-                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2 italic">Minhas Listas (Cronológico)</h3>
+                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2 italic">Minhas Listas (Ordem Cronológica)</h3>
                 <div id="listaLinksAniv" class="space-y-3"></div>
             </div>
 
             <div>
-                <h3 class="text-[10px] font-black uppercase text-zinc-500 mb-4 tracking-[0.2em] ml-2 italic">Desempenho nos Eventos</h3>
+                <h3 class="text-[10px] font-black uppercase text-zinc-500 mb-4 tracking-[0.2em] ml-2 italic text-white">Desempenho nos Eventos</h3>
                 <div id="listaEventosPromoter" class="glass rounded-[2.5rem] overflow-hidden"></div>
             </div>
         </section>
 
         <div id="footerAcoes" class="fixed bottom-0 left-0 w-full p-4 md:p-6 bg-black/90 backdrop-blur-xl border-t border-white/10 z-40">
             <div class="max-w-md mx-auto flex gap-3" id="barraBotoes">
-                <button onclick="copiarLinkReservas()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-transform active:scale-95">Link de Reservas</button>
+                <button onclick="copiarLinkReservas()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-transform active:scale-95">Link Geral de Reservas</button>
             </div>
         </div>
     </div>
 
-    <div id="modalAniversario" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-6 text-white">
-        <div class="glass max-w-sm w-full p-10 rounded-[3rem] border-yellow-500/30 border text-center">
+    <div id="modalAniversario" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-6 text-white text-white">
+        <div class="glass max-w-sm w-full p-10 rounded-[3rem] border-yellow-500/30 border text-center text-white">
             <h2 class="text-2xl font-black text-yellow-500 uppercase italic mb-8">Novo Aniversário</h2>
             <div class="text-left space-y-4">
                 <select id="selectEventoAniv" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none text-xs font-bold uppercase"></select>
                 <input type="text" id="nomeAniversariante" placeholder="NOME DO ANIVERSARIANTE" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none font-black uppercase text-xs">
             </div>
-            <button onclick="gerarLinkAniversario()" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-8">Gerar Link</button>
+            <button onclick="gerarLinkAniversario()" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-8">Gerar e Salvar Link</button>
             <button onclick="fecharModalAniv()" class="w-full text-zinc-600 font-black py-4 uppercase text-[9px] mt-2">Cancelar</button>
         </div>
     </div>
@@ -109,7 +109,7 @@
 
         window.entrarComSenha = async function() {
             const senha = document.getElementById('passPromoter').value.trim();
-            if(userData.senha === senha || !userData.senha) {
+            if(!userData.senha || userData.senha === senha) {
                 if(!userData.senha) await updateDoc(doc(db, "promoters", currentPromoter), { senha: senha });
                 carregarPainel();
             } else { alert("Senha incorreta!"); }
@@ -117,7 +117,7 @@
 
         function carregarPainel() {
             document.getElementById('loginPromoter').classList.add('hidden');
-            document.getElementById('painelDados').classList.remove('hidden');
+            document.getElementById('interfacePrincipal').classList.remove('hidden');
             document.getElementById('boasVindas').innerText = currentPromoter;
 
             onSnapshot(collection(db, "eventos"), (snap) => {
@@ -136,7 +136,7 @@
                     const btnAniv = document.createElement('button');
                     btnAniv.id = 'btnAnivFix'; btnAniv.onclick = abrirModalAniv;
                     btnAniv.className = "flex-grow purple-gradient text-white font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl";
-                    btnAniv.innerHTML = "🎂 Criar Link Aniv.";
+                    btnAniv.innerHTML = "🎂 Criar Link de Aniv.";
                     document.getElementById('barraBotoes').appendChild(btnAniv);
                 }
                 onSnapshot(query(collection(db, "links_aniversario"), where("promoter", "==", currentPromoter)), (snap) => {
@@ -165,7 +165,7 @@
             const agora = new Date();
             const hojeStr = new Date(agora.getTime() - (agora.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
             
-            // LÓGICA DE ORDENAÇÃO CRONOLÓGICA
+            // ORDENAÇÃO CRONOLÓGICA
             const linksOrdenados = links.map(link => {
                 const ev = todosEventosGlobal.find(e => e.nome === link.festa);
                 return { ...link, dataEvento: ev ? ev.data : '9999-99-99' };
@@ -182,8 +182,26 @@
                         if (!(dataFesta === dataOntem.toISOString().split('T')[0] && agora.getHours() < 5)) mostrar = false;
                     }
                     if (mostrar) {
-                        const qtd = todasReservasGlobal.filter(r => r.tipo === "ANIVERSARIO" && r.aniversariante === link.aniversariante && r.evento === link.festa).length;
-                        container.innerHTML += `<div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-purple-500"><div class="truncate mr-2"><p class="text-[10px] font-black text-white uppercase">${link.aniversariante}</p><p class="text-[7px] text-zinc-500 uppercase truncate">${evInfo.data.split('-').reverse().join('/')} - ${link.festa}</p></div><div class="flex items-center gap-4"><div class="text-right"><p class="text-[7px] text-purple-400 font-black uppercase">Convidados</p><p class="text-lg font-black text-white leading-none">${qtd}</p></div><button onclick="navigator.clipboard.writeText('${link.url}'); alert('Copiado!')" class="bg-purple-500/20 text-purple-400 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Copiar</button></div></div>`;
+                        // CONTAGEM PRECISA (Procura em aniversariante ou nome_aniversariante)
+                        const qtd = todasReservasGlobal.filter(r => 
+                            r.evento === link.festa && 
+                            (r.aniversariante === link.aniversariante || r.nome_aniversariante === link.aniversariante)
+                        ).length;
+
+                        container.innerHTML += `
+                        <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-purple-500 mb-2">
+                            <div class="truncate mr-2">
+                                <p class="text-[10px] font-black text-white uppercase">${link.aniversariante}</p>
+                                <p class="text-[7px] text-zinc-500 uppercase truncate">${evInfo.data.split('-').reverse().join('/')} - ${link.festa}</p>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="text-right">
+                                    <p class="text-[7px] text-purple-400 font-black uppercase">Convidados</p>
+                                    <p class="text-lg font-black text-white leading-none">${qtd}</p>
+                                </div>
+                                <button onclick="navigator.clipboard.writeText('${link.url}'); alert('Copiado!')" class="bg-purple-500/20 text-purple-400 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Copiar</button>
+                            </div>
+                        </div>`;
                     }
                 }
             });
@@ -198,18 +216,29 @@
             document.getElementById('modalAniversario').classList.remove('hidden');
         }
         window.fecharModalAniv = () => document.getElementById('modalAniversario').classList.add('hidden');
+        
         window.gerarLinkAniversario = async () => {
             const festa = document.getElementById('selectEventoAniv').value;
             const nome = document.getElementById('nomeAniversariante').value.trim().toUpperCase();
-            if(!festa || !nome) return alert("Preencha tudo!");
+            if(!festa || !nome) return alert("Preencha todos os campos!");
+            
             const baseUrl = window.location.href.split('promoter.html')[0] + 'listas.html';
             const urlFinal = `${baseUrl}?ref=${currentPromoter}&aniv=${encodeURIComponent(nome)}&festa=${encodeURIComponent(festa)}`;
-            await setDoc(doc(collection(db, "links_aniversario")), { promoter: currentPromoter, aniversariante: nome, festa: festa, url: urlFinal, data_criacao: new Date().toISOString() });
-            fecharModalAniv(); alert("Link Criado!");
+            
+            await setDoc(doc(collection(db, "links_aniversario")), { 
+                promoter: currentPromoter, 
+                aniversariante: nome, 
+                festa: festa, 
+                url: urlFinal, 
+                data_criacao: new Date().toISOString() 
+            });
+            fecharModalAniv(); 
+            alert("Link Criado e Salvo!");
         }
+
         window.copiarLinkReservas = () => {
             const url = window.location.href.split('promoter.html')[0] + 'listas.html?ref=' + currentPromoter;
-            navigator.clipboard.writeText(url).then(() => alert("Copiado!"));
+            navigator.clipboard.writeText(url).then(() => alert("Link Geral Copiado!"));
         };
     </script>
 </body>
