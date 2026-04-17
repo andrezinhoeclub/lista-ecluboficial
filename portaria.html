@@ -10,11 +10,10 @@
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
-        .client-card { background: #0a0a0a; border: 1px solid #1a1a1a; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
-        .client-card:not(.entrou):hover { border-color: #eab308; background: #111; transform: translateX(8px); box-shadow: -10px 0 20px -10px #eab308; }
+        .client-card { background: #0a0a0a; border: 1px solid #1a1a1a; transition: 0.25s; cursor: pointer; }
         .client-card.entrou { opacity: 0.2 !important; filter: grayscale(1); pointer-events: none; }
-        input, select { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
-        input:focus, select:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
+        input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
+        input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
         .badge-casal { background: #eab308; color: #000; }
         .badge-solteiro { background: #3b82f6; color: #fff; }
         ::-webkit-scrollbar { width: 4px; }
@@ -29,18 +28,19 @@
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">ACESSO <span class="text-yellow-500">PORTARIA</span></h1>
             
             <div class="space-y-4">
-                <select id="selectUsuario" class="w-full p-5 rounded-2xl font-bold uppercase text-xs text-center appearance-none cursor-pointer" onchange="verificarStatusUsuario()">
-                    <option value="">SELECIONE SEU NOME</option>
-                </select>
+                <input type="text" id="inputNomeUsuario" placeholder="DIGITE SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
                 
-                <input type="password" id="senhaUsuario" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
+                <div id="areaSenha" class="hidden animate-in fade-in duration-500">
+                    <input type="password" id="senhaUsuario" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
+                </div>
                 
-                <button onclick="executarAcaoLogin()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all mt-4">
-                    ENTRAR NO SISTEMA
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all mt-4">
+                    CONTINUAR
                 </button>
             </div>
-            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Primeiro acesso: Defina sua senha acima</p>
-            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden">Senha Incorreta</p>
+
+            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Nome localizado! Defina sua senha acima</p>
+            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden">Operador não cadastrado ou senha incorreta</p>
         </div>
     </div>
 
@@ -48,8 +48,8 @@
         <aside class="w-80 h-full flex flex-col p-6 bg-black/50 border-r border-zinc-900">
             <div class="mb-10 text-center">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-2 border border-zinc-800 py-1 rounded-lg">OPERADOR: ---</p>
+                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter leading-none">E-CLUB</h2>
+                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-2 border border-zinc-800 py-1 rounded-lg">---</p>
             </div>
             <div class="flex-grow overflow-y-auto">
                 <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Eventos Ativos</h3>
@@ -78,7 +78,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -91,54 +91,68 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        let bancoClientes = []; let bancoEventos = []; let bancoUsuarios = []; let operadorLogado = "";
+        let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let usuarioTemp = null;
 
-        // CARREGA USUÁRIOS
-        onSnapshot(collection(db, "configuracoes"), (snap) => {
-            const select = document.getElementById('selectUsuario');
-            bancoUsuarios = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            select.innerHTML = '<option value="">SELECIONE SEU NOME</option>';
-            bancoUsuarios.forEach(u => { select.innerHTML += `<option value="${u.id}">${u.login.toUpperCase()}</option>`; });
-        });
+        // ESTADO DO LOGIN: 0 = Digitando Nome, 1 = Login/Cadastro de Senha
+        let stepLogin = 0;
 
-        // VERIFICA SE JÁ TEM SENHA
-        window.verificarStatusUsuario = () => {
-            const id = document.getElementById('selectUsuario').value;
-            const user = bancoUsuarios.find(u => u.id === id);
+        window.verificarOuLogar = async () => {
+            const nomeDigitado = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
+            const senhaDigitada = document.getElementById('senhaUsuario').value.trim();
+            const areaSenha = document.getElementById('areaSenha');
             const btn = document.getElementById('btnAcao');
+            const erro = document.getElementById('erroLogin');
             const msg = document.getElementById('msgStatus');
-            if (user && user.senha === "") {
-                btn.innerText = "CADASTRAR MINHA SENHA";
-                btn.className = btn.className.replace('bg-yellow-500', 'bg-blue-600');
-                msg.classList.remove('hidden');
+
+            erro.classList.add('hidden');
+
+            if (stepLogin === 0) {
+                if (!nomeDigitado) return;
+                
+                // Busca o usuário pelo ID (que é o nome em lowercase)
+                const userDoc = await getDoc(doc(db, "configuracoes", nomeDigitado));
+
+                if (userDoc.exists()) {
+                    usuarioTemp = userDoc.data();
+                    stepLogin = 1;
+                    areaSenha.classList.remove('hidden');
+                    document.getElementById('inputNomeUsuario').readOnly = true;
+                    
+                    if (usuarioTemp.senha === "") {
+                        btn.innerText = "CADASTRAR SENHA E ENTRAR";
+                        msg.classList.remove('hidden');
+                    } else {
+                        btn.innerText = "ENTRAR NO SISTEMA";
+                    }
+                } else {
+                    erro.innerText = "OPERADOR NÃO CADASTRADO NO SISTEMA";
+                    erro.classList.remove('hidden');
+                }
             } else {
-                btn.innerText = "ENTRAR NO SISTEMA";
-                btn.className = btn.className.replace('bg-blue-600', 'bg-yellow-500');
-                msg.classList.add('hidden');
+                // Lógica de Login ou Cadastro de Senha
+                if (!senhaDigitada) return;
+
+                if (usuarioTemp.senha === "") {
+                    // Cadastrar primeira senha
+                    await updateDoc(doc(db, "configuracoes", nomeDigitado), { senha: senhaDigitada });
+                    logarSucesso(nomeDigitado);
+                } else if (usuarioTemp.senha === senhaDigitada) {
+                    // Login normal
+                    logarSucesso(nomeDigitado);
+                } else {
+                    erro.innerText = "SENHA INCORRETA";
+                    erro.classList.remove('hidden');
+                }
             }
         };
 
-        // LOGIN OU CADASTRO
-        window.executarAcaoLogin = async () => {
-            const id = document.getElementById('selectUsuario').value;
-            const senha = document.getElementById('senhaUsuario').value.trim();
-            const user = bancoUsuarios.find(u => u.id === id);
-            if (!id || !senha) return alert("Selecione o nome e digite a senha");
-
-            if (user.senha === "") {
-                await updateDoc(doc(db, "configuracoes", id), { senha: senha });
-                alert("Senha cadastrada! Faça o login agora.");
-                location.reload();
-            } else if (user.senha === senha) {
-                operadorLogado = user.login;
-                document.getElementById('operadorAtivo').innerText = "OPERADOR: " + operadorLogado.toUpperCase();
-                document.getElementById('telaLogin').classList.add('hidden');
-                document.getElementById('interfacePrincipal').classList.remove('hidden');
-                iniciarEscutas();
-            } else {
-                document.getElementById('erroLogin').classList.remove('hidden');
-            }
-        };
+        function logarSucesso(nome) {
+            operadorLogado = nome;
+            document.getElementById('operadorAtivo').innerText = "OPERADOR: " + nome.toUpperCase();
+            document.getElementById('telaLogin').classList.add('hidden');
+            document.getElementById('interfacePrincipal').classList.remove('hidden');
+            iniciarEscutas();
+        }
 
         function iniciarEscutas() {
             onSnapshot(collection(db, "lista_eventos"), (snap) => {
