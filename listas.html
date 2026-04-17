@@ -7,7 +7,7 @@
     <title>E-CLUB | Reservas e Listas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; }
         .btn-action { transition: all 0.2s ease; }
         .btn-action:active { transform: scale(0.96); }
@@ -18,9 +18,10 @@
         .site-input { background: #000 !important; border: 1px solid #27272a !important; color: white !important; }
         .site-input:focus { border-color: #eab308 !important; outline: none; }
         
-        /* Estilo Especial de Aniversário */
-        .aniv-card { background: linear-gradient(145deg, #1a1033 0%, #000 100%); border: 2px solid #9333ea; }
-        .purple-glow { text-shadow: 0 0 15px rgba(147, 51, 234, 0.6); }
+        /* Estilo VIP Aniversário */
+        .aniv-card { background: linear-gradient(145deg, #1a1033 0%, #000 100%); border: 2px solid #9333ea; box-shadow: 0 0 30px rgba(147, 51, 234, 0.2); }
+        .purple-glow { text-shadow: 0 0 15px rgba(147, 51, 234, 0.8); }
+        .price-box { background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.3); }
     </style>
 </head>
 <body class="p-4 flex flex-col min-h-screen">
@@ -40,18 +41,18 @@
                 <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="bg-gradient-to-r from-orange-500 via-red-500 to-purple-600 p-5 rounded-2xl text-white font-black uppercase text-[11px] btn-action text-center">Instagram</a>
             </div>
             <div class="border-2 border-yellow-500 p-8 rounded-[2.5rem]">
-                <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Localização</p>
-                <p class="text-sm font-black italic text-white mb-1">Rua Albino Kaminski, 645 - Bairro Alto</p>
-                <p class="text-[10px] text-zinc-500 font-bold uppercase">Curitiba - PR</p>
+                <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Onde Estamos</p>
+                <p class="text-sm font-black italic text-white mb-1 leading-tight">Rua Albino Kaminski, 645 - Bairro Alto</p>
+                <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter text-white">Curitiba - PR</p>
             </div>
         </footer>
     </div>
 
     <div id="telaSucesso" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center">
         <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 text-4xl text-white">✓</div>
-        <h2 class="text-2xl font-black uppercase italic mb-2 text-white">Confirmado!</h2>
-        <p class="text-zinc-400 text-xs font-bold uppercase px-4">Seu nome está na lista da E-CLUB!</p>
-        <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action">Nova Reserva</button>
+        <h2 class="text-2xl font-black uppercase italic mb-2 text-white text-white">Confirmado!</h2>
+        <p class="text-zinc-400 text-xs font-bold uppercase px-4 leading-relaxed">Sua presença foi confirmada na lista da E-CLUB!</p>
+        <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action">Voltar</button>
     </div>
 
     <script type="module">
@@ -102,49 +103,63 @@
             container.innerHTML = '';
             eventos.forEach(ev => {
                 const card = document.createElement('div');
-                // Aplica estilo diferente se for Aniversário
                 card.className = nomeAniv ? "festa-card aniv-card" : "festa-card";
                 
-                const vC = nomeAniv ? (ev.desc_casal || '0,00') : (ev.valor_casal || '0,00');
-                const vS = nomeAniv ? (ev.desc_solteiro || '0,00') : (ev.valor_solteiro || '0,00');
+                const vC = nomeAniv ? (ev.desc_casal || '---') : (ev.valor_casal || '---');
+                const vS = nomeAniv ? (ev.desc_solteiro || '---') : (ev.valor_solteiro || '---');
 
                 card.innerHTML = `
                     ${!nomeAniv ? `<img src="${ev.imagem}" class="banner-img">` : ''}
                     
                     <div class="p-8 text-center">
                         ${nomeAniv ? `
-                            <div class="mb-6">
-                                <p class="text-purple-400 font-black uppercase text-[10px] tracking-[0.4em] mb-2">Convite Especial</p>
-                                <h3 class="text-3xl font-black uppercase italic text-white purple-glow leading-tight">${decodeURIComponent(nomeAniv)}</h3>
-                                <p class="text-zinc-500 text-[11px] font-bold mt-4 px-6 uppercase italic leading-relaxed">
-                                    "Comemore comigo na E-CLUB! Coloque seu nome na lista e garanta seu valor especial."
+                            <div class="mb-8">
+                                <p class="text-purple-400 font-black uppercase text-[11px] tracking-[0.4em] mb-3 leading-none italic">Convite VIP</p>
+                                <h3 class="text-4xl font-black uppercase italic text-white purple-glow leading-tight">${decodeURIComponent(nomeAniv)}</h3>
+                                <p class="text-zinc-500 text-[10px] font-bold mt-4 px-4 uppercase italic leading-relaxed">
+                                    "Vem comemorar comigo na E-CLUB! Confirme seu nome abaixo para garantir o valor de desconto da minha lista."
                                 </p>
                             </div>
+                            
+                            <div class="grid grid-cols-2 gap-4 mb-8">
+                                <div class="price-box p-4 rounded-3xl">
+                                    <p class="text-[8px] text-zinc-500 uppercase font-black mb-1">Casal</p>
+                                    <p class="text-xl font-black text-white italic">R$ ${vC}</p>
+                                </div>
+                                <div class="price-box p-4 rounded-3xl">
+                                    <p class="text-[8px] text-zinc-500 uppercase font-black mb-1">Solteiro</p>
+                                    <p class="text-xl font-black text-white italic">R$ ${vS}</p>
+                                </div>
+                            </div>
                         ` : `
-                            <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-1">${ev.data.split('-').reverse().join('/')}</p>
-                            <h3 class="text-2xl font-black uppercase italic leading-tight mb-8">${ev.nome}</h3>
+                            <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-1 leading-none">${ev.data.split('-').reverse().join('/')}</p>
+                            <h3 class="text-2xl font-black uppercase italic leading-tight mb-8 text-white">${ev.nome}</h3>
                         `}
                         
                         <div id="btn-init-${ev.id}">
                             <button onclick="iniciarReserva('${ev.id}')" class="w-full ${nomeAniv ? 'bg-purple-600' : 'bg-yellow-500'} text-white font-black py-5 rounded-2xl uppercase text-xs btn-action shadow-lg">
-                                ${nomeAniv ? 'Garantir meu lugar na lista' : 'Colocar nome na lista'}
+                                ${nomeAniv ? 'Confirmar Presença na Lista' : 'Colocar nome na lista'}
                             </button>
                         </div>
 
                         <div id="step-reserva-${ev.id}" class="hidden space-y-6 pt-6 border-t border-white/10 mt-6">
-                            <div class="grid grid-cols-2 gap-3">
-                                <button id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'CASAL', '${vC}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase">Casal</button>
-                                <button id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'SOLTEIRO', '${vS}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase">Solteiro</button>
-                            </div>
-
-                            <div id="form-${ev.id}" class="hidden space-y-4 text-left">
-                                <div class="bg-white/5 p-4 rounded-2xl text-center border border-white/10">
-                                    <p class="text-[8px] text-zinc-500 uppercase font-black">Valor na Lista (${nomeAniv ? 'Desconto' : 'Normal'})</p>
-                                    <p id="valor-display-${ev.id}" class="text-2xl font-black text-white italic">R$ 0,00</p>
+                            ${!nomeAniv ? `
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'CASAL', '${vC}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase">Casal</button>
+                                    <button id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'SOLTEIRO', '${vS}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase">Solteiro</button>
                                 </div>
-                                <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase">
-                                <input type="tel" id="tel-${ev.id}" oninput="mascaraTelefone(this)" placeholder="(DDD) 00000-0000" class="w-full site-input p-5 rounded-2xl font-bold text-xs">
-                                <button onclick="enviarReserva('${ev.id}', '${ev.nome}')" id="btn-final-${ev.id}" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action">Confirmar Presença</button>
+                            ` : ''}
+
+                            <div id="form-${ev.id}" class="${nomeAniv ? '' : 'hidden'} space-y-4 text-left">
+                                ${!nomeAniv ? `
+                                    <div class="bg-white/5 p-4 rounded-2xl text-center border border-white/10">
+                                        <p class="text-[8px] text-zinc-500 uppercase font-black">Valor na Lista</p>
+                                        <p id="valor-display-${ev.id}" class="text-2xl font-black text-white italic">R$ 0,00</p>
+                                    </div>
+                                ` : ''}
+                                <input type="text" id="nome-${ev.id}" placeholder="SEU NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase text-white">
+                                <input type="tel" id="tel-${ev.id}" oninput="mascaraTelefone(this)" placeholder="(DDD) 00000-0000" class="w-full site-input p-5 rounded-2xl font-bold text-xs text-white">
+                                <button onclick="enviarReserva('${ev.id}', '${ev.nome}')" id="btn-final-${ev.id}" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action">Finalizar Cadastro</button>
                             </div>
                         </div>
                     </div>
@@ -156,6 +171,10 @@
         window.iniciarReserva = (id) => {
             document.getElementById('btn-init-'+id).classList.add('hidden');
             document.getElementById('step-reserva-'+id).classList.remove('hidden');
+            // Se for aniversário, já seleciona o tipo como "ANIVERSÁRIO" internamente
+            if(nomeAniv) {
+                document.getElementById('form-'+id).setAttribute('data-tipo', 'ANIVERSARIO');
+            }
         };
 
         window.selecionarTipo = (id, tipo, valor) => {
@@ -174,9 +193,9 @@
             const tipo = document.getElementById('form-'+id).getAttribute('data-tipo');
             const btn = document.getElementById('btn-final-'+id);
 
-            if (!nome || tel.length < 14) return alert("Preencha nome e telefone corretamente.");
+            if (!nome || tel.length < 14) return alert("Por favor, preencha nome e telefone.");
             btn.disabled = true;
-            btn.innerText = "SINCRONIZANDO...";
+            btn.innerText = "ENVIANDO...";
 
             try {
                 await addDoc(collection(db, "lista_eventos"), {
