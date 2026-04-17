@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; }
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; min-height: 100-screen; }
         .glass-card { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); border-radius: 2rem; }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
         input, select { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
@@ -23,14 +23,14 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">ACESSO <span class="text-yellow-500">PROMOTER</span></h1>
             <div class="space-y-4">
-                <input type="text" id="inputNomePromoter" placeholder="SEU NOME (COMO NA DASHBOARD)" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
+                <input type="text" id="inputNomePromoter" placeholder="SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
                 <div id="areaSenha" class="hidden">
                     <input type="password" id="senhaPromoter" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
                 </div>
                 <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all mt-4">CONTINUAR</button>
             </div>
-            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Primeiro acesso! Defina sua senha acima</p>
-            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden">Nome não cadastrado ou senha incorreta</p>
+            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Defina sua senha de acesso</p>
+            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden">Dados inválidos</p>
         </div>
     </div>
 
@@ -48,8 +48,8 @@
 
         <section class="space-y-6">
             <div class="flex justify-between items-end border-b border-zinc-900 pb-4">
-                <h3 class="text-xs font-black uppercase text-purple-500 tracking-widest italic">Minhas Listas de Aniversário</h3>
-                <span class="text-[8px] text-zinc-600 font-bold uppercase">Limpeza automática às 05h</span>
+                <h3 class="text-xs font-black uppercase text-purple-500 tracking-widest italic">Links de Aniversário</h3>
+                <span class="text-[8px] text-zinc-600 font-bold uppercase">Limpeza: Pós-evento às 05h</span>
             </div>
             <div id="container-links-aniversario" class="space-y-4">
                 </div>
@@ -78,33 +78,29 @@
         let usuarioTemp = null;
         let stepLogin = 0;
 
-        // LOGIN
         window.verificarOuLogar = async () => {
             const nome = document.getElementById('inputNomePromoter').value.trim().toLowerCase();
             const senha = document.getElementById('senhaPromoter').value.trim();
-            const areaSenha = document.getElementById('areaSenha');
             const btn = document.getElementById('btnAcao');
-            const erro = document.getElementById('erroLogin');
-
             if (stepLogin === 0) {
                 const userDoc = await getDoc(doc(db, "promoters", nome));
                 if (userDoc.exists()) {
                     usuarioTemp = userDoc.data();
                     stepLogin = 1;
-                    areaSenha.classList.remove('hidden');
+                    document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomePromoter').readOnly = true;
                     if (!usuarioTemp.senha) {
                         btn.innerText = "CADASTRAR E ENTRAR";
                         document.getElementById('msgStatus').classList.remove('hidden');
                     } else { btn.innerText = "ENTRAR"; }
-                } else { erro.classList.remove('hidden'); }
+                } else { document.getElementById('erroLogin').classList.remove('hidden'); }
             } else {
-                if (usuarioTemp.senha === "" || !usuarioTemp.senha) {
+                if (!usuarioTemp.senha) {
                     await updateDoc(doc(db, "promoters", nome), { senha: senha });
                     logarSucesso(nome);
                 } else if (usuarioTemp.senha === senha) {
                     logarSucesso(nome);
-                } else { erro.classList.remove('hidden'); }
+                } else { document.getElementById('erroLogin').classList.remove('hidden'); }
             }
         };
 
@@ -130,45 +126,39 @@
         function renderizarLinksAniversario() {
             const container = document.getElementById('container-links-aniversario');
             const agora = new Date();
-            const horaAtual = agora.getHours();
-            const offset = agora.getTimezoneOffset() * 60000;
-            const dataHojeStr = new Date(agora.getTime() - offset).toISOString().split('T')[0];
-            const ontemObj = new Date(agora.getTime() - offset);
-            ontemObj.setDate(ontemObj.getDate() - 1);
-            const dataOntemStr = ontemObj.toISOString().split('T')[0];
-
+            
+            // Filtro de validade
             const linksValidos = dadosAniversarios.filter(link => {
                 const evento = dadosEventos.find(e => e.nome === link.evento);
-                if (!evento) return false;
+                if (!evento) return true; // Se não achar o evento, mantém por segurança
 
-                const dataEvento = evento.data;
-                // 1. Futuro
-                if (dataEvento > dataHojeStr) return true;
-                // 2. Hoje
-                if (dataEvento === dataHojeStr) return true;
-                // 3. Ontem (Válido até 05h da manhã de hoje)
-                if (dataEvento === dataOntemStr) return horaAtual < 5;
-                
-                return false;
+                // Criar data do evento (meio-dia para evitar erros de fuso)
+                const dataEv = new Date(evento.data + "T12:00:00");
+                const amanhaAsCinco = new Date(dataEv);
+                amanhaAsCinco.setDate(amanhaAsCinco.getDate() + 1);
+                amanhaAsCinco.setHours(5, 0, 0, 0);
+
+                // Só esconde se o momento ATUAL for DEPOIS das 05h do dia seguinte ao evento
+                return agora < amanhaAsCinco;
             });
 
             if (linksValidos.length === 0) {
-                container.innerHTML = '<p class="text-zinc-600 text-[10px] uppercase font-bold text-center py-20">Nenhuma lista ativa para seus aniversariantes.</p>';
+                container.innerHTML = '<p class="text-zinc-600 text-[10px] uppercase font-bold text-center py-20 italic tracking-widest">Nenhuma lista ativa.</p>';
                 return;
             }
 
             container.innerHTML = linksValidos.map(link => `
                 <div class="glass-card p-6 border-l-4 border-purple-500 flex justify-between items-center mb-4">
-                    <div>
-                        <h3 class="text-white font-black uppercase italic">${link.nome_aniversariante}</h3>
-                        <p class="text-[9px] text-zinc-500 font-bold uppercase">${link.evento}</p>
+                    <div class="flex-grow">
+                        <h3 class="text-white font-black uppercase italic text-sm md:text-base leading-tight">${link.nome_aniversariante}</h3>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 truncate max-w-[200px] md:max-w-md">${link.evento}</p>
                     </div>
-                    <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-4 md:gap-8 ml-4">
                         <div class="text-center">
                             <p class="text-[7px] text-zinc-500 font-black uppercase">Convidados</p>
                             <p class="text-xl font-black text-white">${link.total_convidados || 0}</p>
                         </div>
-                        <button onclick="copiarLink('${link.id}')" class="bg-zinc-800 text-[10px] font-black px-5 py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all">Link</button>
+                        <button onclick="copiarLink('${link.id}')" class="bg-zinc-800 text-[10px] font-black px-6 py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all">Copiar</button>
                     </div>
                 </div>
             `).join('');
@@ -176,8 +166,7 @@
 
         window.copiarLink = (id) => {
             const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/aniversario.html?id=${id}`;
-            navigator.clipboard.writeText(link);
-            alert("Link da lista copiado!");
+            navigator.clipboard.writeText(link).then(() => alert("Link copiado!"));
         };
     </script>
 </body>
