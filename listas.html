@@ -12,51 +12,46 @@
             font-family: 'Inter', sans-serif; 
             background: radial-gradient(circle at top right, #1e1b4b, #000); 
             background-attachment: fixed;
-            color: #fff; 
-            min-height: 100vh; 
+            color: #fff; min-height: 100vh; 
         }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .gold-gradient { background: linear-gradient(135deg, #eab308 0%, #a16207 100%); }
         .purple-badge { background: rgba(147, 51, 234, 0.15); border: 1px solid rgba(147, 51, 234, 0.3); }
         input, select { background: #0a0a0a !important; border: 1px solid #1f1f1f !important; color: #fff !important; }
         input:focus { border-color: #eab308 !important; outline: none; }
-        .social-btn { transition: 0.3s; }
-        .social-btn:hover { color: #eab308; transform: scale(1.1); }
+        .banner-img { width: 100%; border-radius: 1.5rem; object-fit: cover; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.5rem; display: none; }
     </style>
 </head>
-<body class="p-4 flex flex-col items-center justify-center min-h-screen space-y-8">
+<body class="p-4 flex flex-col items-center justify-center min-h-screen space-y-6">
 
-    <div class="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl border border-white/5">
-        <div class="text-center mb-8">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-8">
+    <div class="w-full max-w-md glass p-8 md:p-10 rounded-[3rem] shadow-2xl border border-white/5 mt-4">
+        <div class="text-center mb-6">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-6">
             
-            <div id="layoutAniversario" class="hidden mb-6">
-                <p class="text-purple-400 font-black uppercase italic text-[10px] tracking-[0.3em] mb-2">Lista Especial de Aniversário</p>
-                <h1 id="nomeAniv" class="text-3xl font-black uppercase leading-none tracking-tighter text-white">---</h1>
-                <div class="mt-6 p-4 rounded-2xl purple-badge flex justify-around items-center">
-                    <div class="text-center">
-                        <p class="text-[8px] font-black uppercase text-purple-300">Casal</p>
-                        <p id="vCasalAniv" class="text-xl font-black text-white">---</p>
-                    </div>
-                    <div class="h-8 w-[1px] bg-purple-500/30"></div>
-                    <div class="text-center">
-                        <p class="text-[8px] font-black uppercase text-purple-300">Solteiro</p>
-                        <p id="vSolteiroAniv" class="text-xl font-black text-white">---</p>
-                    </div>
-                </div>
+            <div id="layoutAniversario" class="hidden mb-4">
+                <p class="text-purple-400 font-black uppercase italic text-[10px] tracking-[0.3em] mb-2">Lista de Aniversário</p>
+                <h1 id="nomeAniv" class="text-2xl font-black uppercase text-white tracking-tighter">---</h1>
             </div>
+        </div>
 
-            <div id="layoutTradicional">
-                <h2 id="tituloPrincipal" class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Confirme sua presença</h2>
+        <img id="bannerEvento" src="" alt="Banner Evento" class="banner-img">
+
+        <div id="boxValores" class="hidden mb-6 p-4 rounded-2xl bg-white/5 border border-white/10 flex justify-around items-center">
+            <div class="text-center">
+                <p class="text-[8px] font-black uppercase text-zinc-500">Casal</p>
+                <p id="vCasal" class="text-lg font-black text-white">---</p>
+            </div>
+            <div class="h-8 w-[1px] bg-white/10"></div>
+            <div class="text-center">
+                <p class="text-[8px] font-black uppercase text-zinc-500">Solteiro</p>
+                <p id="vSolteiro" class="text-lg font-black text-white">---</p>
             </div>
         </div>
 
         <form id="formReserva" class="space-y-4">
-            <div id="containerEvento">
-                <select id="listaEventos" class="w-full p-5 rounded-2xl font-bold uppercase text-xs outline-none" required>
-                    <option value="">Carregando eventos...</option>
-                </select>
-            </div>
+            <select id="listaEventos" class="w-full p-5 rounded-2xl font-bold uppercase text-xs outline-none" required onchange="atualizarInfoEvento()">
+                <option value="">Carregando eventos...</option>
+            </select>
 
             <select id="tipoEntrada" class="w-full p-5 rounded-2xl font-bold uppercase text-xs outline-none" required>
                 <option value="">COMO VOCÊ VAI ENTRAR?</option>
@@ -64,34 +59,28 @@
                 <option value="SOLTEIRO">SOLTEIRO(A)</option>
             </select>
 
-            <div class="space-y-4 pt-2">
+            <div class="space-y-4">
                 <input type="text" id="nomeCliente" placeholder="SEU NOME COMPLETO" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
                 <input type="tel" id="telCliente" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
             </div>
 
-            <button type="submit" id="btnEnviar" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-6 tracking-widest transition-transform active:scale-95">
+            <button type="submit" id="btnEnviar" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-4 tracking-widest transition-transform active:scale-95">
                 Confirmar na Lista
             </button>
         </form>
 
         <div id="msgSucesso" class="hidden text-center mt-8 p-6 bg-green-500/10 border border-green-500/20 rounded-3xl">
             <p class="text-green-500 font-black uppercase text-xs">✅ Nome Confirmado!</p>
-            <p id="msgRodapeSucesso" class="text-zinc-400 text-[10px] mt-2 uppercase font-bold italic">Desconto aplicado na portaria da E-CLUB.</p>
+            <p class="text-zinc-400 text-[10px] mt-2 uppercase font-bold italic">Desconto aplicado na portaria.</p>
         </div>
     </div>
 
-    <footer class="w-full max-w-md text-center space-y-6 pb-10">
-        <div class="flex justify-center gap-8 text-2xl">
-            <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="social-btn"><i class="fab fa-instagram"></i></a>
-            <a href="https://wa.me/5541995040506" target="_blank" class="social-btn"><i class="fab fa-whatsapp"></i></a>
+    <footer class="w-full max-w-md text-center space-y-4 pb-10">
+        <div class="flex justify-center gap-6 text-xl">
+            <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="text-white hover:text-yellow-500"><i class="fab fa-instagram"></i></a>
+            <a href="https://wa.me/5541995040506" target="_blank" class="text-white hover:text-yellow-500"><i class="fab fa-whatsapp"></i></a>
         </div>
-        <div class="px-6 py-4 glass rounded-3xl border-white/5">
-            <p class="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 italic">Endereço</p>
-            <p class="text-[11px] font-bold text-white leading-relaxed">
-                Rua Albino Kaminski, 645 - Bairro Alto<br>Curitiba - PR
-            </p>
-        </div>
-        <p class="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-700 italic">© E-CLUB SWING & DANCE 2026</p>
+        <p class="text-[10px] font-bold text-zinc-500">Rua Albino Kaminski, 645 - Bairro Alto, Curitiba</p>
     </footer>
 
     <script type="module">
@@ -114,34 +103,56 @@
         const refPromoter = params.get('ref') || "direto";
         const nomeAniv = params.get('aniv');
         const festaFixa = params.get('festa');
+        let eventosAtivos = [];
 
         async function inicializar() {
-            const selectEventos = document.getElementById('listaEventos');
+            const select = document.getElementById('listaEventos');
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            selectEventos.innerHTML = '';
+            
+            eventosAtivos = snap.docs.map(d => d.data());
+            select.innerHTML = '';
             
             if (festaFixa && nomeAniv) {
-                // MODO ANIVERSÁRIO
-                const nomeFestaDecoded = decodeURIComponent(festaFixa);
                 document.getElementById('layoutAniversario').classList.remove('hidden');
-                document.getElementById('layoutTradicional').classList.add('hidden');
                 document.getElementById('nomeAniv').innerText = decodeURIComponent(nomeAniv);
-                document.getElementById('containerEvento').classList.add('hidden');
-                
-                snap.forEach(doc => {
-                    const ev = doc.data();
-                    if(ev.nome === nomeFestaDecoded) {
-                        document.getElementById('vCasalAniv').innerText = "R$ " + (ev.desc_casal || "--");
-                        document.getElementById('vSolteiroAniv').innerText = "R$ " + (ev.desc_solteiro || "--");
-                    }
-                });
-                selectEventos.innerHTML = `<option value="${nomeFestaDecoded}" selected>${nomeFestaDecoded}</option>`;
+                select.innerHTML = `<option value="${decodeURIComponent(festaFixa)}" selected>${decodeURIComponent(festaFixa)}</option>`;
+                select.style.display = 'none';
+                atualizarInfoEvento();
             } else {
-                // MODO TRADICIONAL
-                selectEventos.innerHTML = '<option value="">SELECIONE O EVENTO</option>';
-                snap.forEach(doc => {
-                    selectEventos.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome}</option>`;
+                select.innerHTML = '<option value="">SELECIONE O EVENTO</option>';
+                eventosAtivos.forEach(ev => {
+                    select.innerHTML += `<option value="${ev.nome}">${ev.nome}</option>`;
                 });
+            }
+        }
+
+        window.atualizarInfoEvento = function() {
+            const nomeSelecionado = document.getElementById('listaEventos').value;
+            const banner = document.getElementById('bannerEvento');
+            const box = document.getElementById('boxValores');
+            const ev = eventosAtivos.find(e => e.nome === nomeSelecionado);
+
+            if (ev) {
+                // Banner
+                if (ev.imagem) {
+                    banner.src = ev.imagem;
+                    banner.style.display = 'block';
+                } else { banner.style.display = 'none'; }
+
+                // Valores (Checa se é aniversário para mostrar desconto ou valor normal)
+                box.classList.remove('hidden');
+                box.classList.toggle('purple-badge', !!nomeAniv);
+                
+                if (nomeAniv) {
+                    document.getElementById('vCasal').innerText = "R$ " + (ev.desc_casal || "--");
+                    document.getElementById('vSolteiro').innerText = "R$ " + (ev.desc_solteiro || "--");
+                } else {
+                    document.getElementById('vCasal').innerText = "R$ " + (ev.valor_casal || "--");
+                    document.getElementById('vSolteiro').innerText = "R$ " + (ev.valor_solteiro || "--");
+                }
+            } else {
+                banner.style.display = 'none';
+                box.classList.add('hidden');
             }
         }
 
@@ -149,7 +160,7 @@
             e.preventDefault();
             const btn = document.getElementById('btnEnviar');
             btn.disabled = true;
-            btn.innerText = "CONFIRMANDO...";
+            btn.innerText = "ENVIANDO...";
 
             try {
                 await addDoc(collection(db, "lista_eventos"), {
@@ -166,11 +177,8 @@
 
                 document.getElementById('formReserva').classList.add('hidden');
                 document.getElementById('msgSucesso').classList.remove('hidden');
-                setTimeout(() => location.reload(), 5000);
-            } catch (err) {
-                alert("Erro ao confirmar.");
-                btn.disabled = false;
-            }
+                setTimeout(() => location.reload(), 4000);
+            } catch (err) { alert("Erro!"); btn.disabled = false; }
         });
 
         inicializar();
