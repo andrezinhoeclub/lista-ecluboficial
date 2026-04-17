@@ -3,33 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel da Promoter - Eclub</title>
+    <title>E-CLUB | Painel da Promoter</title>
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; }
+        .glass-card { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .btn-blue { background: #3b82f6; color: #fff; font-weight: 900; transition: 0.3s; }
+        .btn-blue:hover { transform: scale(1.02); background: #2563eb; }
+        .festa-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 2rem; overflow: hidden; }
+    </style>
 </head>
-<body class="bg-zinc-900 text-white font-sans min-h-screen p-4">
+<body class="p-4 md:p-8">
 
     <div id="loginPromoter" class="flex flex-col items-center justify-center min-h-[80vh]">
-        <div class="w-full max-w-sm bg-zinc-800 p-8 rounded-3xl border border-zinc-700 shadow-2xl text-center">
-            <h1 class="text-2xl font-bold mb-6 text-blue-500 uppercase italic">Acesso Promoter</h1>
-            <input type="text" id="userPromoter" placeholder="Seu usuário (ex: fabi)" class="w-full bg-zinc-900 border border-zinc-700 p-4 rounded-2xl mb-6 outline-none focus:border-blue-500 text-center font-bold text-white uppercase">
-            <button onclick="acessarPainel()" id="btnAcessar" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase transition hover:bg-blue-700">Entrar no Painel</button>
+        <div class="w-full max-w-sm glass-card p-10 rounded-[3rem] text-center shadow-2xl">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12 mx-auto mb-6">
+            <h1 class="text-xl font-black mb-6 text-blue-500 uppercase italic">Acesso Promoter</h1>
+            <input type="text" id="userPromoter" placeholder="DIGITE SEU USUÁRIO" class="w-full bg-black border border-zinc-800 p-5 rounded-2xl mb-6 outline-none focus:border-blue-500 text-center font-bold text-white uppercase text-xs">
+            <button onclick="acessarPainel()" id="btnAcessar" class="w-full btn-blue py-5 rounded-2xl uppercase text-xs shadow-lg">Entrar no Painel</button>
+            <p class="text-zinc-600 text-[8px] uppercase font-black mt-6 tracking-widest">E-club Private Access</p>
         </div>
     </div>
 
     <div id="painelDados" class="max-w-md mx-auto hidden">
-        <header class="text-center mb-8 flex justify-between items-end">
-            <div class="text-left">
+        <header class="flex justify-between items-center mb-10">
+            <div>
                 <h1 id="boasVindas" class="text-2xl font-black text-blue-500 uppercase italic leading-none">Olá</h1>
-                <p class="text-zinc-500 text-[9px] uppercase font-black mt-1 tracking-tighter">Comparativo de Reservas por Evento</p>
+                <p class="text-zinc-500 text-[9px] uppercase font-black mt-1 tracking-widest">Seu desempenho nos próximos eventos</p>
             </div>
-            <button onclick="location.reload()" class="text-zinc-600 text-[10px] font-bold uppercase underline mb-1">Sair</button>
+            <button onclick="location.reload()" class="bg-zinc-900 p-3 rounded-xl text-zinc-500 hover:text-white transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+            </button>
         </header>
 
-        <div id="listaEventosPromoter" class="space-y-6">
+        <div id="listaEventosPromoter" class="space-y-8">
             </div>
 
-        <footer class="mt-10 text-center border-t border-zinc-800 pt-6">
-            <p class="text-zinc-600 text-[9px] uppercase font-black tracking-widest italic">Eclub Master Control</p>
+        <footer class="mt-20 text-center border-t border-zinc-900 pt-10 mb-10">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-8 mx-auto mb-4 opacity-20">
+            <p class="text-zinc-700 text-[8px] uppercase font-black tracking-widest italic">Eclub Master Control v2.0</p>
         </footer>
     </div>
 
@@ -52,10 +68,13 @@
         window.acessarPainel = async function() {
             const nome = document.getElementById('userPromoter').value.trim().toLowerCase();
             const btn = document.getElementById('btnAcessar');
-            if(!nome) return alert("Digite seu nome!");
+            if(!nome) return alert("Digite seu usuário!");
 
+            btn.disabled = true;
             btn.innerText = "CARREGANDO...";
+
             try {
+                // Verifica na sua coleção de promoters da Dashboard
                 const snapP = await getDoc(doc(db, "promoters", nome));
                 if(snapP.exists()) {
                     document.getElementById('loginPromoter').classList.add('hidden');
@@ -63,75 +82,93 @@
                     document.getElementById('boasVindas').innerText = `Olá, ${nome}!`;
                     carregarDados(nome);
                 } else {
-                    alert("Usuário não autorizado.");
+                    alert("Usuário não encontrado. Peça para o André cadastrar você na Dashboard.");
+                    btn.disabled = false;
                     btn.innerText = "Entrar no Painel";
                 }
-            } catch(e) { alert("Erro ao conectar."); }
+            } catch(e) { alert("Erro ao conectar com o servidor."); btn.disabled = false; }
         }
 
         async function carregarDados(nomePromoter) {
             const cont = document.getElementById('listaEventosPromoter');
-            cont.innerHTML = '<p class="text-center py-10 text-xs animate-pulse">Sincronizando...</p>';
+            cont.innerHTML = '<div class="py-20 text-center animate-pulse text-zinc-700 font-black uppercase text-[10px]">Sincronizando suas metas...</div>';
 
             try {
+                const hoje = new Date().toLocaleDateString('en-CA');
                 const qEventos = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snapEventos = await getDocs(qEventos);
                 
+                // Puxa toda a lista de uma vez para filtrar rápido
                 const snapReservas = await getDocs(collection(db, "lista_eventos"));
                 const todasReservas = [];
                 snapReservas.forEach(d => todasReservas.push(d.data()));
 
                 cont.innerHTML = '';
 
-                if(snapEventos.empty) {
-                    cont.innerHTML = '<p class="text-center text-zinc-500 text-[10px] uppercase font-black italic">Nenhuma festa ativa.</p>';
+                let eventosFiltrados = [];
+                snapEventos.forEach(doc => {
+                    if(!doc.data().data || doc.data().data >= hoje) {
+                        eventosFiltrados.push(doc.data());
+                    }
+                });
+                eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data));
+
+                if(eventosFiltrados.length === 0) {
+                    cont.innerHTML = '<p class="text-center text-zinc-500 text-[10px] py-10 uppercase font-black italic">Nenhuma festa futura na agenda.</p>';
                     return;
                 }
 
-                snapEventos.forEach(docEv => {
-                    const ev = docEv.data();
+                eventosFiltrados.forEach(ev => {
                     const totalGeral = todasReservas.filter(r => r.evento === ev.nome).length;
-                    const totalIndividual = todasReservas.filter(r => r.evento === ev.nome && r.promoter === nomePromoter).length;
-                    const [a,m,d] = ev.data.split('-');
-
-                    // Verifica se existe imagem, senão usa um fundo escuro
-                    const bannerImg = ev.imagem ? `<img src="${ev.imagem}" class="w-full h-32 object-cover rounded-2xl mb-4 shadow-lg">` : '';
+                    const totalIndividual = todasReservas.filter(r => r.evento === ev.nome && r.promoter.toLowerCase() === nomePromoter).length;
+                    const dataFormatada = ev.data.split('-').reverse().join('/');
 
                     cont.innerHTML += `
-                        <div class="bg-zinc-800 p-5 rounded-3xl border border-zinc-700 shadow-2xl">
-                            ${bannerImg}
-                            <div class="mb-4">
-                                <h3 class="text-lg font-black text-white uppercase italic leading-none">${ev.nome}</h3>
-                                <p class="text-[9px] text-zinc-500 font-bold">${d}/${m}/${a}</p>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-2">
-                                <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-700/50 text-center">
-                                    <p class="text-[8px] text-yellow-500 uppercase font-black mb-1">Minhas Reservas</p>
-                                    <p class="text-3xl font-black text-yellow-500">${totalIndividual}</p>
+                        <div class="festa-card glass-card">
+                            ${ev.imagem ? `<img src="${ev.imagem}" class="w-full h-40 object-cover opacity-60">` : ''}
+                            <div class="p-6">
+                                <div class="flex justify-between items-start mb-6">
+                                    <div>
+                                        <h3 class="text-xl font-black text-white uppercase italic leading-none">${ev.nome}</h3>
+                                        <p class="text-[9px] text-zinc-500 font-bold mt-1 uppercase">📅 ${dataFormatada}</p>
+                                    </div>
                                 </div>
-                                <div class="bg-zinc-900 p-4 rounded-2xl border border-zinc-700/50 text-center">
-                                    <p class="text-[8px] text-blue-500 uppercase font-black mb-1">Total da Equipe</p>
-                                    <p class="text-3xl font-black text-blue-500">${totalGeral}</p>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="bg-black/50 p-4 rounded-2xl border border-zinc-800 text-center">
+                                        <p class="text-[8px] text-blue-500 uppercase font-black mb-1">Minhas Reservas</p>
+                                        <p class="text-3xl font-black text-white">${totalIndividual}</p>
+                                    </div>
+                                    <div class="bg-black/50 p-4 rounded-2xl border border-zinc-800 text-center">
+                                        <p class="text-[8px] text-zinc-600 uppercase font-black mb-1">Total da Casa</p>
+                                        <p class="text-3xl font-black text-zinc-600">${totalGeral}</p>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <button onclick="copiarLink('${nomePromoter}')" class="w-full mt-4 bg-zinc-700/50 hover:bg-zinc-700 text-zinc-400 text-[9px] font-black py-3 rounded-xl uppercase transition tracking-widest">
-                                Copiar Meu Link Individual
-                            </button>
+                                <button onclick="copiarLink('${nomePromoter}')" class="w-full mt-6 bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 text-[10px] font-black py-4 rounded-xl uppercase transition tracking-widest border border-blue-500/20">
+                                    Copiar Link de Divulgação
+                                </button>
+                            </div>
                         </div>
                     `;
                 });
             } catch(e) { 
-                cont.innerHTML = '<p class="text-center text-red-500 text-[10px]">ERRO AO CARREGAR.</p>'; 
+                cont.innerHTML = '<p class="text-center text-red-500 text-[10px] font-black uppercase">Erro ao carregar os dados.</p>'; 
             }
         }
 
         window.copiarLink = (nome) => {
-            const urlBase = window.location.href.replace('promoter.html', 'index.html');
+            // Ajustado para apontar para listas.html conforme renomeamos
+            const urlBase = window.location.href.split('promoter.html')[0] + 'listas.html';
             const link = `${urlBase}?ref=${nome}`;
-            navigator.clipboard.writeText(link);
-            alert("Link copiado!");
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(link).then(() => {
+                    alert("Seu link individual foi copiado!");
+                });
+            } else {
+                alert("Link: " + link);
+            }
         }
     </script>
 </body>
