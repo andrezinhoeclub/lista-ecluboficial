@@ -12,18 +12,12 @@
         .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; }
         .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
         .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
-        
-        /* FILA DE EVENTOS HORIZONTAL */
         .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
         .event-bubble { flex: 0 0 auto; width: 280px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
-        
         input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
-        input:focus, select:focus { border-color: #eab308; }
-
         .event-card-config { background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; overflow: hidden; transition: 0.3s; cursor: pointer; }
-        .event-card-config:hover { border-color: #eab308; transform: translateY(-3px); }
         .mini-capa { width: 100%; height: 80px; object-fit: cover; border-bottom: 1px solid #1a1a1c; opacity: 0.6; }
     </style>
 </head>
@@ -50,23 +44,20 @@
                 <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance por Evento (Agenda)</h2>
                 <div id="container-bolhas" class="scroll-x"></div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <div class="glass-card p-8 border-t-4 border-t-yellow-500">
                     <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest text-center">🏆 Pódio de Reservas</h2>
                     <div id="lista-ranking-reservas" class="space-y-4"></div>
                 </div>
-
                 <div class="glass-card p-8 border-t-4 border-t-green-500">
                     <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest text-center">🔥 Pódio de Check-ins</h2>
                     <div id="lista-ranking-checkins" class="space-y-4"></div>
                 </div>
-
                 <div class="glass-card p-8 border-t-4 border-t-blue-600">
                     <select id="filtro-promoter-excel" class="w-full p-3 rounded-xl text-[10px] font-black uppercase mb-4" onchange="gerarListaCheckins()">
                         <option value="">Filtrar Promoter para Excel</option>
                     </select>
-                    <textarea id="output-excel" readonly class="w-full h-64 rounded-2xl p-4 text-[11px] font-mono text-zinc-400 mb-4" placeholder="Nomes e telefones aparecerão aqui..."></textarea>
+                    <textarea id="output-excel" readonly class="w-full h-64 rounded-2xl p-4 text-[11px] font-mono text-zinc-400 mb-4" placeholder="Nomes e telefones..."></textarea>
                     <button onclick="copiarOutput()" class="w-full bg-zinc-800 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-white hover:text-black">Copiar Tudo</button>
                 </div>
             </div>
@@ -74,8 +65,8 @@
 
         <section id="aba-festas" class="hidden space-y-8 text-white">
              <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                <h2 id="titulo-form-evento" class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Configurar Evento</h2>
-                <form id="formEvento" class="grid grid-cols-1 md:grid-cols-4 gap-4 text-white">
+                <h2 id="titulo-form-evento" class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento</h2>
+                <form id="formEvento" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input type="hidden" id="edit_evento_id">
                     <input type="text" id="nome_festa" placeholder="Nome do Evento" class="p-4 rounded-2xl font-bold md:col-span-3 text-white" required>
                     <input type="date" id="data_festa" class="p-4 rounded-2xl font-bold uppercase text-xs text-white" required>
@@ -83,7 +74,7 @@
                     <input type="text" id="valor_solteiro" placeholder="Solteiro Normal" class="p-4 rounded-2xl font-bold">
                     <input type="text" id="desc_casal" placeholder="Casal Aniv." class="p-4 rounded-2xl font-bold text-purple-400">
                     <input type="text" id="desc_solteiro" placeholder="Solteiro Aniv." class="p-4 rounded-2xl font-bold text-purple-400">
-                    <input type="url" id="url_banner" placeholder="URL da Capa (Banner)" class="md:col-span-4 p-4 rounded-2xl font-bold text-white">
+                    <input type="url" id="url_banner" placeholder="URL da Capa" class="md:col-span-4 p-4 rounded-2xl font-bold text-white">
                     <button type="submit" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm">Salvar Festa</button>
                 </form>
             </div>
@@ -92,7 +83,7 @@
 
         <section id="aba-equipe" class="hidden space-y-12 text-white">
             <div class="glass-card p-8 border-l-4 border-l-yellow-500">
-                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Promoters</h2>
+                <h2 id="titulo-form-promoter" class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Gestão de Promoters</h2>
                 <form id="formPromoter" class="flex flex-col md:flex-row gap-3 mb-10">
                     <input type="hidden" id="edit_promoter_id">
                     <input type="text" id="nome_promoter" placeholder="NOME DO PROMOTER" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
@@ -107,8 +98,8 @@
 
             <div class="glass-card p-8 border-l-4 border-l-green-500">
                 <h2 class="text-green-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Portaria</h2>
-                <form id="formPortaria" class="flex flex-col md:flex-row gap-3 mb-10">
-                    <input type="text" id="login_portaria" placeholder="NOME DO OPERADOR (EX: ANTONIO)" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
+                <form id="formPortaria" class="flex flex-col md:flex-row gap-3 mb-10 text-white">
+                    <input type="text" id="login_portaria" placeholder="NOME DO OPERADOR" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
                     <button type="submit" class="bg-green-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white transition-all hover:bg-green-500">Cadastrar Operador</button>
                 </form>
                 <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
@@ -146,25 +137,50 @@
         onSnapshot(collection(db, "eventos"), snap => { 
             dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()})); renderizarRelatorios(); renderizarGridConfig();
         });
+        
+        // RENDERIZAR PROMOTERS COM SENHA
         onSnapshot(collection(db, "promoters"), snap => { 
-            dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); renderizarPromoters();
+            dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
+            const container = document.getElementById('lista-promoters');
+            container.innerHTML = dadosPromoters.map(p => `
+                <div class="glass-card p-6 border-l-4 ${p.tipo === 'aniversario' ? 'border-purple-500' : 'border-blue-500'} flex justify-between items-center text-white">
+                    <div>
+                        <p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p>
+                        <p class="text-[9px] text-zinc-500 uppercase">TIPO: ${p.tipo}</p>
+                        <p class="text-[10px] text-yellow-500 font-bold uppercase mt-2 italic">SENHA: ${p.senha || 'NÃO DEFINIDA'}</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="prepararEdicaoPromoter('${p.id}')" class="text-blue-500 text-[10px] font-black">EDITAR</button>
+                        <button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 font-black">✕</button>
+                    </div>
+                </div>`).join('');
+            
             document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Promoter para Excel</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
         });
+
+        // RENDERIZAR PORTARIA COM SENHA
         onSnapshot(collection(db, "configuracoes"), snap => {
-            document.getElementById('lista-portaria').innerHTML = snap.docs.map(d => ({id: d.id, ...d.data()})).map(l => `
+            const container = document.getElementById('lista-portaria');
+            container.innerHTML = snap.docs.map(d => ({id: d.id, ...d.data()})).map(l => `
                 <div class="glass-card p-6 border-l-4 border-l-green-500 flex justify-between items-center text-white">
-                    <div><p class="text-xs font-black uppercase text-white">${l.login}</p><p class="text-[9px] text-yellow-500 font-bold uppercase">${l.senha === "" ? "Aguardando Senha" : "Senha Cadastrada"}</p></div>
-                    <button onclick="removerItem('configuracoes', '${l.id}')" class="text-red-500 font-black">✕</button>
+                    <div>
+                        <p class="text-xs font-black uppercase text-white">${l.login}</p>
+                        <p class="text-[10px] text-yellow-500 font-bold uppercase mt-2 italic">SENHA: ${l.senha || 'NÃO DEFINIDA'}</p>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="prepararEdicaoPortaria('${l.id}')" class="text-blue-500 text-[10px] font-black">EDITAR</button>
+                        <button onclick="removerItem('configuracoes', '${l.id}')" class="text-red-500 font-black">✕</button>
+                    </div>
                 </div>`).join('');
         });
 
-        // RELATÓRIOS
+        // FUNÇÕES DE RELATÓRIOS E CONFIGURAÇÃO
         function renderizarRelatorios() {
             const evOrd = [...dadosEventos].filter(e => e.ativo).sort((a,b) => new Date(a.data) - new Date(b.data));
             document.getElementById('container-bolhas').innerHTML = evOrd.map(ev => {
                 const res = dadosReservas.filter(r => r.evento === ev.nome).length;
                 const chk = dadosReservas.filter(r => r.evento === ev.nome && r.entrou).length;
-                return `<div class="event-bubble p-6"><p class="text-[9px] font-black text-yellow-500 uppercase mb-1">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-sm font-black uppercase text-white mb-6 h-10 overflow-hidden leading-tight">${ev.nome}</h4><div class="flex justify-between border-t border-white/5 pt-4 text-white"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-lg font-black">${res}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Entrou</p><p class="text-lg font-black text-green-500">${chk}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Conv.</p><p class="text-lg font-black text-blue-500">${res > 0 ? Math.round((chk/res)*100) : 0}%</p></div></div></div>`;
+                return `<div class="event-bubble p-6 text-white"><p class="text-[9px] font-black text-yellow-500 uppercase mb-1">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-sm font-black uppercase text-white mb-6 h-10 overflow-hidden leading-tight">${ev.nome}</h4><div class="flex justify-between border-t border-white/5 pt-4 text-white"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-lg font-black">${res}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Entrou</p><p class="text-lg font-black text-green-500">${chk}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Conv.</p><p class="text-lg font-black text-blue-500">${res > 0 ? Math.round((chk/res)*100) : 0}%</p></div></div></div>`;
             }).join('');
             const stats = {};
             dadosReservas.forEach(r => {
@@ -177,30 +193,20 @@
             document.getElementById('lista-ranking-checkins').innerHTML = Object.entries(stats).sort((a,b) => b[1].chk - a[1].chk).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 text-white"><div class="flex items-center gap-3"><span class="text-lg">${medals[i] || '👤'}</span><p class="text-[10px] font-black uppercase text-white">${n}</p></div><p class="text-xl font-black text-green-500">${d.chk}</p></div>`).join('');
         }
 
-        // CONFIG EVENTOS
         function renderizarGridConfig() {
-            const evOrd = [...dadosEventos].filter(e => e.ativo).sort((a, b) => new Date(a.data) - new Date(b.data));
+            const evOrd = dadosEventos.filter(e => e.ativo).sort((a, b) => new Date(a.data) - new Date(b.data));
             document.getElementById('grid-eventos-config').innerHTML = evOrd.map(ev => `
                 <div class="event-card-config flex flex-col" onclick="prepararEdicaoEvento('${ev.id}')">
                     ${ev.imagem ? `<img src="${ev.imagem}" class="mini-capa">` : `<div class="mini-capa bg-zinc-900"></div>`}
-                    <div class="p-5 text-white text-left">
+                    <div class="p-5 text-white">
                         <p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                        <h4 class="text-xs font-black uppercase mt-1 text-white truncate">${ev.nome}</h4>
+                        <h4 class="text-xs font-black uppercase mt-1 truncate">${ev.nome}</h4>
                         <button onclick="event.stopPropagation(); removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold mt-4 text-[9px] uppercase hover:underline">REMOVER</button>
                     </div>
                 </div>`).join('');
         }
 
-        // PROMOTERS
-        function renderizarPromoters() {
-            document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `
-                <div class="glass-card p-6 border-l-4 ${p.tipo === 'aniversario' ? 'border-purple-500' : 'border-blue-500'} flex justify-between items-center text-white">
-                    <div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-zinc-500 uppercase">${p.tipo}</p></div>
-                    <div class="flex gap-4"><button onclick="prepararEdicaoPromoter('${p.id}')" class="text-blue-500 text-[10px] font-black">EDITAR</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 font-black">✕</button></div>
-                </div>`).join('');
-        }
-
-        // SUBMITS
+        // SUBMITS E CRUD
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault(); const id = document.getElementById('edit_evento_id').value;
             const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, imagem: document.getElementById('url_banner').value, ativo: true };
@@ -218,11 +224,19 @@
         document.getElementById('formPortaria').addEventListener('submit', async e => {
             e.preventDefault(); const login = document.getElementById('login_portaria').value.trim().toLowerCase();
             await setDoc(doc(db, "configuracoes", login), { login: login, senha: "" }, { merge: true });
-            e.target.reset(); alert("Cadastrado! O operador define a senha no primeiro acesso à Portaria.");
+            e.target.reset(); alert("Cadastrado! A senha deve ser criada no primeiro acesso à Portaria.");
         });
 
-        // UTILITÁRIOS
-        window.removerItem = async (c, i) => { if(confirm("Remover?")) await deleteDoc(doc(db, c, i)); };
+        window.removerItem = async (c, i) => { if(confirm("Remover acesso?")) await deleteDoc(doc(db, c, i)); };
+
+        window.prepararEdicaoPortaria = async (id) => {
+            const snap = await getDoc(doc(db, "configuracoes", id));
+            if (snap.exists()) {
+                document.getElementById('login_portaria').value = snap.data().login;
+                document.getElementById('login_portaria').focus();
+            }
+        };
+
         window.prepararEdicaoPromoter = async (id) => {
             const snap = await getDoc(doc(db, "promoters", id));
             if (snap.exists()) {
@@ -231,6 +245,7 @@
                 document.getElementById('edit_promoter_id').value = id;
             }
         };
+
         window.prepararEdicaoEvento = (id) => {
             const ev = dadosEventos.find(e => e.id === id);
             document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome;
@@ -239,6 +254,7 @@
             document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('url_banner').value = ev.imagem || "";
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
+
         window.gerarListaCheckins = () => {
             const p = document.getElementById('filtro-promoter-excel').value;
             if(!p) return;
