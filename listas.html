@@ -7,7 +7,7 @@
     <title>E-CLUB | Reservas e Listas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; }
         .btn-action { transition: all 0.2s ease; }
         .btn-action:active { transform: scale(0.96); }
@@ -17,14 +17,17 @@
         .type-btn.active { background: #eab308; border-color: #eab308; color: black; font-weight: 900; }
         .site-input { background: #000 !important; border: 1px solid #27272a !important; color: white !important; }
         .site-input:focus { border-color: #eab308 !important; outline: none; }
-        .purple-badge { background: rgba(147, 51, 234, 0.15); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc; }
+        
+        /* Estilo Especial de Aniversário */
+        .aniv-card { background: linear-gradient(145deg, #1a1033 0%, #000 100%); border: 2px solid #9333ea; }
+        .purple-glow { text-shadow: 0 0 15px rgba(147, 51, 234, 0.6); }
     </style>
 </head>
 <body class="p-4 flex flex-col min-h-screen">
 
     <div class="max-w-md mx-auto w-full flex-grow">
         <header class="flex justify-center py-10">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-20 w-auto">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 w-auto">
         </header>
 
         <div id="listaEventos" class="space-y-8">
@@ -33,13 +36,13 @@
 
         <footer class="mt-16 mb-12 border-t border-zinc-900 pt-10 text-center">
             <div class="grid grid-cols-2 gap-4 mb-8">
-                <a href="https://wa.me/5541995040506" target="_blank" class="bg-[#25D366] p-5 rounded-2xl text-black font-black uppercase text-[11px] btn-action">WhatsApp</a>
-                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="bg-gradient-to-r from-orange-500 via-red-500 to-purple-600 p-5 rounded-2xl text-white font-black uppercase text-[11px] btn-action">Instagram</a>
+                <a href="https://wa.me/5541995040506" target="_blank" class="bg-[#25D366] p-5 rounded-2xl text-black font-black uppercase text-[11px] btn-action text-center">WhatsApp</a>
+                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="bg-gradient-to-r from-orange-500 via-red-500 to-purple-600 p-5 rounded-2xl text-white font-black uppercase text-[11px] btn-action text-center">Instagram</a>
             </div>
             <div class="border-2 border-yellow-500 p-8 rounded-[2.5rem]">
-                <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest text-white">Localização</p>
+                <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Localização</p>
                 <p class="text-sm font-black italic text-white mb-1">Rua Albino Kaminski, 645 - Bairro Alto</p>
-                <p class="text-[10px] text-zinc-500 font-bold">Curitiba - PR</p>
+                <p class="text-[10px] text-zinc-500 font-bold uppercase">Curitiba - PR</p>
             </div>
         </footer>
     </div>
@@ -47,7 +50,7 @@
     <div id="telaSucesso" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center">
         <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 text-4xl text-white">✓</div>
         <h2 class="text-2xl font-black uppercase italic mb-2 text-white">Confirmado!</h2>
-        <p class="text-zinc-400 text-xs font-bold uppercase px-4">Sua reserva foi enviada para a lista da E-CLUB.</p>
+        <p class="text-zinc-400 text-xs font-bold uppercase px-4">Seu nome está na lista da E-CLUB!</p>
         <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] mt-10 btn-action">Nova Reserva</button>
     </div>
 
@@ -99,38 +102,49 @@
             container.innerHTML = '';
             eventos.forEach(ev => {
                 const card = document.createElement('div');
-                card.className = "festa-card";
+                // Aplica estilo diferente se for Aniversário
+                card.className = nomeAniv ? "festa-card aniv-card" : "festa-card";
                 
-                // Valores Dinâmicos (Pega do banco: desc_casal se for aniv, senão valor_casal)
                 const vC = nomeAniv ? (ev.desc_casal || '0,00') : (ev.valor_casal || '0,00');
                 const vS = nomeAniv ? (ev.desc_solteiro || '0,00') : (ev.valor_solteiro || '0,00');
 
                 card.innerHTML = `
-                    <img src="${ev.imagem}" class="banner-img">
-                    <div class="p-6 text-center">
-                        ${nomeAniv ? `<div class="p-4 mb-6 rounded-[1.5rem] purple-badge text-[11px] font-black uppercase italic tracking-tighter text-white">🎂 Lista de Aniversário: ${decodeURIComponent(nomeAniv)}</div>` : ''}
-                        
-                        <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest">${ev.data.split('-').reverse().join('/')}</p>
-                        <h3 class="text-2xl font-black uppercase italic leading-tight mb-8">${ev.nome}</h3>
+                    ${!nomeAniv ? `<img src="${ev.imagem}" class="banner-img">` : ''}
+                    
+                    <div class="p-8 text-center">
+                        ${nomeAniv ? `
+                            <div class="mb-6">
+                                <p class="text-purple-400 font-black uppercase text-[10px] tracking-[0.4em] mb-2">Convite Especial</p>
+                                <h3 class="text-3xl font-black uppercase italic text-white purple-glow leading-tight">${decodeURIComponent(nomeAniv)}</h3>
+                                <p class="text-zinc-500 text-[11px] font-bold mt-4 px-6 uppercase italic leading-relaxed">
+                                    "Comemore comigo na E-CLUB! Coloque seu nome na lista e garanta seu valor especial."
+                                </p>
+                            </div>
+                        ` : `
+                            <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-1">${ev.data.split('-').reverse().join('/')}</p>
+                            <h3 class="text-2xl font-black uppercase italic leading-tight mb-8">${ev.nome}</h3>
+                        `}
                         
                         <div id="btn-init-${ev.id}">
-                            <button onclick="iniciarReserva('${ev.id}')" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-xs btn-action">Colocar nome na lista</button>
+                            <button onclick="iniciarReserva('${ev.id}')" class="w-full ${nomeAniv ? 'bg-purple-600' : 'bg-yellow-500'} text-white font-black py-5 rounded-2xl uppercase text-xs btn-action shadow-lg">
+                                ${nomeAniv ? 'Garantir meu lugar na lista' : 'Colocar nome na lista'}
+                            </button>
                         </div>
 
-                        <div id="step-reserva-${ev.id}" class="hidden space-y-6 pt-4 border-t border-white/10 mt-4">
+                        <div id="step-reserva-${ev.id}" class="hidden space-y-6 pt-6 border-t border-white/10 mt-6">
                             <div class="grid grid-cols-2 gap-3">
-                                <button id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'CASAL', '${vC}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase text-white">Casal</button>
-                                <button id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'SOLTEIRO', '${vS}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase text-white">Solteiro</button>
+                                <button id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'CASAL', '${vC}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase">Casal</button>
+                                <button id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'SOLTEIRO', '${vS}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase">Solteiro</button>
                             </div>
 
                             <div id="form-${ev.id}" class="hidden space-y-4 text-left">
-                                <div class="bg-zinc-900 p-4 rounded-2xl text-center border border-white/5">
-                                    <p class="text-[8px] text-zinc-500 uppercase font-black">Valor Especial na Lista</p>
+                                <div class="bg-white/5 p-4 rounded-2xl text-center border border-white/10">
+                                    <p class="text-[8px] text-zinc-500 uppercase font-black">Valor na Lista (${nomeAniv ? 'Desconto' : 'Normal'})</p>
                                     <p id="valor-display-${ev.id}" class="text-2xl font-black text-white italic">R$ 0,00</p>
                                 </div>
                                 <input type="text" id="nome-${ev.id}" placeholder="NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase">
                                 <input type="tel" id="tel-${ev.id}" oninput="mascaraTelefone(this)" placeholder="(DDD) 00000-0000" class="w-full site-input p-5 rounded-2xl font-bold text-xs">
-                                <button onclick="enviarReserva('${ev.id}', '${ev.nome}')" id="btn-final-${ev.id}" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action">Finalizar Reserva</button>
+                                <button onclick="enviarReserva('${ev.id}', '${ev.nome}')" id="btn-final-${ev.id}" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action">Confirmar Presença</button>
                             </div>
                         </div>
                     </div>
@@ -161,9 +175,8 @@
             const btn = document.getElementById('btn-final-'+id);
 
             if (!nome || tel.length < 14) return alert("Preencha nome e telefone corretamente.");
-
             btn.disabled = true;
-            btn.innerText = "ENVIANDO...";
+            btn.innerText = "SINCRONIZANDO...";
 
             try {
                 await addDoc(collection(db, "lista_eventos"), {
