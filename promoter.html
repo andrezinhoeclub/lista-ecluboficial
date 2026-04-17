@@ -12,7 +12,7 @@
         .glass-card { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .btn-blue { background: #3b82f6; color: #fff; font-weight: 900; transition: 0.3s; }
         .btn-blue:hover { transform: scale(1.02); background: #2563eb; }
-        .festa-card { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 2rem; overflow: hidden; }
+        .festa-row { border-bottom: 1px solid #1a1a1a; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -23,29 +23,36 @@
             <h1 class="text-xl font-black mb-6 text-blue-500 uppercase italic">Acesso Promoter</h1>
             <input type="text" id="userPromoter" placeholder="DIGITE SEU USUÁRIO" class="w-full bg-black border border-zinc-800 p-5 rounded-2xl mb-6 outline-none focus:border-blue-500 text-center font-bold text-white uppercase text-xs">
             <button onclick="acessarPainel()" id="btnAcessar" class="w-full btn-blue py-5 rounded-2xl uppercase text-xs shadow-lg">Entrar no Painel</button>
-            <p class="text-zinc-600 text-[8px] uppercase font-black mt-6 tracking-widest">E-club Private Access</p>
         </div>
     </div>
 
     <div id="painelDados" class="max-w-md mx-auto hidden">
-        <header class="flex justify-between items-center mb-10">
+        <header class="flex justify-between items-center mb-6">
             <div>
                 <h1 id="boasVindas" class="text-2xl font-black text-blue-500 uppercase italic leading-none">Olá</h1>
-                <p class="text-zinc-500 text-[9px] uppercase font-black mt-1 tracking-widest">Seu desempenho nos próximos eventos</p>
+                <p class="text-zinc-500 text-[9px] uppercase font-black mt-1 tracking-widest">Controle de links e metas</p>
             </div>
-            <button onclick="location.reload()" class="bg-zinc-900 p-3 rounded-xl text-zinc-500 hover:text-white transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-            </button>
+            <button onclick="location.reload()" class="bg-zinc-900 p-3 rounded-xl text-zinc-500 hover:text-white transition">SAIR</button>
         </header>
 
-        <div id="listaEventosPromoter" class="space-y-8">
+        <div class="grid grid-cols-1 gap-3 mb-10">
+            <button onclick="copiarLinkReservas()" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action shadow-lg flex flex-col items-center">
+                <span>Copiar Link de Reservas</span>
+                <span class="text-[8px] opacity-60 normal-case font-bold mt-1">(Link para enviar aos clientes)</span>
+            </button>
+            <button onclick="copiarLinkPainel()" class="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl uppercase text-[9px] tracking-widest border border-zinc-700">
+                Copiar Link deste Painel
+            </button>
+        </div>
+
+        <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-4 tracking-widest italic border-b border-zinc-900 pb-2">Eventos da Semana</h3>
+        
+        <div id="listaEventosPromoter" class="glass-card rounded-[2rem] overflow-hidden">
             </div>
 
         <footer class="mt-20 text-center border-t border-zinc-900 pt-10 mb-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-8 mx-auto mb-4 opacity-20">
-            <p class="text-zinc-700 text-[8px] uppercase font-black tracking-widest italic">Eclub Master Control v2.0</p>
+            <p class="text-zinc-700 text-[8px] uppercase font-black tracking-widest italic">Eclub Master Control v3.0</p>
         </footer>
     </div>
 
@@ -64,6 +71,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        let currentPromoter = "";
 
         window.acessarPainel = async function() {
             const nome = document.getElementById('userPromoter').value.trim().toLowerCase();
@@ -74,102 +82,82 @@
             btn.innerText = "CARREGANDO...";
 
             try {
-                // Verifica na sua coleção de promoters da Dashboard
                 const snapP = await getDoc(doc(db, "promoters", nome));
                 if(snapP.exists()) {
+                    currentPromoter = nome;
                     document.getElementById('loginPromoter').classList.add('hidden');
                     document.getElementById('painelDados').classList.remove('hidden');
                     document.getElementById('boasVindas').innerText = `Olá, ${nome}!`;
                     carregarDados(nome);
                 } else {
-                    alert("Usuário não encontrado. Peça para o André cadastrar você na Dashboard.");
+                    alert("Usuário não autorizado.");
                     btn.disabled = false;
-                    btn.innerText = "Entrar no Painel";
+                    btn.innerText = "Entrar";
                 }
-            } catch(e) { alert("Erro ao conectar com o servidor."); btn.disabled = false; }
+            } catch(e) { alert("Erro de conexão."); btn.disabled = false; }
         }
 
         async function carregarDados(nomePromoter) {
             const cont = document.getElementById('listaEventosPromoter');
-            cont.innerHTML = '<div class="py-20 text-center animate-pulse text-zinc-700 font-black uppercase text-[10px]">Sincronizando suas metas...</div>';
+            cont.innerHTML = '<div class="p-10 text-center animate-pulse text-[10px] font-black uppercase text-zinc-600">Sincronizando...</div>';
 
             try {
                 const hoje = new Date().toLocaleDateString('en-CA');
                 const qEventos = query(collection(db, "eventos"), where("ativo", "==", true));
                 const snapEventos = await getDocs(qEventos);
-                
-                // Puxa toda a lista de uma vez para filtrar rápido
                 const snapReservas = await getDocs(collection(db, "lista_eventos"));
                 const todasReservas = [];
                 snapReservas.forEach(d => todasReservas.push(d.data()));
 
-                cont.innerHTML = '';
-
                 let eventosFiltrados = [];
                 snapEventos.forEach(doc => {
-                    if(!doc.data().data || doc.data().data >= hoje) {
-                        eventosFiltrados.push(doc.data());
-                    }
+                    if(!doc.data().data || doc.data().data >= hoje) eventosFiltrados.push(doc.data());
                 });
                 eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data));
 
                 if(eventosFiltrados.length === 0) {
-                    cont.innerHTML = '<p class="text-center text-zinc-500 text-[10px] py-10 uppercase font-black italic">Nenhuma festa futura na agenda.</p>';
+                    cont.innerHTML = '<p class="p-10 text-center text-zinc-500 text-[10px] uppercase font-black">Sem eventos ativos.</p>';
                     return;
                 }
 
+                cont.innerHTML = '';
                 eventosFiltrados.forEach(ev => {
-                    const totalGeral = todasReservas.filter(r => r.evento === ev.nome).length;
-                    const totalIndividual = todasReservas.filter(r => r.evento === ev.nome && r.promoter.toLowerCase() === nomePromoter).length;
-                    const dataFormatada = ev.data.split('-').reverse().join('/');
+                    const individual = todasReservas.filter(r => r.evento === ev.nome && r.promoter.toLowerCase() === nomePromoter).length;
+                    const geral = todasReservas.filter(r => r.evento === ev.nome).length;
+                    const data = ev.data.split('-').reverse().join('/');
 
                     cont.innerHTML += `
-                        <div class="festa-card glass-card">
-                            ${ev.imagem ? `<img src="${ev.imagem}" class="w-full h-40 object-cover opacity-60">` : ''}
-                            <div class="p-6">
-                                <div class="flex justify-between items-start mb-6">
-                                    <div>
-                                        <h3 class="text-xl font-black text-white uppercase italic leading-none">${ev.nome}</h3>
-                                        <p class="text-[9px] text-zinc-500 font-bold mt-1 uppercase">📅 ${dataFormatada}</p>
-                                    </div>
+                        <div class="festa-row p-5 flex justify-between items-center bg-zinc-900/40">
+                            <div>
+                                <h4 class="text-xs font-black uppercase text-white leading-none mb-1">${ev.nome}</h4>
+                                <p class="text-[8px] text-zinc-500 font-bold uppercase">${data}</p>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="text-center">
+                                    <p class="text-[7px] text-blue-500 font-black uppercase">Minhas</p>
+                                    <p class="text-lg font-black text-white leading-none">${individual}</p>
                                 </div>
-                                
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="bg-black/50 p-4 rounded-2xl border border-zinc-800 text-center">
-                                        <p class="text-[8px] text-blue-500 uppercase font-black mb-1">Minhas Reservas</p>
-                                        <p class="text-3xl font-black text-white">${totalIndividual}</p>
-                                    </div>
-                                    <div class="bg-black/50 p-4 rounded-2xl border border-zinc-800 text-center">
-                                        <p class="text-[8px] text-zinc-600 uppercase font-black mb-1">Total da Casa</p>
-                                        <p class="text-3xl font-black text-zinc-600">${totalGeral}</p>
-                                    </div>
+                                <div class="text-center border-l border-zinc-800 pl-4">
+                                    <p class="text-[7px] text-zinc-600 font-black uppercase">Geral</p>
+                                    <p class="text-lg font-black text-zinc-600 leading-none">${geral}</p>
                                 </div>
-
-                                <button onclick="copiarLink('${nomePromoter}')" class="w-full mt-6 bg-blue-600/10 hover:bg-blue-600/20 text-blue-500 text-[10px] font-black py-4 rounded-xl uppercase transition tracking-widest border border-blue-500/20">
-                                    Copiar Link de Divulgação
-                                </button>
                             </div>
                         </div>
                     `;
                 });
-            } catch(e) { 
-                cont.innerHTML = '<p class="text-center text-red-500 text-[10px] font-black uppercase">Erro ao carregar os dados.</p>'; 
-            }
+            } catch(e) { cont.innerHTML = '<p class="p-10 text-center text-red-500 text-[10px]">ERRO.</p>'; }
         }
 
-        window.copiarLink = (nome) => {
-            // Ajustado para apontar para listas.html conforme renomeamos
-            const urlBase = window.location.href.split('promoter.html')[0] + 'listas.html';
-            const link = `${urlBase}?ref=${nome}`;
-            
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(link).then(() => {
-                    alert("Seu link individual foi copiado!");
-                });
-            } else {
-                alert("Link: " + link);
-            }
-        }
+        window.copiarLinkReservas = () => {
+            const url = window.location.href.split('promoter.html')[0] + 'listas.html?ref=' + currentPromoter;
+            navigator.clipboard.writeText(url);
+            alert("Link de Reservas copiado!");
+        };
+
+        window.copiarLinkPainel = () => {
+            navigator.clipboard.writeText(window.location.href);
+            alert("Link do seu Painel copiado!");
+        };
     </script>
 </body>
 </html>
