@@ -20,7 +20,6 @@
         .input-field:focus { border-color: #eab308 !important; outline: none; }
         .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; }
         .btn-gold:hover:not(:disabled) { transform: scale(1.02); }
-        .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
         .item-cliente { border-bottom: 1px solid #1a1a1a; transition: 0.3s; }
         .bday-anim { animation: pulse 1.5s infinite; background: #db2777; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -100,7 +99,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, getDocs, where, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, getDocs, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -114,16 +113,14 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const colRef = collection(db, "cadastro_solteiras");
-
         let clientesCache = [];
 
         onSnapshot(colRef, (snap) => {
             clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             atualizarContadores();
-            filtrarClientes(); // Renderiza com os filtros aplicados
+            filtrarClientes();
         });
 
-        // MASCARAS
         window.maskCPF = (i) => {
             let v = i.value.replace(/\D/g,"").substring(0,11);
             v = v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2");
@@ -159,27 +156,27 @@
             const a = new Date(); 
             const c = new Date(); 
             c.setHours(5, 0, 0, 0); 
-            // Se agora for antes das 5h da manhã, o "hoje" ainda é o evento que começou ontem à noite
             if (a < c) c.setDate(c.getDate() - 1); 
             return c; 
         }
 
-        function render(dados) {
+        function render(dados, isBusca = false) {
             const container = document.getElementById('listaSolteiras');
             const corte = obterDataCorteEvento();
             
-            // FILTRO SOLICITADO: Ocultar quem entrou antes do corte (ontem)
-            // Mostramos apenas quem NUNCA entrou ou quem entrou HOJE (após o corte)
-            const filtrados = dados.filter(c => {
-                const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
-                return !u || u >= corte;
-            });
+            // Se NÃO for busca, mostramos apenas quem ainda não entrou HOJE
+            // Se FOR busca, mostramos todo mundo que bater com o filtro
+            let filtrados = dados;
+            if (!isBusca) {
+                filtrados = dados.filter(c => {
+                    const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
+                    return !u || u < corte;
+                });
+            }
 
-            container.innerHTML = filtrados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Nenhum registro para o turno atual</p>';
+            container.innerHTML = filtrados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Nenhum registro encontrado</p>';
 
             filtrados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
-                const idade = calcIdade(c.nascimento);
-                const niver = isBday(c.nascimento);
                 const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
                 const naCasa = u && u >= corte;
                 
@@ -190,15 +187,15 @@
                         <div class="flex items-center flex-wrap gap-2">
                             <h3 class="text-lg font-black uppercase ${naCasa ? 'text-green-400' : 'text-white'}">${c.nome}</h3>
                             <span class="text-xl font-black text-green-500 tel-destaque"> — ${c.tel}</span>
-                            ${niver ? '<span class="text-white text-[9px] font-black px-2 py-1 rounded bday-anim">🎂 ANIVERSARIANTE!</span>' : ''}
+                            ${isBday(c.nascimento) ? '<span class="text-white text-[9px] font-black px-2 py-1 rounded bday-anim">🎂 ANIVERSARIANTE!</span>' : ''}
                         </div>
-                        <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase">🎂 ${idade} ANOS | 🆔 ${c.cpf}</p>
+                        <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase">🎂 ${calcIdade(c.nascimento)} ANOS | 🆔 ${c.cpf}</p>
                         ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase">⚠️ OBS: ${c.obs}</p>` : ''}
-                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">${naCasa ? '● CONFIRMADA NA CASA HOJE' : 'AGUARDANDO ENTRADA'}</p>
+                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">${naCasa ? '● CONFIRMADA HOJE' : 'ÚLTIMA VISITA: ' + (u ? u.toLocaleDateString('pt-BR') : 'NUNCA')}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700">Obs</button>
-                        ${naCasa ? '<span class="text-green-500 text-[10px] font-black uppercase px-4">NA CASA ✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500">Check-in</button>`}
+                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase">Obs</button>
+                        ${naCasa ? '<span class="text-green-500 text-[10px] font-black uppercase px-4">NA CASA ✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase">Check-in</button>`}
                     </div>`;
                 container.appendChild(div);
             });
@@ -206,16 +203,10 @@
 
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const form = document.getElementById('formSolteira');
             const btn = document.getElementById('btnSalvar');
             const tel = document.getElementById('tel').value;
             const cpf = document.getElementById('cpf').value;
             const nome = document.getElementById('nome').value.trim().toUpperCase();
-
-            if (tel.replace(/\D/g,"").length < 11 || cpf.replace(/\D/g,"").length < 11) {
-                alert("Preencha Telefone e CPF completos!");
-                return;
-            }
 
             btn.disabled = true;
             btn.innerText = "SALVANDO...";
@@ -223,32 +214,26 @@
             try {
                 const qTel = query(colRef, where("tel", "==", tel));
                 const qCpf = query(colRef, where("cpf", "==", cpf));
-                const [snapTel, snapCpf] = await Promise.all([getDocs(qTel), getDocs(qCpf)]);
+                const [sTel, sCpf] = await Promise.all([getDocs(qTel), getDocs(qCpf)]);
 
-                // Se já existe, apenas faz o check-in (atualiza visita)
-                if (!snapTel.empty || !snapCpf.empty) {
-                    const existente = !snapTel.empty ? snapTel.docs[0] : snapCpf.docs[0];
-                    await updateDoc(doc(db, "cadastro_solteiras", existente.id), { ultima_visita: serverTimestamp() });
-                    alert("Cliente já cadastrada. Check-in realizado!");
+                if (!sTel.empty || !sCpf.empty) {
+                    const idExistente = !sTel.empty ? sTel.docs[0].id : sCpf.docs[0].id;
+                    await updateDoc(doc(db, "cadastro_solteiras", idExistente), { ultima_visita: serverTimestamp() });
+                    alert("Cliente já cadastrada. Check-in atualizado!");
                 } else {
                     await addDoc(colRef, {
                         nome, tel, cpf,
                         nascimento: document.getElementById('nascimento').value,
                         obs: document.getElementById('obs').value.toUpperCase(),
-                        data_cadastro: serverTimestamp(),
                         ultima_visita: serverTimestamp() 
                     });
-                    alert("Cadastro e entrada confirmados!");
+                    alert("Cadastrada e confirmada!");
                 }
-                
-                form.reset();
+                document.getElementById('formSolteira').reset();
                 document.getElementById('idadeDisplay').innerText = "--";
-            } catch (err) {
-                alert("Erro ao salvar.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Salvar e Confirmar";
-            }
+            } catch (err) { alert("Erro ao salvar."); }
+            btn.disabled = false;
+            btn.innerText = "Salvar e Confirmar";
         });
 
         window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
@@ -258,18 +243,18 @@
 
         function atualizarContadores() {
             const corte = obterDataCorteEvento();
-            let ev = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
-            document.getElementById('contagemEvento').innerText = ev;
+            document.getElementById('contagemEvento').innerText = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
             document.getElementById('contadorTotal').innerText = clientesCache.length;
         }
 
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase();
-            const filtrados = b ? clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || c.tel.includes(b)) : clientesCache;
-            render(filtrados);
+            if (b.length > 0) {
+                render(clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || c.tel.includes(b)), true);
+            } else {
+                render(clientesCache, false);
+            }
         };
-
-        setInterval(atualizarContadores, 30000);
     </script>
 </body>
 </html>
