@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB | Lista de Convidados</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { 
@@ -16,59 +17,82 @@
         }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .gold-gradient { background: linear-gradient(135deg, #eab308 0%, #a16207 100%); }
-        .purple-badge { background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.3); }
+        .purple-badge { background: rgba(147, 51, 234, 0.15); border: 1px solid rgba(147, 51, 234, 0.3); }
         input, select { background: #0a0a0a !important; border: 1px solid #1f1f1f !important; color: #fff !important; }
         input:focus { border-color: #eab308 !important; outline: none; }
+        .social-btn { transition: 0.3s; }
+        .social-btn:hover { color: #eab308; transform: scale(1.1); }
     </style>
 </head>
-<body class="p-4 flex items-center justify-center min-h-screen">
+<body class="p-4 flex flex-col items-center justify-center min-h-screen space-y-8">
 
     <div class="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl border border-white/5">
         <div class="text-center mb-8">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-8">
             
-            <div id="headerAniversario" class="hidden mb-6">
+            <div id="layoutAniversario" class="hidden mb-6">
                 <p class="text-purple-400 font-black uppercase italic text-[10px] tracking-[0.3em] mb-2">Lista Especial de Aniversário</p>
                 <h1 id="nomeAniv" class="text-3xl font-black uppercase leading-none tracking-tighter text-white">---</h1>
-                
-                <div id="boxValoresAniv" class="mt-6 p-4 rounded-2xl purple-badge flex justify-around items-center">
+                <div class="mt-6 p-4 rounded-2xl purple-badge flex justify-around items-center">
                     <div class="text-center">
                         <p class="text-[8px] font-black uppercase text-purple-300">Casal</p>
-                        <p id="vCasalAniv" class="text-xl font-black text-white">R$ --</p>
+                        <p id="vCasalAniv" class="text-xl font-black text-white">---</p>
                     </div>
                     <div class="h-8 w-[1px] bg-purple-500/30"></div>
                     <div class="text-center">
                         <p class="text-[8px] font-black uppercase text-purple-300">Solteiro</p>
-                        <p id="vSolteiroAniv" class="text-xl font-black text-white">R$ --</p>
+                        <p id="vSolteiroAniv" class="text-xl font-black text-white">---</p>
                     </div>
                 </div>
             </div>
 
-            <div id="infoFesta">
-                <h2 id="tituloEvento" class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Confirme sua presença</h2>
+            <div id="layoutTradicional">
+                <h2 id="tituloPrincipal" class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Confirme sua presença</h2>
             </div>
         </div>
 
         <form id="formReserva" class="space-y-4">
-            <select id="listaEventos" class="w-full p-5 rounded-2xl font-bold uppercase text-xs outline-none" required>
-                <option value="">Carregando eventos...</option>
+            <div id="containerEvento">
+                <select id="listaEventos" class="w-full p-5 rounded-2xl font-bold uppercase text-xs outline-none" required>
+                    <option value="">Carregando eventos...</option>
+                </select>
+            </div>
+
+            <select id="tipoEntrada" class="w-full p-5 rounded-2xl font-bold uppercase text-xs outline-none" required>
+                <option value="">COMO VOCÊ VAI ENTRAR?</option>
+                <option value="CASAL">CASAL</option>
+                <option value="SOLTEIRO">SOLTEIRO(A)</option>
             </select>
 
             <div class="space-y-4 pt-2">
-                <input type="text" id="nomeCliente" placeholder="NOME COMPLETO DO CONVIDADO" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
+                <input type="text" id="nomeCliente" placeholder="SEU NOME COMPLETO" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
                 <input type="tel" id="telCliente" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
             </div>
 
             <button type="submit" id="btnEnviar" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-6 tracking-widest transition-transform active:scale-95">
-                Garantir Desconto na Lista
+                Confirmar na Lista
             </button>
         </form>
 
         <div id="msgSucesso" class="hidden text-center mt-8 p-6 bg-green-500/10 border border-green-500/20 rounded-3xl">
             <p class="text-green-500 font-black uppercase text-xs">✅ Nome Confirmado!</p>
-            <p class="text-zinc-400 text-[10px] mt-2 uppercase font-bold text-center leading-relaxed">O desconto será aplicado diretamente na portaria da E-CLUB.</p>
+            <p id="msgRodapeSucesso" class="text-zinc-400 text-[10px] mt-2 uppercase font-bold italic">Desconto aplicado na portaria da E-CLUB.</p>
         </div>
     </div>
+
+    <footer class="w-full max-w-md text-center space-y-6 pb-10">
+        <div class="flex justify-center gap-8 text-2xl">
+            <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="social-btn"><i class="fab fa-instagram"></i></a>
+            <a href="https://wa.me/5541995040506" target="_blank" class="social-btn"><i class="fab fa-whatsapp"></i></a>
+        </div>
+        <div class="px-6 py-4 glass rounded-3xl border-white/5">
+            <p class="text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-2 italic">Endereço</p>
+            <p class="text-[11px] font-bold text-white leading-relaxed">
+                Rua Albino Kaminski, 645 - Bairro Alto<br>Curitiba - PR
+            </p>
+        </div>
+        <p class="text-[8px] font-black uppercase tracking-[0.4em] text-zinc-700 italic">© E-CLUB SWING & DANCE 2026</p>
+    </footer>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -87,38 +111,36 @@
         const db = getFirestore(app);
 
         const params = new URLSearchParams(window.location.search);
-        const refPromoter = params.get('ref') || "DIRETO";
+        const refPromoter = params.get('ref') || "direto";
         const nomeAniv = params.get('aniv');
         const festaFixa = params.get('festa');
 
         async function inicializar() {
-            const select = document.getElementById('listaEventos');
+            const selectEventos = document.getElementById('listaEventos');
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            
-            select.innerHTML = '';
+            selectEventos.innerHTML = '';
             
             if (festaFixa && nomeAniv) {
+                // MODO ANIVERSÁRIO
                 const nomeFestaDecoded = decodeURIComponent(festaFixa);
-                document.getElementById('headerAniversario').classList.remove('hidden');
+                document.getElementById('layoutAniversario').classList.remove('hidden');
+                document.getElementById('layoutTradicional').classList.add('hidden');
                 document.getElementById('nomeAniv').innerText = decodeURIComponent(nomeAniv);
-                document.getElementById('tituloEvento').innerText = "FESTA: " + nomeFestaDecoded;
+                document.getElementById('containerEvento').classList.add('hidden');
                 
-                // BUSCAR OS VALORES DE DESCONTO NO FIREBASE
                 snap.forEach(doc => {
                     const ev = doc.data();
                     if(ev.nome === nomeFestaDecoded) {
-                        document.getElementById('vCasalAniv').innerText = "R$ " + (ev.desc_casal || "00");
-                        document.getElementById('vSolteiroAniv').innerText = "R$ " + (ev.desc_solteiro || "00");
+                        document.getElementById('vCasalAniv').innerText = "R$ " + (ev.desc_casal || "--");
+                        document.getElementById('vSolteiroAniv').innerText = "R$ " + (ev.desc_solteiro || "--");
                     }
                 });
-
-                select.classList.add('hidden');
-                select.innerHTML = `<option value="${nomeFestaDecoded}" selected>${nomeFestaDecoded}</option>`;
+                selectEventos.innerHTML = `<option value="${nomeFestaDecoded}" selected>${nomeFestaDecoded}</option>`;
             } else {
-                select.innerHTML = '<option value="">SELECIONE O EVENTO</option>';
+                // MODO TRADICIONAL
+                selectEventos.innerHTML = '<option value="">SELECIONE O EVENTO</option>';
                 snap.forEach(doc => {
-                    const ev = doc.data();
-                    select.innerHTML += `<option value="${ev.nome}">${ev.nome}</option>`;
+                    selectEventos.innerHTML += `<option value="${doc.data().nome}">${doc.data().nome}</option>`;
                 });
             }
         }
@@ -134,9 +156,10 @@
                     nome: document.getElementById('nomeCliente').value.toUpperCase().trim(),
                     telefone: document.getElementById('telCliente').value.trim(),
                     evento: document.getElementById('listaEventos').value,
+                    tipo_entrada: document.getElementById('tipoEntrada').value,
                     promoter: refPromoter.toLowerCase(),
                     aniversariante: nomeAniv ? nomeAniv.toUpperCase() : "",
-                    tipo: nomeAniv ? "ANIVERSARIO" : "NORMAL",
+                    tipo_lista: nomeAniv ? "ANIVERSARIO" : "NORMAL",
                     entrou: false,
                     data_reserva: new Date().toISOString()
                 });
@@ -145,7 +168,7 @@
                 document.getElementById('msgSucesso').classList.remove('hidden');
                 setTimeout(() => location.reload(), 5000);
             } catch (err) {
-                alert("Erro ao confirmar. Tente novamente.");
+                alert("Erro ao confirmar.");
                 btn.disabled = false;
             }
         });
