@@ -13,6 +13,8 @@
         .btn-blue { background: #3b82f6; color: #fff; font-weight: 900; transition: 0.3s; }
         .btn-blue:hover { transform: scale(1.02); background: #2563eb; }
         .festa-row { border-bottom: 1px solid #1a1a1a; }
+        .btn-action { transition: all 0.2s ease; }
+        .btn-action:active { transform: scale(0.96); }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -30,29 +32,26 @@
         <header class="flex justify-between items-center mb-6">
             <div>
                 <h1 id="boasVindas" class="text-2xl font-black text-blue-500 uppercase italic leading-none">Olá</h1>
-                <p class="text-zinc-500 text-[9px] uppercase font-black mt-1 tracking-widest">Controle de links e metas</p>
+                <p class="text-zinc-500 text-[9px] uppercase font-black mt-1 tracking-widest text-white">Controle de Metas</p>
             </div>
-            <button onclick="location.reload()" class="bg-zinc-900 p-3 rounded-xl text-zinc-500 hover:text-white transition">SAIR</button>
+            <button onclick="location.reload()" class="bg-zinc-900 p-3 px-5 rounded-xl text-zinc-500 hover:text-white transition font-black text-[10px]">SAIR</button>
         </header>
-
-        <div class="grid grid-cols-1 gap-3 mb-10">
-            <button onclick="copiarLinkReservas()" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action shadow-lg flex flex-col items-center">
-                <span>Copiar Link de Reservas</span>
-                <span class="text-[8px] opacity-60 normal-case font-bold mt-1">(Link para enviar aos clientes)</span>
-            </button>
-            <button onclick="copiarLinkPainel()" class="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl uppercase text-[9px] tracking-widest border border-zinc-700">
-                Copiar Link deste Painel
-            </button>
-        </div>
 
         <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-4 tracking-widest italic border-b border-zinc-900 pb-2">Eventos da Semana</h3>
         
-        <div id="listaEventosPromoter" class="glass-card rounded-[2rem] overflow-hidden">
+        <div id="listaEventosPromoter" class="glass-card rounded-[2rem] overflow-hidden mb-8">
             </div>
 
-        <footer class="mt-20 text-center border-t border-zinc-900 pt-10 mb-10">
+        <div class="mt-10 pt-6 border-t border-zinc-900">
+            <button onclick="copiarLinkReservas()" class="w-full bg-yellow-500 text-black font-black py-6 rounded-3xl uppercase text-[11px] tracking-widest btn-action shadow-2xl flex flex-col items-center">
+                <span>Copiar Meu Link de Reservas</span>
+                <span class="text-[8px] opacity-70 normal-case font-bold mt-1">(Link para enviar aos seus clientes)</span>
+            </button>
+        </div>
+
+        <footer class="mt-20 text-center mb-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-8 mx-auto mb-4 opacity-20">
-            <p class="text-zinc-700 text-[8px] uppercase font-black tracking-widest italic">Eclub Master Control v3.0</p>
+            <p class="text-zinc-700 text-[8px] uppercase font-black tracking-widest italic">Eclub Master Control v3.1</p>
         </footer>
     </div>
 
@@ -99,7 +98,7 @@
 
         async function carregarDados(nomePromoter) {
             const cont = document.getElementById('listaEventosPromoter');
-            cont.innerHTML = '<div class="p-10 text-center animate-pulse text-[10px] font-black uppercase text-zinc-600">Sincronizando...</div>';
+            cont.innerHTML = '<div class="p-10 text-center animate-pulse text-[10px] font-black uppercase text-zinc-600 text-white">Sincronizando...</div>';
 
             try {
                 const hoje = new Date().toLocaleDateString('en-CA');
@@ -150,13 +149,14 @@
 
         window.copiarLinkReservas = () => {
             const url = window.location.href.split('promoter.html')[0] + 'listas.html?ref=' + currentPromoter;
-            navigator.clipboard.writeText(url);
-            alert("Link de Reservas copiado!");
-        };
-
-        window.copiarLinkPainel = () => {
-            navigator.clipboard.writeText(window.location.href);
-            alert("Link do seu Painel copiado!");
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert("Seu Link de Reservas foi copiado com sucesso!");
+                });
+            } else {
+                alert("Link: " + url);
+            }
         };
     </script>
 </body>
