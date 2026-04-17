@@ -7,48 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
-        
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
-        
-        /* Estilo Vidro e Neons */
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
-        
-        /* Cards de Clientes */
-        .client-card { 
-            background: #0a0a0a; 
-            border: 1px solid #1a1a1a; 
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
-        }
-        .client-card:not(.entrou):hover { 
-            border-color: #eab308; 
-            background: #111; 
-            transform: translateX(8px);
-            box-shadow: -10px 0 20px -10px #eab308;
-        }
-        .client-card.entrou { 
-            opacity: 0.2 !important; 
-            filter: grayscale(1); 
-            pointer-events: none; 
-        }
-
-        /* Inputs Estilizados */
-        input, select { 
-            background: #000 !important; 
-            border: 1px solid #333 !important; 
-            color: white !important; 
-            outline: none; 
-            transition: 0.3s; 
-        }
-        input:focus, select:focus { 
-            border-color: #eab308 !important; 
-            box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); 
-        }
-
-        /* Badges */
+        .client-card { background: #0a0a0a; border: 1px solid #1a1a1a; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .client-card:not(.entrou):hover { border-color: #eab308; background: #111; transform: translateX(8px); box-shadow: -10px 0 20px -10px #eab308; }
+        .client-card.entrou { opacity: 0.2 !important; filter: grayscale(1); pointer-events: none; }
+        input, select { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
+        input:focus, select:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
         .badge-casal { background: #eab308; color: #000; }
         .badge-solteiro { background: #3b82f6; color: #fff; }
-        
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
@@ -58,65 +26,51 @@
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
-            
-            <h1 class="text-3xl font-black mb-8 uppercase italic tracking-tighter text-white">
-                ACESSO <span class="text-yellow-500">PORTARIA</span>
-            </h1>
+            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">ACESSO <span class="text-yellow-500">PORTARIA</span></h1>
             
             <div class="space-y-4">
-                <select id="selectUsuario" class="w-full p-5 rounded-2xl font-bold uppercase text-xs text-center appearance-none cursor-pointer">
-                    <option value="">SELECIONE O OPERADOR</option>
+                <select id="selectUsuario" class="w-full p-5 rounded-2xl font-bold uppercase text-xs text-center appearance-none cursor-pointer" onchange="verificarStatusUsuario()">
+                    <option value="">SELECIONE SEU NOME</option>
                 </select>
                 
                 <input type="password" id="senhaUsuario" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
                 
-                <button onclick="realizarLogin()" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all mt-4 hover:bg-yellow-400">
+                <button onclick="executarAcaoLogin()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all mt-4">
                     ENTRAR NO SISTEMA
                 </button>
             </div>
-            
-            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden tracking-widest">Acesso Negado: Verifique os dados</p>
+            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Primeiro acesso: Defina sua senha acima</p>
+            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden">Senha Incorreta</p>
         </div>
     </div>
 
     <div id="interfacePrincipal" class="hidden flex w-full h-full">
-        
         <aside class="w-80 h-full flex flex-col p-6 bg-black/50 border-r border-zinc-900">
             <div class="mb-10 text-center">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter leading-none">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[8px] text-zinc-500 font-bold uppercase tracking-widest mt-2 border border-zinc-800 py-1 rounded-lg italic">OPERADOR: ---</p>
+                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
+                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-2 border border-zinc-800 py-1 rounded-lg">OPERADOR: ---</p>
             </div>
-
             <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Eventos do Dia</h3>
+                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Eventos Ativos</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
-
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors tracking-tighter">Encerrar Sessão / Trocar Turno</button>
+            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair / Trocar Usuário</button>
         </aside>
 
         <main class="flex-grow flex flex-col">
             <header class="p-8 border-b border-zinc-900 bg-black/20">
                 <div class="max-w-5xl mx-auto flex gap-8 items-center">
-                    <div class="relative flex-grow">
-                        <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
-                        <input type="text" id="input-busca" oninput="processarPesquisa()" 
-                               placeholder="DIGITE O NOME OU TELEFONE PARA LOCALIZAR NA LISTA..." 
-                               class="w-full p-6 pl-14 rounded-[2rem] text-sm font-bold uppercase">
-                    </div>
+                    <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="PESQUISAR CLIENTE POR NOME OU WHATSAPP..." class="flex-grow p-6 rounded-[2rem] text-sm font-bold uppercase text-white">
                     <div class="text-right border-l border-zinc-800 pl-8">
-                        <p id="total-noite" class="text-4xl font-black italic leading-none text-green-500">0</p>
+                        <p id="total-checkins" class="text-4xl font-black italic leading-none text-green-500">0</p>
                         <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2">Check-ins realizados</p>
                     </div>
                 </div>
             </header>
-
             <section class="flex-grow p-8 overflow-y-auto bg-[#030303]">
                 <div id="container-resultados" class="max-w-5xl mx-auto grid grid-cols-1 gap-4">
-                    <div class="py-40 opacity-10 text-center">
-                        <p class="font-black uppercase italic tracking-[0.5em] text-xl text-white">Aguardando Pesquisa</p>
-                    </div>
+                    <div class="py-40 opacity-10 text-center text-white font-black uppercase italic tracking-[0.5em]">Aguardando Pesquisa</div>
                 </div>
             </section>
         </main>
@@ -124,7 +78,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -137,63 +91,72 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        let bancoClientes = []; let bancoEventos = []; let bancoUsuarios = []; let operadorLogado = "";
 
-        let bancoClientes = [];
-        let bancoEventos = [];
-        let bancoUsuarios = [];
-        let operadorLogado = "";
-
-        // 1. CARREGA OS PORTETIROS DA DASHBOARD
+        // CARREGA USUÁRIOS
         onSnapshot(collection(db, "configuracoes"), (snap) => {
             const select = document.getElementById('selectUsuario');
             bancoUsuarios = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            
-            select.innerHTML = '<option value="">SELECIONE O OPERADOR</option>';
-            bancoUsuarios.forEach(u => {
-                select.innerHTML += `<option value="${u.id}">${u.login.toUpperCase()}</option>`;
-            });
+            select.innerHTML = '<option value="">SELECIONE SEU NOME</option>';
+            bancoUsuarios.forEach(u => { select.innerHTML += `<option value="${u.id}">${u.login.toUpperCase()}</option>`; });
         });
 
-        // 2. SISTEMA DE LOGIN
-        window.realizarLogin = () => {
-            const userId = document.getElementById('selectUsuario').value;
-            const senha = document.getElementById('senhaUsuario').value;
-            const erro = document.getElementById('erroLogin');
-            
-            const userFound = bancoUsuarios.find(u => u.id === userId);
-
-            if (userFound && userFound.senha === senha) {
-                operadorLogado = userFound.login;
-                document.getElementById('operadorAtivo').innerText = "OPERADOR: " + operadorLogado.toUpperCase();
-                document.getElementById('telaLogin').classList.add('hidden');
-                document.getElementById('interfacePrincipal').classList.remove('hidden');
-                ativarEscutasPortaria();
+        // VERIFICA SE JÁ TEM SENHA
+        window.verificarStatusUsuario = () => {
+            const id = document.getElementById('selectUsuario').value;
+            const user = bancoUsuarios.find(u => u.id === id);
+            const btn = document.getElementById('btnAcao');
+            const msg = document.getElementById('msgStatus');
+            if (user && user.senha === "") {
+                btn.innerText = "CADASTRAR MINHA SENHA";
+                btn.className = btn.className.replace('bg-yellow-500', 'bg-blue-600');
+                msg.classList.remove('hidden');
             } else {
-                erro.classList.remove('hidden');
-                setTimeout(() => erro.classList.add('hidden'), 3000);
+                btn.innerText = "ENTRAR NO SISTEMA";
+                btn.className = btn.className.replace('bg-blue-600', 'bg-yellow-500');
+                msg.classList.add('hidden');
             }
         };
 
-        // 3. MONITORAMENTO EM TEMPO REAL
-        function ativarEscutasPortaria() {
+        // LOGIN OU CADASTRO
+        window.executarAcaoLogin = async () => {
+            const id = document.getElementById('selectUsuario').value;
+            const senha = document.getElementById('senhaUsuario').value.trim();
+            const user = bancoUsuarios.find(u => u.id === id);
+            if (!id || !senha) return alert("Selecione o nome e digite a senha");
+
+            if (user.senha === "") {
+                await updateDoc(doc(db, "configuracoes", id), { senha: senha });
+                alert("Senha cadastrada! Faça o login agora.");
+                location.reload();
+            } else if (user.senha === senha) {
+                operadorLogado = user.login;
+                document.getElementById('operadorAtivo').innerText = "OPERADOR: " + operadorLogado.toUpperCase();
+                document.getElementById('telaLogin').classList.add('hidden');
+                document.getElementById('interfacePrincipal').classList.remove('hidden');
+                iniciarEscutas();
+            } else {
+                document.getElementById('erroLogin').classList.remove('hidden');
+            }
+        };
+
+        function iniciarEscutas() {
             onSnapshot(collection(db, "lista_eventos"), (snap) => {
                 bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                atualizarContagemCheckins();
+                document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou).length;
                 processarPesquisa();
             });
-
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
                 bancoEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 renderizarSidebar();
             });
         }
 
-        // 4. LÓGICA DE FILTRO (JANELA DE HORÁRIO)
-        const checkJanela = (dataEv) => {
+        const validarJanela = (dataEv) => {
             const agora = new Date();
             const hr = agora.getHours();
             const hoje = new Date(agora.getTime() - agora.getTimezoneOffset() * 60000).toISOString().split('T')[0];
-            return hoje === dataEv ? (hr >= 21 || hr < 6) : false; // Libera das 21h às 06h
+            return hoje === dataEv ? (hr >= 21 || hr < 6) : false;
         };
 
         function renderizarSidebar() {
@@ -201,72 +164,35 @@
             cont.innerHTML = '';
             bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const total = bancoClientes.filter(c => c.evento === ev.nome).length;
-                const aberto = checkJanela(ev.data);
-                cont.innerHTML += `
-                    <div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'}">
-                        <p class="text-[8px] font-black text-zinc-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                        <h4 class="text-[10px] font-black uppercase text-white leading-tight mb-2 truncate">${ev.nome}</h4>
-                        <div class="flex justify-between items-end">
-                            <span class="text-[8px] font-bold text-zinc-600">${aberto ? '🔥 ATIVO' : '🔒 AGUARDANDO'}</span>
-                            <span class="text-lg font-black italic text-yellow-500 leading-none">${total}</span>
-                        </div>
-                    </div>`;
+                const aberto = validarJanela(ev.data);
+                cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'}"><p class="text-[8px] font-black text-zinc-500 uppercase">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-[10px] font-black uppercase text-white leading-tight mb-2 truncate">${ev.nome}</h4><div class="flex justify-between items-end"><span class="text-[8px] font-bold text-zinc-600">${aberto ? '🔥 ATIVO' : '🔒 AGUARDANDO'}</span><span class="text-lg font-black italic text-yellow-500 leading-none">${total}</span></div></div>`;
             });
         }
 
         window.processarPesquisa = () => {
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
+            if (busca.length < 2) { cont.innerHTML = '<div class="py-40 opacity-10 text-center text-white font-black uppercase italic tracking-[0.5em]">Aguardando Pesquisa</div>'; return; }
             
-            if (busca.length < 2) {
-                cont.innerHTML = `<div class="py-40 opacity-10 text-center text-white font-black uppercase italic tracking-[0.5em]">Aguardando Pesquisa</div>`;
-                return;
-            }
-
             const filtrados = bancoClientes.filter(c => {
                 const termo = (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
                 const evMatch = bancoEventos.find(e => e.nome === c.evento);
-                return termo && (evMatch ? checkJanela(evMatch.data) : false);
+                return termo && (evMatch ? validarJanela(evMatch.data) : false);
             });
 
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum registro encontrado para este horário</div>' : '';
-            
+            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum registro encontrado</div>' : '';
             filtrados.sort((a,b) => (a.entrou === b.entrou) ? a.nome.localeCompare(b.nome) : a.entrou ? 1 : -1).forEach(c => {
                 const typeColor = c.tipo_entrada === 'CASAL' ? 'badge-casal' : 'badge-solteiro';
                 const div = document.createElement('div');
                 div.className = `client-card p-6 rounded-[2rem] flex items-center ${c.entrou ? 'entrou' : ''}`;
-                div.innerHTML = `
-                    <div class="w-40 border-r border-zinc-900 pr-6">
-                        <span class="px-4 py-1.5 ${typeColor} text-[10px] font-black rounded-lg uppercase block text-center">${c.tipo_entrada || 'LISTA'}</span>
-                        <p class="text-[8px] font-black text-zinc-600 uppercase mt-2 text-center truncate">REF: ${c.promoter || 'DIRETO'}</p>
-                    </div>
-                    <div class="flex-grow px-10">
-                        <h3 class="text-xl font-black uppercase italic leading-none mb-1 text-white">${c.nome}</h3>
-                        <p class="text-sm font-bold text-zinc-500 font-mono tracking-tighter">${c.tel || c.telefone || '---'}</p>
-                    </div>
-                    <div class="w-48 text-right">
-                        ${c.entrou 
-                            ? '<span class="text-green-500 font-black italic uppercase text-xs tracking-widest">Confirmado ✓</span>' 
-                            : `<button onclick="confirmarCheckin('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-xs hover:bg-yellow-500 active:scale-95 transition-all">CHECK-IN</button>`}
-                    </div>`;
+                div.innerHTML = `<div class="w-40 border-r border-zinc-900 pr-6"><span class="px-4 py-1.5 ${typeColor} text-[10px] font-black rounded-lg uppercase block text-center">${c.tipo_entrada || 'LISTA'}</span><p class="text-[8px] font-black text-zinc-600 uppercase mt-2 text-center truncate">REF: ${c.promoter || 'DIRETO'}</p></div><div class="flex-grow px-10"><h3 class="text-xl font-black uppercase italic mb-1 text-white">${c.nome}</h3><p class="text-sm font-bold text-zinc-500 font-mono tracking-tighter">${c.tel || c.telefone || '---'}</p></div><div class="w-48 text-right">${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-xs tracking-widest">Confirmado ✓</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-xs hover:bg-yellow-500 transition-all">CHECK-IN</button>`}</div>`;
                 cont.appendChild(div);
             });
         };
 
         window.confirmarCheckin = async (id) => {
-            try {
-                await updateDoc(doc(db, "lista_eventos", id), { 
-                    entrou: true, 
-                    porteiro: operadorLogado,
-                    data_entrada: new Date().toISOString() 
-                });
-            } catch (e) { alert("Erro ao validar. Tente novamente."); }
+            await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
         };
-
-        function atualizarContagemCheckins() {
-            const total = bancoClientes.filter(c => c.entrou).length;
-            document.getElementById('total-noite').innerText = total;
-        }
     </script>
 </body>
 </html>
