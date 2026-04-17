@@ -22,7 +22,7 @@
         .btn-gold:hover:not(:disabled) { transform: scale(1.02); }
         .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
         .item-cliente { border-bottom: 1px solid #1a1a1a; transition: 0.3s; }
-        .bday-anim { animation: pulse 1.5s infinite; }
+        .bday-anim { animation: pulse 1.5s infinite; background: #db2777; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .tel-destaque { font-family: 'JetBrains Mono', monospace; }
         ::-webkit-scrollbar { width: 4px; }
@@ -43,7 +43,7 @@
             
             <div class="flex gap-4">
                 <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-center min-w-[120px]">
-                    <p class="text-[8px] font-black text-zinc-500 uppercase">No Evento Hoje</p>
+                    <p class="text-[8px] font-black text-zinc-500 uppercase">Check-ins Hoje</p>
                     <p id="contagemEvento" class="text-xl font-black text-green-500">0</p>
                 </div>
                 <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-center min-w-[120px]">
@@ -87,13 +87,13 @@
     </div>
 
     <div id="modalEdit" class="hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-6 text-white">
-        <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-md border-yellow-500/30 border-2 text-center text-white">
+        <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-md border-yellow-500/30 border-2 text-center">
             <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest text-white">Editar Observações</h2>
             <input type="hidden" id="editId">
-            <textarea id="editObsField" class="w-full p-4 rounded-xl input-field font-bold text-[11px] uppercase h-40 resize-none mb-6 text-white"></textarea>
+            <textarea id="editObsField" class="w-full p-4 rounded-xl input-field font-bold text-[11px] uppercase h-40 resize-none mb-6"></textarea>
             <div class="flex gap-4">
-                <button onclick="fecharModal()" class="flex-grow bg-zinc-800 py-4 rounded-xl uppercase text-[10px] font-black text-white">Cancelar</button>
-                <button onclick="salvarObs()" class="flex-grow btn-gold py-4 rounded-xl uppercase text-[10px] font-black text-white">Salvar</button>
+                <button onclick="fecharModal()" class="flex-grow bg-zinc-800 py-4 rounded-xl uppercase text-[10px] font-black">Cancelar</button>
+                <button onclick="salvarObs()" class="flex-grow btn-gold py-4 rounded-xl uppercase text-[10px] font-black">Salvar</button>
             </div>
         </div>
     </div>
@@ -117,16 +117,13 @@
 
         let clientesCache = [];
 
-        // Inicializa direto
         onSnapshot(colRef, (snap) => {
             clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             atualizarContadores();
-            render(clientesCache);
+            filtrarClientes(); // Renderiza com os filtros aplicados
         });
 
-        faxinaAutomatica();
-
-        // MÁSCARAS
+        // MASCARAS
         window.maskCPF = (i) => {
             let v = i.value.replace(/\D/g,"").substring(0,11);
             v = v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2");
@@ -151,29 +148,53 @@
 
         window.updateIdade = (v) => { document.getElementById('idadeDisplay').innerText = calcIdade(v); };
 
+        function isBday(d) { 
+            if(!d) return false; 
+            const h = new Date(); 
+            const n = new Date(d + "T12:00:00"); 
+            return h.getDate() === n.getDate() && h.getMonth() === n.getMonth(); 
+        }
+
+        function obterDataCorteEvento() { 
+            const a = new Date(); 
+            const c = new Date(); 
+            c.setHours(5, 0, 0, 0); 
+            // Se agora for antes das 5h da manhã, o "hoje" ainda é o evento que começou ontem à noite
+            if (a < c) c.setDate(c.getDate() - 1); 
+            return c; 
+        }
+
         function render(dados) {
             const container = document.getElementById('listaSolteiras');
-            container.innerHTML = dados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Nenhum registro</p>';
             const corte = obterDataCorteEvento();
+            
+            // FILTRO SOLICITADO: Ocultar quem entrou antes do corte (ontem)
+            // Mostramos apenas quem NUNCA entrou ou quem entrou HOJE (após o corte)
+            const filtrados = dados.filter(c => {
+                const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
+                return !u || u >= corte;
+            });
 
-            dados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
+            container.innerHTML = filtrados.length ? '' : '<p class="p-10 text-center text-zinc-600 font-bold uppercase text-[10px]">Nenhum registro para o turno atual</p>';
+
+            filtrados.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
                 const idade = calcIdade(c.nascimento);
                 const niver = isBday(c.nascimento);
                 const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
-                const naCasa = u && u > corte;
+                const naCasa = u && u >= corte;
                 
                 const div = document.createElement('div');
                 div.className = `item-cliente p-6 flex flex-col md:flex-row justify-between items-center gap-4 ${naCasa ? 'bg-green-500/5' : ''}`;
                 div.innerHTML = `
-                    <div class="flex-grow text-white">
-                        <div class="flex items-center flex-wrap gap-2 text-white">
+                    <div class="flex-grow">
+                        <div class="flex items-center flex-wrap gap-2">
                             <h3 class="text-lg font-black uppercase ${naCasa ? 'text-green-400' : 'text-white'}">${c.nome}</h3>
                             <span class="text-xl font-black text-green-500 tel-destaque"> — ${c.tel}</span>
-                            ${niver ? '<span class="bg-pink-600 text-white text-[9px] font-black px-2 py-1 rounded bday-anim">🎂 ANIVERSARIANTE!</span>' : ''}
+                            ${niver ? '<span class="text-white text-[9px] font-black px-2 py-1 rounded bday-anim">🎂 ANIVERSARIANTE!</span>' : ''}
                         </div>
-                        <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase text-white">🎂 ${idade} ANOS | 🆔 ${c.cpf}</p>
-                        ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase text-white">⚠️ OBS: ${c.obs}</p>` : ''}
-                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic text-white">${naCasa ? '● CONFIRMADA NA CASA' : 'ÚLTIMA VISITA: ' + (u ? u.toLocaleDateString('pt-BR') : 'NUNCA')}</p>
+                        <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase">🎂 ${idade} ANOS | 🆔 ${c.cpf}</p>
+                        ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase">⚠️ OBS: ${c.obs}</p>` : ''}
+                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">${naCasa ? '● CONFIRMADA NA CASA HOJE' : 'AGUARDANDO ENTRADA'}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700">Obs</button>
@@ -197,30 +218,31 @@
             }
 
             btn.disabled = true;
-            btn.innerText = "VERIFICANDO...";
+            btn.innerText = "SALVANDO...";
 
             try {
                 const qTel = query(colRef, where("tel", "==", tel));
                 const qCpf = query(colRef, where("cpf", "==", cpf));
                 const [snapTel, snapCpf] = await Promise.all([getDocs(qTel), getDocs(qCpf)]);
 
+                // Se já existe, apenas faz o check-in (atualiza visita)
                 if (!snapTel.empty || !snapCpf.empty) {
-                    alert("Esta solteira já está cadastrada na base!");
-                    form.reset();
-                    return;
+                    const existente = !snapTel.empty ? snapTel.docs[0] : snapCpf.docs[0];
+                    await updateDoc(doc(db, "cadastro_solteiras", existente.id), { ultima_visita: serverTimestamp() });
+                    alert("Cliente já cadastrada. Check-in realizado!");
+                } else {
+                    await addDoc(colRef, {
+                        nome, tel, cpf,
+                        nascimento: document.getElementById('nascimento').value,
+                        obs: document.getElementById('obs').value.toUpperCase(),
+                        data_cadastro: serverTimestamp(),
+                        ultima_visita: serverTimestamp() 
+                    });
+                    alert("Cadastro e entrada confirmados!");
                 }
-
-                await addDoc(colRef, {
-                    nome, tel, cpf,
-                    nascimento: document.getElementById('nascimento').value,
-                    obs: document.getElementById('obs').value.toUpperCase(),
-                    data_cadastro: serverTimestamp(),
-                    ultima_visita: serverTimestamp() 
-                });
                 
                 form.reset();
                 document.getElementById('idadeDisplay').innerText = "--";
-                alert("Cadastro e entrada confirmados!");
             } catch (err) {
                 alert("Erro ao salvar.");
             } finally {
@@ -234,30 +256,20 @@
         window.fecharModal = () => document.getElementById('modalEdit').classList.add('hidden');
         window.salvarObs = async () => { await updateDoc(doc(db, "cadastro_solteiras", document.getElementById('editId').value), { obs: document.getElementById('editObsField').value.toUpperCase() }); fecharModal(); };
 
-        async function faxinaAutomatica() {
-            const limite = new Date();
-            limite.setDate(limite.getDate() - 90);
-            const snap = await getDocs(query(colRef));
-            snap.forEach(async (d) => {
-                const data = d.data();
-                const ultima = data.ultima_visita ? data.ultima_visita.toDate() : data.data_cadastro.toDate();
-                if (ultima < limite) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
-            });
-        }
-
-        function isBday(d) { if(!d) return false; const h = new Date(); const n = new Date(d + "T12:00:00"); return h.getDate() === n.getDate() && h.getMonth() === n.getMonth(); }
-        function obterDataCorteEvento() { const a = new Date(); const c = new Date(); c.setHours(5, 0, 0, 0); if (a < c) c.setDate(c.getDate() - 1); return c; }
         function atualizarContadores() {
             const corte = obterDataCorteEvento();
-            let ev = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() > corte).length;
+            let ev = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
             document.getElementById('contagemEvento').innerText = ev;
             document.getElementById('contadorTotal').innerText = clientesCache.length;
         }
+
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase();
-            render(clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || c.tel.includes(b)));
+            const filtrados = b ? clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b) || c.tel.includes(b)) : clientesCache;
+            render(filtrados);
         };
-        setInterval(atualizarContadores, 60000);
+
+        setInterval(atualizarContadores, 30000);
     </script>
 </body>
 </html>
