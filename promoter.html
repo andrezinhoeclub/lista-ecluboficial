@@ -37,7 +37,7 @@
         <header class="flex justify-between items-center mb-10 text-white">
             <div>
                 <p class="text-blue-500 text-[10px] font-black uppercase tracking-[0.3em] mb-1">E-Club Oficial</p>
-                <h1 id="boasVindas" class="text-3xl font-black uppercase italic leading-none">---</h1>
+                <h1 id="boasVindas" class="text-3xl font-black uppercase italic leading-none text-white">---</h1>
             </div>
             <button onclick="location.reload()" class="bg-zinc-900/50 p-3 px-5 rounded-2xl text-red-500 font-black text-[10px] border border-red-500/20">Sair</button>
         </header>
@@ -55,17 +55,19 @@
 
         <div id="footerAcoes" class="fixed bottom-0 left-0 w-full p-4 md:p-6 bg-black/90 backdrop-blur-xl border-t border-white/10 z-40">
             <div class="max-w-md mx-auto flex gap-3" id="barraBotoes">
-                <button onclick="copiarLinkReservas()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">Link Geral de Reservas</button>
+                <button onclick="copiarLinkReservas()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">Link Geral</button>
             </div>
         </div>
     </div>
 
-    <div id="modalAniversario" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-6 text-white">
-        <div class="glass max-w-sm w-full p-10 rounded-[3rem] border-yellow-500/30 border text-center text-white">
+    <div id="modalAniversario" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-6 text-white text-white">
+        <div class="glass max-w-sm w-full p-10 rounded-[3rem] border-yellow-500/30 border text-center">
             <h2 class="text-2xl font-black text-yellow-500 uppercase italic mb-8">Novo Aniversário</h2>
             <div class="text-left space-y-4">
                 <select id="selectEventoAniv" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none text-xs font-bold uppercase"></select>
                 <input type="text" id="nomeAniversariante" placeholder="NOME DO ANIVERSARIANTE" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none font-black uppercase text-xs">
+                <input type="tel" id="telAniversariante" oninput="mascaraTelefone(this)" placeholder="TELEFONE DO ANIVERSARIANTE" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none font-black uppercase text-xs">
+                <p class="text-[8px] text-zinc-500 uppercase px-2">* O aniversariante será cadastrado como FREE automaticamente.</p>
             </div>
             <button onclick="gerarLinkAniversario()" id="btnGerar" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-8 transition-all active:scale-95">Gerar Link Curto</button>
             <button onclick="fecharModalAniv()" class="w-full text-zinc-600 font-black py-4 uppercase text-[9px] mt-2">Cancelar</button>
@@ -91,6 +93,15 @@
         let currentPromoter = "";
         let todasReservasGlobal = [];
         let meusLinksAniversario = [];
+
+        window.mascaraTelefone = (input) => {
+            let v = input.value.replace(/\D/g, "");
+            if (v.length > 11) v = v.substring(0, 11);
+            if (v.length > 0) v = "(" + v;
+            if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3);
+            if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
+            input.value = v;
+        };
 
         window.validarUsuario = async function() {
             const n = document.getElementById('userPromoter').value.trim().toLowerCase();
@@ -147,7 +158,7 @@
             meusLinksAniversario.forEach(link => {
                 const qtd = todasReservasGlobal.filter(r => r.evento === link.festa && (r.aniversariante === link.aniversariante || r.nome_aniversariante === link.aniversariante)).length;
                 cont.innerHTML += `
-                    <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-purple-500 mb-2">
+                    <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-purple-500 mb-2 text-white">
                         <div class="truncate mr-2">
                             <p class="text-[10px] font-black text-white uppercase">${link.aniversariante}</p>
                             <p class="text-[7px] text-zinc-500 uppercase truncate">${link.festa}</p>
@@ -171,7 +182,7 @@
                 snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                     const ind = todasReservasGlobal.filter(r => r.evento === ev.nome && r.promoter === currentPromoter).length;
                     const ger = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
-                    cont.innerHTML += `<div class="p-6 flex justify-between items-center border-b border-white/5"><div><h4 class="text-[12px] font-black uppercase text-white italic leading-tight">${ev.nome}</h4><p class="text-[9px] text-zinc-500 font-bold uppercase mt-1">${ev.data.split('-').reverse().join('/')}</p></div><div class="flex gap-4 text-right"><div><p class="text-[7px] text-blue-400 font-black uppercase mb-1">Minhas</p><p class="text-2xl font-black leading-none">${ind}</p></div><div class="border-l border-white/10 pl-4"><p class="text-[7px] text-zinc-600 font-black uppercase mb-1">Geral</p><p class="text-2xl font-black text-zinc-400 leading-none">${ger}</p></div></div></div>`;
+                    cont.innerHTML += `<div class="p-6 flex justify-between items-center border-b border-white/5 text-white"><div><h4 class="text-[12px] font-black uppercase text-white italic leading-tight">${ev.nome}</h4><p class="text-[9px] text-zinc-500 font-bold uppercase mt-1">${ev.data.split('-').reverse().join('/')}</p></div><div class="flex gap-4 text-right"><div><p class="text-[7px] text-blue-400 font-black uppercase mb-1">Minhas</p><p class="text-2xl font-black leading-none">${ind}</p></div><div class="border-l border-white/10 pl-4"><p class="text-[7px] text-zinc-600 font-black uppercase mb-1">Geral</p><p class="text-2xl font-black text-zinc-400 leading-none">${ger}</p></div></div></div>`;
                 });
             });
         }
@@ -179,48 +190,56 @@
         window.abrirModalAniv = async () => {
             const s = document.getElementById('selectEventoAniv');
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            
-            // ORDENAÇÃO CRONOLÓGICA E DATA NA FRENTE
             const eventos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data));
-            
             s.innerHTML = '';
             eventos.forEach(ev => {
-                const dataBr = ev.data.split('-').reverse().slice(0, 2).join('/'); // Formata como 17/04
+                const dataBr = ev.data.split('-').reverse().slice(0, 2).join('/');
                 s.innerHTML += `<option value="${ev.nome}">${dataBr} - ${ev.nome}</option>`;
             });
-            
             document.getElementById('modalAniversario').classList.remove('hidden');
         }
 
-        window.fecharModalAniv = () => {
-            document.getElementById('modalAniversario').classList.add('hidden');
-        }
+        window.fecharModalAniv = () => document.getElementById('modalAniversario').classList.add('hidden');
 
         window.gerarLinkAniversario = async () => {
             const festa = document.getElementById('selectEventoAniv').value;
             const nome = document.getElementById('nomeAniversariante').value.trim().toUpperCase();
-            if(!nome) return alert("Digite o nome!");
+            const tel = document.getElementById('telAniversariante').value.trim();
+            if(!nome || tel.length < 14) return alert("Preencha nome e telefone do aniversariante!");
             
             const btn = document.getElementById('btnGerar');
-            btn.disabled = true; 
-            btn.innerText = "GRAVANDO...";
+            btn.disabled = true; btn.innerText = "GRAVANDO...";
 
             try {
-                await addDoc(collection(db, "links_aniversario"), {
+                // 1. Cria o Link de Aniversário
+                const docRef = await addDoc(collection(db, "links_aniversario"), {
                     promoter: currentPromoter,
                     aniversariante: nome,
                     festa: festa,
                     data_criacao: new Date().toISOString()
                 });
+
+                // 2. Cria a Reserva FREE Automática para o aniversariante
+                await addDoc(collection(db, "lista_eventos"), {
+                    nome: nome,
+                    tel: tel,
+                    evento: festa,
+                    tipo_entrada: "ANIVERSARIANTE",
+                    promoter: currentPromoter,
+                    aniversariante: nome,
+                    tipo: "ANIVERSARIANTE_FREE",
+                    entrou: false,
+                    data_reserva: new Date().toISOString()
+                });
+
                 fecharModalAniv();
-                alert("Link criado com sucesso!");
+                alert("Link VIP Criado e Aniversariante cadastrado como FREE!");
             } catch (error) {
-                console.error(error);
                 alert("Erro ao salvar.");
             } finally {
-                btn.disabled = false; 
-                btn.innerText = "Gerar Link Curto";
+                btn.disabled = false; btn.innerText = "Gerar Link Curto";
                 document.getElementById('nomeAniversariante').value = "";
+                document.getElementById('telAniversariante').value = "";
             }
         }
 
