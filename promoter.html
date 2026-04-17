@@ -7,16 +7,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top right, #1e1b4b, #000); background-attachment: fixed; color: #fff; min-height: 100vh; }
+        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top right, #1e1b4b, #000); background-attachment: fixed; color: #fff; min-height: 100vh; margin: 0; padding: 0; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .blue-gradient { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
         .gold-gradient { background: linear-gradient(135deg, #eab308 0%, #a16207 100%); }
         .purple-gradient { background: linear-gradient(135deg, #9333ea 0%, #3b82f6 100%); }
         .text-neon-blue { color: #60a5fa; text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); font-family: 'JetBrains Mono', monospace; }
         .text-neon-zinc { color: #e4e4e7; text-shadow: 0 0 10px rgba(255, 255, 255, 0.2); font-family: 'JetBrains Mono', monospace; }
+        /* Ajuste para a rolagem não ser cortada pelos botões fixos */
+        .content-wrapper { padding-bottom: 180px; } 
     </style>
 </head>
-<body class="p-4 md:p-8 pb-40">
+<body class="p-4 md:p-8">
 
     <div id="loginPromoter" class="flex flex-col items-center justify-center min-h-[90vh]">
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-blue-500/20 border text-white">
@@ -34,7 +36,7 @@
         </div>
     </div>
 
-    <div id="painelDados" class="max-w-md mx-auto hidden">
+    <div id="painelDados" class="max-w-md mx-auto hidden content-wrapper">
         <header class="flex justify-between items-center mb-10">
             <div>
                 <p class="text-blue-500 text-[10px] font-black uppercase tracking-[0.3em] mb-1">E-Club Oficial</p>
@@ -45,16 +47,19 @@
 
         <section class="space-y-8">
             <div id="secaoMeusLinks" class="hidden">
-                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2">Links de Aniversário e Convidados</h3>
+                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2 italic">Links de Aniversário</h3>
                 <div id="listaLinksAniv" class="space-y-3"></div>
             </div>
 
-            <div id="listaEventosPromoter" class="glass rounded-[2.5rem] overflow-hidden"></div>
+            <div>
+                <h3 class="text-[10px] font-black uppercase text-zinc-500 mb-4 tracking-[0.2em] ml-2 italic">Próximos Eventos</h3>
+                <div id="listaEventosPromoter" class="glass rounded-[2.5rem] overflow-hidden"></div>
+            </div>
         </section>
 
-        <div id="footerAcoes" class="fixed bottom-0 left-0 w-full p-4 md:p-6 bg-black/80 backdrop-blur-xl border-t border-white/5 z-40">
+        <div id="footerAcoes" class="fixed bottom-0 left-0 w-full p-4 md:p-6 bg-black/90 backdrop-blur-xl border-t border-white/10 z-40">
             <div class="max-w-md mx-auto flex gap-3" id="barraBotoes">
-                <button onclick="copiarLinkReservas()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">Link Reservas</button>
+                <button onclick="copiarLinkReservas()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-transform active:scale-95">Link Reservas</button>
             </div>
         </div>
     </div>
@@ -116,16 +121,9 @@
             document.getElementById('painelDados').classList.remove('hidden');
             document.getElementById('boasVindas').innerText = currentPromoter;
 
-            // Escuta Reservas Globalmente para somar em tempo real
             onSnapshot(collection(db, "lista_eventos"), (snap) => {
                 todasReservasGlobal = snap.docs.map(d => d.data());
-                
-                // Atualiza a Seção de Links se for Aniversário
-                if(dadosUser.tipo === "aniversario") {
-                    atualizarListaLinks();
-                }
-                
-                // Atualiza a Tabela Geral de Eventos
+                if(dadosUser.tipo === "aniversario") atualizarListaLinks();
                 carregarTabelaEventos();
             });
 
@@ -133,13 +131,10 @@
                 document.getElementById('secaoMeusLinks').classList.remove('hidden');
                 const btnAniv = document.createElement('button');
                 btnAniv.onclick = abrirModalAniv;
-                btnAniv.className = "flex-grow purple-gradient text-white font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl";
+                btnAniv.className = "flex-grow purple-gradient text-white font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-transform active:scale-95";
                 btnAniv.innerHTML = "🎂 Desconto";
                 document.getElementById('barraBotoes').appendChild(btnAniv);
-                
-                onSnapshot(query(collection(db, "links_aniversario"), where("promoter", "==", currentPromoter)), () => {
-                    atualizarListaLinks();
-                });
+                onSnapshot(query(collection(db, "links_aniversario"), where("promoter", "==", currentPromoter)), () => atualizarListaLinks());
             }
         }
 
@@ -147,16 +142,9 @@
             const snapLinks = await getDocs(query(collection(db, "links_aniversario"), where("promoter", "==", currentPromoter)));
             const container = document.getElementById('listaLinksAniv');
             container.innerHTML = '';
-
             snapLinks.forEach(docLink => {
                 const link = docLink.data();
-                // Conta quantos convidados estão nesta lista específica
-                const qtdConvidados = todasReservasGlobal.filter(r => 
-                    r.tipo === "ANIVERSARIO" && 
-                    r.aniversariante === link.aniversariante && 
-                    r.evento === link.festa
-                ).length;
-
+                const qtdConvidados = todasReservasGlobal.filter(r => r.tipo === "ANIVERSARIO" && r.aniversariante === link.aniversariante && r.evento === link.festa).length;
                 container.innerHTML += `
                     <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-purple-500">
                         <div class="truncate mr-2">
@@ -178,26 +166,22 @@
             const snapEventos = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             const cont = document.getElementById('listaEventosPromoter');
             cont.innerHTML = '';
+            
+            // Ordena por data
+            const eventos = snapEventos.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data));
 
-            snapEventos.forEach(docEv => {
-                const ev = docEv.data();
-                // SOMA: Reservas Diretas + Reservas de Links de Aniversário vinculados a ele
-                const ind = todasReservasGlobal.filter(r => 
-                    r.evento === ev.nome && 
-                    r.promoter.toLowerCase() === currentPromoter
-                ).length;
-
+            eventos.forEach(ev => {
+                const ind = todasReservasGlobal.filter(r => r.evento === ev.nome && r.promoter.toLowerCase() === currentPromoter).length;
                 const ger = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
-
                 cont.innerHTML += `
                     <div class="p-6 flex justify-between items-center border-b border-white/5">
                         <div>
-                            <h4 class="text-[12px] font-black uppercase text-white italic">${ev.nome}</h4>
-                            <p class="text-[9px] text-zinc-500 font-bold uppercase">${ev.data.split('-').reverse().join('/')}</p>
+                            <h4 class="text-[12px] font-black uppercase text-white italic leading-tight">${ev.nome}</h4>
+                            <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1">${ev.data.split('-').reverse().join('/')}</p>
                         </div>
                         <div class="flex gap-4 text-right">
                             <div>
-                                <p class="text-[7px] text-blue-400 font-black uppercase mb-1">Total (Meta)</p>
+                                <p class="text-[7px] text-blue-400 font-black uppercase mb-1">Minhas</p>
                                 <p class="text-2xl font-black text-neon-blue leading-none">${ind}</p>
                             </div>
                             <div class="border-l border-white/10 pl-4">
@@ -209,7 +193,6 @@
             });
         }
 
-        // Funções auxiliares (Modal, Gerar Link, Copiar) permanecem as mesmas
         window.abrirModalAniv = async () => {
             const select = document.getElementById('selectEventoAniv');
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
