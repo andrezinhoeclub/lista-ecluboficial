@@ -50,20 +50,25 @@
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center fade-in border-blue-500/20 border">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 text-white uppercase italic tracking-tighter">Promoter <span class="text-blue-500">Access</span></h1>
-            <input type="text" id="userPromoter" placeholder="USUÁRIO DASHBOARD" 
-                class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-blue-500 text-center font-bold text-white uppercase text-xs tracking-widest transition-all mb-4">
+            
+            <div class="relative mb-4">
+                <input type="text" id="userPromoter" placeholder="USUÁRIO DASHBOARD" 
+                    class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-blue-500 text-center font-bold text-white uppercase text-xs tracking-widest transition-all">
+            </div>
+
             <button onclick="acessarPainel()" id="btnAcessar" 
                 class="w-full blue-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl btn-press tracking-widest">
                 Validar Acesso
             </button>
-            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-4 hidden">Usuário não localizado na Dashboard</p>
+            
+            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-4 hidden">Acesso Negado: Usuário não cadastrado</p>
         </div>
     </div>
 
     <div id="painelDados" class="max-w-md mx-auto hidden fade-in">
         <header class="flex justify-between items-center mb-10">
             <div>
-                <p class="text-blue-500 text-[10px] font-black uppercase tracking-[0.3em] mb-1">Dashboard Oficial</p>
+                <p class="text-blue-500 text-[10px] font-black uppercase tracking-[0.3em] mb-1 text-white">Dashboard Oficial</p>
                 <h1 id="boasVindas" class="text-3xl font-black text-white uppercase italic leading-none">Olá!</h1>
             </div>
             <button onclick="location.reload()" class="bg-zinc-900/50 p-3 px-5 rounded-2xl text-red-500 hover:bg-red-500/10 transition font-black text-[10px] uppercase border border-red-500/20">
@@ -73,7 +78,7 @@
 
         <section class="space-y-6">
             <div class="flex items-center justify-between px-2">
-                <h3 class="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em]">Meus Números</h3>
+                <h3 class="text-zinc-500 text-[11px] font-black uppercase tracking-[0.2em]">Desempenho da Semana</h3>
                 <div class="h-[1px] flex-grow mx-4 bg-zinc-800"></div>
             </div>
             
@@ -124,14 +129,14 @@
             if(!nomeInput) return;
             erro.classList.add('hidden');
             btn.disabled = true;
-            btn.innerText = "VALIDANDO...";
+            btn.innerText = "VERIFICANDO...";
 
             try {
-                // VERIFICAÇÃO RIGOROSA: Busca pelo ID do documento na coleção 'promoters'
+                // CONSULTA BLINDADA: Busca especificamente na coleção 'promoters' onde o ID é o nome digitado
                 const docRef = doc(db, "promoters", nomeInput);
                 const docSnap = await getDoc(docRef);
 
-                // Só entra se o documento existir E tiver dados (se foi excluído na dash, o snap vira falso)
+                // O Firebase só considera que o documento existe se ele estiver na lista da Dashboard
                 if(docSnap.exists()) {
                     currentPromoter = nomeInput;
                     document.getElementById('loginPromoter').classList.add('hidden');
@@ -139,14 +144,16 @@
                     document.getElementById('boasVindas').innerText = nomeInput;
                     carregarDados(nomeInput);
                 } else {
+                    // Bloqueio Total
                     erro.classList.remove('hidden');
+                    document.getElementById('userPromoter').value = "";
                     btn.disabled = false;
                     btn.innerText = "Validar Acesso";
                 }
             } catch(e) { 
-                console.error(e);
-                alert("Erro ao validar. Tente novamente.");
+                alert("Erro de conexão com o banco de dados.");
                 btn.disabled = false;
+                btn.innerText = "Validar Acesso";
             }
         }
 
@@ -171,7 +178,6 @@
 
                 cont.innerHTML = '';
                 eventosFiltrados.forEach((ev, idx) => {
-                    // Filtra reservas pelo nome exato do promoter cadastrado
                     const individual = todasReservas.filter(r => r.evento === ev.nome && r.promoter.toLowerCase() === nomePromoter).length;
                     const geral = todasReservas.filter(r => r.evento === ev.nome).length;
                     const data = ev.data.split('-').reverse().join('/');
@@ -201,7 +207,7 @@
         window.copiarLinkReservas = () => {
             const url = window.location.href.split('promoter.html')[0] + 'listas.html?ref=' + currentPromoter;
             navigator.clipboard.writeText(url).then(() => {
-                alert("Seu Link de Reservas foi copiado!");
+                alert("Link de Reservas copiado!");
             });
         };
     </script>
