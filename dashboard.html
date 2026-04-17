@@ -3,22 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB MASTER | Command Center</title>
+    <title>E-CLUB MASTER | Reports & Data</title>
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e4e4e7; }
         .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2rem; }
-        .stat-card { transition: transform 0.3s ease; border-left: 4px solid #eab308; }
         .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
         .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
-        input, select { background-color: #09090b !important; border: 1px solid #27272a !important; color: #ffffff !important; transition: 0.3s; }
-        .event-row { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
-        .event-row:hover { background: rgba(255,255,255,0.05); border-color: #eab308; }
-        .ranking-card { background: linear-gradient(145deg, #0f0f10 0%, #050505 100%); border: 1px solid #1a1a1c; }
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
+        
+        /* Tabela de Eventos Modernos */
+        .row-event { background: linear-gradient(90deg, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.03) 100%); border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .row-event:hover { border-color: #eab308; background: rgba(234, 179, 8, 0.05); }
+        
+        .badge-count { background: #111; border: 1px solid #27272a; padding: 2px 8px; border-radius: 6px; font-family: monospace; }
+        
+        /* Pódio */
+        .rank-1 { border-left: 4px solid #eab308; background: linear-gradient(90deg, rgba(234, 179, 8, 0.1) 0%, transparent 100%); }
+        .rank-2 { border-left: 4px solid #a1a1aa; }
+        .rank-3 { border-left: 4px solid #92400e; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #eab308; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -29,47 +37,55 @@
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 w-auto">
                 <div>
                     <h1 class="text-2xl font-black uppercase italic tracking-tighter text-yellow-500 leading-none">Command Center</h1>
-                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 italic text-white">E-CLUB MANAGEMENT</p>
+                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 italic">Reports & Analytics</p>
                 </div>
             </div>
             <nav class="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800">
                 <button onclick="trocarAba('aba-relatorios', this)" class="btn-menu active px-6 py-2.5 rounded-xl text-[10px] uppercase font-black">Relatórios</button>
                 <button onclick="trocarAba('aba-festas', this)" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black">Eventos</button>
-                <button onclick="trocarAba('aba-equipe', this)" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black text-white">Equipe & Acesso</button>
+                <button onclick="trocarAba('aba-equipe', this)" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black">Equipe</button>
             </nav>
         </header>
 
         <section id="aba-relatorios" class="space-y-8">
-            <div class="glass-card p-8">
-                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Agenda e Performance de Eventos</h2>
-                <div class="space-y-3" id="lista-performance-eventos">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <div class="glass-card p-8">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-xs font-black uppercase text-yellow-500 italic tracking-widest">Agenda de Performance</h2>
+                        <span class="text-[9px] font-bold text-zinc-500 uppercase">Ordenado por Data</span>
                     </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-1 glass-card p-8">
-                    <h2 class="text-xs font-black uppercase mb-6 border-b border-zinc-800 pb-4 text-yellow-500 italic">Pódio de Performance</h2>
-                    <div id="lista-ranking-podio" class="space-y-4">
+                    <div id="container-agenda-performance" class="space-y-3">
                         </div>
                 </div>
 
-                <div class="lg:col-span-2 glass-card p-8">
-                    <h2 class="text-xs font-black uppercase mb-6 border-b border-zinc-800 pb-4 text-blue-500 italic text-white">Últimos Check-ins</h2>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-[11px] font-bold uppercase">
-                            <thead class="text-zinc-500 border-b border-zinc-800 text-white">
-                                <tr>
-                                    <th class="py-3">Nome</th>
-                                    <th class="py-3">Evento</th>
-                                    <th class="py-3">Promoter</th>
-                                    <th class="py-3">Check-in</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabela-monitor-real" class="divide-y divide-zinc-900 text-white"></tbody>
-                        </table>
+                <div class="glass-card p-8">
+                    <h2 class="text-xs font-black uppercase text-yellow-500 italic tracking-widest mb-8">Ranking Geral Promoters</h2>
+                    <div id="container-ranking-promoters" class="space-y-3">
+                        </div>
+                </div>
+
+            </div>
+
+            <div class="glass-card p-8 border-t-4 border-t-green-600">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                    <div>
+                        <h2 class="text-xs font-black uppercase text-green-500 italic tracking-widest">Extração de Dados (Excel)</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1">Selecione para gerar a lista de cópia rápida</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <select id="select-export-evento" class="bg-black border border-zinc-800 p-2 rounded-xl text-[10px] font-black uppercase outline-none focus:border-green-500"></select>
+                        <button onclick="gerarListaExcel()" class="bg-green-600 text-black font-black px-6 py-2 rounded-xl text-[10px] uppercase hover:bg-green-500 transition-colors">Gerar Lista</button>
                     </div>
                 </div>
+                
+                <div class="relative">
+                    <textarea id="output-excel" readonly class="w-full h-48 bg-black/50 border border-zinc-900 rounded-2xl p-4 text-[11px] font-mono text-zinc-400 outline-none focus:border-green-800" placeholder="A lista de nomes e telefones aparecerá aqui..."></textarea>
+                    <button onclick="copiarOutput()" class="absolute top-4 right-4 bg-zinc-800 text-[9px] font-black px-3 py-1 rounded-md uppercase hover:bg-white hover:text-black transition-all">Copiar Tudo</button>
+                </div>
             </div>
+
         </section>
 
         <section id="aba-festas" class="hidden space-y-8">
@@ -120,7 +136,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -143,15 +159,18 @@
             b.classList.add('active'); 
         };
 
-        // ESCUTAS FIREBASE
+        // SNAPSHOTS
         onSnapshot(query(collection(db, "lista_eventos"), orderBy("data_reserva", "desc")), snap => { 
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()})); 
             renderizarRelatorios(); 
         });
         onSnapshot(collection(db, "eventos"), snap => { 
-            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(e => e.ativo); 
-            renderizarEventos(); 
+            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()})); 
             renderizarRelatorios();
+            renderizarEventos(); 
+            // Atualiza select de export
+            const sel = document.getElementById('select-export-evento');
+            sel.innerHTML = '<option value="">Selecione o Evento</option>' + dadosEventos.filter(e => e.ativo).map(e => `<option value="${e.nome}">${e.nome}</option>`).join('');
         });
         onSnapshot(collection(db, "promoters"), snap => { 
             dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
@@ -162,62 +181,92 @@
         });
 
         function renderizarRelatorios() {
-            // 1. PERFORMANCE DE EVENTOS (ORDEM CRONOLÓGICA)
-            const eventosOrdenados = [...dadosEventos].sort((a,b) => new Date(a.data) - new Date(b.data));
-            document.getElementById('lista-performance-eventos').innerHTML = eventosOrdenados.map(ev => {
-                const res = dadosReservas.filter(r => r.evento === ev.nome);
-                const ent = res.filter(r => r.entrou).length;
+            // 1. AGENDA CRONOLÓGICA (Menor para Maior)
+            const agendaCont = document.getElementById('container-agenda-performance');
+            const eventosFiltrados = dadosEventos.filter(e => e.ativo).sort((a,b) => new Date(a.data) - new Date(b.data));
+            
+            agendaCont.innerHTML = eventosFiltrados.map(ev => {
+                const totalR = dadosReservas.filter(r => r.evento === ev.nome).length;
+                const totalC = dadosReservas.filter(r => r.evento === ev.nome && r.entrou).length;
                 return `
-                <div class="event-row p-5 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div class="flex-grow">
+                <div class="row-event p-4 rounded-2xl flex justify-between items-center">
+                    <div>
                         <p class="text-[8px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                        <h4 class="text-sm font-black uppercase text-white">${ev.nome}</h4>
+                        <h4 class="text-xs font-black uppercase text-white">${ev.nome}</h4>
                     </div>
-                    <div class="flex gap-10">
-                        <div class="text-center"><p class="text-[8px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-xl font-black text-white">${res.length}</p></div>
-                        <div class="text-center"><p class="text-[8px] text-zinc-500 uppercase font-black">Check-ins</p><p class="text-xl font-black text-green-500">${ent}</p></div>
-                        <div class="text-center"><p class="text-[8px] text-zinc-500 uppercase font-black">Conv.</p><p class="text-xl font-black text-blue-500">${res.length > 0 ? Math.round((ent/res.length)*100) : 0}%</p></div>
+                    <div class="flex gap-6 text-right">
+                        <div><p class="text-[7px] text-zinc-500 uppercase font-bold">Reservas</p><p class="text-sm font-black text-white">${totalR}</p></div>
+                        <div><p class="text-[7px] text-zinc-500 uppercase font-bold">Check-ins</p><p class="text-sm font-black text-green-500">${totalC}</p></div>
                     </div>
                 </div>`;
             }).join('');
 
-            // 2. RANKING PROMOTERS (PODIO)
-            const statsP = {};
-            dadosReservas.forEach(r => { 
-                const n = (r.promoter || "DIRETO").trim().toUpperCase(); 
-                if(!statsP[n]) statsP[n] = { res: 0, ent: 0 };
-                statsP[n].res++;
-                if(r.entrou) statsP[n].ent++;
+            // 2. RANKING PROMOTERS
+            const rankingCont = document.getElementById('container-ranking-promoters');
+            const stats = {};
+            dadosReservas.forEach(r => {
+                const p = (r.promoter || 'DIRETO').toUpperCase();
+                if(!stats[p]) stats[p] = { res: 0, chk: 0 };
+                stats[p].res++;
+                if(r.entrou) stats[p].chk++;
             });
-            
-            const trofeus = ["🥇", "🥈", "🥉"];
-            document.getElementById('lista-ranking-podio').innerHTML = Object.entries(statsP)
-                .sort((a,b)=>b[1].res - a[1].res)
-                .map(([n, s], i) => `
-                <div class="ranking-card p-4 rounded-2xl flex justify-between items-center ${i < 3 ? 'border-l-2 border-yellow-500' : ''}">
-                    <div class="flex items-center gap-3">
-                        <span class="text-lg">${trofeus[i] || '👤'}</span>
-                        <div><p class="text-[10px] font-black text-white uppercase">${n}</p><p class="text-[8px] text-zinc-500 uppercase">Check-ins: ${s.ent}</p></div>
-                    </div>
-                    <p class="text-xl font-black text-yellow-500">${s.res}</p>
-                </div>`).join('');
 
-            // 3. MONITOR REALTIME
-            document.getElementById('tabela-monitor-real').innerHTML = dadosReservas.slice(0, 10).map(r => `
-                <tr>
-                    <td class="py-4 text-[10px] font-black">${r.nome}</td>
-                    <td class="py-4 text-[9px] text-zinc-500">${r.evento.slice(0, 20)}...</td>
-                    <td class="py-4 text-blue-500 text-[9px]">${r.promoter || 'DIRETO'}</td>
-                    <td class="py-4">${r.entrou ? '✅' : '⏳'}</td>
-                </tr>`).join('');
+            const rankingSort = Object.entries(stats).sort((a,b) => b[1].res - a[1].res);
+            
+            rankingCont.innerHTML = rankingSort.map(([name, data], i) => {
+                let medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '👤';
+                let rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+                return `
+                <div class="p-4 rounded-xl row-event ${rankClass} flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <span class="text-lg">${medal}</span>
+                        <div>
+                            <p class="text-[10px] font-black text-white uppercase">${name}</p>
+                            <p class="text-[7px] text-zinc-500 font-bold uppercase italic">Check-ins: ${data.chk}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[7px] text-zinc-500 uppercase font-bold">Total Reservas</p>
+                        <p class="text-lg font-black text-yellow-500">${data.res}</p>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
-        // CRUD E RENDERERS (MANTIDOS)
+        window.gerarListaExcel = () => {
+            const eventoNome = document.getElementById('select-export-evento').value;
+            if(!eventoNome) return alert("Selecione um evento!");
+            
+            // Filtra quem FEZ CHECKIN no evento selecionado
+            const filtrados = dadosReservas.filter(r => r.evento === eventoNome && r.entrou);
+            
+            if(filtrados.length === 0) {
+                document.getElementById('output-excel').value = "Nenhum check-in realizado para este evento.";
+                return;
+            }
+
+            // Formata: NOME [TAB] TELEFONE [TAB] PROMOTER
+            let output = "NOME\tTELEFONE\tPROMOTER\n";
+            filtrados.forEach(r => {
+                output += `${r.nome}\t${r.telefone || r.tel || '---'}\t${(r.promoter || 'DIRETO').toUpperCase()}\n`;
+            });
+
+            document.getElementById('output-excel').value = output;
+        };
+
+        window.copiarOutput = () => {
+            const area = document.getElementById('output-excel');
+            area.select();
+            document.execCommand('copy');
+            alert("Lista copiada! Agora é só colar no Excel.");
+        };
+
+        // MANTENDO FUNÇÕES DE EVENTOS E EQUIPE ORIGINAIS
         function renderizarEventos() {
-            document.getElementById('grid-eventos-ativos').innerHTML = dadosEventos.map(ev => `
+            document.getElementById('grid-eventos-ativos').innerHTML = dadosEventos.filter(e => e.ativo).map(ev => `
                 <div class="event-card p-6 rounded-[2rem]" onclick="prepararEdicaoEvento('${ev.id}')">
                     <p class="text-[10px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                    <h4 class="text-lg font-black text-white mt-1">${ev.nome}</h4>
+                    <h4 class="text-lg font-black text-white mt-1 uppercase">${ev.nome}</h4>
                     <button onclick="event.stopPropagation(); removerItem('eventos', '${ev.id}')" class="text-red-500 font-black mt-4 text-[10px]">REMOVER</button>
                 </div>`).join('');
         }
@@ -261,8 +310,6 @@
             e.target.reset();
         });
 
-        window.removerItem = async (c, i) => { if(confirm("Remover?")) await deleteDoc(doc(db, c, i)); };
-        
         window.prepararEdicaoPromoter = (id) => {
             const p = dadosPromoters.find(item => item.id === id);
             document.getElementById('edit_promoter_id').value = p.id;
@@ -284,6 +331,9 @@
             document.getElementById('url_banner').value = ev.imagem || "";
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
+
+        window.removerItem = async (c, i) => { if(confirm("Remover?")) await deleteDoc(doc(db, c, i)); };
+
     </script>
 </body>
 </html>
