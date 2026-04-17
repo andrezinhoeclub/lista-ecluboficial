@@ -74,6 +74,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        // ADICIONADO addDoc NO IMPORT ABAIXO PARA NÃO TRAVAR O BOTÃO
         import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -94,6 +95,7 @@
 
         window.validarUsuario = async function() {
             const n = document.getElementById('userPromoter').value.trim().toLowerCase();
+            if(!n) return;
             const snap = await getDoc(doc(db, "promoters", n));
             if(snap.exists()) {
                 currentPromoter = n;
@@ -190,16 +192,24 @@
             const btn = document.getElementById('btnGerar');
             btn.disabled = true; btn.innerText = "GERANDO...";
 
-            const docRef = await addDoc(collection(db, "links_aniversario"), {
-                promoter: currentPromoter,
-                aniversariante: nome,
-                festa: festa,
-                data_criacao: new Date().toISOString()
-            });
+            try {
+                // AGORA COM addDoc IMPORTADO CORRETAMENTE
+                await addDoc(collection(db, "links_aniversario"), {
+                    promoter: currentPromoter,
+                    aniversariante: nome,
+                    festa: festa,
+                    data_criacao: new Date().toISOString()
+                });
 
-            fecharModalAniv();
-            btn.disabled = false; btn.innerText = "Gerar Link Curto";
-            alert("Link criado! Use o botão COPIAR na lista.");
+                fecharModalAniv();
+                btn.disabled = false; btn.innerText = "Gerar Link Curto";
+                document.getElementById('nomeAniversariante').value = ""; // Limpa o campo
+                alert("Link criado! Use o botão COPIAR na lista.");
+            } catch (error) {
+                console.error("Erro ao gerar link:", error);
+                alert("Erro ao salvar no banco de dados.");
+                btn.disabled = false; btn.innerText = "Gerar Link Curto";
+            }
         }
 
         window.copiarLinkCurto = (id) => {
