@@ -7,88 +7,65 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
-        
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
-        
         .sidebar { border-right: 1px solid #1a1a1a; }
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
-        
-        .client-card { 
-            background: #0a0a0a; 
-            border: 1px solid #1a1a1a; 
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
-            cursor: pointer;
-        }
-
-        .client-card:not(.entrou):hover { 
-            border-color: #eab308; 
-            background: #111; 
-            transform: translateX(8px);
-            box-shadow: -10px 0 20px -10px #eab308;
-        }
-        
-        .client-card.entrou { 
-            opacity: 0.20 !important;
-            filter: grayscale(1);
-            transform: scale(0.97);
-            pointer-events: none;
-            border-color: #27272a;
-            background: #050505;
-        }
-        
+        .client-card { background: #0a0a0a; border: 1px solid #1a1a1a; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .client-card:not(.entrou):hover { border-color: #eab308; background: #111; transform: translateX(8px); box-shadow: -10px 0 20px -10px #eab308; }
+        .client-card.entrou { opacity: 0.20 !important; filter: grayscale(1); transform: scale(0.97); pointer-events: none; border-color: #27272a; background: #050505; }
         .nome-cliente { font-size: 1.5rem; line-height: 1; letter-spacing: -0.02em; }
         .tel-cliente { font-size: 1.1rem; color: #a1a1aa; font-family: 'JetBrains Mono', monospace; }
         .badge-perfil { font-size: 14px; font-weight: 900; padding: 4px 12px; border-radius: 8px; text-transform: uppercase; letter-spacing: 1px; }
-        
         .badge-casal { background: #eab308; color: #000; }
         .badge-solteiro { background: #3b82f6; color: #fff; }
-
         input:focus { border-color: #eab308 !important; outline: none; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
-        
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-in { animation: fadeIn 0.3s ease forwards; }
+        .login-screen { background: radial-gradient(circle at center, #111 0%, #000 100%); }
     </style>
 </head>
 <body class="flex h-screen">
 
-    <aside class="sidebar w-80 h-full flex flex-col p-6 bg-black/50">
+    <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-screen">
+        <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
+            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter">Acesso <span class="text-yellow-500">Portaria</span></h1>
+            <input type="text" id="userPortaria" placeholder="USUÁRIO" class="w-full bg-black border border-zinc-800 p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-4">
+            <input type="password" id="passPortaria" placeholder="SENHA" class="w-full bg-black border border-zinc-800 p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-6 text-white">
+            <button onclick="realizarLogin()" id="btnLogin" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest">Entrar no Sistema</button>
+            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-4 hidden">Usuário ou Senha inválidos</p>
+        </div>
+    </div>
+
+    <aside class="sidebar w-80 h-full flex flex-col p-6 bg-black/50 hidden" id="asideMenu">
         <div class="mb-10 text-white text-center">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12 mx-auto mb-2">
             <h2 class="text-yellow-500 font-black italic uppercase text-xl tracking-tighter">E-Club</h2>
-            <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Controle de Portaria</p>
+            <p id="operadorNome" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Operador: ---</p>
         </div>
         <div class="flex-grow overflow-y-auto text-white">
             <h3 class="text-zinc-500 text-[10px] font-black uppercase mb-6 tracking-widest">Eventos Ativos</h3>
             <div id="lista-eventos-sidebar" class="space-y-4"></div>
         </div>
+        <button onclick="location.reload()" class="mt-4 text-red-500 text-[10px] font-black uppercase tracking-widest">Sair do Sistema</button>
     </aside>
 
-    <main class="flex-grow flex flex-col">
+    <main class="flex-grow flex flex-col hidden" id="mainContent">
         <header class="p-8 border-b border-zinc-900 text-white">
             <div class="max-w-5xl mx-auto flex gap-6 items-center">
                 <div class="relative flex-grow">
                     <span class="absolute left-5 top-5 opacity-30 text-xl">🔍</span>
-                    <input type="text" id="input-busca" 
-                           placeholder="PESQUISAR CLIENTE POR NOME OU WHATSAPP..." 
-                           class="w-full p-6 pl-14 rounded-3xl bg-zinc-900 border border-zinc-800 text-sm font-bold uppercase text-white transition-all"
-                           oninput="processarPesquisa()">
+                    <input type="text" id="input-busca" placeholder="PESQUISAR CLIENTE POR NOME OU WHATSAPP..." class="w-full p-6 pl-14 rounded-3xl bg-zinc-900 border border-zinc-800 text-sm font-bold uppercase text-white" oninput="processarPesquisa()">
                 </div>
                 <div class="text-right">
                     <p id="total-confirmado" class="text-3xl font-black italic leading-none text-green-500">0</p>
-                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-1">Check-ins Noite Atual</p>
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-1">Check-ins Na Janela</p>
                 </div>
             </div>
         </header>
 
         <section class="flex-grow p-8 overflow-y-auto">
             <div id="container-resultados" class="max-w-5xl mx-auto grid grid-cols-1 gap-4">
-                <div id="placeholder-busca" class="h-full flex flex-col items-center justify-center py-40">
-                    <p class="font-black uppercase italic tracking-widest text-sm text-white opacity-20 text-center">
-                        Portaria Liberada (21h às 05h)<br>Aguardando pesquisa...
-                    </p>
+                <div class="h-full flex flex-col items-center justify-center py-40 opacity-20">
+                    <p class="font-black uppercase italic tracking-widest text-sm text-white text-center">Aguardando pesquisa...</p>
                 </div>
             </div>
         </section>
@@ -96,7 +73,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -112,44 +89,62 @@
 
         let bancoClientes = [];
         let bancoEventos = [];
+        let operadorAtual = "";
 
-        // --- VALIDAÇÃO DE JANELA (21H às 05H) ---
+        // --- SISTEMA DE LOGIN ---
+        window.realizarLogin = async function() {
+            const user = document.getElementById('userPortaria').value.trim().toLowerCase();
+            const pass = document.getElementById('passPortaria').value.trim();
+            const erro = document.getElementById('erroLogin');
+
+            if(!user || !pass) return;
+
+            try {
+                const docRef = doc(db, "configuracoes", user);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists() && docSnap.data().senha === pass) {
+                    operadorAtual = user;
+                    document.getElementById('operadorNome').innerText = "Operador: " + user.toUpperCase();
+                    document.getElementById('telaLogin').classList.add('hidden');
+                    document.getElementById('asideMenu').classList.remove('hidden');
+                    document.getElementById('mainContent').classList.remove('hidden');
+                    iniciarMonitoramento();
+                } else {
+                    erro.classList.remove('hidden');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function iniciarMonitoramento() {
+            onSnapshot(collection(db, "lista_eventos"), (snap) => {
+                bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                atualizarContadorOperacional();
+                renderizarSidebar();
+                processarPesquisa();
+            });
+
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
+                bancoEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                renderizarSidebar();
+                atualizarContadorOperacional();
+            });
+        }
+
         const validarJanelaAcesso = (dataEvento) => {
             const agora = new Date();
             const offset = agora.getTimezoneOffset() * 60000;
             const dataHoje = new Date(agora.getTime() - offset).toISOString().split('T')[0];
             const hora = agora.getHours();
 
-            // Se for o dia do evento, libera a partir das 21h ou se for madrugada (antes das 5h)
-            if (dataHoje === dataEvento) {
-                return hora >= 21 || hora < 5;
-            }
-
-            // Se for o dia seguinte ao evento, libera apenas até as 5h da manhã
+            if (dataHoje === dataEvento) return hora >= 21 || hora < 5;
             const dataEventoObj = new Date(dataEvento + 'T12:00:00');
             const amanha = new Date(dataEventoObj);
             amanha.setDate(amanha.getDate() + 1);
             const dataAmanha = amanha.toISOString().split('T')[0];
-
-            if (dataHoje === dataAmanha) {
-                return hora < 5;
-            }
-
+            if (dataHoje === dataAmanha) return hora < 5;
             return false;
         };
-
-        onSnapshot(collection(db, "lista_eventos"), (snap) => {
-            bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            atualizarContadorOperacional();
-            renderizarSidebar();
-            processarPesquisa(); // Atualiza a tela se houver busca ativa
-        });
-
-        onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
-            bancoEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderizarSidebar();
-            atualizarContadorOperacional();
-        });
 
         function atualizarContadorOperacional() {
             const confirmadosAgora = bancoClientes.filter(c => {
@@ -157,7 +152,6 @@
                 const estaNaJanela = eventoRelacionado ? validarJanelaAcesso(eventoRelacionado.data) : false;
                 return c.entrou === true && estaNaJanela;
             }).length;
-
             document.getElementById('total-confirmado').innerText = confirmadosAgora;
         }
 
@@ -168,7 +162,6 @@
             eventosOrdenados.forEach(ev => {
                 const totalReservas = bancoClientes.filter(c => c.evento === ev.nome).length;
                 const aberto = validarJanelaAcesso(ev.data);
-                
                 container.innerHTML += `
                     <div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'}">
                         <p class="text-[8px] font-black text-zinc-500 uppercase mb-1 text-white">${ev.data.split('-').reverse().join('/')}</p>
@@ -184,53 +177,42 @@
         window.processarPesquisa = () => {
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const container = document.getElementById('container-resultados');
-            
             if (busca.length < 2) {
-                container.innerHTML = `
-                    <div class="py-40 opacity-20 text-white font-black uppercase italic text-sm text-center">
-                        Aguardando pesquisa...<br>
-                        <span class="text-[10px] lowercase tracking-normal font-normal">busque por nome ou parte do telefone</span>
-                    </div>`;
+                container.innerHTML = `<div class="py-40 opacity-20 text-white font-black uppercase italic text-sm text-center text-white">Aguardando pesquisa...</div>`;
                 return;
             }
-
             const filtrados = bancoClientes.filter(c => {
                 const bateBusca = (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
                 const eventoRelacionado = bancoEventos.find(e => e.nome === c.evento);
                 const estaNaHora = eventoRelacionado ? validarJanelaAcesso(eventoRelacionado.data) : false;
                 return bateBusca && estaNaHora;
             });
-
             renderizarResultados(filtrados);
         };
 
         function renderizarResultados(lista) {
             const container = document.getElementById('container-resultados');
             if (lista.length === 0) {
-                container.innerHTML = '<p class="py-40 font-black uppercase text-zinc-800 italic text-white text-center text-sm">Nenhum cliente disponível para check-in neste horário.</p>';
+                container.innerHTML = '<p class="py-40 font-black uppercase text-zinc-800 italic text-white text-center text-sm">Nenhum cliente disponível no momento.</p>';
                 return;
             }
             container.innerHTML = '';
             lista.sort((a,b) => (a.entrou === b.entrou) ? a.nome.localeCompare(b.nome) : a.entrou ? 1 : -1).forEach(c => {
-                const badgeColor = c.tipo === 'casal' ? 'badge-casal' : 'badge-solteiro';
+                const badgeColor = c.tipo_entrada === 'CASAL' ? 'badge-casal' : 'badge-solteiro';
                 const card = document.createElement('div');
-                card.className = `client-card p-6 rounded-[2rem] flex items-center animate-in ${c.entrou ? 'entrou' : ''}`;
-                
+                card.className = `client-card p-6 rounded-[2rem] flex items-center ${c.entrou ? 'entrou' : ''}`;
                 card.innerHTML = `
                     <div class="w-1/4 flex flex-col items-start border-r border-zinc-800 pr-4">
-                        <span class="${badgeColor} badge-perfil mb-2">${c.tipo}</span>
+                        <span class="${badgeColor} badge-perfil mb-2">${c.tipo_entrada || 'LISTA'}</span>
                         <span class="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Promoter: ${c.promoter || 'Direto'}</span>
                     </div>
                     <div class="flex-grow px-8 flex flex-col justify-center">
                         <h3 class="nome-cliente font-black uppercase italic text-white mb-1">${c.nome}</h3>
-                        <div class="flex items-center gap-4">
-                            <span class="tel-cliente font-bold tracking-tighter">${c.tel || c.telefone || '(00) 00000-0000'}</span>
-                        </div>
-                        <p class="text-[9px] text-zinc-600 font-black uppercase mt-2 tracking-widest italic border-t border-zinc-900 pt-1 w-fit">📅 Evento: ${c.evento}</p>
+                        <span class="tel-cliente font-bold tracking-tighter">${c.tel || c.telefone || '(00) 00000-0000'}</span>
                     </div>
                     <div class="w-1/4 flex justify-end">
                         ${c.entrou 
-                            ? `<span class="text-green-500 font-black uppercase italic text-[11px] mr-4 tracking-widest">Confirmado ✓</span>`
+                            ? `<span class="text-green-500 font-black uppercase italic text-[11px] mr-4 tracking-widest">Check-in OK</span>`
                             : `<button onclick="confirmarCheckin('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-sm hover:bg-yellow-500 transition-all shadow-xl active:scale-95">Check-in</button>`
                         }
                     </div>
@@ -242,8 +224,7 @@
         window.confirmarCheckin = async (id) => {
             const docRef = doc(db, "lista_eventos", id);
             try { 
-                await updateDoc(docRef, { entrou: true, data_entrada: new Date().toISOString() });
-                document.getElementById('input-busca').value = "";
+                await updateDoc(docRef, { entrou: true, data_entrada: new Date().toISOString(), porteiro: operadorAtual });
                 processarPesquisa();
             } catch (e) { alert("Erro no check-in!"); }
         };
