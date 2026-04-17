@@ -53,10 +53,18 @@
                     <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest">🔥 Pódio de Check-ins</h2>
                     <div id="lista-ranking-checkins" class="space-y-4 text-left"></div>
                 </div>
-                <div class="glass-card p-8 border-t-4 border-t-blue-600">
-                    <select id="filtro-promoter-excel" class="w-full p-3 rounded-xl text-[10px] font-black uppercase mb-4" onchange="gerarListaCheckins()"></select>
-                    <textarea id="output-excel" readonly class="w-full h-64 rounded-2xl p-4 text-[11px] font-mono text-zinc-400 mb-4" placeholder="Lista para Excel..."></textarea>
-                    <button onclick="copiarOutput()" class="w-full bg-zinc-800 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all">Copiar Tudo</button>
+                <div class="flex flex-col gap-8">
+                    <div class="glass-card p-8 border-t-4 border-t-blue-600">
+                        <select id="filtro-promoter-excel" class="w-full p-3 rounded-xl text-[10px] font-black uppercase mb-4" onchange="gerarListaCheckins()"></select>
+                        <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[11px] font-mono text-zinc-400 mb-4" placeholder="Lista para Excel..."></textarea>
+                        <button onclick="copiarOutput()" class="w-full bg-zinc-800 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all">Copiar Tudo</button>
+                    </div>
+                    
+                    <div class="glass-card p-8 border-2 border-red-900/30 bg-red-900/5">
+                        <h2 class="text-[9px] font-black uppercase text-red-500 mb-4 tracking-widest">Manutenção do Sistema</h2>
+                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/20 border border-red-600/50 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all">Limpar Base de Clientes</button>
+                        <p class="text-[7px] text-zinc-600 uppercase mt-3 text-center">Isso apagará todas as reservas de todos os eventos.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -138,7 +146,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, query, orderBy, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, orderBy, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -162,7 +170,7 @@
 
         // ESCUTAS EM TEMPO REAL
         onSnapshot(collection(db, "lista_eventos"), snap => { 
-            dadosReservas = snap.docs.map(d => d.data());
+            dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderizarRelatorios();
             renderizarAniversarios();
         });
@@ -193,6 +201,30 @@
             renderizarAniversarios();
         });
 
+        // --- FUNÇÃO PARA LIMPAR BASE DE DADOS ---
+        window.limparBaseDeDados = async () => {
+            const confirmar = confirm("ATENÇÃO: Isso apagará TODOS os clientes cadastrados em todos os eventos. Deseja continuar?");
+            if (!confirmar) return;
+
+            const seguranca = confirm("Você tem certeza absoluta? Essa ação não pode ser desfeita.");
+            if (!seguranca) return;
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "lista_eventos"));
+                const batch = writeBatch(db);
+                
+                querySnapshot.forEach((docSnap) => {
+                    batch.delete(docSnap.ref);
+                });
+
+                await batch.commit();
+                alert("Base de clientes limpa com sucesso!");
+            } catch (error) {
+                console.error("Erro ao limpar base:", error);
+                alert("Erro ao limpar base. Tente novamente.");
+            }
+        };
+
         function renderizarAniversarios() {
             const tbody = document.getElementById('tabela-aniversarios-body');
             if(!tbody) return;
@@ -201,7 +233,6 @@
                 const eventoRelacionado = dadosEventos.find(e => e.nome === link.festa);
                 const dataFormatada = eventoRelacionado ? eventoRelacionado.data.split('-').reverse().join('/') : '---';
                 
-                // CONTAGEM ATUALIZADA (Busca nos dois campos possíveis de aniversariante)
                 const qtd = dadosReservas.filter(r => 
                     r.evento === link.festa && 
                     (r.aniversariante === link.aniversariante || r.nome_aniversariante === link.aniversariante)
