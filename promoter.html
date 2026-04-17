@@ -23,19 +23,15 @@
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-blue-500/20 border text-white">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">Promoter <span class="text-blue-500">Access</span></h1>
-            
             <div id="step-user">
                 <input type="text" id="userPromoter" placeholder="DIGITE SEU NOME" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-blue-500 text-center font-bold uppercase text-xs mb-4 text-white">
                 <button onclick="validarUsuario()" class="w-full blue-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all">Continuar</button>
             </div>
-
             <div id="step-password" class="hidden">
                 <input type="password" id="passPromoter" placeholder="SUA SENHA" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-blue-500 text-center font-bold uppercase text-xs mb-4 text-white">
                 <button onclick="entrarComSenha()" id="btnEntrar" class="w-full blue-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all">Entrar</button>
             </div>
-
             <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden italic tracking-widest">Usuário não encontrado ou senha inválida</p>
-            <p id="msgAviso" class="text-blue-400 text-[9px] font-black uppercase mt-6 hidden italic">Nome localizado! Defina sua senha acima</p>
         </div>
     </div>
 
@@ -50,7 +46,7 @@
 
         <section class="space-y-8">
             <div id="secaoMeusLinks" class="hidden">
-                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2 italic">Links de Aniversário</h3>
+                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2 italic">Minhas Listas (Cronológico)</h3>
                 <div id="listaLinksAniv" class="space-y-3"></div>
             </div>
 
@@ -74,14 +70,14 @@
                 <select id="selectEventoAniv" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none text-xs font-bold uppercase"></select>
                 <input type="text" id="nomeAniversariante" placeholder="NOME DO ANIVERSARIANTE" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none font-black uppercase text-xs">
             </div>
-            <button onclick="gerarLinkAniversario()" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-8">Gerar e Salvar Link</button>
+            <button onclick="gerarLinkAniversario()" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-8">Gerar Link</button>
             <button onclick="fecharModalAniv()" class="w-full text-zinc-600 font-black py-4 uppercase text-[9px] mt-2">Cancelar</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, setDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -97,79 +93,52 @@
         
         let currentPromoter = "";
         let userData = null;
-        let isFirstAccess = false;
         let todasReservasGlobal = [];
         let todosEventosGlobal = [];
 
         window.validarUsuario = async function() {
             const nomeInput = document.getElementById('userPromoter').value.trim().toLowerCase();
-            const erro = document.getElementById('msgErro');
-            const aviso = document.getElementById('msgAviso');
-            
-            erro.classList.add('hidden');
-            if(!nomeInput) return;
-
             const docSnap = await getDoc(doc(db, "promoters", nomeInput));
-            
             if(docSnap.exists()) {
                 currentPromoter = nomeInput;
                 userData = docSnap.data();
                 document.getElementById('step-user').classList.add('hidden');
                 document.getElementById('step-password').classList.remove('hidden');
-                
-                if(!userData.senha) {
-                    isFirstAccess = true;
-                    aviso.classList.remove('hidden');
-                    document.getElementById('btnEntrar').innerText = "CADASTRAR E ENTRAR";
-                }
-            } else {
-                erro.classList.remove('hidden');
-            }
+            } else { document.getElementById('msgErro').classList.remove('hidden'); }
         }
 
         window.entrarComSenha = async function() {
             const senha = document.getElementById('passPromoter').value.trim();
-            if(!senha) return;
-
-            if(isFirstAccess) {
-                await updateDoc(doc(db, "promoters", currentPromoter), { senha: senha });
-                carregarPainel(userData);
-            } else if(userData.senha === senha) {
-                carregarPainel(userData);
-            } else {
-                alert("Senha incorreta!");
-            }
+            if(userData.senha === senha || !userData.senha) {
+                if(!userData.senha) await updateDoc(doc(db, "promoters", currentPromoter), { senha: senha });
+                carregarPainel();
+            } else { alert("Senha incorreta!"); }
         }
 
-        function carregarPainel(dados) {
+        function carregarPainel() {
             document.getElementById('loginPromoter').classList.add('hidden');
             document.getElementById('painelDados').classList.remove('hidden');
             document.getElementById('boasVindas').innerText = currentPromoter;
 
-            // Escuta Reservas
-            onSnapshot(collection(db, "lista_eventos"), (snap) => {
-                todasReservasGlobal = snap.docs.map(d => d.data());
-                renderizarInterface();
-            });
-
-            // Escuta Eventos
             onSnapshot(collection(db, "eventos"), (snap) => {
                 todosEventosGlobal = snap.docs.map(d => d.data());
                 renderizarInterface();
             });
 
-            // Se for promoter de aniversário, libera botão e seção
-            if(dados.tipo === "aniversario") {
+            onSnapshot(collection(db, "lista_eventos"), (snap) => {
+                todasReservasGlobal = snap.docs.map(d => d.data());
+                renderizarInterface();
+            });
+
+            if(userData.tipo === "aniversario") {
                 document.getElementById('secaoMeusLinks').classList.remove('hidden');
                 if(!document.getElementById('btnAnivFix')) {
                     const btnAniv = document.createElement('button');
-                    btnAniv.id = 'btnAnivFix';
-                    btnAniv.onclick = abrirModalAniv;
-                    btnAniv.className = "flex-grow purple-gradient text-white font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-transform active:scale-95";
-                    btnAniv.innerHTML = "🎂 Criar Link de Aniv.";
+                    btnAniv.id = 'btnAnivFix'; btnAniv.onclick = abrirModalAniv;
+                    btnAniv.className = "flex-grow purple-gradient text-white font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl";
+                    btnAniv.innerHTML = "🎂 Criar Link Aniv.";
                     document.getElementById('barraBotoes').appendChild(btnAniv);
                 }
-                
                 onSnapshot(query(collection(db, "links_aniversario"), where("promoter", "==", currentPromoter)), (snap) => {
                     renderizarLinksAniv(snap.docs.map(d => ({id: d.id, ...d.data()})));
                 });
@@ -177,87 +146,44 @@
         }
 
         function renderizarInterface() {
-            if (todosEventosGlobal.length > 0) {
-                carregarTabelaEventos();
-            }
+            if (todosEventosGlobal.length > 0) carregarTabelaEventos();
         }
 
         function carregarTabelaEventos() {
             const cont = document.getElementById('listaEventosPromoter');
             cont.innerHTML = '';
-            
-            const eventos = todosEventosGlobal
-                .filter(e => e.ativo)
-                .sort((a,b) => new Date(a.data) - new Date(b.data));
-
+            const eventos = todosEventosGlobal.filter(e => e.ativo).sort((a,b) => new Date(a.data) - new Date(b.data));
             eventos.forEach(ev => {
                 const ind = todasReservasGlobal.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase() === currentPromoter).length;
                 const ger = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
-                cont.innerHTML += `
-                    <div class="p-6 flex justify-between items-center border-b border-white/5">
-                        <div>
-                            <h4 class="text-[12px] font-black uppercase text-white italic leading-tight">${ev.nome}</h4>
-                            <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1">${ev.data.split('-').reverse().join('/')}</p>
-                        </div>
-                        <div class="flex gap-4 text-right">
-                            <div>
-                                <p class="text-[7px] text-blue-400 font-black uppercase mb-1">Minhas</p>
-                                <p class="text-2xl font-black text-neon-blue leading-none">${ind}</p>
-                            </div>
-                            <div class="border-l border-white/10 pl-4">
-                                <p class="text-[7px] text-zinc-600 font-black uppercase mb-1">Geral</p>
-                                <p class="text-2xl font-black text-neon-zinc leading-none">${ger}</p>
-                            </div>
-                        </div>
-                    </div>`;
+                cont.innerHTML += `<div class="p-6 flex justify-between items-center border-b border-white/5"><div><h4 class="text-[12px] font-black uppercase text-white italic leading-tight">${ev.nome}</h4><p class="text-[9px] text-zinc-500 font-bold uppercase mt-1">${ev.data.split('-').reverse().join('/')}</p></div><div class="flex gap-4 text-right"><div><p class="text-[7px] text-blue-400 font-black uppercase mb-1">Minhas</p><p class="text-2xl font-black text-neon-blue leading-none">${ind}</p></div><div class="border-l border-white/10 pl-4"><p class="text-[7px] text-zinc-600 font-black uppercase mb-1">Geral</p><p class="text-2xl font-black text-neon-zinc leading-none">${ger}</p></div></div></div>`;
             });
         }
 
         function renderizarLinksAniv(links) {
             const container = document.getElementById('listaLinksAniv');
             const agora = new Date();
-            const horaAtual = agora.getHours();
             const hojeStr = new Date(agora.getTime() - (agora.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
             
+            // LÓGICA DE ORDENAÇÃO CRONOLÓGICA
+            const linksOrdenados = links.map(link => {
+                const ev = todosEventosGlobal.find(e => e.nome === link.festa);
+                return { ...link, dataEvento: ev ? ev.data : '9999-99-99' };
+            }).sort((a, b) => new Date(a.dataEvento) - new Date(b.dataEvento));
+
             container.innerHTML = '';
-            
-            links.forEach(link => {
+            linksOrdenados.forEach(link => {
                 const evInfo = todosEventosGlobal.find(e => e.nome === link.festa);
                 if (evInfo) {
                     const dataFesta = evInfo.data;
                     let mostrar = true;
-
-                    // Lógica de Expiração (05h da manhã do dia seguinte)
                     if (dataFesta < hojeStr) {
-                        const dataOntem = new Date();
-                        dataOntem.setDate(dataOntem.getDate() - 1);
-                        const ontemStr = dataOntem.toISOString().split('T')[0];
-                        if (!(dataFesta === ontemStr && horaAtual < 5)) {
-                            mostrar = false;
-                        }
+                        const dataOntem = new Date(); dataOntem.setDate(dataOntem.getDate() - 1);
+                        if (!(dataFesta === dataOntem.toISOString().split('T')[0] && agora.getHours() < 5)) mostrar = false;
                     }
-
                     if (mostrar) {
-                        const qtdConvidados = todasReservasGlobal.filter(r => 
-                            r.tipo === "ANIVERSARIO" && 
-                            r.aniversariante === link.aniversariante && 
-                            r.evento === link.festa
-                        ).length;
-
-                        container.innerHTML += `
-                            <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-purple-500">
-                                <div class="truncate mr-2">
-                                    <p class="text-[10px] font-black text-white uppercase">${link.aniversariante}</p>
-                                    <p class="text-[7px] text-zinc-500 uppercase truncate">${link.festa}</p>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <div class="text-right">
-                                        <p class="text-[7px] text-purple-400 font-black uppercase">Convidados</p>
-                                        <p class="text-lg font-black text-white leading-none">${qtdConvidados}</p>
-                                    </div>
-                                    <button onclick="copiarTexto('${link.url}')" class="bg-purple-500/20 text-purple-400 px-3 py-2 rounded-xl text-[8px] font-black uppercase active:scale-90 transition-all">Copiar</button>
-                                </div>
-                            </div>`;
+                        const qtd = todasReservasGlobal.filter(r => r.tipo === "ANIVERSARIO" && r.aniversariante === link.aniversariante && r.evento === link.festa).length;
+                        container.innerHTML += `<div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-purple-500"><div class="truncate mr-2"><p class="text-[10px] font-black text-white uppercase">${link.aniversariante}</p><p class="text-[7px] text-zinc-500 uppercase truncate">${evInfo.data.split('-').reverse().join('/')} - ${link.festa}</p></div><div class="flex items-center gap-4"><div class="text-right"><p class="text-[7px] text-purple-400 font-black uppercase">Convidados</p><p class="text-lg font-black text-white leading-none">${qtd}</p></div><button onclick="navigator.clipboard.writeText('${link.url}'); alert('Copiado!')" class="bg-purple-500/20 text-purple-400 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Copiar</button></div></div>`;
                     }
                 }
             });
@@ -265,41 +191,25 @@
 
         window.abrirModalAniv = () => {
             const select = document.getElementById('selectEventoAniv');
-            select.innerHTML = '<option value="">SELECIONE O EVENTO</option>';
-            todosEventosGlobal.filter(e => e.ativo).forEach(ev => {
-                select.innerHTML += `<option value="${ev.nome}">${ev.nome}</option>`;
+            select.innerHTML = '';
+            todosEventosGlobal.filter(e => e.ativo).sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+                select.innerHTML += `<option value="${ev.nome}">${ev.data.split('-').reverse().join('/')} - ${ev.nome}</option>`;
             });
             document.getElementById('modalAniversario').classList.remove('hidden');
         }
         window.fecharModalAniv = () => document.getElementById('modalAniversario').classList.add('hidden');
-
         window.gerarLinkAniversario = async () => {
             const festa = document.getElementById('selectEventoAniv').value;
             const nome = document.getElementById('nomeAniversariante').value.trim().toUpperCase();
-            if(!festa || !nome) return alert("Preencha todos os campos!");
-            
+            if(!festa || !nome) return alert("Preencha tudo!");
             const baseUrl = window.location.href.split('promoter.html')[0] + 'listas.html';
             const urlFinal = `${baseUrl}?ref=${currentPromoter}&aniv=${encodeURIComponent(nome)}&festa=${encodeURIComponent(festa)}`;
-            
-            await setDoc(doc(collection(db, "links_aniversario")), { 
-                promoter: currentPromoter, 
-                aniversariante: nome, 
-                festa: festa, 
-                url: urlFinal, 
-                data_criacao: new Date().toISOString() 
-            });
-            
-            fecharModalAniv();
-            alert("Link Gerado e Salvo!");
+            await setDoc(doc(collection(db, "links_aniversario")), { promoter: currentPromoter, aniversariante: nome, festa: festa, url: urlFinal, data_criacao: new Date().toISOString() });
+            fecharModalAniv(); alert("Link Criado!");
         }
-
-        window.copiarTexto = (txt) => {
-            navigator.clipboard.writeText(txt).then(() => alert("Copiado!"));
-        }
-
         window.copiarLinkReservas = () => {
             const url = window.location.href.split('promoter.html')[0] + 'listas.html?ref=' + currentPromoter;
-            copiarTexto(url);
+            navigator.clipboard.writeText(url).then(() => alert("Copiado!"));
         };
     </script>
 </body>
