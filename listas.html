@@ -16,6 +16,7 @@
         }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .gold-gradient { background: linear-gradient(135deg, #eab308 0%, #a16207 100%); }
+        .purple-badge { background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.3); }
         input, select { background: #0a0a0a !important; border: 1px solid #1f1f1f !important; color: #fff !important; }
         input:focus { border-color: #eab308 !important; outline: none; }
     </style>
@@ -23,16 +24,28 @@
 <body class="p-4 flex items-center justify-center min-h-screen">
 
     <div class="w-full max-w-md glass p-10 rounded-[3rem] shadow-2xl border border-white/5">
-        <div class="text-center mb-10">
+        <div class="text-center mb-8">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-8">
             
             <div id="headerAniversario" class="hidden mb-6">
-                <p class="text-yellow-500 font-black uppercase italic text-[10px] tracking-[0.3em] mb-2">Lista de Convidados</p>
+                <p class="text-purple-400 font-black uppercase italic text-[10px] tracking-[0.3em] mb-2">Lista Especial de Aniversário</p>
                 <h1 id="nomeAniv" class="text-3xl font-black uppercase leading-none tracking-tighter text-white">---</h1>
+                
+                <div id="boxValoresAniv" class="mt-6 p-4 rounded-2xl purple-badge flex justify-around items-center">
+                    <div class="text-center">
+                        <p class="text-[8px] font-black uppercase text-purple-300">Casal</p>
+                        <p id="vCasalAniv" class="text-xl font-black text-white">R$ --</p>
+                    </div>
+                    <div class="h-8 w-[1px] bg-purple-500/30"></div>
+                    <div class="text-center">
+                        <p class="text-[8px] font-black uppercase text-purple-300">Solteiro</p>
+                        <p id="vSolteiroAniv" class="text-xl font-black text-white">R$ --</p>
+                    </div>
+                </div>
             </div>
 
             <div id="infoFesta">
-                <h2 id="tituloEvento" class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Escolha sua Festa</h2>
+                <h2 id="tituloEvento" class="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em]">Confirme sua presença</h2>
             </div>
         </div>
 
@@ -42,18 +55,18 @@
             </select>
 
             <div class="space-y-4 pt-2">
-                <input type="text" id="nomeCliente" placeholder="SEU NOME COMPLETO" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
-                <input type="tel" id="telCliente" placeholder="WHATSAPP (COM DDD)" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
+                <input type="text" id="nomeCliente" placeholder="NOME COMPLETO DO CONVIDADO" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
+                <input type="tel" id="telCliente" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full p-5 rounded-2xl font-bold uppercase text-xs" required>
             </div>
 
             <button type="submit" id="btnEnviar" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-6 tracking-widest transition-transform active:scale-95">
-                Confirmar na Lista
+                Garantir Desconto na Lista
             </button>
         </form>
 
         <div id="msgSucesso" class="hidden text-center mt-8 p-6 bg-green-500/10 border border-green-500/20 rounded-3xl">
-            <p class="text-green-500 font-black uppercase text-xs">✅ Confirmado com Sucesso!</p>
-            <p class="text-zinc-400 text-[10px] mt-2 uppercase font-bold">Aguardamos você na E-CLUB</p>
+            <p class="text-green-500 font-black uppercase text-xs">✅ Nome Confirmado!</p>
+            <p class="text-zinc-400 text-[10px] mt-2 uppercase font-bold text-center leading-relaxed">O desconto será aplicado diretamente na portaria da E-CLUB.</p>
         </div>
     </div>
 
@@ -73,7 +86,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Capturar parâmetros da URL para automação
         const params = new URLSearchParams(window.location.search);
         const refPromoter = params.get('ref') || "DIRETO";
         const nomeAniv = params.get('aniv');
@@ -85,18 +97,24 @@
             
             select.innerHTML = '';
             
-            // SE FOR LINK DE ANIVERSÁRIO GERADO PELO PROMOTER
             if (festaFixa && nomeAniv) {
+                const nomeFestaDecoded = decodeURIComponent(festaFixa);
                 document.getElementById('headerAniversario').classList.remove('hidden');
-                document.getElementById('nomeAniv').innerText = "ANIVERSÁRIO " + decodeURIComponent(nomeAniv);
-                document.getElementById('tituloEvento').innerText = "EVENTO: " + decodeURIComponent(festaFixa);
-                document.getElementById('tituloEvento').classList.add('text-yellow-500/50');
+                document.getElementById('nomeAniv').innerText = decodeURIComponent(nomeAniv);
+                document.getElementById('tituloEvento').innerText = "FESTA: " + nomeFestaDecoded;
                 
-                // Trava a escolha da festa
+                // BUSCAR OS VALORES DE DESCONTO NO FIREBASE
+                snap.forEach(doc => {
+                    const ev = doc.data();
+                    if(ev.nome === nomeFestaDecoded) {
+                        document.getElementById('vCasalAniv').innerText = "R$ " + (ev.desc_casal || "00");
+                        document.getElementById('vSolteiroAniv').innerText = "R$ " + (ev.desc_solteiro || "00");
+                    }
+                });
+
                 select.classList.add('hidden');
-                select.innerHTML = `<option value="${decodeURIComponent(festaFixa)}" selected>${decodeURIComponent(festaFixa)}</option>`;
+                select.innerHTML = `<option value="${nomeFestaDecoded}" selected>${nomeFestaDecoded}</option>`;
             } else {
-                // FLUXO NORMAL DE LISTA
                 select.innerHTML = '<option value="">SELECIONE O EVENTO</option>';
                 snap.forEach(doc => {
                     const ev = doc.data();
@@ -109,7 +127,7 @@
             e.preventDefault();
             const btn = document.getElementById('btnEnviar');
             btn.disabled = true;
-            btn.innerText = "PROCESSANDO...";
+            btn.innerText = "CONFIRMANDO...";
 
             try {
                 await addDoc(collection(db, "lista_eventos"), {
@@ -125,15 +143,10 @@
 
                 document.getElementById('formReserva').classList.add('hidden');
                 document.getElementById('msgSucesso').classList.remove('hidden');
-                
-                // Recarrega após 4 segundos para nova reserva se necessário
-                setTimeout(() => location.reload(), 4000);
-
+                setTimeout(() => location.reload(), 5000);
             } catch (err) {
-                console.error(err);
-                alert("Erro ao enviar. Tente novamente.");
+                alert("Erro ao confirmar. Tente novamente.");
                 btn.disabled = false;
-                btn.innerText = "Confirmar na Lista";
             }
         });
 
