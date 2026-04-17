@@ -11,7 +11,6 @@
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
         .client-card { background: #0a0a0a; border: 1px solid #1a1a1a; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-        .client-card:not(.entrou):hover { border-color: #eab308; background: #111; transform: translateX(8px); box-shadow: -10px 0 20px -10px #eab308; }
         .client-card.entrou { opacity: 0.2 !important; filter: grayscale(1); pointer-events: none; }
         input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
@@ -28,14 +27,14 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">ACESSO <span class="text-yellow-500">PORTARIA</span></h1>
             <div class="space-y-4">
-                <input type="text" id="inputNomeUsuario" placeholder="DIGITE SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
-                <div id="areaSenha" class="hidden animate-in fade-in duration-500">
+                <input type="text" id="inputNomeUsuario" placeholder="SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
+                <div id="areaSenha" class="hidden">
                     <input type="password" id="senhaUsuario" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
                 </div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all mt-4">CONTINUAR</button>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest mt-4">CONTINUAR</button>
             </div>
-            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Nome localizado! Defina sua senha acima</p>
-            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden tracking-tighter">Operador não cadastrado ou senha incorreta</p>
+            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Defina sua senha acima</p>
+            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden">Operador não cadastrado ou senha incorreta</p>
         </div>
     </div>
 
@@ -44,13 +43,13 @@
             <div class="mb-10 text-center">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
                 <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter text-white leading-none">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-2 border border-zinc-800 py-1 rounded-lg italic">OPERADOR: ---</p>
+                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-2 border border-zinc-800 py-1 rounded-lg">---</p>
             </div>
             <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Eventos do Dia</h3>
+                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Eventos do Turno</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Trocar Usuário</button>
+            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors text-white">Sair</button>
         </aside>
 
         <main class="flex-grow flex flex-col">
@@ -66,9 +65,8 @@
                     </div>
                 </div>
             </header>
-
             <section class="flex-grow p-8 overflow-y-auto bg-[#030303]">
-                <div id="container-resultados" class="max-w-5xl mx-auto grid grid-cols-1 gap-4">
+                <div id="container-resultados" class="max-w-5xl mx-auto">
                     <div class="py-40 opacity-10 text-center text-white font-black uppercase italic tracking-[0.5em]">Aguardando Pesquisa</div>
                 </div>
             </section>
@@ -90,48 +88,50 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-
-        let bancoClientes = [];
-        let bancoEventos = [];
-        let operadorLogado = "";
-        let stepLogin = 0;
-        let usuarioTemp = null;
+        let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
 
         window.verificarOuLogar = async () => {
-            const nomeDigitado = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
-            const senhaDigitada = document.getElementById('senhaUsuario').value.trim();
+            const nomeInput = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
+            const senhaInput = document.getElementById('senhaUsuario').value.trim();
+            const erro = document.getElementById('erroLogin');
+            erro.classList.add('hidden');
+
             if (stepLogin === 0) {
-                const userDoc = await getDoc(doc(db, "configuracoes", nomeDigitado));
-                if (userDoc.exists()) {
-                    usuarioTemp = userDoc.data();
+                if (!nomeInput) return;
+                const docSnap = await getDoc(doc(db, "configuracoes", nomeInput));
+                if (docSnap.exists()) {
+                    usuarioData = docSnap.data();
                     stepLogin = 1;
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
-                    document.getElementById('btnAcao').innerText = usuarioTemp.senha === "" ? "CADASTRAR E ENTRAR" : "ENTRAR";
-                } else { document.getElementById('erroLogin').classList.remove('hidden'); }
+                    if (!usuarioData.senha) {
+                        document.getElementById('btnAcao').innerText = "CADASTRAR E ENTRAR";
+                        document.getElementById('msgStatus').classList.remove('hidden');
+                    } else { document.getElementById('btnAcao').innerText = "ENTRAR"; }
+                } else { erro.classList.remove('hidden'); }
             } else {
-                if (usuarioTemp.senha === "" || usuarioTemp.senha === senhaDigitada) {
-                    if (usuarioTemp.senha === "") await updateDoc(doc(db, "configuracoes", nomeDigitado), { senha: senhaDigitada });
-                    logarSucesso(nomeDigitado);
-                } else { document.getElementById('erroLogin').classList.remove('hidden'); }
+                if (!usuarioData.senha) {
+                    await updateDoc(doc(db, "configuracoes", nomeInput), { senha: senhaInput });
+                    logarSucesso(nomeInput);
+                } else if (usuarioData.senha === senhaInput) {
+                    logarSucesso(nomeInput);
+                } else { erro.innerText = "SENHA INCORRETA"; erro.classList.remove('hidden'); }
             }
         };
 
-        function logarSucesso(nome) {
-            operadorLogado = nome;
-            document.getElementById('operadorAtivo').innerText = "OPERADOR: " + nome.toUpperCase();
+        function logarSucesso(n) {
+            operadorLogado = n;
+            document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
             document.getElementById('telaLogin').classList.add('hidden');
             document.getElementById('interfacePrincipal').classList.remove('hidden');
             iniciarEscutas();
         }
 
         const validarJanela = (dataEvento) => {
-            const agora = new Date();
-            const hora = agora.getHours();
+            const agora = new Date(); const hora = agora.getHours();
             const offset = agora.getTimezoneOffset() * 60000;
             const hoje = new Date(agora.getTime() - offset).toISOString().split('T')[0];
-            const ontemObj = new Date(agora.getTime() - offset);
-            ontemObj.setDate(ontemObj.getDate() - 1);
+            const ontemObj = new Date(agora.getTime() - offset); ontemObj.setDate(ontemObj.getDate() - 1);
             const ontem = ontemObj.toISOString().split('T')[0];
             if (hora >= 21 && hoje === dataEvento) return true;
             if (hora < 6 && ontem === dataEvento) return true;
@@ -141,30 +141,21 @@
         function iniciarEscutas() {
             onSnapshot(collection(db, "lista_eventos"), (snap) => {
                 bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou).length;
+                document.getElementById('total-checkins').innerText = bancoClientes.filter(c => {
+                    const ev = bancoEventos.find(e => e.nome === c.evento);
+                    return c.entrou && (ev ? validarJanela(ev.data) : false);
+                }).length;
                 processarPesquisa();
             });
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
                 bancoEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                renderizarSidebar();
-            });
-        }
-
-        function renderizarSidebar() {
-            const cont = document.getElementById('lista-eventos-sidebar');
-            cont.innerHTML = '';
-            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
-                const aberto = validarJanela(ev.data);
-                const total = bancoClientes.filter(c => c.evento === ev.nome).length;
-                cont.innerHTML += `
-                    <div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'}">
-                        <p class="text-[8px] font-black text-zinc-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                        <h4 class="text-[10px] font-black uppercase text-white truncate leading-tight">${ev.nome}</h4>
-                        <div class="flex justify-between items-end mt-2">
-                            <span class="text-[8px] font-bold text-zinc-600">${aberto ? '🔥 ATIVO' : '🔒 ESPERA'}</span>
-                            <span class="text-lg font-black italic text-yellow-500 leading-none">${total}</span>
-                        </div>
-                    </div>`;
+                const cont = document.getElementById('lista-eventos-sidebar');
+                cont.innerHTML = '';
+                bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+                    const aberto = validarJanela(ev.data);
+                    const total = bancoClientes.filter(c => c.evento === ev.nome).length;
+                    cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'} mb-2"><p class="text-[8px] font-black text-white uppercase">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4><div class="flex justify-between items-end mt-2"><span class="text-[8px] font-bold ${aberto ? 'text-green-500' : 'text-zinc-600'}">${aberto ? '🔥 NO AR' : '🔒 ESPERA'}</span><span class="text-lg font-black text-yellow-500 leading-none">${total}</span></div></div>`;
+                });
             });
         }
 
@@ -172,51 +163,34 @@
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
             if (busca.length < 2) return;
-
             const filtrados = bancoClientes.filter(c => {
                 const termo = (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
                 const evMatch = bancoEventos.find(e => e.nome === c.evento);
                 return termo && (evMatch ? validarJanela(evMatch.data) : false);
             });
-
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic text-white">Nenhum registro para este turno</div>' : '';
+            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800">Nenhum registro para este turno</div>' : '';
             
             filtrados.sort((a,b) => (a.entrou === b.entrou) ? a.nome.localeCompare(b.nome) : a.entrou ? 1 : -1).forEach(c => {
-                const evConfig = bancoEventos.find(e => e.nome === c.evento) || {};
-                const isAniv = c.tipo === "ANIVERSARIO";
-                const isCasal = c.tipo_entrada === "CASAL";
-                
-                // LÓGICA DE VALOR
-                let valorExibicao = "---";
-                if (isAniv) {
-                    valorExibicao = isCasal ? (evConfig.desc_casal || "---") : (evConfig.desc_solteiro || "---");
-                } else {
-                    valorExibicao = isCasal ? (evConfig.valor_casal || "---") : (evConfig.valor_solteiro || "---");
-                }
+                const ev = bancoEventos.find(e => e.nome === c.evento) || {};
+                const isAniv = c.tipo === "ANIVERSARIO"; const isCasal = c.tipo_entrada === "CASAL";
+                let valor = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
+                const badge = isCasal ? 'badge-casal' : 'badge-solteiro';
 
-                const badgeColor = isCasal ? 'badge-casal' : 'badge-solteiro';
-                
                 const div = document.createElement('div');
-                div.className = `client-card p-6 rounded-[2rem] flex items-center mb-2 ${c.entrou ? 'entrou' : ''}`;
+                div.className = `client-card p-8 rounded-[2.5rem] mb-4 ${c.entrou ? 'entrou' : ''}`;
                 div.innerHTML = `
-                    <div class="w-36 border-r border-zinc-900 pr-6 text-center">
-                        <span class="px-3 py-1.5 ${badgeColor} text-[10px] font-black rounded-lg uppercase block mb-2">${c.tipo_entrada}</span>
-                        <p class="text-[7px] text-zinc-500 font-black uppercase">PROMOTER</p>
-                        <p class="text-[9px] text-white font-black truncate">${c.promoter || 'DIRETO'}</p>
-                    </div>
-                    <div class="flex-grow px-10">
-                        <h3 class="text-xl font-black uppercase italic text-white leading-none">${c.nome}</h3>
-                        <p class="text-xs font-bold text-zinc-500 font-mono mt-1">${c.tel || '---'}</p>
-                        ${isAniv ? `<p class="text-[9px] text-purple-400 font-black uppercase mt-2 italic">🎂 ANIVERSARIANTE: ${c.aniversariante || c.nome_aniversariante || '---'}</p>` : ''}
-                    </div>
-                    <div class="w-40 border-l border-zinc-900 px-6 text-center">
-                        <p class="text-[7px] text-yellow-500 font-black uppercase">VALOR LISTA</p>
-                        <p class="text-2xl font-black italic text-white leading-tight">R$ ${valorExibicao}</p>
-                    </div>
-                    <div class="w-48 text-right">
-                        ${c.entrou 
-                            ? '<span class="text-green-500 font-black italic uppercase text-xs tracking-widest">Confirmado ✓</span>' 
-                            : `<button onclick="confirmarCheckin('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-xs hover:bg-yellow-500 transition-all">CHECK-IN</button>`}
+                    <div class="flex flex-col gap-4">
+                        <div class="flex justify-between items-center">
+                            <div><h3 class="text-2xl font-black uppercase italic text-white leading-none">${c.nome}</h3><p class="text-sm font-bold text-zinc-500 font-mono mt-1">${c.tel || '(00) 00000-0000'}</p></div>
+                            <div>${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-4 py-2 rounded-xl">✓ OK</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)]">LIBERAR ENTRADA</button>`}</div>
+                        </div>
+                        <div class="h-[1px] bg-zinc-900 w-full"></div>
+                        <div class="flex flex-wrap items-center gap-6">
+                            <span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase">${c.tipo_entrada || 'LISTA'}</span>
+                            <div class="flex items-center gap-2"><span class="text-[8px] text-zinc-600 font-black uppercase">Promoter:</span><span class="text-xs text-zinc-300 font-bold uppercase">${c.promoter || 'DIRETO'}</span></div>
+                            <div class="flex items-center gap-2 border-l border-zinc-800 pl-6"><span class="text-[8px] text-yellow-600 font-black uppercase">Pagar:</span><span class="text-xl font-black text-yellow-500 italic">R$ ${valor || '---'}</span></div>
+                            ${isAniv ? `<div class="flex items-center gap-2 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-600 font-black uppercase">🎂 Aniv:</span><span class="text-xs text-purple-400 font-black uppercase italic">${c.aniversariante || c.nome_aniversariante || '---'}</span></div>` : ''}
+                        </div>
                     </div>`;
                 cont.appendChild(div);
             });
