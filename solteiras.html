@@ -83,11 +83,11 @@
         </div>
     </div>
 
-    <div id="modalEdit" class="hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-6 text-white">
+    <div id="modalEdit" class="hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-6 text-white text-white">
         <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-md border-yellow-500/30 border-2 text-center text-white">
-            <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest">Editar Observações</h2>
+            <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest text-white">Editar Observações</h2>
             <input type="hidden" id="editId">
-            <textarea id="editObsField" class="w-full p-4 rounded-xl input-field font-bold text-[11px] uppercase h-40 resize-none mb-6"></textarea>
+            <textarea id="editObsField" class="w-full p-4 rounded-xl input-field font-bold text-[11px] uppercase h-40 resize-none mb-6 text-white"></textarea>
             <div class="flex gap-4">
                 <button onclick="fecharModal()" class="flex-grow bg-zinc-800 py-4 rounded-xl uppercase text-[10px] font-black">Cancelar</button>
                 <button onclick="salvarObs()" class="flex-grow btn-gold py-4 rounded-xl uppercase text-[10px] font-black">Salvar</button>
@@ -153,17 +153,24 @@
 
         function isBday(d) { 
             if(!d) return false; 
-            const h = new Date(); 
-            const n = new Date(d + "T12:00:00"); 
-            return h.getDate() === n.getDate() && h.getMonth() === n.getMonth(); 
+            // Pega a data atual do sistema
+            const hoje = new Date();
+            // Ajusta para o fuso de hoje se for madrugada (antes das 5h)
+            const corte = obterDataCorteEvento();
+            
+            // Converte a data de nascimento do cadastro
+            const nascParts = d.split("-"); // [YYYY, MM, DD]
+            const nascMes = parseInt(nascParts[1]);
+            const nascDia = parseInt(nascParts[2]);
+
+            // Compara estritamente com o dia e mês de HOJE (considerando o turno da casa)
+            return (hoje.getDate() === nascDia && (hoje.getMonth() + 1) === nascMes);
         }
 
         function render(dados, isBusca = false) {
             const container = document.getElementById('listaSolteiras');
             const corte = obterDataCorteEvento();
             
-            // SE NÃO ESTÁ PESQUISANDO: Mostra apenas quem entrou HOJE (limpa a tela de ontem)
-            // SE ESTÁ PESQUISANDO: Mostra qualquer uma da base
             let paraExibir = dados;
             if (!isBusca) {
                 paraExibir = dados.filter(c => {
@@ -174,8 +181,8 @@
 
             if (paraExibir.length === 0) {
                 const msg = isBusca ? 
-                    '<div class="p-20 text-center"><p class="text-red-500 font-black uppercase text-xl italic mb-2">Cliente Sem Cadastro</p><p class="text-zinc-500 text-[10px] uppercase font-bold">Use o formulário ao lado para cadastrar agora.</p></div>' : 
-                    '<div class="p-20 text-center"><p class="text-zinc-700 font-black uppercase text-xs italic">Aguardando pesquisa ou novos check-ins...</p></div>';
+                    '<div class="p-20 text-center"><p class="text-red-500 font-black uppercase text-xl italic mb-2">Cliente Sem Cadastro</p><p class="text-zinc-500 text-[10px] uppercase font-bold text-white">Use o formulário ao lado para cadastrar agora.</p></div>' : 
+                    '<div class="p-20 text-center"><p class="text-zinc-700 font-black uppercase text-xs italic text-white">Aguardando pesquisa ou novos check-ins...</p></div>';
                 container.innerHTML = msg;
                 return;
             }
@@ -189,14 +196,14 @@
                 div.className = `item-cliente p-6 flex flex-col md:flex-row justify-between items-center gap-4 ${naCasa ? 'bg-green-500/5' : ''}`;
                 div.innerHTML = `
                     <div class="flex-grow text-white">
-                        <div class="flex items-center flex-wrap gap-2">
+                        <div class="flex items-center flex-wrap gap-2 text-white">
                             <h3 class="text-lg font-black uppercase ${naCasa ? 'text-green-400' : 'text-white'} text-white">${c.nome}</h3>
                             <span class="text-xl font-black text-green-500 font-mono"> — ${c.tel}</span>
                             ${isBday(c.nascimento) ? '<span class="text-white text-[9px] font-black px-2 py-1 rounded bday-anim">🎂 NIVER HOJE!</span>' : ''}
                         </div>
                         <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase text-white">🎂 ${calcIdade(c.nascimento)} ANOS | 🆔 ${c.cpf}</p>
-                        ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase">⚠️ ${c.obs}</p>` : ''}
-                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic">${naCasa ? '● DENTRO DA CASA' : 'ÚLTIMA VISITA: ' + (u ? u.toLocaleDateString('pt-BR') : 'NUNCA')}</p>
+                        ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase text-white">⚠️ ${c.obs}</p>` : ''}
+                        <p class="text-[9px] font-black text-yellow-600 uppercase mt-2 italic text-white">${naCasa ? '● DENTRO DA CASA' : 'ÚLTIMA VISITA: ' + (u ? u.toLocaleDateString('pt-BR') : 'NUNCA')}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase transition-colors hover:bg-zinc-700">Obs</button>
@@ -236,7 +243,7 @@
                 }
                 document.getElementById('formSolteira').reset();
                 document.getElementById('idadeDisplay').innerText = "--";
-                document.getElementById('buscaCliente').value = ""; // Limpa busca após cadastro
+                document.getElementById('buscaCliente').value = "";
             } catch (err) { alert("Erro ao salvar."); }
             btn.disabled = false;
             btn.innerText = "Salvar e Confirmar";
