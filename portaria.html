@@ -18,6 +18,8 @@
         .badge-solteiro { background: #3b82f6; color: #fff; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .btn-copy { background: rgba(255,255,255,0.05); transition: 0.2s; }
+        .btn-copy:hover { background: rgba(255,255,255,0.2); color: #eab308; }
     </style>
 </head>
 <body class="flex h-screen">
@@ -38,16 +40,16 @@
 
     <div id="interfacePrincipal" class="hidden flex w-full h-full">
         <aside class="w-80 h-full flex flex-col p-6 bg-black/50 border-r border-zinc-900">
-            <div class="mb-10 text-center">
+            <div class="mb-10 text-center text-white">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter text-white">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase mt-2 border border-zinc-800 py-1 rounded-lg">---</p>
+                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
+                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase mt-2 border border-zinc-800 py-1 rounded-lg italic">---</p>
             </div>
             <div class="flex-grow overflow-y-auto">
                 <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Todos Eventos Ativos</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors text-white">Sair</button>
+            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
         </aside>
 
         <main class="flex-grow flex flex-col">
@@ -59,7 +61,7 @@
                     </div>
                     <div class="text-right border-l border-zinc-800 pl-8 min-w-[120px]">
                         <p id="total-checkins" class="text-4xl font-black italic leading-none text-green-500">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2">Check-ins Atuais</p>
+                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2">Check-ins Totais</p>
                     </div>
                 </div>
             </header>
@@ -111,18 +113,14 @@
             iniciarEscutas();
         }
 
-        // --- REGRAS EM STANDBY PARA TESTE ---
-        const validarJanela = (dataEvento) => {
-            return true; 
-        };
+        const validarJanela = (dataEvento) => { return true; };
 
         function iniciarEscutas() {
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
                 bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
-                    const checkins = bancoClientes.filter(c => c.entrou).length;
-                    document.getElementById('total-checkins').innerText = checkins;
+                    document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou).length;
                     processarPesquisa();
                     renderizarSidebar();
                 });
@@ -148,7 +146,7 @@
                 return termo;
             });
 
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800">Nenhum registro encontrado</div>' : '';
+            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum registro encontrado</div>' : '';
             
             filtrados.forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
@@ -163,18 +161,25 @@
                 div.innerHTML = `
                     <div class="flex flex-col gap-4">
                         <div class="flex justify-between items-center">
-                            <div class="flex items-baseline gap-4">
+                            <div class="flex items-center gap-4">
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-none">${c.nome}</h3>
-                                <p class="text-lg font-bold text-zinc-500 font-mono italic tracking-tighter">${c.tel || c.telefone || ''}</p>
+                                <div class="flex items-center bg-zinc-900/50 rounded-xl px-3 py-2 gap-3 border border-white/5">
+                                    <p class="text-lg font-bold text-zinc-400 font-mono italic tracking-tighter leading-none">${c.tel || c.telefone || ''}</p>
+                                    <button onclick="copiarTexto('${c.tel || c.telefone}')" class="btn-copy p-1.5 rounded-lg text-zinc-500 hover:text-yellow-500 transition-all" title="Copiar Telefone">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                             <div>
-                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-4 py-2 rounded-xl">✓ CONFIRMADO</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)]">LIBERAR ENTRADA</button>`}
+                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-4 py-2 rounded-xl border border-green-500/20">✓ CONFIRMADO</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)]">LIBERAR ENTRADA</button>`}
                             </div>
                         </div>
                         <div class="h-[1px] bg-zinc-900 w-full"></div>
                         <div class="flex flex-wrap items-center gap-6">
-                            <span class="text-xs text-zinc-400 font-black uppercase">${c.promoter || 'DIRETO'}</span>
-                            <span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase">${c.tipo_entrada || 'LISTA'}</span>
+                            <span class="text-xs text-zinc-400 font-black uppercase italic">${c.promoter || 'DIRETO'}</span>
+                            <span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase shadow-lg shadow-black/50">${c.tipo_entrada || 'LISTA'}</span>
                             <div class="flex items-center gap-2 border-l border-zinc-800 pl-6">
                                 <span class="text-[8px] text-yellow-600 font-black uppercase tracking-widest">PAGAR:</span>
                                 <span class="text-xl font-black text-yellow-500 italic">R$ ${valor || '---'}</span>
@@ -183,6 +188,13 @@
                         </div>
                     </div>`;
                 cont.appendChild(div);
+            });
+        };
+
+        window.copiarTexto = (texto) => {
+            const apenasNumeros = texto.replace(/\D/g, "");
+            navigator.clipboard.writeText(apenasNumeros).then(() => {
+                alert("Telefone copiado (apenas números)!");
             });
         };
 
