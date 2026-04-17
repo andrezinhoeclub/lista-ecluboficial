@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB | Portaria Solteiras</title>
-    
-    <meta name="apple-mobile-web-app-title" content="Solteiras E-CLUB">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <link rel="apple-touch-icon" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
 
@@ -20,6 +16,13 @@
         .input-field:focus { border-color: #eab308 !important; outline: none; }
         .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; }
         .item-cliente { border-bottom: 1px solid #1a1a1a; transition: 0.3s; }
+        
+        /* ESTILO PARA BLOQUEIO (VERMELHO ALERTA) */
+        .cliente-bloqueada { 
+            background: linear-gradient(90deg, rgba(153, 27, 27, 0.4) 0%, rgba(5, 5, 5, 1) 100%) !important; 
+            border-left: 6px solid #ef4444 !important;
+        }
+
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
@@ -38,11 +41,11 @@
                 </div>
                 <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">CONTINUAR</button>
             </div>
-            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden italic text-center">Acesso negado</p>
+            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden text-center italic">Acesso negado</p>
         </div>
     </div>
 
-    <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto text-white">
+    <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center gap-4">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12">
@@ -51,7 +54,6 @@
                     <p id="labelOperador" class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1">---</p>
                 </div>
             </div>
-            
             <div class="flex gap-4">
                 <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-center min-w-[120px]">
                     <p class="text-[8px] font-black text-zinc-500 uppercase">Check-ins Hoje</p>
@@ -89,7 +91,7 @@
             <main class="lg:col-span-2 space-y-6">
                 <div class="relative w-full">
                     <input type="text" id="buscaCliente" placeholder="PESQUISAR: NOME, CPF OU WHATSAPP..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase pl-14 shadow-2xl border-white/10" oninput="filtrarClientes()">
-                    <span class="absolute left-6 top-5 opacity-30 text-xl text-white">🔍</span>
+                    <span class="absolute left-6 top-5 opacity-30 text-xl">🔍</span>
                 </div>
                 <div class="glass-card rounded-[2.5rem] overflow-hidden min-h-[400px]">
                     <div id="listaSolteiras" class="divide-y divide-zinc-900"></div>
@@ -98,14 +100,20 @@
         </div>
     </div>
 
-    <div id="modalEdit" class="hidden fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-6">
-        <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-md border-yellow-500/30 border-2 text-center text-white">
-            <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest text-white">Editar Observações</h2>
+    <div id="modalEdit" class="hidden fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-6">
+        <div class="glass-card p-8 rounded-[3rem] w-full max-w-md border-zinc-800 border-2 text-center">
+            <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest text-sm">Prontuário da Cliente</h2>
             <input type="hidden" id="editId">
-            <textarea id="editObsField" class="w-full p-4 rounded-xl input-field font-bold text-[11px] uppercase h-40 resize-none mb-6"></textarea>
-            <div class="flex gap-4">
-                <button onclick="fecharModal()" class="flex-grow bg-zinc-800 py-4 rounded-xl uppercase text-[10px] font-black">Cancelar</button>
-                <button onclick="salvarObs()" class="flex-grow btn-gold py-4 rounded-xl uppercase text-[10px] font-black">Salvar</button>
+            <input type="hidden" id="statusBloqueio">
+            <textarea id="editObsField" placeholder="MOTIVO DO BLOQUEIO OU OBSERVAÇÕES..." class="w-full p-6 rounded-2xl input-field font-bold text-xs uppercase h-48 resize-none mb-6"></textarea>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="fecharModal()" class="bg-zinc-800 py-5 rounded-2xl uppercase text-[10px] font-black text-white">Cancelar</button>
+                <button onclick="salvarObs()" class="bg-white text-black py-5 rounded-2xl uppercase text-[10px] font-black">Salvar Obs</button>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-zinc-800">
+                <button id="btnToggleBloqueio" onclick="toggleBloqueio()" class="w-full py-5 rounded-2xl uppercase text-[11px] font-black transition-all shadow-xl"></button>
             </div>
         </div>
     </div>
@@ -126,35 +134,22 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const colRef = collection(db, "cadastro_solteiras");
-        let clientesCache = [];
-        let operadorLogado = "";
-        let stepLogin = 0;
-        let usuarioData = null;
+        let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
 
-        // --- LÓGICA DE LOGIN UNIFICADA ---
         window.verificarOuLogar = async () => {
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
-            const erroMsg = document.getElementById('msgErro');
-            
             if (stepLogin === 0) {
                 const docSnap = await getDoc(doc(db, "configuracoes", n));
                 if (docSnap.exists()) {
-                    usuarioData = docSnap.data();
-                    stepLogin = 1;
+                    usuarioData = docSnap.data(); stepLogin = 1;
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
                     document.getElementById('btnAcao').innerText = "ENTRAR";
-                    erroMsg.classList.add('hidden');
-                } else {
-                    erroMsg.classList.remove('hidden');
-                }
+                } else { document.getElementById('msgErro').classList.remove('hidden'); }
             } else {
-                if (usuarioData.senha === s) {
-                    logarSucesso(n);
-                } else {
-                    alert("Senha incorreta!");
-                }
+                if (usuarioData.senha === s) logarSucesso(n);
+                else alert("Senha incorreta");
             }
         };
 
@@ -169,27 +164,22 @@
         function iniciarEscutas() {
             onSnapshot(colRef, (snap) => {
                 clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                atualizarContadores();
-                filtrarClientes();
+                atualizarContadores(); filtrarClientes();
             });
         }
 
-        // --- MÁSCARAS E AUXILIARES ---
         window.maskCPF = (i) => {
             let v = i.value.replace(/\D/g,"").substring(0,11);
             v = v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2");
             i.value = v;
         };
-
         window.maskTel = (i) => {
             let v = i.value.replace(/\D/g,"").substring(0,11);
             v = v.replace(/^(\d{2})(\d)/g,"($1) $2").replace(/(\d)(\d{4})$/,"$1-$2");
             i.value = v;
         };
-
         window.updateIdade = (v) => { 
-            const hoje = new Date();
-            const nasc = new Date(v + "T12:00:00");
+            const hoje = new Date(); const nasc = new Date(v + "T12:00:00");
             let idade = hoje.getFullYear() - nasc.getFullYear();
             const m = hoje.getMonth() - nasc.getMonth();
             if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--;
@@ -197,30 +187,20 @@
         };
 
         function obterDataCorteEvento() { 
-            const a = new Date(); 
-            const c = new Date(); 
-            c.setHours(5, 0, 0, 0); 
-            if (a < c) c.setDate(c.getDate() - 1); 
-            return c; 
+            const a = new Date(); const c = new Date(); c.setHours(5, 0, 0, 0); 
+            if (a < c) c.setDate(c.getDate() - 1); return c; 
         }
 
         function render(dados, isBusca = false) {
             const container = document.getElementById('listaSolteiras');
             const corte = obterDataCorteEvento();
-            
-            let paraExibir = dados;
-            if (!isBusca) {
-                paraExibir = dados.filter(c => {
-                    const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
-                    return u && u >= corte;
-                });
-            }
+            let paraExibir = isBusca ? dados : dados.filter(c => {
+                const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
+                return u && u >= corte;
+            });
 
             if (paraExibir.length === 0) {
-                const msg = isBusca ? 
-                    '<div class="p-20 text-center"><p class="text-red-500 font-black uppercase text-2xl italic mb-2">Cliente Sem Cadastro</p><p class="text-zinc-500 text-[11px] uppercase font-bold text-white text-white">Utilize o formulário ao lado para cadastrar.</p></div>' : 
-                    '<div class="p-20 text-center"><p class="text-zinc-700 font-black uppercase text-xs italic text-white text-white text-white">Aguardando pesquisa ou check-ins hoje...</p></div>';
-                container.innerHTML = msg;
+                container.innerHTML = `<div class="p-20 text-center opacity-30 uppercase font-black text-xs italic">${isBusca ? 'Cliente Sem Cadastro' : 'Nenhuma solteira na casa agora'}</div>`;
                 return;
             }
 
@@ -228,25 +208,72 @@
             paraExibir.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
                 const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
                 const naCasa = u && u >= corte;
+                const bloqueada = c.bloqueada === true;
                 
                 const div = document.createElement('div');
-                div.className = `item-cliente p-6 flex flex-col md:flex-row justify-between items-center gap-4 ${naCasa ? 'bg-green-500/5' : ''}`;
+                div.className = `item-cliente p-6 flex flex-col md:flex-row justify-between items-center gap-4 ${bloqueada ? 'cliente-bloqueada' : (naCasa ? 'bg-green-500/5' : '')}`;
+                
                 div.innerHTML = `
-                    <div class="flex-grow text-white">
-                        <div class="flex items-center flex-wrap gap-2 text-white">
-                            <h3 class="text-lg font-black uppercase ${naCasa ? 'text-green-400' : 'text-white'} text-white">${c.nome}</h3>
-                            <span class="text-xl font-black text-green-500 font-mono text-white"> — ${c.tel}</span>
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3">
+                            <h3 class="text-xl font-black uppercase ${bloqueada ? 'text-red-200' : (naCasa ? 'text-green-400' : 'text-white')}">${c.nome}</h3>
+                            ${bloqueada ? '<span class="bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-black animate-pulse">⚠️ BLOQUEADA</span>' : ''}
                         </div>
-                        <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase text-white">🆔 ${c.cpf} | ÚLTIMA: ${u ? u.toLocaleDateString('pt-BR') : 'NUNCA'}</p>
-                        ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase text-white">⚠️ ${c.obs}</p>` : ''}
+                        <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase text-white">🆔 ${c.cpf} | ${c.tel}</p>
+                        ${c.obs ? `<p class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-bold p-3 rounded-xl mt-3 uppercase">⚠️ OBS: ${c.obs}</p>` : ''}
                     </div>
-                    <div class="flex items-center gap-2 text-white">
-                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-4 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700 text-white">Obs</button>
-                        ${naCasa ? '<span class="text-green-500 text-[10px] font-black uppercase px-4 text-white">NA CASA ✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-green-500 shadow-lg shadow-green-900/20 text-white">Liberar</button>`}
+                    <div class="flex items-center gap-2">
+                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`, ${bloqueada})" class="bg-zinc-800 text-white px-6 py-4 rounded-2xl text-[9px] font-black uppercase">OBS / BLOQUEIO</button>
+                        ${bloqueada ? 
+                            '<span class="text-red-500 font-black uppercase px-6 py-4 border border-red-500/30 rounded-2xl bg-red-900/20 italic">Proibida</span>' : 
+                            (naCasa ? '<span class="text-green-500 text-[10px] font-black uppercase px-6 py-4">NA CASA ✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase hover:bg-green-500">Liberar</button>`)
+                        }
                     </div>`;
                 container.appendChild(div);
             });
         }
+
+        window.abrirModal = (id, obs, bloqueada) => {
+            document.getElementById('editId').value = id;
+            document.getElementById('editObsField').value = obs;
+            document.getElementById('statusBloqueio').value = bloqueada;
+            const btnB = document.getElementById('btnToggleBloqueio');
+            if(bloqueada) {
+                btnB.innerText = "DESBLOQUEAR CLIENTE";
+                btnB.className = "w-full py-5 rounded-2xl uppercase text-[11px] font-black bg-green-600 text-white shadow-green-900/40";
+            } else {
+                btnB.innerText = "ATIVAR BLOQUEIO (BLACKLIST)";
+                btnB.className = "w-full py-5 rounded-2xl uppercase text-[11px] font-black bg-red-600 text-white shadow-red-900/40";
+            }
+            document.getElementById('modalEdit').classList.remove('hidden');
+        };
+
+        window.fecharModal = () => document.getElementById('modalEdit').classList.add('hidden');
+
+        window.toggleBloqueio = async () => {
+            const id = document.getElementById('editId').value;
+            const isB = document.getElementById('statusBloqueio').value === 'true';
+            const motivo = document.getElementById('editObsField').value;
+
+            if(!isB) { // Vai bloquear agora
+                if(!motivo) return alert("DIGITE O MOTIVO DO BLOQUEIO NO CAMPO ACIMA!");
+                if(confirm("CONFIRMA BLOQUEIO DESTA CLIENTE?")) {
+                    await updateDoc(doc(db, "cadastro_solteiras", id), { bloqueada: true, obs: motivo.toUpperCase() });
+                }
+            } else { // Vai desbloquear
+                if(confirm("DESEJA RETIRAR O BLOQUEIO?")) {
+                    await updateDoc(doc(db, "cadastro_solteiras", id), { bloqueada: false });
+                }
+            }
+            fecharModal();
+        };
+
+        window.salvarObs = async () => {
+            await updateDoc(doc(db, "cadastro_solteiras", document.getElementById('editId').value), { 
+                obs: document.getElementById('editObsField').value.toUpperCase() 
+            });
+            fecharModal();
+        };
 
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -255,43 +282,30 @@
             const tel = document.getElementById('tel').value.trim();
             const cpf = document.getElementById('cpf').value.trim();
 
-            if(tel.length < 14 || cpf.length < 14) return alert("Telefone ou CPF incompletos!");
+            btn.disabled = true; btn.innerText = "VERIFICANDO...";
+            const qTel = query(colRef, where("tel", "==", tel));
+            const qCpf = query(colRef, where("cpf", "==", cpf));
+            const [sTel, sCpf] = await Promise.all([getDocs(qTel), getDocs(qCpf)]);
 
-            btn.disabled = true;
-            btn.innerText = "VERIFICANDO...";
-
-            try {
-                const qTel = query(colRef, where("tel", "==", tel));
-                const qCpf = query(colRef, where("cpf", "==", cpf));
-                const [sTel, sCpf] = await Promise.all([getDocs(qTel), getDocs(qCpf)]);
-
-                if (!sTel.empty || !sCpf.empty) {
-                    const docExistente = !sTel.empty ? sTel.docs[0] : sCpf.docs[0];
-                    if(confirm(`CLIENTE JÁ CADASTRADA!\nRealizar check-in de hoje?`)) {
-                        await updateDoc(doc(db, "cadastro_solteiras", docExistente.id), { ultima_visita: serverTimestamp(), operador_checkin: operadorLogado });
-                    }
-                } else {
-                    await addDoc(colRef, {
-                        nome, tel, cpf,
-                        nascimento: document.getElementById('nascimento').value,
-                        obs: document.getElementById('obs').value.toUpperCase(),
-                        ultima_visita: serverTimestamp(),
-                        operador_cadastro: operadorLogado
-                    });
-                    alert("Cadastrada e liberada!");
+            if (!sTel.empty || !sCpf.empty) {
+                const ex = !sTel.empty ? sTel.docs[0] : sCpf.docs[0];
+                if(ex.data().bloqueada) { alert("ERRO: ESTA CLIENTE ESTÁ BLOQUEADA NA BLACKLIST!"); }
+                else if(confirm("JÁ CADASTRADA! DAR CHECK-IN?")) {
+                    await updateDoc(doc(db, "cadastro_solteiras", ex.id), { ultima_visita: serverTimestamp(), operador_checkin: operadorLogado });
                 }
-                document.getElementById('formSolteira').reset();
-                document.getElementById('idadeDisplay').innerText = "--";
-                document.getElementById('buscaCliente').value = "";
-            } catch (err) { alert("Erro ao salvar."); }
-            btn.disabled = false;
-            btn.innerText = "Salvar e Confirmar";
+            } else {
+                await addDoc(colRef, {
+                    nome, tel, cpf, nascimento: document.getElementById('nascimento').value,
+                    obs: document.getElementById('obs').value.toUpperCase(),
+                    ultima_visita: serverTimestamp(), operador_cadastro: operadorLogado, bloqueada: false
+                });
+            }
+            document.getElementById('formSolteira').reset();
+            document.getElementById('idadeDisplay').innerText = "--";
+            btn.disabled = false; btn.innerText = "Salvar e Confirmar";
         });
 
         window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp(), operador_checkin: operadorLogado });
-        window.abrirModal = (id, obs) => { document.getElementById('editId').value = id; document.getElementById('editObsField').value = obs; document.getElementById('modalEdit').classList.remove('hidden'); };
-        window.fecharModal = () => document.getElementById('modalEdit').classList.add('hidden');
-        window.salvarObs = async () => { await updateDoc(doc(db, "cadastro_solteiras", document.getElementById('editId').value), { obs: document.getElementById('editObsField').value.toUpperCase() }); fecharModal(); };
 
         function atualizarContadores() {
             const corte = obterDataCorteEvento();
@@ -304,14 +318,12 @@
             if (b.length > 0) {
                 const tLimpo = b.replace(/\D/g, "");
                 render(clientesCache.filter(c => {
-                    const nMatch = c.nome.includes(b);
-                    const cMatch = c.cpf.replace(/\D/g, "").includes(tLimpo);
-                    const tMatch = c.tel.replace(/\D/g, "").includes(tLimpo);
-                    return nMatch || (tLimpo && (cMatch || tMatch));
+                    const nM = c.nome.includes(b);
+                    const cM = c.cpf.replace(/\D/g, "").includes(tLimpo);
+                    const tM = c.tel.replace(/\D/g, "").includes(tLimpo);
+                    return nM || (tLimpo && (cM || tM));
                 }), true);
-            } else {
-                render(clientesCache, false);
-            }
+            } else { render(clientesCache, false); }
         };
     </script>
 </body>
