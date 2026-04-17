@@ -4,13 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eclub - Official Booking</title>
-    
-    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <meta property="og:title" content="E-CLUB | Reserva de Lista">
-    <meta property="og:description" content="Garanta seu nome na lista VIP oficial do E-Club Curitiba.">
-    <meta property="og:image" content="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <meta property="og:type" content="website">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .btn-action { transition: all 0.2s ease; }
@@ -19,20 +12,8 @@
         @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         
         .festa-card { background: #000; border: 1px solid #1a1a1a; border-radius: 2.5rem; overflow: hidden; }
-        
-        .banner-container { 
-            background-color: #000; 
-            position: relative; 
-            width: 100%; 
-            height: auto; 
-            display: block;
-        }
-        .banner-img { 
-            width: 100%; 
-            height: auto; 
-            display: block;
-            object-fit: contain;
-        }
+        .banner-container { background-color: #000; position: relative; width: 100%; height: 320px; display: flex; align-items: center; justify-content: center; }
+        .banner-img { object-fit: contain !important; width: 100%; height: 100%; }
         
         .type-btn { background: #111; border: 1px solid #27272a; color: white; transition: all 0.3s; }
         .type-btn.active { background: #eab308; border-color: #eab308; color: black; box-shadow: 0 0 15px rgba(234, 179, 8, 0.3); }
@@ -55,18 +36,13 @@
             <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Sincronizando Agenda...</div>
         </div>
 
-        <div class="mt-16 mb-8 px-1">
-            <p class="text-[9px] text-zinc-500 font-black uppercase mb-4 tracking-[0.2em] text-center italic">E-Club Beats • Spotify Playlist</p>
-            <iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/artist/5huLErnSl12r2IkhO81Hqa?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-        </div>
-
-        <footer class="mt-12 mb-12 border-t border-zinc-900 pt-10 text-center text-white">
+        <footer class="mt-20 mb-12 border-t border-zinc-900 pt-10 text-center text-white">
             <div class="grid grid-cols-2 gap-4 w-full px-1 mb-8">
                 <a href="https://wa.me/5541995040506" target="_blank" class="btn-whatsapp flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-black">WhatsApp</a>
                 <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="btn-instagram flex items-center justify-center p-5 rounded-2xl btn-action text-[11px] font-black uppercase tracking-widest text-white">Instagram</a>
             </div>
 
-            <a href="http://googleusercontent.com/maps.google.com/12" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
+            <a href="http://maps.google.com/?q=Eclub+Curitiba" target="_blank" class="block border-2 border-yellow-500 p-8 rounded-[2.5rem] bg-black btn-action">
                 <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Localização</p>
                 <p class="text-sm font-black italic text-white mb-1">Bairro Alto, Curitiba - PR</p>
                 <p class="text-[10px] text-zinc-500 font-bold uppercase underline tracking-tighter">Abrir GPS</p>
@@ -96,7 +72,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
         const params = new URLSearchParams(window.location.search);
         const promoterRef = params.get('ref') || 'Direto';
 
@@ -127,11 +102,6 @@
                 eventosValidos.sort((a, b) => new Date(a.data) - new Date(b.data));
                 container.innerHTML = '';
                 
-                if (eventosValidos.length === 0) {
-                    container.innerHTML = '<p class="text-center py-20 text-zinc-500 font-bold uppercase text-xs">Nenhum evento programado.</p>';
-                    return;
-                }
-
                 eventosValidos.forEach(ev => {
                     const card = document.createElement('div');
                     card.className = "festa-card fade-down mb-6";
@@ -187,7 +157,7 @@
         window.processarEnvio = async (nomeEvento, id) => {
             const form = document.getElementById(`form-contato-${id}`);
             const btn = document.getElementById(`btn-submit-${id}`);
-            const nome = document.getElementById(`nome-${id}`).value.trim().toUpperCase();
+            const nome = document.getElementById(`nome-${id}`).value.trim();
             const telRaw = document.getElementById(`tel-${id}`).value.trim();
             const tipo = form.getAttribute('data-tipo');
             const telNumeros = telRaw.replace(/\D/g, "");
