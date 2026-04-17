@@ -28,10 +28,10 @@
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">ACESSO <span class="text-yellow-500">PORTARIA</span></h1>
             <div class="space-y-4">
                 <input type="text" id="inputNomeUsuario" placeholder="SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
-                <div id="areaSenha" class="hidden">
+                <div id="areaSenha" class="hidden animate-in fade-in duration-500">
                     <input type="password" id="senhaUsuario" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
                 </div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest mt-4">CONTINUAR</button>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all mt-4">CONTINUAR</button>
             </div>
             <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Defina sua senha acima</p>
             <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden">Operador não cadastrado ou senha incorreta</p>
@@ -127,35 +127,51 @@
             iniciarEscutas();
         }
 
+        // REGRA DE OURO: O dia da casa só muda às 05:00 da manhã
         const validarJanela = (dataEvento) => {
-            const agora = new Date(); const hora = agora.getHours();
+            const agora = new Date();
+            const hora = agora.getHours();
             const offset = agora.getTimezoneOffset() * 60000;
             const hoje = new Date(agora.getTime() - offset).toISOString().split('T')[0];
-            const ontemObj = new Date(agora.getTime() - offset); ontemObj.setDate(ontemObj.getDate() - 1);
+            const ontemObj = new Date(agora.getTime() - offset);
+            ontemObj.setDate(ontemObj.getDate() - 1);
             const ontem = ontemObj.toISOString().split('T')[0];
+            
             if (hora >= 21 && hoje === dataEvento) return true;
-            if (hora < 6 && ontem === dataEvento) return true;
+            if (hora < 5 && ontem === dataEvento) return true; // Mantém liberado até as 05h
             return false;
         };
 
         function iniciarEscutas() {
-            onSnapshot(collection(db, "lista_eventos"), (snap) => {
-                bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                document.getElementById('total-checkins').innerText = bancoClientes.filter(c => {
-                    const ev = bancoEventos.find(e => e.nome === c.evento);
-                    return c.entrou && (ev ? validarJanela(ev.data) : false);
-                }).length;
-                processarPesquisa();
-            });
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
-                bancoEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                const cont = document.getElementById('lista-eventos-sidebar');
-                cont.innerHTML = '';
-                bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
-                    const aberto = validarJanela(ev.data);
-                    const total = bancoClientes.filter(c => c.evento === ev.nome).length;
-                    cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'} mb-2"><p class="text-[8px] font-black text-white uppercase">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4><div class="flex justify-between items-end mt-2"><span class="text-[8px] font-bold ${aberto ? 'text-green-500' : 'text-zinc-600'}">${aberto ? '🔥 NO AR' : '🔒 ESPERA'}</span><span class="text-lg font-black text-yellow-500 leading-none">${total}</span></div></div>`;
+            // Primeiro buscamos os eventos ativos
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
+                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
+                
+                // Dentro da escuta de clientes, aplicamos o filtro cruzado
+                onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
+                    bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
+                    
+                    // CONTADOR CORRIGIDO: Conta apenas check-ins dos eventos que estão no ar
+                    const checkinsTurno = bancoClientes.filter(c => {
+                        const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
+                        const noTurno = evRelacionado ? validarJanela(evRelacionado.data) : false;
+                        return c.entrou && noTurno;
+                    }).length;
+                    
+                    document.getElementById('total-checkins').innerText = checkinsTurno;
+                    processarPesquisa();
+                    renderizarSidebar();
                 });
+            });
+        }
+
+        function renderizarSidebar() {
+            const cont = document.getElementById('lista-eventos-sidebar');
+            cont.innerHTML = '';
+            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+                const aberto = validarJanela(ev.data);
+                const totalReservas = bancoClientes.filter(c => c.evento === ev.nome).length;
+                cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'} mb-2"><p class="text-[8px] font-black text-white uppercase">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-[10px] font-black uppercase text-white truncate leading-tight">${ev.nome}</h4><div class="flex justify-between items-end mt-2"><span class="text-[8px] font-bold ${aberto ? 'text-green-500' : 'text-zinc-600'}">${aberto ? '🔥 NO AR' : '🔒 ESPERA'}</span><span class="text-lg font-black text-yellow-500 leading-none">${totalReservas}</span></div></div>`;
             });
         }
 
@@ -168,11 +184,12 @@
                 const evMatch = bancoEventos.find(e => e.nome === c.evento);
                 return termo && (evMatch ? validarJanela(evMatch.data) : false);
             });
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800">Nenhum registro para este turno</div>' : '';
+            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800">Nenhum registro encontrado</div>' : '';
             
             filtrados.sort((a,b) => (a.entrou === b.entrou) ? a.nome.localeCompare(b.nome) : a.entrou ? 1 : -1).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
-                const isAniv = c.tipo === "ANIVERSARIO"; const isCasal = c.tipo_entrada === "CASAL";
+                const isAniv = (c.tipo === "ANIVERSARIO" || c.tipo_entrada === "ANIVERSARIO"); 
+                const isCasal = c.tipo_entrada === "CASAL";
                 let valor = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
                 const badge = isCasal ? 'badge-casal' : 'badge-solteiro';
 
