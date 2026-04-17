@@ -3,75 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB | Portaria Inteligente</title>
+    <title>E-CLUB | Promoter Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
-        .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
-        .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
-        .client-card { background: #0a0a0a; border: 1px solid #1a1a1a; transition: 0.25s; cursor: pointer; }
-        .client-card.entrou { opacity: 0.2 !important; filter: grayscale(1); pointer-events: none; }
-        input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
-        input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
-        .badge-casal { background: #eab308; color: #000; }
-        .badge-solteiro { background: #3b82f6; color: #fff; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@800&display=swap');
+        body { font-family: 'Inter', sans-serif; background: radial-gradient(circle at top right, #1e1b4b, #000); background-attachment: fixed; color: #fff; min-height: 100vh; margin: 0; padding: 0; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .blue-gradient { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+        .gold-gradient { background: linear-gradient(135deg, #eab308 0%, #a16207 100%); }
+        .purple-gradient { background: linear-gradient(135deg, #9333ea 0%, #3b82f6 100%); }
+        .text-neon-blue { color: #60a5fa; text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); font-family: 'JetBrains Mono', monospace; }
+        .text-neon-zinc { color: #e4e4e7; text-shadow: 0 0 10px rgba(255, 255, 255, 0.2); font-family: 'JetBrains Mono', monospace; }
+        /* Ajuste para a rolagem não ser cortada pelos botões fixos */
+        .content-wrapper { padding-bottom: 180px; } 
     </style>
 </head>
-<body class="flex h-screen">
+<body class="p-4 md:p-8">
 
-    <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
-        <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
-            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">ACESSO <span class="text-yellow-500">PORTARIA</span></h1>
-            
-            <div class="space-y-4">
-                <input type="text" id="inputNomeUsuario" placeholder="DIGITE SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
-                
-                <div id="areaSenha" class="hidden">
-                    <input type="password" id="senhaUsuario" placeholder="SUA SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
-                </div>
-                
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all mt-4">
-                    CONTINUAR
-                </button>
+    <div id="loginPromoter" class="flex flex-col items-center justify-center min-h-[90vh]">
+        <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-blue-500/20 border text-white">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 mx-auto mb-8">
+            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter">Promoter <span class="text-blue-500">Access</span></h1>
+            <div id="step-user">
+                <input type="text" id="userPromoter" placeholder="USUÁRIO" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-blue-500 text-center font-bold uppercase text-xs mb-4">
+                <button onclick="validarUsuario()" class="w-full blue-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest">Continuar</button>
             </div>
-
-            <p id="msgStatus" class="text-blue-400 text-[10px] font-black uppercase mt-6 hidden italic">Nome localizado! Defina sua senha acima</p>
-            <p id="erroLogin" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden tracking-tighter">OPERADOR NÃO CADASTRADO NO SISTEMA</p>
+            <div id="step-password" class="hidden">
+                <input type="password" id="passPromoter" placeholder="SENHA" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-blue-500 text-center font-bold uppercase text-xs mb-4 text-white">
+                <button onclick="entrarComSenha()" id="btnEntrar" class="w-full blue-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest">Entrar</button>
+            </div>
+            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-4 hidden">Erro na validação</p>
         </div>
     </div>
 
-    <div id="interfacePrincipal" class="hidden flex w-full h-full">
-        <aside class="w-80 h-full flex flex-col p-6 bg-black/50 border-r border-zinc-900">
-            <div class="mb-10 text-center">
-                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-2 border border-zinc-800 py-1 rounded-lg italic">OPERADOR: ---</p>
+    <div id="painelDados" class="max-w-md mx-auto hidden content-wrapper">
+        <header class="flex justify-between items-center mb-10">
+            <div>
+                <p class="text-blue-500 text-[10px] font-black uppercase tracking-[0.3em] mb-1">E-Club Oficial</p>
+                <h1 id="boasVindas" class="text-3xl font-black text-white uppercase italic leading-none">---</h1>
             </div>
-            <div class="flex-grow overflow-y-auto" id="lista-eventos-sidebar"></div>
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Trocar Usuário</button>
-        </aside>
+            <button onclick="location.reload()" class="bg-zinc-900/50 p-3 px-5 rounded-2xl text-red-500 font-black text-[10px] border border-red-500/20">Sair</button>
+        </header>
 
-        <main class="flex-grow flex flex-col">
-            <header class="p-8 border-b border-zinc-900 bg-black/20">
-                <div class="max-w-5xl mx-auto flex gap-8 items-center">
-                    <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="PESQUISAR CLIENTE..." class="flex-grow p-6 rounded-[2rem] text-sm font-bold uppercase text-white">
-                    <div class="text-right border-l border-zinc-800 pl-8 min-w-[120px]">
-                        <p id="total-checkins" class="text-4xl font-black italic leading-none text-green-500">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2">Check-ins Noite</p>
-                    </div>
-                </div>
-            </header>
-            <section class="flex-grow p-8 overflow-y-auto bg-[#030303]" id="container-resultados">
-                <div class="py-40 opacity-10 text-center text-white font-black uppercase italic tracking-[0.5em]">Aguardando Pesquisa</div>
-            </section>
-        </main>
+        <section class="space-y-8">
+            <div id="secaoMeusLinks" class="hidden">
+                <h3 class="text-[10px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] ml-2 italic">Links de Aniversário</h3>
+                <div id="listaLinksAniv" class="space-y-3"></div>
+            </div>
+
+            <div>
+                <h3 class="text-[10px] font-black uppercase text-zinc-500 mb-4 tracking-[0.2em] ml-2 italic">Próximos Eventos</h3>
+                <div id="listaEventosPromoter" class="glass rounded-[2.5rem] overflow-hidden"></div>
+            </div>
+        </section>
+
+        <div id="footerAcoes" class="fixed bottom-0 left-0 w-full p-4 md:p-6 bg-black/90 backdrop-blur-xl border-t border-white/10 z-40">
+            <div class="max-w-md mx-auto flex gap-3" id="barraBotoes">
+                <button onclick="copiarLinkReservas()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-transform active:scale-95">Link Reservas</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalAniversario" class="fixed inset-0 bg-black/95 backdrop-blur-md z-50 hidden flex items-center justify-center p-6 text-white">
+        <div class="glass max-w-sm w-full p-10 rounded-[3rem] border-yellow-500/30 border text-center">
+            <h2 class="text-2xl font-black text-yellow-500 uppercase italic mb-8">Novo Aniversário</h2>
+            <div class="text-left space-y-4">
+                <select id="selectEventoAniv" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none text-xs font-bold uppercase"></select>
+                <input type="text" id="nomeAniversariante" placeholder="NOME DO ANIVERSARIANTE" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl text-white outline-none font-black uppercase text-xs">
+            </div>
+            <button onclick="gerarLinkAniversario()" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl mt-8">Gerar e Salvar</button>
+            <button onclick="fecharModalAniv()" class="w-full text-zinc-600 font-black py-4 uppercase text-[9px] mt-2">Cancelar</button>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, getDoc, updateDoc, setDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -84,136 +91,128 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        let currentPromoter = "";
+        let isFirstAccess = false;
+        let todasReservasGlobal = [];
 
-        let bancoClientes = [];
-        let bancoEventos = [];
-        let operadorLogado = "";
-        let usuarioDocId = ""; 
-        let usuarioData = null;
-        let stepLogin = 0;
-
-        // FUNÇÃO DE LOGIN ROBUSTA
-        window.verificarOuLogar = async () => {
-            const nomeInput = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
-            const senhaInput = document.getElementById('senhaUsuario').value.trim();
-            const areaSenha = document.getElementById('areaSenha');
-            const btn = document.getElementById('btnAcao');
-            const erro = document.getElementById('erroLogin');
-            const msg = document.getElementById('msgStatus');
-
-            erro.classList.add('hidden');
-
-            if (stepLogin === 0) {
-                if (!nomeInput) return;
-
-                // Tenta buscar pelo ID direto (que é o nome em minúsculo)
-                const docRef = doc(db, "configuracoes", nomeInput);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    usuarioData = docSnap.data();
-                    usuarioDocId = nomeInput;
-                    stepLogin = 1;
-                    areaSenha.classList.remove('hidden');
-                    document.getElementById('inputNomeUsuario').readOnly = true;
-                    
-                    if (!usuarioData.senha || usuarioData.senha === "") {
-                        btn.innerText = "CADASTRAR E ENTRAR";
-                        msg.classList.remove('hidden');
-                    } else {
-                        btn.innerText = "ENTRAR NO SISTEMA";
-                    }
-                } else {
-                    erro.classList.remove('hidden');
-                }
-            } else {
-                if (!senhaInput) return;
-
-                if (!usuarioData.senha || usuarioData.senha === "") {
-                    await updateDoc(doc(db, "configuracoes", usuarioDocId), { senha: senhaInput });
-                    logarSucesso(usuarioDocId);
-                } else if (usuarioData.senha === senhaInput) {
-                    logarSucesso(usuarioDocId);
-                } else {
-                    erro.innerText = "SENHA INCORRETA";
-                    erro.classList.remove('hidden');
-                }
-            }
-        };
-
-        function logarSucesso(nome) {
-            operadorLogado = nome;
-            document.getElementById('operadorAtivo').innerText = "OPERADOR: " + nome.toUpperCase();
-            document.getElementById('telaLogin').classList.add('hidden');
-            document.getElementById('interfacePrincipal').classList.remove('hidden');
-            iniciarEscutas();
+        window.validarUsuario = async function() {
+            const nomeInput = document.getElementById('userPromoter').value.trim().toLowerCase();
+            if(!nomeInput) return;
+            const docSnap = await getDoc(doc(db, "promoters", nomeInput));
+            if(docSnap.exists()) {
+                currentPromoter = nomeInput;
+                document.getElementById('step-user').classList.add('hidden');
+                document.getElementById('step-password').classList.remove('hidden');
+                if(!docSnap.data().senha) isFirstAccess = true;
+            } else { document.getElementById('msgErro').classList.remove('hidden'); }
         }
 
-        const validarTurno = (dataEvento) => {
-            const agora = new Date();
-            const hora = agora.getHours();
-            const offset = agora.getTimezoneOffset() * 60000;
-            const hojeStr = new Date(agora.getTime() - offset).toISOString().split('T')[0];
-            const ontemObj = new Date(agora.getTime() - offset);
-            ontemObj.setDate(ontemObj.getDate() - 1);
-            const ontemStr = ontemObj.toISOString().split('T')[0];
+        window.entrarComSenha = async function() {
+            const senha = document.getElementById('passPromoter').value.trim();
+            const docSnap = await getDoc(doc(db, "promoters", currentPromoter));
+            if(isFirstAccess || docSnap.data().senha === senha) {
+                if(isFirstAccess) await updateDoc(doc(db, "promoters", currentPromoter), { senha: senha });
+                carregarPainel(docSnap.data());
+            } else { alert("Senha incorreta"); }
+        }
 
-            if (hora >= 21 && hojeStr === dataEvento) return true;
-            if (hora < 6 && ontemStr === dataEvento) return true;
-            return false;
-        };
+        function carregarPainel(dadosUser) {
+            document.getElementById('loginPromoter').classList.add('hidden');
+            document.getElementById('painelDados').classList.remove('hidden');
+            document.getElementById('boasVindas').innerText = currentPromoter;
 
-        function iniciarEscutas() {
             onSnapshot(collection(db, "lista_eventos"), (snap) => {
-                bancoClientes = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                const total = bancoClientes.filter(c => {
-                    const ev = bancoEventos.find(e => e.nome === c.evento);
-                    return c.entrou && (ev ? validarTurno(ev.data) : false);
-                }).length;
-                document.getElementById('total-checkins').innerText = total;
-                processarPesquisa();
+                todasReservasGlobal = snap.docs.map(d => d.data());
+                if(dadosUser.tipo === "aniversario") atualizarListaLinks();
+                carregarTabelaEventos();
             });
 
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
-                bancoEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                const cont = document.getElementById('lista-eventos-sidebar');
-                cont.innerHTML = '';
-                bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
-                    const aberto = validarTurno(ev.data);
-                    const qtd = bancoClientes.filter(c => c.evento === ev.nome).length;
-                    cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 ${aberto ? 'border-l-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 'border-l-zinc-800 opacity-40'} mb-2">
-                        <p class="text-[8px] font-black text-white uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                        <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
-                        <div class="flex justify-between items-end mt-2"><span class="text-[8px] font-bold ${aberto ? 'text-green-500' : 'text-zinc-600'}">${aberto ? '🔥 NO AR' : '🔒 ESPERA'}</span><span class="text-lg font-black text-yellow-500">${qtd}</span></div></div>`;
-                });
+            if(dadosUser.tipo === "aniversario") {
+                document.getElementById('secaoMeusLinks').classList.remove('hidden');
+                const btnAniv = document.createElement('button');
+                btnAniv.onclick = abrirModalAniv;
+                btnAniv.className = "flex-grow purple-gradient text-white font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl transition-transform active:scale-95";
+                btnAniv.innerHTML = "🎂 Desconto";
+                document.getElementById('barraBotoes').appendChild(btnAniv);
+                onSnapshot(query(collection(db, "links_aniversario"), where("promoter", "==", currentPromoter)), () => atualizarListaLinks());
+            }
+        }
+
+        async function atualizarListaLinks() {
+            const snapLinks = await getDocs(query(collection(db, "links_aniversario"), where("promoter", "==", currentPromoter)));
+            const container = document.getElementById('listaLinksAniv');
+            container.innerHTML = '';
+            snapLinks.forEach(docLink => {
+                const link = docLink.data();
+                const qtdConvidados = todasReservasGlobal.filter(r => r.tipo === "ANIVERSARIO" && r.aniversariante === link.aniversariante && r.evento === link.festa).length;
+                container.innerHTML += `
+                    <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-purple-500">
+                        <div class="truncate mr-2">
+                            <p class="text-[10px] font-black text-white uppercase">${link.aniversariante}</p>
+                            <p class="text-[7px] text-zinc-500 uppercase truncate">${link.festa}</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="text-right">
+                                <p class="text-[7px] text-purple-400 font-black uppercase">Convidados</p>
+                                <p class="text-lg font-black text-white leading-none">${qtdConvidados}</p>
+                            </div>
+                            <button onclick="navigator.clipboard.writeText('${link.url}'); alert('Link Copiado!')" class="bg-purple-500/20 text-purple-400 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Copiar</button>
+                        </div>
+                    </div>`;
             });
         }
 
-        window.processarPesquisa = () => {
-            const busca = document.getElementById('input-busca').value.trim().toUpperCase();
-            const cont = document.getElementById('container-resultados');
-            if (busca.length < 2) return;
+        async function carregarTabelaEventos() {
+            const snapEventos = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+            const cont = document.getElementById('listaEventosPromoter');
+            cont.innerHTML = '';
+            
+            // Ordena por data
+            const eventos = snapEventos.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data));
 
-            const filtrados = bancoClientes.filter(c => {
-                const bate = (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
-                const ev = bancoEventos.find(e => e.nome === c.evento);
-                return bate && (ev ? validarTurno(ev.data) : false);
+            eventos.forEach(ev => {
+                const ind = todasReservasGlobal.filter(r => r.evento === ev.nome && r.promoter.toLowerCase() === currentPromoter).length;
+                const ger = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
+                cont.innerHTML += `
+                    <div class="p-6 flex justify-between items-center border-b border-white/5">
+                        <div>
+                            <h4 class="text-[12px] font-black uppercase text-white italic leading-tight">${ev.nome}</h4>
+                            <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1">${ev.data.split('-').reverse().join('/')}</p>
+                        </div>
+                        <div class="flex gap-4 text-right">
+                            <div>
+                                <p class="text-[7px] text-blue-400 font-black uppercase mb-1">Minhas</p>
+                                <p class="text-2xl font-black text-neon-blue leading-none">${ind}</p>
+                            </div>
+                            <div class="border-l border-white/10 pl-4">
+                                <p class="text-[7px] text-zinc-600 font-black uppercase mb-1">Geral</p>
+                                <p class="text-2xl font-black text-neon-zinc leading-none">${ger}</p>
+                            </div>
+                        </div>
+                    </div>`;
             });
+        }
 
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black text-zinc-800">NENHUM REGISTRO NESTE TURNO</div>' : '';
-            filtrados.sort((a,b) => (a.entrou === b.entrou) ? a.nome.localeCompare(b.nome) : a.entrou ? 1 : -1).forEach(c => {
-                const badge = c.tipo_entrada === 'CASAL' ? 'badge-casal' : 'badge-solteiro';
-                const div = document.createElement('div');
-                div.className = `client-card p-6 rounded-[2rem] flex items-center mb-2 ${c.entrou ? 'entrou' : ''}`;
-                div.innerHTML = `<div class="w-40 border-r border-zinc-900 pr-6"><span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase block text-center">${c.tipo_entrada || 'LISTA'}</span><p class="text-[8px] font-black text-zinc-600 uppercase mt-2 text-center truncate">REF: ${c.promoter || 'DIRETO'}</p></div>
-                    <div class="flex-grow px-10"><h3 class="text-xl font-black uppercase italic text-white">${c.nome}</h3><p class="text-sm font-bold text-zinc-500 font-mono">${c.tel || '---'}</p></div>
-                    <div class="w-48 text-right">${c.entrou ? '<span class="text-green-500 font-black italic">CHECK-IN OK ✓</span>' : `<button onclick="confirmar('${c.id}')" class="bg-white text-black px-10 py-4 rounded-2xl font-black uppercase italic text-xs hover:bg-yellow-500">ENTRADA</button>`}</div>`;
-                cont.appendChild(div);
-            });
-        };
-
-        window.confirmar = async (id) => {
-            await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
+        window.abrirModalAniv = async () => {
+            const select = document.getElementById('selectEventoAniv');
+            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+            select.innerHTML = '';
+            snap.forEach(ev => select.innerHTML += `<option value="${ev.data().nome}">${ev.data().nome}</option>`);
+            document.getElementById('modalAniversario').classList.remove('hidden');
+        }
+        window.fecharModalAniv = () => document.getElementById('modalAniversario').classList.add('hidden');
+        window.gerarLinkAniversario = async () => {
+            const festa = document.getElementById('selectEventoAniv').value;
+            const nome = document.getElementById('nomeAniversariante').value.trim().toUpperCase();
+            if(!nome) return alert("Digite o nome!");
+            const baseUrl = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html');
+            const urlFinal = `${baseUrl}?ref=${currentPromoter}&aniv=${encodeURIComponent(nome)}&festa=${encodeURIComponent(festa)}`;
+            await setDoc(doc(collection(db, "links_aniversario")), { promoter: currentPromoter, aniversariante: nome, festa: festa, url: urlFinal, data_criacao: new Date().toISOString() });
+            navigator.clipboard.writeText(urlFinal).then(() => { alert("Link Salvo!"); fecharModalAniv(); });
+        }
+        window.copiarLinkReservas = () => {
+            const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?ref=' + currentPromoter;
+            navigator.clipboard.writeText(url).then(() => alert("Copiado!"));
         };
     </script>
 </body>
