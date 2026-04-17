@@ -12,6 +12,7 @@
         .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; }
         .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
         .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
+        
         .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
@@ -186,10 +187,17 @@
 
         window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado!"); };
 
+        // AJUSTADO PARA ORDEM CRONOLÓGICA (DA DATA MENOR PARA MAIOR)
         function renderizarGridConfig() {
-            document.getElementById('grid-eventos-config').innerHTML = dadosEventos.filter(e => e.ativo).map(ev => `
+            const grid = document.getElementById('grid-eventos-config');
+            const eventosOrdenados = dadosEventos
+                .filter(e => e.ativo)
+                .sort((a, b) => new Date(a.data) - new Date(b.data));
+
+            grid.innerHTML = eventosOrdenados.map(ev => `
                 <div class="event-card-config p-6 rounded-[2rem] text-white" onclick="prepararEdicaoEvento('${ev.id}')">
-                    <p class="text-[10px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-lg font-black uppercase mt-1 text-white">${ev.nome}</h4>
+                    <p class="text-[10px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
+                    <h4 class="text-lg font-black uppercase mt-1 text-white">${ev.nome}</h4>
                     <button onclick="event.stopPropagation(); removerItem('eventos', '${ev.id}')" class="text-red-500 font-black mt-4 text-[10px]">REMOVER</button>
                 </div>`).join('');
         }
