@@ -94,12 +94,15 @@
 
         window.validarUsuario = async function() {
             const n = document.getElementById('userPromoter').value.trim().toLowerCase();
-            const snap = await getDoc(doc(db, "promoters", n));
-            if(snap.exists()) {
-                currentPromoter = n;
-                document.getElementById('step-user').classList.add('hidden');
-                document.getElementById('step-password').classList.remove('hidden');
-            } else { document.getElementById('msgErro').classList.remove('hidden'); }
+            if(!n) return;
+            try {
+                const snap = await getDoc(doc(db, "promoters", n));
+                if(snap.exists()) {
+                    currentPromoter = n;
+                    document.getElementById('step-user').classList.add('hidden');
+                    document.getElementById('step-password').classList.remove('hidden');
+                } else { document.getElementById('msgErro').classList.remove('hidden'); }
+            } catch (e) { alert("Erro de conexão."); }
         }
 
         window.entrarComSenha = async function() {
@@ -187,32 +190,40 @@
             const festa = document.getElementById('selectEventoAniv').value;
             const nome = document.getElementById('nomeAniversariante').value.trim().toUpperCase();
             if(!nome) return alert("Digite o nome!");
+            
             const btn = document.getElementById('btnGerar');
-            btn.disabled = true; btn.innerText = "GERANDO...";
+            btn.disabled = true; 
+            btn.innerText = "GRAVANDO NO BANCO...";
+
             try {
+                // Adiciona no Firebase
                 await addDoc(collection(db, "links_aniversario"), {
                     promoter: currentPromoter,
                     aniversariante: nome,
                     festa: festa,
                     data_criacao: new Date().toISOString()
                 });
+
+                // Sucesso
                 fecharModalAniv();
-                btn.disabled = false; btn.innerText = "Gerar Link Curto";
-                document.getElementById('nomeAniversariante').value = "";
-                alert("Link criado! Use o botão COPIAR na lista.");
+                alert("Link VIP Criado com Sucesso!");
             } catch (error) {
-                btn.disabled = false;
-                alert("Erro ao criar link.");
+                console.error("Erro Firebase:", error);
+                alert("Erro ao salvar. Verifique se o banco de dados permite gravação.");
+            } finally {
+                // ISSO GARANTE QUE O BOTÃO DESTRAVA MESMO SE DER ERRO
+                btn.disabled = false; 
+                btn.innerText = "Gerar Link Curto";
+                document.getElementById('nomeAniversariante').value = "";
             }
         }
 
-        // --- FUNÇÃO DE COPIAR ATUALIZADA ---
         window.copiarLinkInteligente = (id, aniversariante) => {
             const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?id=' + id;
             const textoMensagem = `*Convite VIP: Aniversário de ${aniversariante}* 🎂\n\n*Clique no link abaixo para confirmar seu nome na lista:*\n${url}`;
             
             navigator.clipboard.writeText(textoMensagem).then(() => {
-                alert("Texto completo para WhatsApp copiado com sucesso!");
+                alert("Mensagem para WhatsApp copiada!");
             });
         }
 
