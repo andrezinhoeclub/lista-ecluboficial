@@ -24,6 +24,21 @@
 </head>
 <body class="flex h-screen">
 
+    <div id="telaRegras" class="fixed inset-0 z-[200] bg-black hidden flex items-center justify-center p-6">
+        <div class="max-w-2xl w-full glass p-10 rounded-[3rem] border border-yellow-500/20 text-center">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
+            <h2 class="text-3xl font-black uppercase italic text-yellow-500 mb-4">Sistema Indisponível</h2>
+            <p class="text-zinc-400 font-bold mb-8 leading-relaxed">
+                A portaria digital opera apenas durante o horário dos eventos.<br>
+                Fora deste período, o sistema permanece em modo de segurança.
+            </p>
+            <div class="grid grid-cols-2 gap-4 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                <div class="p-4 bg-white/5 rounded-2xl">Abertura: 21:00h</div>
+                <div class="p-4 bg-white/5 rounded-2xl">Fechamento: 05:00h</div>
+            </div>
+        </div>
+    </div>
+
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
@@ -33,7 +48,7 @@
                 <div id="areaSenha" class="hidden">
                     <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
                 </div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4">ACESSAR SISTEMA</button>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4">ACESSAR</button>
             </div>
         </div>
     </div>
@@ -42,22 +57,22 @@
         <aside class="w-80 h-full flex flex-col p-6 bg-black/50 border-r border-zinc-900">
             <div class="mb-10 text-center text-white">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter leading-none">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg italic tracking-widest">OPERADOR: ---</p>
+                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
+                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg italic tracking-widest">---</p>
             </div>
             <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em] border-b border-zinc-900 pb-2">Evento de Hoje</h3>
+                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em] border-b border-zinc-900 pb-2">Eventos Monitorados</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors">Sair do Sistema</button>
+            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
         </aside>
 
         <main class="flex-grow flex flex-col">
             <header class="p-8 border-b border-zinc-900 bg-black/20">
                 <div class="max-w-5xl mx-auto flex gap-8 items-center">
                     <div class="relative flex-grow">
-                        <span class="absolute left-6 top-5 text-zinc-600 text-lg">🔍</span>
-                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR NOME OU TELEFONE..." class="w-full p-6 pl-16 rounded-[2rem] text-sm font-bold uppercase text-white shadow-2xl">
+                        <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
+                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR CLIENTE..." class="w-full p-6 pl-16 rounded-[2rem] text-sm font-bold uppercase text-white">
                     </div>
                     <div class="text-right border-l border-zinc-800 pl-8 min-w-[140px]">
                         <p id="total-checkins" class="text-5xl font-black italic leading-none text-green-500">0</p>
@@ -88,9 +103,21 @@
         const db = getFirestore(app);
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
 
-        const getHojeData = () => new Date().toISOString().split('T')[0];
+        // CONTROLE DE HORÁRIO (RESTABELECIDO)
+        const validarHorario = () => {
+            const agora = new Date();
+            const hora = agora.getHours();
+            // Bloqueia das 05:00 até as 20:59:59
+            if (hora >= 5 && hora < 21) {
+                document.getElementById('telaRegras').classList.remove('hidden');
+                return false;
+            }
+            document.getElementById('telaRegras').classList.add('hidden');
+            return true;
+        };
 
         window.verificarOuLogar = async () => {
+            if (!validarHorario()) return;
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
             if (stepLogin === 0) {
@@ -117,15 +144,13 @@
         }
 
         function iniciarEscutas() {
-            const hoje = getHojeData();
-            // Monitora eventos ativos e sincroniza com a Dashboard
+            // Varredura de todos os eventos ativos para a sidebar
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
                 bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
                 
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
-                    const chksHoje = bancoClientes.filter(c => c.entrou && c.data_entrada && c.data_entrada.startsWith(hoje)).length;
-                    document.getElementById('total-checkins').innerText = chksHoje;
+                    document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou).length;
                     processarPesquisa();
                     renderizarSidebar();
                 });
@@ -135,21 +160,14 @@
         function renderizarSidebar() {
             const cont = document.getElementById('lista-eventos-sidebar');
             cont.innerHTML = '';
-            const hoje = getHojeData();
-            const eventosHoje = bancoEventos.filter(ev => ev.data === hoje);
-            
-            if (eventosHoje.length === 0) {
-                cont.innerHTML = '<p class="text-[10px] text-zinc-700 italic font-bold">Sem eventos para hoje.</p>';
-                return;
-            }
-
-            eventosHoje.forEach(ev => {
+            // Ordena e mostra os eventos ativos
+            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const total = bancoClientes.filter(c => c.evento === ev.nome).length;
                 cont.innerHTML += `
                     <div class="p-4 rounded-2xl glass border-l-4 border-l-yellow-500 mb-2">
                         <h4 class="text-[11px] font-black uppercase text-white truncate">${ev.nome}</h4>
                         <div class="flex justify-between items-end mt-2">
-                            <span class="text-[8px] font-bold text-green-500 animate-pulse tracking-widest">NO AR</span>
+                            <span class="text-[8px] font-bold text-zinc-500 italic">${ev.data.split('-').reverse().join('/')}</span>
                             <span class="text-xl font-black text-yellow-500">${total}</span>
                         </div>
                     </div>`;
@@ -159,24 +177,20 @@
         window.processarPesquisa = () => {
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
-            const hoje = getHojeData();
             if (busca.length < 2) { cont.innerHTML = ''; return; }
             
             const filtrados = bancoClientes.filter(c => {
-                const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
-                if (!evRelacionado || evRelacionado.data !== hoje) return false;
                 const nomeMatch = c.nome && c.nome.toUpperCase().includes(busca);
                 const telMatch = (c.tel || c.telefone) && (c.tel || c.telefone).includes(busca);
                 return nomeMatch || telMatch;
             });
 
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nada encontrado para hoje</div>' : '';
+            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nada encontrado</div>' : '';
             
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
                 const isCasal = c.tipo_entrada === "CASAL";
                 const v = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
-                const badge = isCasal ? 'badge-casal' : (c.tipo_entrada === "ANIVERSARIANTE" ? 'bg-purple-600 text-white' : 'badge-solteiro');
 
                 const div = document.createElement('div');
                 div.className = `client-card p-8 rounded-[2.5rem] mb-4 ${c.entrou ? 'entrou' : ''}`;
@@ -188,13 +202,12 @@
                                 <p class="text-lg font-bold text-zinc-500 font-mono italic leading-none">${c.tel || c.telefone || ''}</p>
                             </div>
                             <div>
-                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-6 py-3 rounded-xl border border-green-500/20">CONFIRMADO</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all">LIBERAR AGORA</button>`}
+                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-6 py-3 rounded-xl">CONFIRMADO</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.4)]">LIBERAR</button>`}
                             </div>
                         </div>
                         <div class="h-[1px] bg-zinc-900/50 w-full"></div>
                         <div class="flex flex-wrap items-center gap-6">
-                            <span class="text-[10px] text-zinc-400 font-black uppercase italic tracking-widest">${c.promoter || 'DIRETO'}</span>
-                            <span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase">${c.tipo_entrada || 'LISTA'}</span>
+                            <span class="text-[10px] text-zinc-400 font-black uppercase italic tracking-widest">${c.evento}</span>
                             <div class="flex items-center gap-3 border-l border-zinc-800 pl-6">
                                 <span class="text-[8px] text-zinc-600 font-black uppercase tracking-[0.2em]">VALOR:</span>
                                 <span class="text-2xl font-black italic text-yellow-500">R$ ${v || '---'}</span>
@@ -209,6 +222,9 @@
         window.confirmarCheckin = async (id) => {
             await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
         };
+
+        // Verifica o horário ao abrir a página
+        validarHorario();
     </script>
 </body>
 </html>
