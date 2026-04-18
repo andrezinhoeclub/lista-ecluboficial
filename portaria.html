@@ -14,14 +14,10 @@
         .client-card.entrou { opacity: 0.2 !important; filter: grayscale(1); pointer-events: none; }
         input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
-        .badge-casal { background: #eab308; color: #000; }
-        .badge-solteiro { background: #3b82f6; color: #fff; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
-        
-        /* Estilo do Alerta de Teste */
         @keyframes pulse-alert { 0% { background-color: rgba(234, 179, 8, 0.1); } 50% { background-color: rgba(234, 179, 8, 0.3); } 100% { background-color: rgba(234, 179, 8, 0.1); } }
         .alert-teste { animation: pulse-alert 2s infinite; border: 1px solid #eab308; color: #eab308; text-align: center; font-weight: 900; font-style: italic; padding: 10px; margin-bottom: 15px; border-radius: 10px; text-transform: uppercase; font-size: 11px; letter-spacing: 2px;}
     </style>
@@ -119,10 +115,9 @@
         const db = getFirestore(app);
         
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
-        let isModoTeste = false; // VARIÁVEL GLOBAL DO MODO TESTE
+        let isModoTeste = false;
 
         const getStatusTurno = (dataEvento) => {
-            // SE O MODO TESTE ESTIVER ATIVADO, TODOS OS EVENTOS FICAM ONLINE
             if (isModoTeste) return "ONLINE"; 
 
             const agora = new Date();
@@ -141,7 +136,6 @@
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
             const btn = document.getElementById('btnAcao');
-            const erroMsg = document.getElementById('erro');
 
             if (stepLogin === 0) {
                 btn.innerText = "VERIFICANDO...";
@@ -172,7 +166,6 @@
         };
 
         function iniciarEscutas() {
-            // NOVO: ESCUTA O COMANDO DE "MODO TESTE" DO PAINEL MASTER
             onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
                 const alerta = document.getElementById('alertaModoTeste');
                 if (snap.exists() && snap.data().modo_teste === true) {
@@ -182,8 +175,6 @@
                     isModoTeste = false;
                     alerta.classList.add('hidden');
                 }
-                
-                // Sempre que o modo mudar, ele reprocessa a barra lateral e a busca
                 if (bancoEventos.length > 0) {
                     renderizarSidebar();
                     processarPesquisa();
@@ -209,9 +200,7 @@
                             limite.setHours(21, 0, 0);
                         }
                         
-                        // NO MODO TESTE, ELE CONTA TODOS OS CHECK-INS, IGNORANDO O HORÁRIO
                         if (isModoTeste) return true;
-                        
                         return dataEntrada >= limite;
                     }).length;
 
@@ -226,7 +215,6 @@
             const cont = document.getElementById('lista-eventos-sidebar');
             cont.innerHTML = '';
             
-            // Filtra os eventos baseados no status. No modo teste, nenhum será "ENCERRADO".
             const eventosFiltrados = bancoEventos.filter(ev => getStatusTurno(ev.data) !== "ENCERRADO");
             
             eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
@@ -256,7 +244,6 @@
             
             const filtrados = bancoClientes.filter(c => {
                 const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
-                // A BUSCA SÓ FUNCIONA SE O EVENTO ESTIVER ONLINE (O que inclui o Modo Teste)
                 if (!evRelacionado || getStatusTurno(evRelacionado.data) !== "ONLINE") return false;
                 
                 const nomeMatch = c.nome && c.nome.toUpperCase().includes(busca);
@@ -276,16 +263,35 @@
             cont.innerHTML = '';
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
-                const isCasal = c.tipo_entrada === "CASAL";
-                const v = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
+                
+                // --- LÓGICA DE PRECIFICAÇÃO E IDENTIFICAÇÃO VIP ---
+                let valorExibicao = '---';
+                let badgeDestaque = '';
+                let corDestaqueNome = 'text-white';
+                let corBordaEspecial = '';
+                
+                if (c.tipo_entrada === "ANIVERSARIANTE") {
+                    valorExibicao = "FREE";
+                    corDestaqueNome = 'text-green-400';
+                    corBordaEspecial = 'border border-green-500/30';
+                    badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-[0.2em]">👑 DONO(A) DA FESTA</span></div>`;
+                } else {
+                    const isCasal = c.tipo_entrada === "CASAL";
+                    const vCalc = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
+                    valorExibicao = vCalc ? "R$ " + vCalc : "PORTARIA";
+                    
+                    if (c.aniversariante) {
+                        badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-400 font-black uppercase tracking-[0.2em]">CONVIDADO DE:</span><span class="text-xs font-black italic text-white leading-none">${c.aniversariante}</span></div>`;
+                    }
+                }
 
                 const div = document.createElement('div');
-                div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${c.entrou ? 'entrou' : ''}`;
+                div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${corBordaEspecial} ${c.entrou ? 'entrou' : ''}`;
                 div.innerHTML = `
                     <div class="flex flex-col gap-4 text-white">
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-4">
-                                <h3 class="text-2xl font-black uppercase italic text-white leading-none">${c.nome}</h3>
+                                <h3 class="text-2xl font-black uppercase italic ${corDestaqueNome} leading-none">${c.nome}</h3>
                                 <p class="text-lg font-bold text-zinc-400 font-mono italic leading-none">${c.tel || c.telefone || ''}</p>
                             </div>
                             <div>
@@ -297,9 +303,9 @@
                             <span class="text-[10px] text-zinc-400 font-black uppercase italic tracking-widest">${c.evento}</span>
                             <div class="flex items-center gap-3 border-l border-zinc-800 pl-6">
                                 <span class="text-[8px] text-zinc-600 font-black uppercase tracking-[0.2em]">VALOR:</span>
-                                <span class="text-2xl font-black italic text-yellow-500 leading-none">R$ ${v || '---'}</span>
+                                <span class="text-2xl font-black italic ${c.tipo_entrada === "ANIVERSARIANTE" ? 'text-green-500' : 'text-yellow-500'} leading-none">${valorExibicao}</span>
                             </div>
-                            ${c.aniversariante ? `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-400 font-black uppercase tracking-[0.2em]">ANIVERSARIANTE:</span><span class="text-xs font-black italic text-white leading-none">${c.aniversariante}</span></div>` : ''}
+                            ${badgeDestaque}
                         </div>
                     </div>`;
                 cont.appendChild(div);
