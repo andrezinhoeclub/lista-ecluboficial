@@ -135,7 +135,7 @@
                     <div class="bg-blue-500/10 border border-blue-500/40 p-8 rounded-3xl text-center flex flex-col justify-between shadow-[0_0_20px_rgba(59,130,246,0.05)]">
                         <div>
                             <h3 class="text-blue-400 font-black uppercase tracking-widest text-sm mb-2">Modo Teste (Portaria)</h3>
-                            <p class="text-zinc-400 text-[10px] mb-8 font-bold leading-relaxed">Destrava os horários da portaria temporariamente para você testar a busca. Clique novamente para restaurar as regras de segurança padrão.</p>
+                            <p class="text-zinc-400 text-[10px] mb-8 font-bold leading-relaxed">Destrava os horários da portaria temporariamente para você testar a busca. Clique novamente para restaurar as regras.</p>
                         </div>
                         <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] tracking-widest">🔓 LIBERAR TESTE</button>
                     </div>
@@ -143,7 +143,7 @@
                     <div class="bg-red-500/5 border border-red-500/20 p-8 rounded-3xl text-center flex flex-col justify-between">
                         <div>
                             <h3 class="text-red-400 font-black uppercase tracking-widest text-sm mb-2">Limpar Clientes</h3>
-                            <p class="text-zinc-500 text-[10px] mb-8 font-bold leading-relaxed">Apaga apenas as reservas cadastradas. Ideal para usar após o fim de semana, preparando a casa para a próxima semana mantendo os eventos e links.</p>
+                            <p class="text-zinc-500 text-[10px] mb-8 font-bold leading-relaxed">Apaga apenas as reservas cadastradas. Ideal para usar após o fim de semana, preparando a casa para a próxima semana.</p>
                         </div>
                         <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all">Limpar Base</button>
                     </div>
@@ -194,7 +194,6 @@
             }
         };
 
-        // ESCUTA A CONFIGURAÇÃO GLOBAL DO MODO TESTE
         onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
             const btn = document.getElementById('btnModoTeste');
             if (snap.exists()) {
@@ -214,7 +213,6 @@
             }
         });
 
-        // FUNÇÃO DO BOTÃO DE MODO TESTE
         window.toggleModoTeste = async () => {
             try {
                 await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true });
@@ -246,7 +244,6 @@
             const cont = document.getElementById('lista-portaria');
             if(cont) cont.innerHTML = snap.docs.map(d => {
                 const l = d.data();
-                // Evita listar a config do sistema na lista de portarias
                 if (d.id === 'sistema') return ''; 
                 return `<div class="glass-card p-6 border-l-4 border-l-green-500 flex justify-between items-center mb-2"><div><p class="text-xs font-black uppercase text-white">${l.login || d.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${l.senha || '---'}</p></div><button onclick="removerItem('configuracoes', '${d.id}')" class="text-red-500 font-black">✕</button></div>`;
             }).join('');
@@ -332,8 +329,26 @@
                 </div>`).join('');
         }
 
+        // AQUI ESTÁ A CORREÇÃO COM AS SENHAS E O BOTÃO EDITAR DE VOLTA
         function renderizarEquipe() {
-            document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `<div class="glass-card p-6 flex justify-between items-center mb-2"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p></div><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500">✕</button></div>`).join('');
+            document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => {
+                const tipo = p.tipo === 'aniversario' ? 'LISTA VIP' : 'LISTA PADRÃO';
+                const senhaVisivel = p.senha ? p.senha : 'NÃO CADASTRADA';
+                return `
+                <div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 border-l-yellow-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p>
+                            <p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${senhaVisivel}</p>
+                            <p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tipo}</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="editarSenhaPromoter('${p.id}')" class="text-blue-400 text-[10px] font-black uppercase hover:text-blue-300">Editar</button>
+                            <button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase hover:text-red-400">✕</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         function renderizarAniversarios() {
@@ -357,6 +372,14 @@
             document.getElementById('desc_solteiro').value = ev.desc_solteiro || "";
             document.getElementById('url_banner').value = ev.imagem || "";
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // NOVA FUNÇÃO PARA EDITAR SENHA
+        window.editarSenhaPromoter = async (id) => {
+            const novaSenha = prompt("Digite a NOVA SENHA para este promoter (ou deixe em branco para limpar):");
+            if (novaSenha !== null) {
+                await updateDoc(doc(db, "promoters", id), { senha: novaSenha.trim() });
+            }
         };
 
         document.getElementById('formEvento').addEventListener('submit', async e => {
