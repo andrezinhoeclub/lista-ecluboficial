@@ -18,7 +18,7 @@
         .site-input { background: #000 !important; border: 1px solid #27272a !important; color: white !important; }
         .site-input:disabled { opacity: 0.2; cursor: not-allowed; }
         .glass-modal { background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); }
-        .btn-tipo { background: #0c0c0e; border: 1px solid #27272a; transition: 0.3s; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px; }
+        .btn-tipo { background: #0c0c0e; border: 1px solid #27272a; transition: 0.3s; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 110px; }
         .btn-tipo.active { border-color: #eab308; background: rgba(234, 179, 8, 0.1); }
     </style>
 </head>
@@ -41,12 +41,14 @@
             <div class="space-y-4 text-left text-white">
                 <div class="grid grid-cols-2 gap-3 mb-4 text-white">
                     <button onclick="setTipo('CASAL')" id="btn-tipo-casal" class="btn-tipo p-4 rounded-2xl text-white">
-                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-2">Casal</span>
-                        <span id="preco-casal-modal" class="text-[11px] font-black italic text-white uppercase text-center">---</span>
+                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-1">Casal</span>
+                        <span id="preco-casal-modal" class="text-lg font-black italic text-white uppercase">---</span>
+                        <span class="text-[8px] font-black uppercase text-zinc-600 mt-1">Sem consumação</span>
                     </button>
                     <button onclick="setTipo('SOLTEIRO')" id="btn-tipo-solteiro" class="btn-tipo p-4 rounded-2xl text-white">
-                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-2">Solteiro</span>
-                        <span id="preco-solteiro-modal" class="text-[11px] font-black italic text-white uppercase text-center">---</span>
+                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-1">Solteiro</span>
+                        <span id="preco-solteiro-modal" class="text-lg font-black italic text-white uppercase">---</span>
+                        <span class="text-[8px] font-black uppercase text-zinc-600 mt-1">Sem consumação</span>
                     </button>
                 </div>
 
@@ -83,9 +85,18 @@
         let nomeAniv = params.get('aniv') || "";
         let idLink = params.get('id');
 
-        const exibirValorBruto = (v) => {
-            if(!v || v === "" || v === 0) return "VALOR NA PORTARIA";
-            return v.toString().toUpperCase();
+        // FUNÇÃO DE FORMATAÇÃO FORÇADA
+        const formatarMoedaCompleta = (valor) => {
+            if (!valor || valor === "" || valor === 0) return "R$ 0,00";
+            // Se já tiver "R$", apenas retorna o que veio
+            if (valor.toString().includes("R$")) return valor.toString().toUpperCase();
+            
+            // Se for apenas número, limpa e formata
+            let v = valor.toString().replace(/\s/g, "").replace(",", ".");
+            let n = parseFloat(v);
+            if (isNaN(n)) return valor.toString().toUpperCase();
+            
+            return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         };
 
         async function carregarPagina() {
@@ -95,6 +106,8 @@
             }
 
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+            const hoje = new Date().toLocaleDateString('en-CA');
+            
             eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
             const container = document.getElementById('listaEventos');
@@ -106,13 +119,13 @@
                 card.innerHTML = `
                     ${ev.imagem ? `<img src="${ev.imagem}" class="img-banner">` : ''}
                     <div class="p-8 text-center text-white">
-                        <p class="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-2">${ev.data.split('-').reverse().join('/')}</p>
-                        <h3 class="text-3xl font-black uppercase italic leading-tight mb-8 text-white text-white">${ev.nome}</h3>
+                        <p class="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-2 text-white">${ev.data.split('-').reverse().join('/')}</p>
+                        <h3 class="text-3xl font-black uppercase italic leading-tight mb-8 text-white">${ev.nome}</h3>
                         <div class="space-y-3">
                             <button onclick="abrirFluxo('${ev.id}', 'LISTA')" class="w-full btn-lista py-5 rounded-2xl btn-action text-sm">Colocar nome na lista</button>
                             <div class="grid grid-cols-2 gap-3 text-white">
-                                <button onclick="abrirFluxo('${ev.id}', 'ANTECIPADO')" class="btn-secundario py-4 rounded-2xl">Venda Antecipada</button>
-                                <button class="btn-secundario py-4 rounded-2xl opacity-40 cursor-not-allowed">Camarote</button>
+                                <button onclick="abrirFluxo('${ev.id}', 'ANTECIPADO')" class="btn-secundario py-4 rounded-2xl text-white">Venda Antecipada</button>
+                                <button class="btn-secundario py-4 rounded-2xl opacity-40 cursor-not-allowed text-white">Camarote</button>
                             </div>
                         </div>
                     </div>
@@ -137,14 +150,13 @@
                     document.getElementById('modal-titulo').innerText = 'Reserva de Lista';
                 }
             } else {
-                // AQUI BUSCA OS VALORES ANTECIPADOS QUE VOCÊ CADASTROU NA DASH
                 vC = eventoAtivo.valor_antecipado_casal;
                 vS = eventoAtivo.valor_antecipado_solteiro;
                 document.getElementById('modal-titulo').innerText = 'Venda Antecipada PIX';
             }
 
-            document.getElementById('preco-casal-modal').innerText = exibirValorBruto(vC);
-            document.getElementById('preco-solteiro-modal').innerText = exibirValorBruto(vS);
+            document.getElementById('preco-casal-modal').innerText = formatarMoedaCompleta(vC);
+            document.getElementById('preco-solteiro-modal').innerText = formatarMoedaCompleta(vS);
             
             document.getElementById('modalForm').classList.remove('hidden');
             document.getElementById('nome-cliente').value = "";
@@ -174,10 +186,9 @@
                 nome: n.toUpperCase(), tel: t, evento: eventoAtivo.nome,
                 tipo_entrada: window.tipoSelecionado, categoria: modoAtivo,
                 aniversariante: nomeAniv.toUpperCase(),
-                pago: modoAtivo === 'ANTECIPADO', // Se for antecipado, marca como true ou pendente
                 data_reserva: new Date().toISOString()
             });
-            alert("Confirmado! Seu nome foi enviado.");
+            alert("Sucesso! Nome enviado.");
             location.reload();
         };
 
