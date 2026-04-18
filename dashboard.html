@@ -329,7 +329,7 @@
                 </div>`).join('');
         }
 
-        // AQUI ESTÁ A CORREÇÃO COM AS SENHAS E O BOTÃO EDITAR DE VOLTA
+        // --- CAIXA DOS PROMOTERS COM NOVO BOTÃO EDITAR MULTIFUNÇÃO ---
         function renderizarEquipe() {
             document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => {
                 const tipo = p.tipo === 'aniversario' ? 'LISTA VIP' : 'LISTA PADRÃO';
@@ -343,7 +343,7 @@
                             <p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tipo}</p>
                         </div>
                         <div class="flex gap-4">
-                            <button onclick="editarSenhaPromoter('${p.id}')" class="text-blue-400 text-[10px] font-black uppercase hover:text-blue-300">Editar</button>
+                            <button onclick="editarPromoter('${p.id}', '${p.tipo}', '${p.senha || ''}')" class="text-blue-400 text-[10px] font-black uppercase hover:text-blue-300">Editar</button>
                             <button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase hover:text-red-400">✕</button>
                         </div>
                     </div>
@@ -374,11 +374,28 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        // NOVA FUNÇÃO PARA EDITAR SENHA
-        window.editarSenhaPromoter = async (id) => {
-            const novaSenha = prompt("Digite a NOVA SENHA para este promoter (ou deixe em branco para limpar):");
-            if (novaSenha !== null) {
-                await updateDoc(doc(db, "promoters", id), { senha: novaSenha.trim() });
+        // --- LÓGICA DO MENU DE EDIÇÃO DO PROMOTER ---
+        window.editarPromoter = async (id, tipoAtual, senhaAtual) => {
+            const novoTipoNome = tipoAtual === 'aniversario' ? 'LISTA PADRÃO' : 'LISTA VIP';
+            const op = prompt(`⚙️ EDITAR PROMOTER: ${id.toUpperCase()}\n\n1 - Mudar para ${novoTipoNome}\n2 - Alterar apenas Senha\n3 - Alterar Ambos (Tipo e Senha)\n\nDigite a opção desejada (1, 2 ou 3):`);
+            
+            if (!op) return; // Se cancelar, nada acontece
+            
+            let updates = {};
+
+            if (op === '1' || op === '3') {
+                updates.tipo = tipoAtual === 'aniversario' ? 'padrao' : 'aniversario';
+            }
+
+            if (op === '2' || op === '3') {
+                const novaSenha = prompt("Digite a NOVA SENHA para " + id.toUpperCase() + " (ou deixe vazio para remover a senha):");
+                if (novaSenha !== null) {
+                    updates.senha = novaSenha.trim();
+                }
+            }
+
+            if (Object.keys(updates).length > 0) {
+                await updateDoc(doc(db, "promoters", id), updates);
             }
         };
 
