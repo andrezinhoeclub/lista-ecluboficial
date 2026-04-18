@@ -28,7 +28,7 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 w-auto">
         </header>
         <div id="listaEventos" class="space-y-8">
-            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando...</div>
+            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando festas...</div>
         </div>
     </div>
 
@@ -64,18 +64,22 @@
         <div class="w-full max-w-sm bg-zinc-900 border border-white/10 p-8 rounded-[3rem]">
             <h2 class="text-yellow-500 font-black uppercase italic mb-2 text-sm">Pagamento PIX</h2>
             <p class="text-zinc-500 text-[9px] font-bold uppercase mb-6">Escaneie ou copie o código abaixo</p>
-            <div class="bg-white p-4 rounded-3xl inline-block mb-6">
-                <img id="imgQrCode" class="w-48 h-48 mx-auto" src="">
+            <div id="pixLoading" class="py-10 text-zinc-500 font-bold text-[10px] animate-pulse">GERANDO QR CODE...</div>
+            <div id="pixContent" class="hidden">
+                <div class="bg-white p-4 rounded-3xl inline-block mb-6">
+                    <img id="imgQrCode" class="w-48 h-48 mx-auto" src="">
+                </div>
+                <textarea id="payloadPix" readonly class="w-full p-4 bg-black border border-zinc-800 rounded-xl text-[9px] font-mono text-zinc-400 h-20 mb-4 resize-none"></textarea>
+                <button onclick="copiarPix()" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-xs mb-4">Copiar Código</button>
             </div>
-            <textarea id="payloadPix" readonly class="w-full p-4 bg-black border border-zinc-800 rounded-xl text-[9px] font-mono text-zinc-400 h-20 mb-4 resize-none"></textarea>
-            <button onclick="copiarPix()" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-xs mb-4">Copiar Código</button>
-            <button onclick="location.reload()" class="w-full text-zinc-500 font-bold uppercase text-[9px] py-2">Já paguei / Sair</button>
+            <button onclick="location.reload()" class="w-full text-zinc-500 font-bold uppercase text-[9px] py-2">Voltar / Sair</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -88,11 +92,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-
-        // API ASAAS INTEGRADA
-        const ASAAS_KEY = '$aact_prod_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjIzMzJjM2NlLTg2NTQtNDQ1ZC1hYmFmLTE1YTVkYTlhYTEyNjo6JGFhY2hfMzhkMTIzOGItYjhlYS00MTIxLTg1NWMtYmNlZmI4NTcwNTkx';
-        const PROXY = "https://cors-anywhere.herokuapp.com/"; 
-        const ASAAS_URL = "https://www.asaas.com/api/v3";
+        const functions = getFunctions(app);
 
         let eventosCache = [];
         let eventoAtivo = null;
@@ -158,9 +158,6 @@
             document.getElementById('preco-casal-modal').innerText = formatarMoeda(vC);
             document.getElementById('preco-solteiro-modal').innerText = formatarMoeda(vS);
             document.getElementById('modalForm').classList.remove('hidden');
-            document.getElementById('nome-cliente').disabled = true;
-            document.getElementById('tel-cliente').disabled = true;
-            document.getElementById('btn-confirmar').disabled = true;
         };
 
         window.setTipo = (tipo) => {
@@ -184,64 +181,47 @@
                     aniversariante: nomeAniv.toUpperCase(), pago: false,
                     data_reserva: new Date().toISOString()
                 });
-                alert("Confirmado!"); location.reload();
+                alert("Nome enviado com sucesso!"); location.reload();
             } else {
-                gerarPixAsaas(n, t);
+                // ABRE MODAL DE PIX E CHAMA FUNÇÃO SEGURA
+                document.getElementById('modalForm').classList.add('hidden');
+                document.getElementById('modalPix').classList.remove('hidden');
+                chamarGeradorPix(n, t);
             }
         };
 
-        async function gerarPixAsaas(nome, tel) {
-            const btn = document.getElementById('btn-confirmar');
-            btn.innerText = "GERANDO PIX..."; btn.disabled = true;
-
+        async function chamarGeradorPix(nome, tel) {
             let valorRaw = tipoAtivo === 'CASAL' ? eventoAtivo.valor_antecipado_casal : eventoAtivo.valor_antecipado_solteiro;
             let valorNum = parseFloat(String(valorRaw).replace("R$", "").replace(/\s/g, "").replace(",", "."));
 
+            const gerarPix = httpsCallable(functions, 'gerarPix');
+
             try {
-                const resCli = await fetch(PROXY + ASAAS_URL + "/customers", {
-                    method: 'POST',
-                    headers: { 'access_token': ASAAS_KEY, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: nome, mobilePhone: tel })
-                });
-                const cliente = await resCli.json();
-
-                const resPay = await fetch(PROXY + ASAAS_URL + "/payments", {
-                    method: 'POST',
-                    headers: { 'access_token': ASAAS_KEY, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        billingType: "PIX", customer: cliente.id, value: valorNum,
-                        dueDate: new Date().toISOString().split('T')[0],
-                        description: `E-CLUB | ${eventoAtivo.nome}`
-                    })
-                });
-                const pagamento = await resPay.json();
-
-                const resQr = await fetch(PROXY + ASAAS_URL + `/payments/${pagamento.id}/pixQrCode`, {
-                    headers: { 'access_token': ASAAS_KEY }
-                });
-                const qrData = await resQr.json();
-
-                await addDoc(collection(db, "lista_eventos"), {
-                    nome: nome.toUpperCase(), tel: tel, evento: eventoAtivo.nome,
-                    tipo_entrada: tipoAtivo, categoria: "ANTECIPADO",
-                    pago: false, asaas_id: pagamento.id,
-                    data_reserva: new Date().toISOString()
+                const result = await gerarPix({ 
+                    nome: nome, 
+                    tel: tel, 
+                    valor: valorNum, 
+                    evento: eventoAtivo.nome,
+                    tipo: tipoAtivo
                 });
 
-                document.getElementById('imgQrCode').src = `data:image/png;base64,${qrData.encodedImage}`;
-                document.getElementById('payloadPix').value = qrData.payload;
-                document.getElementById('modalForm').classList.add('hidden');
-                document.getElementById('modalPix').classList.remove('hidden');
-            } catch (e) {
-                alert("Erro ao gerar pagamento real. Verifique se o Proxy está ativo.");
-                btn.innerText = "Confirmar"; btn.disabled = false;
+                if (result.data.success) {
+                    document.getElementById('imgQrCode').src = `data:image/png;base64,${result.data.qrCode}`;
+                    document.getElementById('payloadPix').value = result.data.payload;
+                    document.getElementById('pixLoading').classList.add('hidden');
+                    document.getElementById('pixContent').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao gerar pagamento. Tente novamente.");
+                location.reload();
             }
         }
 
         window.copiarPix = () => {
             const area = document.getElementById('payloadPix');
             area.select(); document.execCommand('copy');
-            alert("Copiado!");
+            alert("Código Copiado!");
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
