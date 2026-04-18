@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB | Portaria Inteligente</title>
+    <title>E-CLUB | Portaria Inteligente (MODO TESTE)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
@@ -29,7 +29,7 @@
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
-            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
+            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">TESTE</span></h1>
             <div class="space-y-4">
                 <input type="text" id="inputNomeUsuario" placeholder="SEU NOME" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
                 <div id="areaSenha" class="hidden">
@@ -48,7 +48,7 @@
                 <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase mt-2 border border-zinc-800 py-1 rounded-lg italic">---</p>
             </div>
             <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Monitor de Eventos Ativos</h3>
+                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em]">Todos Eventos Ativos</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
             <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
@@ -63,7 +63,7 @@
                     </div>
                     <div class="text-right border-l border-zinc-800 pl-8 min-w-[120px]">
                         <p id="total-checkins" class="text-4xl font-black italic leading-none text-green-500">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2">Entradas Hoje</p>
+                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2">Check-ins Totais</p>
                     </div>
                 </div>
             </header>
@@ -101,10 +101,9 @@
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
                     document.getElementById('btnAcao').innerText = "ENTRAR";
-                } else { alert("Usuário não encontrado!"); }
+                }
             } else {
                 if (usuarioData.senha === s) logarSucesso(n);
-                else { alert("Senha incorreta!"); }
             }
         };
 
@@ -117,17 +116,18 @@
         }
 
         function iniciarEscutas() {
-            const hoje = new Date().toISOString().split('T')[0];
-            
-            // Busca eventos ativos de hoje em diante
-            const qEv = query(collection(db, "eventos"), where("ativo", "==", true));
-            onSnapshot(qEv, (snapEv) => {
-                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}))
-                                .filter(ev => ev.data >= hoje);
-                
+            // Pega a data de hoje no formato YYYY-MM-DD
+            const hojeStr = new Date().toISOString().split('T')[0];
+
+            onSnapshot(collection(db, "eventos"), (snapEv) => {
+                // Filtra apenas eventos ativos e que sejam de hoje em diante
+                bancoEventos = snapEv.docs
+                    .map(d => ({id: d.id, ...d.data()}))
+                    .filter(ev => ev.ativo === true && ev.data >= hojeStr);
+
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
-                    document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou && c.data_entrada?.includes(hoje)).length;
+                    document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou).length;
                     processarPesquisa();
                     renderizarSidebar();
                 });
@@ -140,7 +140,7 @@
             bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const total = bancoClientes.filter(c => c.evento === ev.nome).length;
                 cont.innerHTML += `
-                    <div class="p-4 rounded-2xl glass border-l-4 border-l-yellow-500 mb-2 shadow-lg">
+                    <div class="p-4 rounded-2xl glass border-l-4 border-l-green-500 mb-2 shadow-[0_0_15px_rgba(34,197,94,0.1)] text-white">
                         <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
                         <div class="flex justify-between items-end mt-2">
                             <span class="text-[8px] font-bold text-zinc-500">${ev.data.split('-').reverse().join('/')}</span>
@@ -155,37 +155,50 @@
             const cont = document.getElementById('container-resultados');
             if (busca.length < 2) { cont.innerHTML = ''; return; }
             
-            // Filtra clientes que pertencem aos eventos que ainda não passaram
+            // Filtra clientes cujo evento ainda está ativo no bancoEventos
             const filtrados = bancoClientes.filter(c => {
-                const pertenceEventoAtivo = bancoEventos.some(e => e.nome === c.evento);
+                const eventoExisteEAtivo = bancoEventos.some(e => e.nome === c.evento);
                 const termo = (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
-                return termo && pertenceEventoAtivo;
+                return termo && eventoExisteEAtivo;
             });
 
             cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum registro encontrado para eventos ativos</div>' : '';
             
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
+                const isAnivPai = (c.tipo === "ANIVERSARIANTE_FREE");
                 const isConviteAniv = (c.aniversariante && c.aniversariante !== "");
                 const isCasal = c.tipo_entrada === "CASAL";
                 
                 let valorTexto = "";
-                let v = isConviteAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
-                valorTexto = v ? "R$ " + v : "VALOR NA PORTARIA";
+                let corValor = "text-yellow-500";
 
-                const badge = isCasal ? 'badge-casal' : 'badge-solteiro';
+                if (isAnivPai) {
+                    valorTexto = "FREE (ANIVERSARIANTE)";
+                    corValor = "animate-free";
+                } else {
+                    let v = isConviteAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
+                    valorTexto = v ? "R$ " + v : "VALOR NA PORTARIA";
+                }
+
+                const badge = isCasal ? 'badge-casal' : (c.tipo_entrada === "ANIVERSARIANTE" ? 'bg-purple-600 text-white' : 'badge-solteiro');
 
                 const div = document.createElement('div');
                 div.className = `client-card p-8 rounded-[2.5rem] mb-4 ${c.entrou ? 'entrou' : ''}`;
                 div.innerHTML = `
-                    <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-4 text-white">
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-4">
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-none">${c.nome}</h3>
-                                <p class="text-lg font-bold text-zinc-400 font-mono italic leading-none">${c.tel || ''}</p>
+                                <div class="flex items-center bg-zinc-900/50 rounded-xl px-3 py-2 gap-3 border border-white/5">
+                                    <p class="text-lg font-bold text-zinc-400 font-mono italic tracking-tighter leading-none">${c.tel || ''}</p>
+                                    <button onclick="copiarTexto('${c.tel}')" class="btn-copy p-1.5 rounded-lg text-zinc-500 hover:text-yellow-500 transition-all">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+                                    </button>
+                                </div>
                             </div>
                             <div>
-                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-4 py-2 rounded-xl">✓ CHECK-IN</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all">LIBERAR</button>`}
+                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-4 py-2 rounded-xl">✓ OK</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.3)]">LIBERAR</button>`}
                             </div>
                         </div>
                         <div class="h-[1px] bg-zinc-900 w-full"></div>
@@ -194,13 +207,18 @@
                             <span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase">${c.tipo_entrada || 'LISTA'}</span>
                             <div class="flex items-center gap-2 border-l border-zinc-800 pl-6">
                                 <span class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">PAGAR:</span>
-                                <span class="text-xl font-black italic text-yellow-500">${valorTexto}</span>
+                                <span class="text-xl font-black italic ${corValor}">${valorTexto}</span>
                             </div>
                             ${isConviteAniv ? `<div class="flex items-center gap-2 border-l border-zinc-800 pl-6"><span class="text-xs text-purple-400 font-black uppercase italic tracking-tighter">🎂 Aniv: ${c.aniversariante}</span></div>` : ''}
                         </div>
                     </div>`;
                 cont.appendChild(div);
             });
+        };
+
+        window.copiarTexto = (t) => {
+            const num = t.replace(/\D/g, "");
+            navigator.clipboard.writeText(num).then(() => alert("Copiado!"));
         };
 
         window.confirmarCheckin = async (id) => {
