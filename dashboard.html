@@ -40,15 +40,15 @@
         </header>
 
         <section id="aba-relatorios" class="space-y-8">
-            <div class="glass-card p-8">
-                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest italic">Performance (Eventos Ativos)</h2>
+            <div class="glass-card p-8 text-white">
+                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance por Evento</h2>
                 <div id="container-bolhas" class="scroll-x"></div>
             </div>
             </section>
 
         <section id="aba-festas" class="hidden space-y-8 text-white">
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento</h2>
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Configurar Evento</h2>
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input type="hidden" id="edit_evento_id">
                     <input type="text" id="nome_festa" placeholder="Nome do Evento" class="p-4 rounded-2xl font-bold md:col-span-3 text-white" required>
@@ -58,7 +58,7 @@
                     <input type="text" id="desc_casal" placeholder="Casal Aniv R$" class="p-4 rounded-2xl font-bold text-purple-400">
                     <input type="text" id="desc_solteiro" placeholder="Solteiro Aniv R$" class="p-4 rounded-2xl font-bold text-purple-400">
                     <input type="url" id="url_banner" placeholder="URL da Capa" class="md:col-span-4 p-4 rounded-2xl font-bold text-white">
-                    <button type="submit" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento</button>
+                    <button type="submit" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar / Atualizar Evento</button>
                 </form>
             </div>
             <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
@@ -68,7 +68,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, addDoc, updateDoc, getDocs, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, orderBy, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -90,10 +90,10 @@
             document.getElementById(id).classList.remove('hidden'); b.classList.add('active'); 
         };
 
-        // Escuta em tempo real
+        // Monitoramento Global
         onSnapshot(collection(db, "eventos"), snap => { 
             dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderizarGridConfig(); 
+            renderizarGridConfig(); // Mostrará o dia 18 aqui
             renderizarRelatorios();
         });
 
@@ -103,24 +103,25 @@
         });
 
         function renderizarGridConfig() {
+            // MOSTRA TODOS OS EVENTOS DO BANCO (Varredura Total)
             const cont = document.getElementById('grid-eventos-config');
             if(!cont) return;
             
-            // ORDEM CRONOLÓGICA (Mais antigo para o mais novo, ou vice-versa, conforme data)
-            const listaOrdenada = [...dadosEventos].sort((a,b) => new Date(a.data) - new Date(b.data));
+            // Ordena pela data mais recente
+            const listaOrdenada = [...dadosEventos].sort((a,b) => new Date(b.data) - new Date(a.data));
             
             cont.innerHTML = listaOrdenada.map(ev => `
-                <div class="glass-card overflow-hidden border border-white/5 transition-all">
+                <div class="glass-card overflow-hidden border border-white/5 hover:border-yellow-500/50 transition-all cursor-pointer" onclick="prepararEdicaoEvento('${ev.id}')">
                     <img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900">
                     <div class="p-5">
-                        <div class="flex justify-between items-center mb-2">
-                            <p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                            <span class="text-[8px] font-black uppercase ${ev.ativo ? 'text-green-500' : 'text-red-500'}">${ev.ativo ? '● Ativo' : '○ Inativo'}</span>
+                        <div class="flex justify-between items-start mb-2">
+                            <p class="text-[9px] font-black text-yellow-500 uppercase tracking-widest">${ev.data.split('-').reverse().join('/')}</p>
+                            <span class="${ev.ativo ? 'text-green-500' : 'text-red-500'} text-[8px] font-black uppercase tracking-widest">${ev.ativo ? '● Ativo' : '○ Inativo'}</span>
                         </div>
                         <h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4>
-                        <div class="flex justify-between">
-                            <button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase hover:underline">EDITAR</button>
-                            <button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase hover:underline">EXCLUIR</button>
+                        <div class="flex justify-between gap-2">
+                            <button onclick="event.stopPropagation(); prepararEdicaoEvento('${ev.id}')" class="text-[9px] font-black uppercase text-blue-400 hover:text-white">Editar</button>
+                            <button onclick="event.stopPropagation(); removerItem('eventos', '${ev.id}')" class="text-[9px] font-black uppercase text-red-500 hover:text-white">Excluir</button>
                         </div>
                     </div>
                 </div>`).join('');
@@ -130,16 +131,15 @@
             const contBolhas = document.getElementById('container-bolhas');
             if(!contBolhas) return;
 
-            // FILTRO DE PERFORMANCE: Mostra eventos ATIVOS e de HOJE em diante
-            const hoje = new Date().toISOString().split('T')[0];
-            const eventosAtuais = dadosEventos.filter(e => e.ativo && e.data >= hoje).sort((a,b) => new Date(a.data) - new Date(b.data));
+            // No relatório mostramos apenas os que você marcou como ATIVO
+            const ativos = dadosEventos.filter(e => e.ativo).sort((a,b) => new Date(a.data) - new Date(b.data));
             
-            contBolhas.innerHTML = eventosAtuais.map(ev => {
+            contBolhas.innerHTML = ativos.map(ev => {
                 const res = dadosReservas.filter(r => r.evento === ev.nome).length;
                 const chk = dadosReservas.filter(r => r.evento === ev.nome && r.entrou).length;
                 return `
                 <div class="event-bubble p-6">
-                    <p class="text-[9px] font-black text-yellow-500 uppercase mb-1">${ev.data.split('-').reverse().join('/')}</p>
+                    <p class="text-[9px] font-black text-yellow-500 uppercase mb-1 italic">${ev.data.split('-').reverse().join('/')}</p>
                     <h4 class="text-sm font-black uppercase text-white mb-6 h-10 overflow-hidden leading-tight">${ev.nome}</h4>
                     <div class="flex justify-between border-t border-white/5 pt-4">
                         <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-lg font-black text-white">${res}</p></div>
@@ -152,6 +152,7 @@
 
         window.prepararEdicaoEvento = (id) => {
             const ev = dadosEventos.find(e => e.id === id);
+            if(!ev) return;
             document.getElementById('edit_evento_id').value = ev.id;
             document.getElementById('nome_festa').value = ev.nome;
             document.getElementById('data_festa').value = ev.data;
@@ -166,22 +167,24 @@
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault();
             const id = document.getElementById('edit_evento_id').value;
-            const d = { 
-                nome: document.getElementById('nome_festa').value, 
-                data: document.getElementById('data_festa').value, 
-                valor_casal: document.getElementById('valor_casal').value, 
-                valor_solteiro: document.getElementById('valor_solteiro').value, 
-                desc_casal: document.getElementById('desc_casal').value, 
-                desc_solteiro: document.getElementById('desc_solteiro').value, 
-                imagem: document.getElementById('url_banner').value, 
-                ativo: true // Força o evento a ser Ativo ao salvar/atualizar
+            const payload = {
+                nome: document.getElementById('nome_festa').value,
+                data: document.getElementById('data_festa').value,
+                valor_casal: document.getElementById('valor_casal').value,
+                valor_solteiro: document.getElementById('valor_solteiro').value,
+                desc_casal: document.getElementById('desc_casal').value,
+                desc_solteiro: document.getElementById('desc_solteiro').value,
+                imagem: document.getElementById('url_banner').value,
+                ativo: true
             };
-            if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
-            e.target.reset(); document.getElementById('edit_evento_id').value = "";
-            alert("Evento atualizado e ativado!");
+            if(id) await updateDoc(doc(db, "eventos", id), payload); 
+            else await addDoc(collection(db, "eventos"), payload);
+            e.target.reset();
+            document.getElementById('edit_evento_id').value = "";
         });
 
-        window.removerItem = async (c, i) => { if(confirm("Remover?")) await deleteDoc(doc(db, c, i)); };
+        window.removerItem = async (c, i) => { if(confirm("Deseja realmente excluir este evento?")) await deleteDoc(doc(db, c, i)); };
+
     </script>
 </body>
 </html>
