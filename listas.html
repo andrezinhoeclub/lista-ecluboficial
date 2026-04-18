@@ -20,6 +20,10 @@
         .glass-modal { background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); }
         .btn-tipo { background: #0c0c0e; border: 1px solid #27272a; transition: 0.3s; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px; }
         .btn-tipo.active { border-color: #eab308; background: rgba(234, 179, 8, 0.1); }
+        
+        /* Estilo do botão Retornar para maior clareza */
+        .btn-retornar { background: #1a1a1a; border: 1px solid #333; color: #a1a1aa; font-weight: 900; letter-spacing: 0.05em; transition: 0.2s; }
+        .btn-retornar:hover { background: #262626; color: #fff; border-color: #444; }
     </style>
 </head>
 <body class="p-4 flex flex-col min-h-screen">
@@ -34,9 +38,9 @@
     </div>
 
     <div id="modalForm" class="hidden fixed inset-0 z-50 glass-modal flex items-center justify-center p-6">
-        <div class="w-full max-w-sm bg-[#121214] border border-white/10 p-8 rounded-[3rem] text-center">
+        <div class="w-full max-sm:max-w-xs max-w-sm bg-[#121214] border border-white/10 p-8 rounded-[3rem] text-center shadow-2xl">
             <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-2 tracking-widest text-sm">Reserva de Lista</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-8">Selecione o tipo para liberar os campos</p>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-8">Escolha Casal ou Solteiro para liberar</p>
             
             <div class="space-y-4 text-left">
                 <div class="grid grid-cols-2 gap-3 mb-4">
@@ -53,8 +57,11 @@
                 <input type="text" id="nome-cliente" disabled placeholder="NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase">
                 <input type="tel" id="tel-cliente" disabled oninput="mascaraTelefone(this)" placeholder="(41) 99999-9999" class="w-full site-input p-5 rounded-2xl font-bold text-xs">
                 
-                <button onclick="finalizarPedido()" id="btn-confirmar" disabled class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action shadow-xl mt-4 disabled:opacity-20">Confirmar</button>
-                <button onclick="fecharModal()" class="w-full text-zinc-600 font-bold uppercase text-[9px] mt-2">Cancelar</button>
+                <button onclick="finalizarPedido()" id="btn-confirmar" disabled class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action shadow-xl mt-4 disabled:opacity-20">Confirmar Presença</button>
+                
+                <button onclick="fecharModal()" class="w-full btn-retornar py-4 rounded-2xl uppercase text-[10px] tracking-widest mt-2 btn-action">
+                    Retornar para Eventos
+                </button>
             </div>
         </div>
     </div>
@@ -97,7 +104,7 @@
             const container = document.getElementById('listaEventos');
             container.innerHTML = '';
 
-            eventosCache.forEach(ev => {
+            eventosCache.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const card = document.createElement('div');
                 card.className = "festa-card";
                 card.innerHTML = `
@@ -108,7 +115,7 @@
                         <div class="space-y-3">
                             <button onclick="abrirFluxo('${ev.id}')" class="w-full btn-lista py-5 rounded-2xl btn-action text-sm">Colocar nome na lista</button>
                             <div class="grid grid-cols-1">
-                                <a href="https://wa.me/5541995040506?text=Olá, gostaria de reservar um camarote para a festa ${ev.nome}" target="_blank" class="btn-secundario py-4 rounded-2xl text-center">Reservar Camarote</a>
+                                <a href="https://wa.me/5541995040506?text=Olá, gostaria de reservar um camarote para a festa ${ev.nome}" target="_blank" class="btn-secundario py-4 rounded-2xl text-center btn-action">Reservar Camarote</a>
                             </div>
                         </div>
                     </div>
@@ -135,7 +142,7 @@
             document.getElementById('preco-solteiro-modal').innerText = formatarValor(vS);
             document.getElementById('modalForm').classList.remove('hidden');
             
-            // Reset campos
+            // Reset campos e visual
             document.getElementById('nome-cliente').value = "";
             document.getElementById('tel-cliente').value = "";
             document.getElementById('nome-cliente').disabled = true;
@@ -143,6 +150,7 @@
             document.getElementById('btn-confirmar').disabled = true;
             document.getElementById('btn-tipo-casal').classList.remove('active');
             document.getElementById('btn-tipo-solteiro').classList.remove('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         window.setTipo = (tipo) => {
@@ -157,16 +165,26 @@
         window.finalizarPedido = async () => {
             const n = document.getElementById('nome-cliente').value.trim();
             const t = document.getElementById('tel-cliente').value.trim();
-            if (!n || t.length < 14) return alert("Preencha nome e telefone.");
+            if (!n || t.length < 14) return alert("Preencha nome e telefone corretamente.");
 
-            await addDoc(collection(db, "lista_eventos"), {
-                nome: n.toUpperCase(), tel: t, evento: eventoAtivo.nome,
-                tipo_entrada: tipoAtivo, categoria: "LISTA",
-                aniversariante: nomeAniv.toUpperCase(),
-                data_reserva: new Date().toISOString()
-            });
-            alert("Confirmado! Seu nome está na lista.");
-            location.reload();
+            const btn = document.getElementById('btn-confirmar');
+            btn.innerText = "ENVIANDO...";
+            btn.disabled = true;
+
+            try {
+                await addDoc(collection(db, "lista_eventos"), {
+                    nome: n.toUpperCase(), tel: t, evento: eventoAtivo.nome,
+                    tipo_entrada: tipoAtivo, categoria: "LISTA",
+                    aniversariante: nomeAniv.toUpperCase(),
+                    data_reserva: new Date().toISOString()
+                });
+                alert("Confirmado! Seu nome está na lista.");
+                location.reload();
+            } catch (e) { 
+                alert("Erro ao enviar. Tente novamente."); 
+                btn.innerText = "Confirmar Presença";
+                btn.disabled = false;
+            }
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
