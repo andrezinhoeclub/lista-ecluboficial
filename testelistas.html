@@ -17,7 +17,7 @@
         .btn-lista { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; }
         .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; box-shadow: 0 10px 25px rgba(0, 191, 165, 0.2); }
         .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; }
-        .banner-img { width: 100%; height: 240px; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .banner-img { width: 100%; height: 240px; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.05); opacity: 0.8; }
         .btn-sel { background: #13131c; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
         .btn-sel:active { transform: scale(0.98); background: #1a1a26; border-color: #00bfa5; }
     </style>
@@ -38,9 +38,9 @@
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-10 rounded-[3.5rem] text-center shadow-2xl relative">
             
             <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-2 tracking-tighter text-xl">Reserva E-Club</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[10px] font-bold uppercase mb-8 tracking-widest italic">Selecione uma opção</p>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[10px] font-bold uppercase mb-8 tracking-widest italic text-white">Selecione uma opção</p>
 
-            <div id="etapa-tipo" class="grid grid-cols-1 gap-4 mb-8">
+            <div id="etapa-tipo" class="grid grid-cols-1 gap-4 mb-8 text-white">
                 <button onclick="selecionarTipo('CASAL')" class="btn-sel p-6 rounded-[2.5rem] flex items-center justify-between">
                     <div class="text-left">
                         <span class="text-[10px] font-black uppercase text-zinc-500 block">👫 Casal</span>
@@ -87,11 +87,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let RASTREIO = { promoter: "direto", aniversariante: "" };
-        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = '';
-        let eFluxoPix = false;
+        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = ''; let eFluxoPix = false;
 
-        // Limpa formatação de R$ vindo do input para não duplicar
         const formatarMoeda = (valor) => {
             if (!valor) return "PORTARIA";
             let v = String(valor).toUpperCase().replace("R$", "").replace("R $", "").trim();
@@ -101,23 +98,18 @@
         async function carregarPagina() {
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
             const container = document.getElementById('listaEventos');
             container.innerHTML = eventosCache.length ? '' : '<p class="text-center opacity-30 uppercase text-[10px] font-black py-20">Nenhuma festa disponível</p>';
 
             eventosCache.forEach(ev => {
                 container.innerHTML += `
                     <div class="glass overflow-hidden rounded-[3.5rem] border-white/5 relative group shadow-2xl">
-                        ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img opacity-70 group-hover:opacity-100 transition duration-700">` : `<div class="banner-img bg-zinc-900 flex items-center justify-center text-zinc-700 font-bold uppercase text-[10px]">E-CLUB Oficial</div>`}
+                        ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="banner-img bg-zinc-900"></div>`}
                         <div class="p-8">
                             <h3 class="text-2xl font-black uppercase italic mb-8 tracking-tighter text-white leading-tight">${ev.nome}</h3>
                             <div class="space-y-4">
-                                <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-6 rounded-3xl text-sm italic font-black active:scale-95 transition-all">
-                                    📝 QUERO MEU NOME NA LISTA
-                                </button>
-                                <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-6 rounded-3xl text-sm italic font-black active:scale-95 transition-all">
-                                    ⚡ PIX ANTECIPADO (DESCONTO)
-                                </button>
+                                <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-6 rounded-3xl text-sm italic font-black active:scale-95 transition-all">📝 NOME NA LISTA</button>
+                                <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-6 rounded-3xl text-sm italic font-black active:scale-95 transition-all">⚡ PIX ANTECIPADO (DESCONTO)</button>
                             </div>
                         </div>
                     </div>`;
@@ -127,17 +119,13 @@
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
             eFluxoPix = isPix;
-            
-            // UI Update do Modal
             document.getElementById('etapa-tipo').classList.remove('hidden');
             document.getElementById('etapa-dados').classList.add('hidden');
             
             const titulo = document.getElementById('modal-titulo');
             titulo.innerText = isPix ? "Pix Antecipado" : "Lista E-Club";
             titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-2 tracking-tighter text-xl" : "text-yellow-500 font-black uppercase italic mb-2 tracking-tighter text-xl";
-            document.getElementById('modal-subtitulo').innerText = isPix ? "Escolha o Desconto PIX" : "Escolha sua Categoria";
 
-            // BUSCA VALORES DA DASHBOARD
             if (isPix) {
                 document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.ant_casal);
                 document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.ant_solteiro);
@@ -149,7 +137,6 @@
                 document.getElementById('label-tipo-casal').innerText = "Pagar no Local";
                 document.getElementById('label-tipo-solteiro').innerText = "Pagar no Local";
             }
-
             document.getElementById('modalForm').classList.remove('hidden');
         };
 
@@ -157,11 +144,9 @@
             tipoAtivo = tipo;
             document.getElementById('etapa-tipo').classList.add('hidden');
             document.getElementById('etapa-dados').classList.remove('hidden');
-            document.getElementById('modal-subtitulo').innerText = "Dados para " + tipo;
-            
             const btnFinal = document.getElementById('btn-final-acao');
             btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
-            btnFinal.className = eFluxoPix ? "w-full btn-pix-main py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl active:scale-95 transition-all" : "w-full btn-lista py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl active:scale-95 transition-all";
+            btnFinal.className = eFluxoPix ? "w-full btn-pix-main py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl" : "w-full btn-lista py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl";
         };
 
         window.processarFinalizacao = async () => {
@@ -175,16 +160,16 @@
             try {
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
-                    promoter: RASTREIO.promoter, data_reserva: new Date().toISOString(), 
-                    entrou: false, pago: false
+                    promoter: "direto", data_reserva: new Date().toISOString(), entrou: false, pago: false
                 });
 
                 if (eFluxoPix) {
                     const linkPag = tipoAtivo === 'CASAL' ? eventoAtivo.link_pag_casal : eventoAtivo.link_pag_solteiro;
                     if (linkPag) {
-                        window.location.href = linkPag + "&external_reference=" + docRef.id;
+                        // AQUI ESTÁ A CORREÇÃO DO "?" PARA O LINK CURTO
+                        window.location.href = linkPag + "?external_reference=" + docRef.id;
                     } else {
-                        alert("Erro: Link de pagamento não encontrado.");
+                        alert("Link de pagamento não configurado.");
                         location.reload();
                     }
                 } else {
