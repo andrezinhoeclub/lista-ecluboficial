@@ -15,22 +15,18 @@
         .img-banner { width: 100%; display: block; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .btn-lista { background: #eab308; color: #000; font-weight: 900; text-transform: uppercase; }
         .btn-secundario { background: #111; border: 1px solid #27272a; color: #fff; font-weight: 800; text-transform: uppercase; font-size: 10px; }
-        .site-input { background: #0c0c0e !important; border: 1px solid #27272a !important; color: #a1a1aa !important; }
-        .site-input:focus { border-color: #a855f7 !important; color: #fff !important; }
+        .site-input { background: #0c0c0e !important; border: 1px solid #27272a !important; color: #fff !important; outline: none; }
+        .site-input:focus { border-color: #eab308 !important; }
         .glass-modal { background: rgba(0,0,0,0.96); backdrop-filter: blur(12px); }
-        
-        /* Modal Estilizado */
         .modal-scroll { max-height: 85vh; overflow-y: auto; scrollbar-width: none; padding-bottom: 20px; }
         .modal-scroll::-webkit-scrollbar { display: none; }
-
         .btn-tipo { background: #0c0c0e; border: 1px solid #1f1f23; transition: 0.3s; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 90px; padding: 12px; }
-        /* Brilho reduzido no valor e borda roxa sutil ao selecionar */
-        .btn-tipo.active { border-color: #a855f7; background: rgba(168, 85, 247, 0.08); box-shadow: 0 0 15px rgba(168, 85, 247, 0.15); }
+        .btn-tipo.active { border-color: #eab308; background: rgba(234, 179, 8, 0.05); box-shadow: 0 0 15px rgba(234, 179, 8, 0.1); }
         .btn-tipo .val-txt { color: #d1d5db; font-size: 10px; font-weight: 800; }
-        .btn-tipo.active .val-txt { color: #fff; }
-        
-        .btn-retornar { background: #111; border: 1px solid #27272a; color: #71717a; font-weight: 700; margin-bottom: 10px; }
-        .btn-retornar:hover { color: #fff; border-color: #3f3f46; }
+        .btn-tipo.active .val-txt { color: #eab308; }
+        .btn-retornar { background: #111; border: 1px solid #27272a; color: #71717a; font-weight: 700; }
+        .footer-link { color: #71717a; transition: 0.3s; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
+        .footer-link:hover { color: #eab308; }
     </style>
 </head>
 <body class="p-4 flex flex-col min-h-screen">
@@ -39,38 +35,53 @@
         <header class="flex justify-center py-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-14 w-auto">
         </header>
+
         <div id="listaEventos" class="space-y-8">
-            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Filtrando eventos ativos...</div>
+            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Sincronizando eventos...</div>
         </div>
     </div>
 
+    <footer class="max-w-md mx-auto w-full pt-10 pb-16 text-center space-y-8">
+        <div class="flex justify-center gap-10">
+            <a href="https://instagram.com/andrezinhoeclub" target="_blank" class="footer-link">Instagram</a>
+            <a href="https://wa.me/5541995040506" target="_blank" class="footer-link">WhatsApp</a>
+        </div>
+        
+        <a href="https://www.google.com/maps/dir/?api=1&destination=E-CLUB+Curitiba" target="_blank" class="block group">
+            <p class="text-zinc-600 font-black text-[8px] uppercase tracking-[0.3em] mb-2 group-hover:text-yellow-500 transition-colors">Localização Oficial</p>
+            <p class="text-zinc-400 font-bold text-[10px] uppercase italic">Curitiba - PR</p>
+        </a>
+
+        <div class="pt-4 opacity-20">
+            <p class="text-[7px] font-black uppercase tracking-[0.5em]">E-CLUB SYSTEM v3.0</p>
+        </div>
+    </footer>
+
     <div id="modalForm" class="hidden fixed inset-0 z-50 glass-modal flex items-center justify-center p-4">
-        <div class="modal-scroll w-full max-w-sm bg-[#0a0a0b] border border-white/5 p-7 rounded-[3rem] text-center shadow-[0_0_50px_rgba(0,0,0,1)]">
+        <div class="modal-scroll w-full max-w-sm bg-[#0a0a0b] border border-white/5 p-8 rounded-[3rem] text-center shadow-2xl">
             <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-1 tracking-widest text-xs">Reserva de Lista</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[8px] font-bold uppercase mb-6 tracking-tighter">Escolha o tipo abaixo para liberar os campos</p>
+            <p id="modal-subtitulo" class="text-zinc-600 text-[8px] font-bold uppercase mb-8 tracking-tighter">Selecione o tipo para liberar o cadastro</p>
             
             <div class="space-y-4 text-left">
                 <div class="grid grid-cols-2 gap-3 mb-4">
-                    <button onclick="setTipo('CASAL')" id="btn-tipo-casal" class="btn-tipo rounded-2xl text-white">
-                        <span class="text-[8px] font-black uppercase text-zinc-600 mb-2">Casal</span>
-                        <span id="preco-casal-modal" class="val-txt uppercase text-center leading-tight">---</span>
+                    <button onclick="setTipo('CASAL')" id="btn-tipo-casal" class="btn-tipo rounded-3xl text-white">
+                        <span class="text-[8px] font-black uppercase text-zinc-500 mb-2">Casal</span>
+                        <span id="preco-casal-modal" class="val-txt uppercase">---</span>
                     </button>
-                    <button onclick="setTipo('SOLTEIRO')" id="btn-tipo-solteiro" class="btn-tipo rounded-2xl text-white">
-                        <span class="text-[8px] font-black uppercase text-zinc-600 mb-2">Solteiro</span>
-                        <span id="preco-solteiro-modal" class="val-txt uppercase text-center leading-tight">---</span>
+                    <button onclick="setTipo('SOLTEIRO')" id="btn-tipo-solteiro" class="btn-tipo rounded-3xl text-white">
+                        <span class="text-[8px] font-black uppercase text-zinc-500 mb-2">Solteiro</span>
+                        <span id="preco-solteiro-modal" class="val-txt uppercase">---</span>
                     </button>
                 </div>
 
                 <div class="space-y-2">
-                    <input type="text" id="nome-cliente" disabled placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-[10px] uppercase transition-all">
-                    <input type="tel" id="tel-cliente" disabled oninput="mascaraTelefone(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-[10px] transition-all">
+                    <input type="text" id="nome-cliente" disabled placeholder="NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-black text-[10px] uppercase transition-all opacity-20">
+                    <input type="tel" id="tel-cliente" disabled oninput="mascaraTelefone(this)" placeholder="(41) 99999-9999" class="w-full site-input p-5 rounded-2xl font-black text-[10px] transition-all opacity-20">
                 </div>
                 
-                <div class="pt-2 space-y-2">
-                    <button onclick="finalizarPedido()" id="btn-confirmar" disabled class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest btn-action shadow-lg disabled:opacity-10 disabled:grayscale transition-all">Confirmar Presença</button>
-                    <button onclick="fecharModal()" class="w-full btn-retornar py-4 rounded-2xl uppercase text-[9px] tracking-widest btn-action">
-                        Retornar para Eventos
-                    </button>
+                <div class="pt-4 space-y-2">
+                    <button onclick="finalizarPedido()" id="btn-confirmar" disabled class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action disabled:opacity-5 shadow-xl">Confirmar na Lista</button>
+                    <button onclick="fecharModal()" class="w-full btn-retornar py-4 rounded-2xl uppercase text-[9px] font-black btn-action">Voltar</button>
                 </div>
             </div>
         </div>
@@ -101,13 +112,15 @@
 
         const formatarValor = (v) => {
             if(!v || v === "") return "VALOR NA PORTARIA";
-            return v.toString().toUpperCase();
+            return "R$ " + v.toString().toUpperCase();
         };
 
         async function carregarPagina() {
             if (idLink) {
-                const docAniv = await getDoc(doc(db, "links_aniversario", idLink));
-                if (docAniv.exists()) { nomeAniv = docAniv.data().aniversariante; }
+                try {
+                    const docAniv = await getDoc(doc(db, "links_aniversario", idLink));
+                    if (docAniv.exists()) { nomeAniv = docAniv.data().aniversariante; }
+                } catch(e) {}
             }
             const agora = new Date().toISOString().split('T')[0];
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
@@ -124,18 +137,18 @@
                 card.className = "festa-card";
                 card.innerHTML = `
                     ${ev.imagem ? `<img src="${ev.imagem}" class="img-banner">` : ''}
-                    <div class="p-8 text-center">
-                        <p class="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-2">${ev.data.split('-').reverse().join('/')}</p>
-                        <h3 class="text-2xl font-black uppercase italic leading-tight mb-8">${ev.nome}</h3>
+                    <div class="p-10 text-center">
+                        <p class="text-[9px] text-yellow-500 font-black uppercase tracking-[0.2em] mb-3 italic">${ev.data.split('-').reverse().join('/')}</p>
+                        <h3 class="text-2xl font-black uppercase italic leading-tight mb-8 tracking-tighter">${ev.nome}</h3>
                         <div class="space-y-3">
-                            <button onclick="abrirFluxo('${ev.id}')" class="w-full btn-lista py-5 rounded-2xl btn-action text-sm">Nome na Lista</button>
-                            <a href="https://wa.me/5541995040506?text=Olá, gostaria de reservar um camarote para a festa ${ev.nome}" target="_blank" class="w-full inline-block btn-secundario py-4 rounded-2xl text-center btn-action">Camarotes</a>
+                            <button onclick="abrirFluxo('${ev.id}')" class="w-full btn-lista py-5 rounded-2xl btn-action text-[11px]">Garantir meu nome</button>
+                            <a href="https://wa.me/5541995040506?text=Olá, quero reservar camarote para ${ev.nome}" target="_blank" class="w-full inline-block btn-secundario py-4 rounded-2xl text-center btn-action">Reservar Camarote</a>
                         </div>
                     </div>
                 `;
                 container.appendChild(card);
             });
-            if (eventosCache.length === 0) container.innerHTML = '<p class="text-center py-20 text-zinc-500 font-bold uppercase text-xs">Nenhum evento ativo.</p>';
+            if (eventosCache.length === 0) container.innerHTML = '<p class="text-center py-20 text-zinc-600 font-black uppercase text-[10px] italic">Nenhuma lista disponível no momento.</p>';
         }
 
         window.abrirFluxo = (id) => {
@@ -143,7 +156,7 @@
             let vC, vS;
             if (nomeAniv !== "") {
                 vC = eventoAtivo.desc_casal; vS = eventoAtivo.desc_solteiro;
-                document.getElementById('modal-titulo').innerText = 'Lista VIP';
+                document.getElementById('modal-titulo').innerText = 'Lista Especial';
             } else {
                 vC = eventoAtivo.valor_casal; vS = eventoAtivo.valor_solteiro;
                 document.getElementById('modal-titulo').innerText = 'Reserva de Lista';
@@ -151,39 +164,42 @@
             document.getElementById('preco-casal-modal').innerText = formatarValor(vC);
             document.getElementById('preco-solteiro-modal').innerText = formatarValor(vS);
             document.getElementById('modalForm').classList.remove('hidden');
-            document.getElementById('nome-cliente').value = ""; document.getElementById('tel-cliente').value = "";
-            document.getElementById('nome-cliente').disabled = true; document.getElementById('tel-cliente').disabled = true;
-            document.getElementById('btn-confirmar').disabled = true;
-            document.getElementById('btn-tipo-casal').classList.remove('active');
-            document.getElementById('btn-tipo-solteiro').classList.remove('active');
         };
 
         window.setTipo = (tipo) => {
             tipoAtivo = tipo;
             document.getElementById('btn-tipo-casal').classList.toggle('active', tipo === 'CASAL');
             document.getElementById('btn-tipo-solteiro').classList.toggle('active', tipo === 'SOLTEIRO');
-            document.getElementById('nome-cliente').disabled = false;
-            document.getElementById('tel-cliente').disabled = false;
+            
+            const inputs = [document.getElementById('nome-cliente'), document.getElementById('tel-cliente')];
+            inputs.forEach(i => { i.disabled = false; i.classList.remove('opacity-20'); });
             document.getElementById('btn-confirmar').disabled = false;
         };
 
         window.finalizarPedido = async () => {
             const n = document.getElementById('nome-cliente').value.trim();
             const t = document.getElementById('tel-cliente').value.trim();
-            if (!n || t.length < 14) return alert("Dados incompletos!");
+            if (!n || t.length < 14) return alert("Por favor, preencha nome e celular corretamente.");
             const btn = document.getElementById('btn-confirmar');
-            btn.innerText = "ENVIANDO..."; btn.disabled = true;
+            btn.innerText = "PROCESSANDO..."; btn.disabled = true;
             try {
                 await addDoc(collection(db, "lista_eventos"), {
                     nome: n.toUpperCase(), tel: t, evento: eventoAtivo.nome,
                     tipo_entrada: tipoAtivo, categoria: "LISTA",
-                    aniversariante: nomeAniv.toUpperCase(), data_reserva: new Date().toISOString()
+                    aniversariante: nomeAniv.toUpperCase(), 
+                    data_reserva: new Date().toISOString(),
+                    entrou: false
                 });
-                alert("Sucesso! Seu nome está na lista."); location.reload();
-            } catch (e) { alert("Erro ao enviar."); btn.innerText = "Confirmar Presença"; btn.disabled = false; }
+                alert("Tudo pronto! Seu nome foi enviado para a portaria."); 
+                location.reload();
+            } catch (e) { alert("Erro de conexão. Tente novamente."); btn.innerText = "Confirmar na Lista"; btn.disabled = false; }
         };
 
-        window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
+        window.fecharModal = () => {
+            document.getElementById('modalForm').classList.add('hidden');
+            location.reload();
+        };
+
         window.mascaraTelefone = (i) => {
             let v = i.value.replace(/\D/g, "").substring(0, 11);
             if (v.length > 0) v = "(" + v;
