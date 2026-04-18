@@ -8,18 +8,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@800&display=swap');
         body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; min-height: 100vh; margin: 0; }
-        
-        /* TELA DE BLOQUEIO */
-        #telaLogin {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: #050508;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
+        #telaLogin { position: fixed; inset: 0; z-index: 9999; background: #050508; display: flex; align-items: center; justify-content: center; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .blue-glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
         .gold-gradient { background: linear-gradient(135deg, #eab308 0%, #a16207 100%); }
@@ -34,7 +23,6 @@
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-3xl font-black mb-8 uppercase italic tracking-tighter">PROMOTER <span class="text-sky-400">ACCESS</span></h1>
-            
             <div id="fluxo-login">
                 <input type="text" id="usuario" placeholder="DIGITE SEU USUÁRIO" class="w-full p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-4">
                 <div id="campo-senha" class="hidden">
@@ -133,17 +121,9 @@
             } else {
                 if (statsPromoter.senha === s || !statsPromoter.senha) {
                     btn.innerText = "ENTRANDO...";
-                    
-                    // Tratamento de erro (Blindagem)
                     if (!statsPromoter.senha) {
-                        try {
-                            await updateDoc(doc(db, "promoters", logado), { senha: s });
-                        } catch (e) {
-                            console.log("Aviso Firebase, ignorando para não travar.");
-                        }
+                        try { await updateDoc(doc(db, "promoters", logado), { senha: s }); } catch (e) {}
                     }
-                    
-                    // FORÇA a tela de login a desaparecer
                     document.getElementById('telaLogin').style.display = 'none';
                     document.getElementById('painel').classList.remove('hidden');
                     document.getElementById('nomePromoterHeader').innerText = logado;
@@ -203,9 +183,11 @@
             navigator.clipboard.writeText(url).then(() => alert("Link Geral Copiado!"));
         };
 
+        // NOVA FUNÇÃO DE COPIAR ANIVERSÁRIO (EXATAMENTE COMO SUA IMAGEM)
         window.copyAniv = (id, n) => {
             const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?id=' + id;
-            navigator.clipboard.writeText(`*Convite VIP: ${n}* 🎂\nConfirme aqui: ${url}`).then(() => alert("Copiado!"));
+            const msg = `*Convite VIP: Aniversário de ${n}* 🎂\n\nClique no link abaixo para confirmar seu nome na lista:\n${url}`;
+            navigator.clipboard.writeText(msg).then(() => alert("Mensagem VIP Copiada!"));
         };
 
         window.abrirModalAniv = () => {
