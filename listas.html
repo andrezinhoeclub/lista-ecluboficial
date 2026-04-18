@@ -16,7 +16,6 @@
         :root { --neon-purple: #a855f7; --eclub-gold: #eab308; }
         body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); min-height: 100vh; }
         .festa-card { background: rgba(15, 15, 20, 0.6); border: 1px solid rgba(255, 255, 255, 0.03); border-radius: 3.5rem; overflow: hidden; backdrop-filter: blur(10px); box-shadow: 0 20px 40px rgba(0,0,0,0.4); margin-bottom: 2rem; }
-        .festa-card:hover { border-color: var(--neon-purple); }
         .btn-lista { background: linear-gradient(135deg, var(--eclub-gold) 0%, #fbbf24 100%); color: #000; font-weight: 900; }
         .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; }
         .btn-tipo.active { border-color: var(--neon-purple); background: rgba(168, 85, 247, 0.05); }
@@ -27,13 +26,20 @@
         <header class="flex justify-center py-12">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
         </header>
+        
+        <div id="avisoLista" class="hidden mb-8 p-4 rounded-3xl bg-purple-500/10 border border-purple-500/30 text-center">
+            <p class="text-[10px] uppercase font-black tracking-widest text-purple-400">✨ Você está no link de:</p>
+            <p id="nomeAnivDestaque" class="text-xl font-black uppercase text-white leading-tight"></p>
+        </div>
+
         <div id="listaEventos" class="space-y-8"></div>
     </div>
 
     <div id="modalForm" class="hidden fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 text-white">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-10 rounded-[4rem] text-center shadow-2xl">
             <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-1 tracking-widest text-base">Reserva E-Club</h2>
-            <p class="text-zinc-500 text-[10px] font-bold uppercase mb-10">Preencha os dados abaixo</p>
+            <p id="subtituloModal" class="text-zinc-500 text-[10px] font-bold uppercase mb-8">Preencha os dados abaixo</p>
+            
             <div class="space-y-6 text-left">
                 <div class="grid grid-cols-2 gap-4 mb-6">
                     <button onclick="setTipo('CASAL')" id="btn-tipo-casal" class="p-6 bg-[#13131c] border border-[#27273a] rounded-[2.5rem] flex flex-col items-center gap-1">
@@ -71,24 +77,41 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = '';
-        
-        // IDENTIFICADOR DE PROMOTER DIRETO DA URL
+        // VARIÁVEIS DE ESTADO GLOBAIS
+        let RASTREIO = {
+            promoter: "direto",
+            aniversariante: ""
+        };
+
         const urlParams = new URLSearchParams(window.location.search);
-        let promoterDaUrl = urlParams.get('ref') || "DIRETO";
-        let idAnivUrl = urlParams.get('id');
-        let nomeAnivBanco = "";
-        let promoterDonoDoAniv = "";
+        const refUrl = urlParams.get('ref');
+        const idAnivUrl = urlParams.get('id');
+
+        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = '';
 
         async function carregarPagina() {
+            // 1. LIMPA TUDO ANTES DE COMEÇAR
+            sessionStorage.clear();
+
+            // 2. BUSCA DADOS DE ANIVERSÁRIO SE EXISTIR ID
             if (idAnivUrl) {
-                const snapA = await getDoc(doc(db, "links_aniversario", idAnivUrl));
-                if (snapA.exists()) {
-                    nomeAnivBanco = snapA.data().aniversariante;
-                    promoterDonoDoAniv = snapA.data().promoter;
-                }
+                try {
+                    const snapA = await getDoc(doc(db, "links_aniversario", idAnivUrl));
+                    if (snapA.exists()) {
+                        const d = snapA.data();
+                        RASTREIO.promoter = d.promoter.toLowerCase().trim();
+                        RASTREIO.aniversariante = d.aniversariante.toUpperCase().trim();
+                        
+                        // Mostra o aviso visual para o cliente
+                        document.getElementById('avisoLista').classList.remove('hidden');
+                        document.getElementById('nomeAnivDestaque').innerText = RASTREIO.aniversariante;
+                    }
+                } catch (e) { console.error("Erro no rastreio"); }
+            } else if (refUrl) {
+                RASTREIO.promoter = refUrl.toLowerCase().trim();
             }
 
+            // 3. CARREGA EVENTOS
             const agora = new Date().toISOString().split('T')[0];
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= agora);
@@ -112,11 +135,12 @@
 
         window.abrirFluxo = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
-            const isAniv = nomeAnivBanco !== "";
+            const isAniv = RASTREIO.aniversariante !== "";
             const vC = isAniv ? eventoAtivo.desc_casal : eventoAtivo.valor_casal;
             const vS = isAniv ? eventoAtivo.desc_solteiro : eventoAtivo.valor_solteiro;
             
             document.getElementById('modal-titulo').innerText = isAniv ? '🎉 Lista VIP' : '🔥 Nome na Lista';
+            document.getElementById('subtituloModal').innerText = isAniv ? 'Convidados de ' + RASTREIO.aniversariante : 'Preencha os dados abaixo';
             document.getElementById('preco-casal-modal').innerText = vC ? "R$ " + vC : "PORTARIA";
             document.getElementById('preco-solteiro-modal').innerText = vS ? "R$ " + vS : "PORTARIA";
             document.getElementById('modalForm').classList.remove('hidden');
@@ -138,28 +162,20 @@
             const btn = document.getElementById('btn-confirmar');
             btn.innerText = "GRAVANDO..."; btn.disabled = true;
 
-            let promoterFinalParaSalvar = promoterDaUrl;
-            
-            if (idAnivUrl && promoterDonoDoAniv) {
-                promoterFinalParaSalvar = promoterDonoDoAniv;
-            }
-
-            promoterFinalParaSalvar = promoterFinalParaSalvar.toLowerCase().trim();
-
             try {
+                // GRAVAÇÃO USANDO O OBJETO GLOBAL RASTREIO (GARANTE O NOME DA MARIA)
                 await addDoc(collection(db, "lista_eventos"), {
                     nome: n,
                     tel: t,
                     evento: eventoAtivo.nome,
                     tipo_entrada: tipoAtivo,
                     categoria: "LISTA",
-                    promoter: promoterFinalParaSalvar, 
-                    aniversariante: nomeAnivBanco.toUpperCase(),
+                    promoter: RASTREIO.promoter, 
+                    aniversariante: RASTREIO.aniversariante,
                     data_reserva: new Date().toISOString(),
                     entrou: false
                 });
                 
-                // NOVA MENSAGEM LIMPA E PROFISSIONAL
                 alert("SUCESSO! Seu nome está confirmado na lista: " + eventoAtivo.nome + " ✨");
                 location.reload();
             } catch (e) { 
