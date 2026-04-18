@@ -131,21 +131,29 @@
             <div class="glass-card p-8 border-l-4 border-l-red-500">
                 <h2 class="text-red-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurações do Sistema</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-blue-500/10 border border-blue-500/40 p-8 rounded-3xl text-center flex flex-col justify-between shadow-[0_0_20px_rgba(59,130,246,0.05)]">
+                        <div>
+                            <h3 class="text-blue-400 font-black uppercase tracking-widest text-sm mb-2">Modo Teste (Portaria)</h3>
+                            <p class="text-zinc-400 text-[10px] mb-8 font-bold leading-relaxed">Destrava os horários da portaria temporariamente para você testar a busca. Clique novamente para restaurar as regras de segurança padrão.</p>
+                        </div>
+                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] tracking-widest">🔓 LIBERAR TESTE</button>
+                    </div>
+
                     <div class="bg-red-500/5 border border-red-500/20 p-8 rounded-3xl text-center flex flex-col justify-between">
                         <div>
                             <h3 class="text-red-400 font-black uppercase tracking-widest text-sm mb-2">Limpar Clientes</h3>
-                            <p class="text-zinc-500 text-[10px] mb-8 font-bold leading-relaxed">Apaga apenas as reservas/clientes cadastrados na lista. Ideal para usar após o fim de semana, preparando a casa para a próxima semana mantendo os eventos e links.</p>
+                            <p class="text-zinc-500 text-[10px] mb-8 font-bold leading-relaxed">Apaga apenas as reservas cadastradas. Ideal para usar após o fim de semana, preparando a casa para a próxima semana mantendo os eventos e links.</p>
                         </div>
-                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all">Limpar Base de Clientes</button>
+                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all">Limpar Base</button>
                     </div>
 
                     <div class="bg-red-500/10 border border-red-500/40 p-8 rounded-3xl text-center flex flex-col justify-between shadow-[0_0_20px_rgba(239,68,68,0.05)]">
                         <div>
-                            <h3 class="text-red-500 font-black uppercase tracking-widest text-sm mb-2">Zerar Sistema Completo</h3>
-                            <p class="text-zinc-400 text-[10px] mb-8 font-bold leading-relaxed">Apaga <span class="text-red-400">TODAS as reservas</span>, <span class="text-red-400">TODOS os eventos</span> e <span class="text-red-400">TODOS os links de aniversário</span> de uma vez só. Essa ação é drástica e irreversível.</p>
+                            <h3 class="text-red-500 font-black uppercase tracking-widest text-sm mb-2">Zerar Sistema</h3>
+                            <p class="text-zinc-400 text-[10px] mb-8 font-bold leading-relaxed">Apaga <span class="text-red-400">TODAS as reservas</span>, <span class="text-red-400">TODOS os eventos</span> e <span class="text-red-400">links VIP</span>. Ação drástica e irreversível.</p>
                         </div>
-                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] tracking-widest">⚠️ ZERAR TUDO AGORA</button>
+                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] tracking-widest">⚠️ ZERAR TUDO</button>
                     </div>
                 </div>
             </div>
@@ -154,7 +162,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -169,6 +177,7 @@
         const db = getFirestore(app);
         
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = [];
+        let modoTesteAtivo = false;
 
         window.trocarAba = (id, btn, type) => { 
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
@@ -182,6 +191,35 @@
                 btn.classList.add('active-danger');
             } else {
                 btn.classList.add('active'); 
+            }
+        };
+
+        // ESCUTA A CONFIGURAÇÃO GLOBAL DO MODO TESTE
+        onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
+            const btn = document.getElementById('btnModoTeste');
+            if (snap.exists()) {
+                modoTesteAtivo = snap.data().modo_teste === true;
+            } else {
+                modoTesteAtivo = false;
+            }
+            
+            if (btn) {
+                if (modoTesteAtivo) {
+                    btn.innerHTML = "🛑 FINALIZAR TESTE (BLOQUEAR)";
+                    btn.className = "w-full bg-red-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] tracking-widest";
+                } else {
+                    btn.innerHTML = "🔓 LIBERAR TESTE NA PORTARIA";
+                    btn.className = "w-full bg-blue-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] tracking-widest";
+                }
+            }
+        });
+
+        // FUNÇÃO DO BOTÃO DE MODO TESTE
+        window.toggleModoTeste = async () => {
+            try {
+                await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true });
+            } catch (e) {
+                alert("Erro ao alterar o modo de teste!");
             }
         };
 
@@ -208,6 +246,8 @@
             const cont = document.getElementById('lista-portaria');
             if(cont) cont.innerHTML = snap.docs.map(d => {
                 const l = d.data();
+                // Evita listar a config do sistema na lista de portarias
+                if (d.id === 'sistema') return ''; 
                 return `<div class="glass-card p-6 border-l-4 border-l-green-500 flex justify-between items-center mb-2"><div><p class="text-xs font-black uppercase text-white">${l.login || d.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${l.senha || '---'}</p></div><button onclick="removerItem('configuracoes', '${d.id}')" class="text-red-500 font-black">✕</button></div>`;
             }).join('');
         });
@@ -255,7 +295,6 @@
         function renderizarRelatorios() {
             const container = document.getElementById('container-bolhas');
             if(!container) return;
-            const hoje = new Date().toISOString().split('T')[0];
             const ativos = dadosEventos.filter(e => e.ativo).sort((a,b) => new Date(a.data) - new Date(b.data));
 
             container.innerHTML = ativos.map(ev => {
