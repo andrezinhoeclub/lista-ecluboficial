@@ -1,60 +1,257 @@
-// Localize a parte do código que renderiza o formulário de Eventos e substitua por este:
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <title>E-CLUB | Painel Administrativo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; }
+        .site-input { background: #000 !important; border: 1px solid #27272a !important; color: white !important; transition: 0.3s; }
+        .site-input:focus { border-color: #eab308 !important; outline: none; }
+        .card-dash { background: #0f0f11; border: 1px solid rgba(255,255,255,0.05); border-radius: 2.5rem; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
 
-function renderFormEvento() {
-    return `
-        <div class="space-y-6 animate-in fade-in duration-500">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-[#0f0f11] p-6 rounded-[2rem] border border-white/5 space-y-4">
-                    <h3 class="text-yellow-500 font-black uppercase italic text-xs tracking-widest mb-4">Informações do Evento</h3>
-                    
-                    <div>
-                        <label class="text-[10px] font-bold text-zinc-500 uppercase ml-2">Nome do Evento</label>
-                        <input type="text" id="ev-nome" placeholder="Ex: QUINTA NA E-CLUB" class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-white text-sm font-bold mt-1">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12 w-auto">
+            <nav class="flex gap-2">
+                <button onclick="renderDashboard()" class="px-6 py-3 bg-zinc-900 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition">Início</button>
+                <button onclick="renderEventos()" class="px-6 py-3 bg-zinc-900 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-zinc-800 transition">Gerenciar Eventos</button>
+                <button onclick="renderListas()" class="px-6 py-3 bg-yellow-500 text-black rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition">Ver Listas</button>
+            </nav>
+        </header>
+
+        <main id="app-content">
+            </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- NAVEGAÇÃO E RENDERIZAÇÃO ---
+
+        window.renderDashboard = () => {
+            const content = document.getElementById('app-content');
+            content.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div class="card-dash p-8 text-center">
+                        <h4 class="text-zinc-500 text-[10px] font-black uppercase mb-2">Total de Eventos Ativos</h4>
+                        <p id="dash-total-eventos" class="text-4xl font-black italic text-yellow-500">...</p>
                     </div>
-
-                    <div>
-                        <label class="text-[10px] font-bold text-zinc-500 uppercase ml-2">Data do Evento</label>
-                        <input type="date" id="ev-data" class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-white text-sm font-bold mt-1">
+                    <div class="card-dash p-8 text-center">
+                        <h4 class="text-zinc-500 text-[10px] font-black uppercase mb-2">Nomes nas Listas</h4>
+                        <p id="dash-total-nomes" class="text-4xl font-black italic text-purple-500">...</p>
                     </div>
-
-                    <div>
-                        <label class="text-[10px] font-bold text-zinc-500 uppercase ml-2">URL da Imagem (Banner)</label>
-                        <input type="text" id="ev-imagem" placeholder="https://..." class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-white text-[10px] mt-1">
+                    <div class="card-dash p-8 text-center flex flex-col justify-center">
+                        <button onclick="renderFormEvento()" class="bg-white text-black font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest">Novo Evento</button>
                     </div>
                 </div>
+            `;
+            atualizarStats();
+        };
 
-                <div class="bg-[#0f0f11] p-6 rounded-[2rem] border border-white/5 space-y-4">
-                    <h3 class="text-yellow-500 font-black uppercase italic text-xs tracking-widest mb-4">Valores na Portaria (Lista)</h3>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-[10px] font-bold text-zinc-500 uppercase ml-2">Casal</label>
-                            <input type="text" id="ev-valor-casal" placeholder="Ex: R$ 120,00" class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-white text-sm font-bold mt-1">
+        window.renderEventos = async () => {
+            const content = document.getElementById('app-content');
+            content.innerHTML = '<p class="text-center py-20 animate-pulse text-zinc-500 font-black uppercase text-[10px]">Carregando eventos...</p>';
+            
+            const snap = await getDocs(collection(db, "eventos"));
+            content.innerHTML = `
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-black italic uppercase tracking-widest">Eventos</h2>
+                    <button onclick="renderFormEvento()" class="bg-yellow-500 text-black px-6 py-3 rounded-xl font-black uppercase text-[10px]">Adicionar</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${snap.docs.map(d => {
+                        const ev = d.data();
+                        return `
+                            <div class="card-dash p-6 flex justify-between items-center">
+                                <div>
+                                    <h3 class="font-black uppercase italic">${ev.nome}</h3>
+                                    <p class="text-[10px] text-zinc-500 font-bold">${ev.data.split('-').reverse().join('/')}</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="excluirEvento('${d.id}')" class="p-3 bg-red-900/20 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition">Excluir</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        };
+
+        window.renderFormEvento = () => {
+            const content = document.getElementById('app-content');
+            content.innerHTML = `
+                <div class="space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <div class="bg-[#0f0f11] p-8 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-5">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-2 h-6 bg-yellow-500 rounded-full"></div>
+                                <h3 class="text-yellow-500 font-black uppercase italic text-sm tracking-widest">Informações do Evento</h3>
+                            </div>
+                            
+                            <div>
+                                <label class="text-[10px] font-black text-zinc-500 uppercase ml-2 tracking-widest">Nome do Evento</label>
+                                <input type="text" id="ev-nome" placeholder="Ex: QUINTA NA E-CLUB" class="w-full site-input p-4 rounded-2xl text-white text-sm font-bold mt-1">
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-black text-zinc-500 uppercase ml-2 tracking-widest">Data do Evento</label>
+                                <input type="date" id="ev-data" class="w-full site-input p-4 rounded-2xl text-white text-sm font-bold mt-1">
+                            </div>
+
+                            <div>
+                                <label class="text-[10px] font-black text-zinc-500 uppercase ml-2 tracking-widest">URL do Banner (Imagem)</label>
+                                <input type="text" id="ev-imagem" placeholder="https://..." class="w-full site-input p-4 rounded-2xl text-white text-[10px] mt-1">
+                            </div>
                         </div>
-                        <div>
-                            <label class="text-[10px] font-bold text-zinc-500 uppercase ml-2">Solteiro</label>
-                            <input type="text" id="ev-valor-solteiro" placeholder="Ex: R$ 170,00" class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-white text-sm font-bold mt-1">
+
+                        <div class="bg-[#0f0f11] p-8 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-5">
+                            <div class="flex items-center gap-3 mb-2">
+                                <div class="w-2 h-6 bg-purple-500 rounded-full"></div>
+                                <h3 class="text-purple-500 font-black uppercase italic text-sm tracking-widest">Portaria e Convites</h3>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-[10px] font-black text-zinc-500 uppercase ml-2 tracking-widest">Casal</label>
+                                    <input type="text" id="ev-valor-casal" placeholder="R$ 120,00" class="w-full site-input p-4 rounded-2xl text-white text-sm font-bold mt-1">
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-black text-zinc-500 uppercase ml-2 tracking-widest">Solteiro</label>
+                                    <input type="text" id="ev-valor-solteiro" placeholder="R$ 170,00" class="w-full site-input p-4 rounded-2xl text-white text-sm font-bold mt-1">
+                                </div>
+                            </div>
+
+                            <div class="pt-6 mt-2 border-t border-white/5">
+                                <p class="text-[10px] font-black text-purple-400 uppercase mb-3 ml-2 tracking-widest italic">Benefício Aniversariante</p>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="text-[9px] font-bold text-zinc-600 uppercase ml-2">Casal VIP</label>
+                                        <input type="text" id="ev-desc-casal" placeholder="Valor" class="w-full site-input p-4 rounded-2xl text-white text-sm font-bold mt-1">
+                                    </div>
+                                    <div>
+                                        <label class="text-[9px] font-bold text-zinc-600 uppercase ml-2">Solteiro VIP</label>
+                                        <input type="text" id="ev-desc-solteiro" placeholder="Valor" class="w-full site-input p-4 rounded-2xl text-white text-sm font-bold mt-1">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="pt-4 border-t border-white/5">
-                        <label class="text-[10px] font-black text-purple-500 uppercase ml-2">Desconto Aniversariante</label>
-                        <div class="grid grid-cols-2 gap-4 mt-1">
-                            <input type="text" id="ev-desc-casal" placeholder="Casal" class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-white text-sm font-bold">
-                            <input type="text" id="ev-desc-solteiro" placeholder="Solteiro" class="w-full bg-black border border-zinc-800 p-4 rounded-2xl text-white text-sm font-bold">
-                        </div>
+                    <div class="flex flex-col md:flex-row gap-4 mt-8">
+                        <button onclick="salvarEvento()" class="flex-[2] bg-yellow-500 text-black font-black py-5 rounded-[2rem] uppercase text-xs tracking-widest hover:bg-yellow-400 transition-all shadow-xl">
+                            Publicar Evento
+                        </button>
+                        <button onclick="renderDashboard()" class="flex-1 bg-zinc-900 text-zinc-400 font-bold py-5 rounded-[2rem] uppercase text-[10px] tracking-widest hover:text-white transition-all">
+                            Voltar
+                        </button>
                     </div>
                 </div>
-            </div>
+            `;
+        };
 
-            <div class="flex flex-col md:flex-row gap-4">
-                <button onclick="salvarEvento()" class="flex-1 bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs tracking-widest hover:bg-yellow-400 transition-all">
-                    Salvar Evento
-                </button>
-                <button onclick="renderDashboard()" class="px-8 bg-zinc-900 text-zinc-500 font-bold py-5 rounded-2xl uppercase text-[10px] hover:text-white transition-all">
-                    Voltar
-                </button>
-            </div>
-        </div>
-    `;
-}
+        window.renderListas = async () => {
+            const content = document.getElementById('app-content');
+            content.innerHTML = '<p class="text-center py-20 text-zinc-500 font-black uppercase text-[10px]">Buscando nomes...</p>';
+            
+            const snap = await getDocs(collection(db, "lista_eventos"));
+            content.innerHTML = `
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-black italic uppercase tracking-widest">Nomes na Lista</h2>
+                    <button onclick="limparListasVelhas()" class="text-red-500 font-bold uppercase text-[9px]">Limpar Tudo</button>
+                </div>
+                <div class="card-dash overflow-hidden">
+                    <table class="w-full text-left text-[11px]">
+                        <thead class="bg-zinc-900 text-zinc-500 font-black uppercase">
+                            <tr>
+                                <th class="p-4">Evento</th>
+                                <th class="p-4">Nome</th>
+                                <th class="p-4">Tipo</th>
+                                <th class="p-4">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${snap.docs.map(d => {
+                                const l = d.data();
+                                return `
+                                    <tr class="border-t border-white/5">
+                                        <td class="p-4 font-bold text-yellow-500">${l.evento}</td>
+                                        <td class="p-4 font-black">${l.nome}</td>
+                                        <td class="p-4 uppercase text-zinc-500">${l.tipo_entrada}</td>
+                                        <td class="p-4">
+                                            <button onclick="excluirNome('${d.id}')" class="text-red-500 font-black">Remover</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        };
+
+        // --- FUNÇÕES DE BANCO DE DADOS ---
+
+        window.salvarEvento = async () => {
+            const nome = document.getElementById('ev-nome').value;
+            const data = document.getElementById('ev-data').value;
+            const imagem = document.getElementById('ev-imagem').value;
+            const valor_casal = document.getElementById('ev-valor-casal').value;
+            const valor_solteiro = document.getElementById('ev-valor-solteiro').value;
+            const desc_casal = document.getElementById('ev-desc-casal').value;
+            const desc_solteiro = document.getElementById('ev-desc-solteiro').value;
+
+            if(!nome || !data) return alert("Preencha o básico!");
+
+            await addDoc(collection(db, "eventos"), {
+                nome, data, imagem, valor_casal, valor_solteiro, 
+                desc_casal, desc_solteiro, ativo: true
+            });
+
+            alert("Evento salvo!");
+            renderEventos();
+        };
+
+        window.excluirEvento = async (id) => {
+            if(confirm("Deseja apagar este evento?")) {
+                await deleteDoc(doc(db, "eventos", id));
+                renderEventos();
+            }
+        };
+
+        window.excluirNome = async (id) => {
+            await deleteDoc(doc(db, "lista_eventos", id));
+            renderListas();
+        };
+
+        async function atualizarStats() {
+            const evSnap = await getDocs(collection(db, "eventos"));
+            const listSnap = await getDocs(collection(db, "lista_eventos"));
+            document.getElementById('dash-total-eventos').innerText = evSnap.size;
+            document.getElementById('dash-total-nomes').innerText = listSnap.size;
+        }
+
+        renderDashboard();
+    </script>
+</body>
+</html>
