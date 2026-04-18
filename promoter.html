@@ -66,7 +66,7 @@
             <input type="text" id="nomeAniv" placeholder="NOME DO ANIVERSARIANTE" class="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-white font-black uppercase text-xs mb-4">
             <input type="tel" id="telAniv" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-white font-black uppercase text-xs mb-8">
             <button onclick="criarLinkAniv()" class="w-full purple-gradient text-white font-black py-6 rounded-2xl uppercase text-xs shadow-xl">GERAR LINK VIP ✨</button>
-            <button onclick="document.getElementById('modalAniv').classList.add('hidden')" class="w-full text-zinc-600 font-black py-4 uppercase text-[9px] mt-2">FECHAR</button>
+            <button onclick="document.getElementById('modalAniv').classList.add('hidden')" class="w-full text-zinc-600 font-black py-4 uppercase text-[9px]">FECHAR</button>
         </div>
     </div>
 
@@ -123,9 +123,9 @@
                     const links = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(l => l.promoter.toLowerCase() === logado);
                     document.getElementById('listaAniversarios').innerHTML = links.map(l => {
                         const count = reservas.filter(r => r.evento === l.festa && (r.aniversariante || '').toLowerCase() === l.aniversariante.toLowerCase()).length;
-                        return `<div class="glass p-5 rounded-[2rem] flex justify-between items-center border-l-4 border-purple-500 shadow-xl mb-4">
-                            <div class="text-left"><p class="text-[11px] font-black uppercase italic">${l.aniversariante}</p><p class="text-[8px] text-zinc-500 font-bold mt-1">${l.festa}</p></div>
-                            <div class="flex items-center gap-4"><div class="text-right"><p class="text-lg font-black leading-none">${count}</p><p class="text-[7px] text-purple-400 font-black mt-1">LISTA</p></div>
+                        return `<div class="glass p-5 rounded-[2rem] flex justify-between items-center border-l-4 border-purple-500 shadow-xl">
+                            <div class="text-left"><p class="text-[11px] font-black uppercase italic">${l.aniversariante}</p><p class="text-[8px] text-zinc-500 font-bold">${l.festa}</p></div>
+                            <div class="flex items-center gap-4"><div class="text-right"><p class="text-lg font-black">${count}</p><p class="text-[7px] text-purple-400 font-black">LISTA</p></div>
                             <button onclick="copyAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-4 py-2 rounded-xl text-[9px] font-black uppercase border border-purple-500/30">Copiar</button></div>
                         </div>`;
                     }).join('');
@@ -145,13 +145,12 @@
 
         function renderPerformance() {
             document.getElementById('listaPerformance').innerHTML = eventos.map(ev => {
-                // BLINDAGEM DA CONTAGEM: Compara promoter e ignora espaços extras.
-                const ind = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase().trim() === logado.toLowerCase().trim()).length;
+                const ind = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase() === logado).length;
                 const ger = reservas.filter(r => r.evento === ev.nome).length;
                 return `<div class="glass p-6 rounded-[2.5rem] border-l-4 border-sky-500 flex justify-between items-center mb-4">
                     <div class="text-left text-white"><h4 class="text-[13px] font-black uppercase italic leading-tight">${ev.nome}</h4><p class="text-[9px] text-zinc-500 font-bold mt-2">${ev.data.split('-').reverse().join('/')}</p></div>
-                    <div class="flex gap-5 text-right"><div><p class="text-2xl font-black text-sky-400 leading-none">${ind}</p><p class="text-[7px] text-sky-500 font-black mt-1">MINHAS</p></div>
-                    <div class="border-l border-white/5 pl-5"><p class="text-2xl font-black text-white leading-none">${ger}</p><p class="text-[7px] text-zinc-600 font-black mt-1">GERAL</p></div></div>
+                    <div class="flex gap-5 text-right"><div><p class="text-2xl font-black text-sky-400">${ind}</p><p class="text-[7px] text-sky-500 font-black">MINHAS</p></div>
+                    <div class="border-l border-white/5 pl-5"><p class="text-2xl font-black text-white">${ger}</p><p class="text-[7px] text-zinc-600 font-black">GERAL</p></div></div>
                 </div>`;
             }).join('');
         }
