@@ -17,11 +17,12 @@
         .btn-lista { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; }
         .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; box-shadow: 0 10px 25px rgba(0, 191, 165, 0.2); }
         .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; }
-        .btn-tipo.active { border-color: #00f5d4; background: rgba(0, 191, 165, 0.1); box-shadow: 0 0 20px rgba(0, 191, 165, 0.2); }
-        .banner-img { width: 100%; height: 220px; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .banner-img { width: 100%; height: 240px; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .btn-sel { background: #13131c; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
+        .btn-sel:active { transform: scale(0.98); background: #1a1a26; border-color: #00bfa5; }
     </style>
 </head>
-<body class="p-6 flex flex-col items-center">
+<body class="p-4 flex flex-col items-center">
     
     <div class="max-w-md w-full">
         <header class="flex justify-center py-10">
@@ -29,7 +30,7 @@
         </header>
 
         <div id="listaEventos" class="space-y-10">
-            <div class="text-center py-20 opacity-20 font-black uppercase italic tracking-widest text-xs">Sincronizando festas...</div>
+            <div class="text-center py-20 opacity-20 font-black uppercase italic tracking-widest text-[10px]">Sincronizando Banco de Dados...</div>
         </div>
     </div>
 
@@ -37,23 +38,23 @@
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-10 rounded-[3.5rem] text-center shadow-2xl relative">
             
             <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-2 tracking-tighter text-xl">Reserva E-Club</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[10px] font-bold uppercase mb-8 tracking-widest">Selecione uma opção</p>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[10px] font-bold uppercase mb-8 tracking-widest italic">Selecione uma opção</p>
 
             <div id="etapa-tipo" class="grid grid-cols-1 gap-4 mb-8">
-                <button onclick="selecionarTipo('CASAL')" id="sel-casal" class="p-6 bg-[#13131c] border border-white/5 rounded-[2.5rem] flex items-center justify-between hover:scale-[1.02] transition-all">
+                <button onclick="selecionarTipo('CASAL')" class="btn-sel p-6 rounded-[2.5rem] flex items-center justify-between">
                     <div class="text-left">
                         <span class="text-[10px] font-black uppercase text-zinc-500 block">👫 Casal</span>
-                        <span id="label-tipo-casal" class="text-[9px] font-bold text-zinc-400">Pagar no Local</span>
+                        <span id="label-tipo-casal" class="text-[9px] font-bold text-zinc-400">---</span>
                     </div>
-                    <span id="v-modal-casal" class="text-xl font-black italic">---</span>
+                    <span id="v-modal-casal" class="text-xl font-black italic text-white">---</span>
                 </button>
 
-                <button onclick="selecionarTipo('SOLTEIRO')" id="sel-solteiro" class="p-6 bg-[#13131c] border border-white/5 rounded-[2.5rem] flex items-center justify-between hover:scale-[1.02] transition-all">
+                <button onclick="selecionarTipo('SOLTEIRO')" class="btn-sel p-6 rounded-[2.5rem] flex items-center justify-between">
                     <div class="text-left">
                         <span class="text-[10px] font-black uppercase text-zinc-500 block">👤 Solteiro</span>
-                        <span id="label-tipo-solteiro" class="text-[9px] font-bold text-zinc-400">Sem Consumação</span>
+                        <span id="label-tipo-solteiro" class="text-[9px] font-bold text-zinc-400">---</span>
                     </div>
-                    <span id="v-modal-solteiro" class="text-xl font-black italic">---</span>
+                    <span id="v-modal-solteiro" class="text-xl font-black italic text-white">---</span>
                 </button>
             </div>
 
@@ -61,12 +62,12 @@
                 <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-6 rounded-3xl font-bold text-xs uppercase text-white">
                 <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-6 rounded-3xl font-bold text-xs text-white">
                 
-                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full btn-lista py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl active:scale-95 transition-all">
-                    Confirmar Reserva ✨
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl active:scale-95 transition-all">
+                    Confirmar ✨
                 </button>
             </div>
 
-            <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[10px] font-black mt-6 tracking-widest">Voltar</button>
+            <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[10px] font-black mt-6 tracking-widest italic">Voltar para Início</button>
         </div>
     </div>
 
@@ -90,6 +91,13 @@
         let eventosCache = []; let eventoAtivo = null; let tipoAtivo = '';
         let eFluxoPix = false;
 
+        // Limpa formatação de R$ vindo do input para não duplicar
+        const formatarMoeda = (valor) => {
+            if (!valor) return "PORTARIA";
+            let v = String(valor).toUpperCase().replace("R$", "").replace("R $", "").trim();
+            return "R$ " + v;
+        };
+
         async function carregarPagina() {
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -99,19 +107,15 @@
 
             eventosCache.forEach(ev => {
                 container.innerHTML += `
-                    <div class="glass overflow-hidden rounded-[3.5rem] mb-10 border-white/5 relative group">
-                        
-                        ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img opacity-80 group-hover:opacity-100 transition duration-700">` : `<div class="banner-img bg-zinc-900 flex items-center justify-center text-zinc-700 font-bold uppercase text-[10px]">E-CLUB Oficial</div>`}
-
+                    <div class="glass overflow-hidden rounded-[3.5rem] border-white/5 relative group shadow-2xl">
+                        ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img opacity-70 group-hover:opacity-100 transition duration-700">` : `<div class="banner-img bg-zinc-900 flex items-center justify-center text-zinc-700 font-bold uppercase text-[10px]">E-CLUB Oficial</div>`}
                         <div class="p-8">
                             <h3 class="text-2xl font-black uppercase italic mb-8 tracking-tighter text-white leading-tight">${ev.nome}</h3>
-                            
                             <div class="space-y-4">
-                                <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-6 rounded-3xl text-sm italic font-black active:scale-95 transition-all flex items-center justify-center gap-3">
-                                    📝 COLOCAR NOME NA LISTA
+                                <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-6 rounded-3xl text-sm italic font-black active:scale-95 transition-all">
+                                    📝 QUERO MEU NOME NA LISTA
                                 </button>
-                                
-                                <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-6 rounded-3xl text-sm italic font-black active:scale-95 transition-all flex items-center justify-center gap-3">
+                                <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-6 rounded-3xl text-sm italic font-black active:scale-95 transition-all">
                                     ⚡ PIX ANTECIPADO (DESCONTO)
                                 </button>
                             </div>
@@ -124,22 +128,24 @@
             eventoAtivo = eventosCache.find(e => e.id === id);
             eFluxoPix = isPix;
             
-            // Reset modal
+            // UI Update do Modal
             document.getElementById('etapa-tipo').classList.remove('hidden');
             document.getElementById('etapa-dados').classList.add('hidden');
-            document.getElementById('modal-titulo').innerText = isPix ? "Pix Antecipado" : "Lista E-Club";
-            document.getElementById('modal-titulo').className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-2 tracking-tighter text-xl" : "text-yellow-500 font-black uppercase italic mb-2 tracking-tighter text-xl";
+            
+            const titulo = document.getElementById('modal-titulo');
+            titulo.innerText = isPix ? "Pix Antecipado" : "Lista E-Club";
+            titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-2 tracking-tighter text-xl" : "text-yellow-500 font-black uppercase italic mb-2 tracking-tighter text-xl";
             document.getElementById('modal-subtitulo').innerText = isPix ? "Escolha o Desconto PIX" : "Escolha sua Categoria";
 
-            // Preços
+            // BUSCA VALORES DA DASHBOARD
             if (isPix) {
-                document.getElementById('v-modal-casal').innerText = "R$ " + (eventoAtivo.ant_casal || "---");
-                document.getElementById('v-modal-solteiro').innerText = "R$ " + (eventoAtivo.ant_solteiro || "---");
+                document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.ant_casal);
+                document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.ant_solteiro);
                 document.getElementById('label-tipo-casal').innerText = "Vantagem Fila VIP";
                 document.getElementById('label-tipo-solteiro').innerText = "Sem Consumação";
             } else {
-                document.getElementById('v-modal-casal').innerText = "R$ " + (eventoAtivo.valor_casal || "---");
-                document.getElementById('v-modal-solteiro').innerText = "R$ " + (eventoAtivo.valor_solteiro || "---");
+                document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.valor_casal);
+                document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.valor_solteiro);
                 document.getElementById('label-tipo-casal').innerText = "Pagar no Local";
                 document.getElementById('label-tipo-solteiro').innerText = "Pagar no Local";
             }
@@ -152,8 +158,10 @@
             document.getElementById('etapa-tipo').classList.add('hidden');
             document.getElementById('etapa-dados').classList.remove('hidden');
             document.getElementById('modal-subtitulo').innerText = "Dados para " + tipo;
-            document.getElementById('btn-final-acao').innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
-            document.getElementById('btn-final-acao').className = eFluxoPix ? "w-full btn-pix-main py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl active:scale-95 transition-all" : "w-full btn-lista py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl active:scale-95 transition-all";
+            
+            const btnFinal = document.getElementById('btn-final-acao');
+            btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
+            btnFinal.className = eFluxoPix ? "w-full btn-pix-main py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl active:scale-95 transition-all" : "w-full btn-lista py-6 rounded-3xl uppercase text-xs font-black mt-4 shadow-xl active:scale-95 transition-all";
         };
 
         window.processarFinalizacao = async () => {
@@ -162,7 +170,6 @@
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
 
             const btn = document.getElementById('btn-final-acao');
-            const originalText = btn.innerText;
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
             try {
@@ -177,14 +184,14 @@
                     if (linkPag) {
                         window.location.href = linkPag + "&external_reference=" + docRef.id;
                     } else {
-                        alert("Erro: Link de pagamento não configurado.");
+                        alert("Erro: Link de pagamento não encontrado.");
                         location.reload();
                     }
                 } else {
                     alert("Sucesso! Nome confirmado na lista.");
                     location.reload();
                 }
-            } catch (e) { alert("Erro de conexão."); btn.disabled = false; btn.innerText = originalText; }
+            } catch (e) { alert("Erro de conexão."); btn.disabled = false; btn.innerText = "Tentar Novamente"; }
         };
 
         window.fecharModal = () => { document.getElementById('modalForm').classList.add('hidden'); };
