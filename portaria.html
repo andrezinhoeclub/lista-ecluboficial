@@ -115,16 +115,12 @@
             iniciarEscutas();
         }
 
+        // --- MANTIDO EM STANDBY PARA TESTE ---
+        const validarJanela = (dataEvento) => { return true; };
+
         function iniciarEscutas() {
-            // Pega a data de hoje no formato YYYY-MM-DD
-            const hojeStr = new Date().toISOString().split('T')[0];
-
-            onSnapshot(collection(db, "eventos"), (snapEv) => {
-                // Filtra apenas eventos ativos e que sejam de hoje em diante
-                bancoEventos = snapEv.docs
-                    .map(d => ({id: d.id, ...d.data()}))
-                    .filter(ev => ev.ativo === true && ev.data >= hojeStr);
-
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
+                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
                     document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou).length;
@@ -139,14 +135,7 @@
             cont.innerHTML = '';
             bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const total = bancoClientes.filter(c => c.evento === ev.nome).length;
-                cont.innerHTML += `
-                    <div class="p-4 rounded-2xl glass border-l-4 border-l-green-500 mb-2 shadow-[0_0_15px_rgba(34,197,94,0.1)] text-white">
-                        <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
-                        <div class="flex justify-between items-end mt-2">
-                            <span class="text-[8px] font-bold text-zinc-500">${ev.data.split('-').reverse().join('/')}</span>
-                            <span class="text-lg font-black text-yellow-500">${total}</span>
-                        </div>
-                    </div>`;
+                cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 border-l-green-500 mb-2 shadow-[0_0_15px_rgba(34,197,94,0.1)] text-white"><h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4><div class="flex justify-between items-end mt-2"><span class="text-[8px] font-bold text-green-500">🔥 MODO TESTE</span><span class="text-lg font-black text-yellow-500">${total}</span></div></div>`;
             });
         }
 
@@ -155,19 +144,17 @@
             const cont = document.getElementById('container-resultados');
             if (busca.length < 2) { cont.innerHTML = ''; return; }
             
-            // Filtra clientes cujo evento ainda está ativo no bancoEventos
             const filtrados = bancoClientes.filter(c => {
-                const eventoExisteEAtivo = bancoEventos.some(e => e.nome === c.evento);
                 const termo = (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
-                return termo && eventoExisteEAtivo;
+                return termo;
             });
 
-            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum registro encontrado para eventos ativos</div>' : '';
+            cont.innerHTML = filtrados.length === 0 ? '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum registro encontrado</div>' : '';
             
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
                 const isAnivPai = (c.tipo === "ANIVERSARIANTE_FREE");
-                const isConviteAniv = (c.aniversariante && c.aniversariante !== "");
+                const isConviteAniv = (c.tipo === "ANIVERSARIO" || c.tipo_lista === "ANIVERSARIO");
                 const isCasal = c.tipo_entrada === "CASAL";
                 
                 let valorTexto = "";
@@ -178,7 +165,7 @@
                     corValor = "animate-free";
                 } else {
                     let v = isConviteAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
-                    valorTexto = v ? "R$ " + v : "VALOR NA PORTARIA";
+                    valorTexto = "R$ " + (v || "---");
                 }
 
                 const badge = isCasal ? 'badge-casal' : (c.tipo_entrada === "ANIVERSARIANTE" ? 'bg-purple-600 text-white' : 'badge-solteiro');
@@ -191,8 +178,8 @@
                             <div class="flex items-center gap-4">
                                 <h3 class="text-2xl font-black uppercase italic text-white leading-none">${c.nome}</h3>
                                 <div class="flex items-center bg-zinc-900/50 rounded-xl px-3 py-2 gap-3 border border-white/5">
-                                    <p class="text-lg font-bold text-zinc-400 font-mono italic tracking-tighter leading-none">${c.tel || ''}</p>
-                                    <button onclick="copiarTexto('${c.tel}')" class="btn-copy p-1.5 rounded-lg text-zinc-500 hover:text-yellow-500 transition-all">
+                                    <p class="text-lg font-bold text-zinc-400 font-mono italic tracking-tighter leading-none">${c.tel || c.telefone || ''}</p>
+                                    <button onclick="copiarTexto('${c.tel || c.telefone}')" class="btn-copy p-1.5 rounded-lg text-zinc-500 hover:text-yellow-500 transition-all">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
                                     </button>
                                 </div>
@@ -203,13 +190,13 @@
                         </div>
                         <div class="h-[1px] bg-zinc-900 w-full"></div>
                         <div class="flex flex-wrap items-center gap-6">
-                            <span class="text-xs text-zinc-400 font-black uppercase italic">${c.evento}</span>
+                            <span class="text-xs text-zinc-400 font-black uppercase italic">${c.promoter || 'DIRETO'}</span>
                             <span class="px-4 py-1.5 ${badge} text-[10px] font-black rounded-lg uppercase">${c.tipo_entrada || 'LISTA'}</span>
                             <div class="flex items-center gap-2 border-l border-zinc-800 pl-6">
                                 <span class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">PAGAR:</span>
                                 <span class="text-xl font-black italic ${corValor}">${valorTexto}</span>
                             </div>
-                            ${isConviteAniv ? `<div class="flex items-center gap-2 border-l border-zinc-800 pl-6"><span class="text-xs text-purple-400 font-black uppercase italic tracking-tighter">🎂 Aniv: ${c.aniversariante}</span></div>` : ''}
+                            ${isConviteAniv ? `<div class="flex items-center gap-2 border-l border-zinc-800 pl-6"><span class="text-xs text-purple-400 font-black uppercase italic tracking-tighter">🎂 Aniv: ${c.aniversariante || ''}</span></div>` : ''}
                         </div>
                     </div>`;
                 cont.appendChild(div);
