@@ -19,7 +19,7 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; }
+        .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
     </style>
 </head>
 <body class="flex h-screen">
@@ -27,17 +27,13 @@
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
-            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
+            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
             <div class="space-y-4">
                 <input type="text" id="inputNomeUsuario" placeholder="LOGIN OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
                 <div id="areaSenha" class="hidden">
                     <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
                 </div>
                 <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4">ENTRAR NO SISTEMA</button>
-            </div>
-            <div class="mt-8 pt-6 border-t border-white/5 grid grid-cols-2 gap-2 opacity-40">
-                <div class="text-[8px] font-black uppercase text-zinc-500 italic">TURNO: 21H ÀS 05H</div>
-                <div id="relogio-login" class="text-[8px] font-black uppercase text-yellow-500 italic">00:00:00</div>
             </div>
         </div>
     </div>
@@ -49,12 +45,10 @@
                 <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
                 <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg italic tracking-widest text-white">---</p>
             </div>
-            
             <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em] border-b border-zinc-900 pb-2">Monitor de Eventos</h3>
+                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em] border-b border-zinc-900 pb-2 text-white">Monitor de Eventos</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
-            
             <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
         </aside>
 
@@ -67,11 +61,10 @@
                     </div>
                     <div class="text-right border-l border-zinc-800 pl-8 min-w-[140px]">
                         <p id="total-checkins" class="text-5xl font-black italic leading-none text-green-500">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2 italic">Check-ins Turno</p>
+                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2 italic text-white">Check-ins Turno</p>
                     </div>
                 </div>
             </header>
-            
             <section class="flex-grow p-8 overflow-y-auto bg-[#030303]">
                 <div id="container-resultados" class="max-w-5xl mx-auto"></div>
             </section>
@@ -95,33 +88,19 @@
         const db = getFirestore(app);
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
 
-        // --- LÓGICA DE TURNO E HORÁRIO ---
         const getStatusTurno = (dataEvento) => {
             const agora = new Date();
             const hora = agora.getHours();
-            
-            // Data do evento em formato YYYY-MM-DD
             const hoje = agora.toISOString().split('T')[0];
             const ontem = new Date(agora);
             ontem.setDate(ontem.getDate() - 1);
             const ontemISO = ontem.toISOString().split('T')[0];
 
-            // Se for entre 21h e 23h59 de hoje
             if (hora >= 21 && dataEvento === hoje) return "ONLINE";
-            
-            // Se for entre 00h e 05h da madrugada, o evento que começou ontem ainda está ONLINE
             if (hora < 5 && dataEvento === ontemISO) return "ONLINE";
-
-            return "RESTRITO";
+            if (dataEvento > hoje || (dataEvento === hoje && hora < 21)) return "RESTRITO";
+            return "ENCERRADO"; 
         };
-
-        const relogio = () => {
-            const d = new Date();
-            const r = document.getElementById('relogio-login');
-            if(r) r.innerText = d.toLocaleTimeString('pt-BR');
-            if(d.getHours() === 5 && d.getMinutes() === 0 && d.getSeconds() === 1) location.reload(); // Auto-limpeza às 05h
-        };
-        setInterval(relogio, 1000);
 
         window.verificarOuLogar = async () => {
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
@@ -148,29 +127,32 @@
 
         function iniciarEscutas() {
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
-                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
+                const hoje = new Date().toISOString().split('T')[0];
+                const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+                const ontemISO = ontem.toISOString().split('T')[0];
+
+                // FILTRO RADICAL: Só mostra se for hoje, futura, ou se for a madrugada do evento de ontem
+                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}))
+                                .filter(ev => {
+                                    const status = getStatusTurno(ev.data);
+                                    return status === "ONLINE" || status === "RESTRITO";
+                                });
                 
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
                     
-                    // Contador de Check-ins considerando apenas o turno atual (desde as 21h do início do evento)
                     const totalTurno = bancoClientes.filter(c => {
                         if (!c.entrou || !c.data_entrada) return false;
                         const dataEntrada = new Date(c.data_entrada);
-                        const hoje = new Date();
-                        
-                        // Se agora é madrugada (0-5h), mostrar check-ins desde as 21h de ontem
-                        if (hoje.getHours() < 5) {
-                            const ontem21h = new Date();
-                            ontem21h.setDate(ontem21h.getDate() - 1);
-                            ontem21h.setHours(21, 0, 0);
-                            return dataEntrada >= ontem21h;
+                        const hojeCheck = new Date();
+                        const limite = new Date();
+                        if (hojeCheck.getHours() < 5) {
+                            limite.setDate(limite.getDate() - 1);
+                            limite.setHours(21, 0, 0);
                         } else {
-                            // Se agora é noite (21-24h), mostrar check-ins de hoje
-                            const hoje21h = new Date();
-                            hoje21h.setHours(21, 0, 0);
-                            return dataEntrada >= hoje21h;
+                            limite.setHours(21, 0, 0);
                         }
+                        return dataEntrada >= limite;
                     }).length;
 
                     document.getElementById('total-checkins').innerText = totalTurno;
@@ -183,22 +165,17 @@
         function renderizarSidebar() {
             const cont = document.getElementById('lista-eventos-sidebar');
             cont.innerHTML = '';
-            
-            // Ordenar por data
-            const eventosOrdenados = [...bancoEventos].sort((a,b) => new Date(a.data) - new Date(b.data));
-
-            eventosOrdenados.forEach(ev => {
+            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
                 const total = bancoClientes.filter(c => c.evento === ev.nome).length;
-                
                 cont.innerHTML += `
-                    <div class="p-4 rounded-2xl glass border-l-4 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-50'} mb-2 shadow-lg">
-                        <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
-                        <div class="flex justify-between items-end mt-2 text-white">
-                            <span class="text-[8px] font-bold ${status === 'ONLINE' ? 'animate-online' : 'text-zinc-600'} italic uppercase">
+                    <div class="p-4 rounded-2xl glass border-l-4 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
+                        <h4 class="text-[10px] font-black uppercase text-white truncate text-white">${ev.nome}</h4>
+                        <div class="flex justify-between items-end mt-2 text-white text-white">
+                            <span class="text-[8px] font-bold ${status === 'ONLINE' ? 'animate-online' : 'text-zinc-600'} italic uppercase text-white">
                                 ${status === 'ONLINE' ? '● ONLINE NOW' : '🔒 RESTRITO'}
                             </span>
-                            <span class="text-lg font-black text-yellow-500 leading-none">${total}</span>
+                            <span class="text-lg font-black text-yellow-500 leading-none text-white">${total}</span>
                         </div>
                     </div>`;
             });
@@ -209,43 +186,39 @@
             const cont = document.getElementById('container-resultados');
             if (busca.length < 2) { cont.innerHTML = ''; return; }
             
-            // Busca permitida APENAS se o evento vinculado ao cliente estiver ONLINE agora
             const filtrados = bancoClientes.filter(c => {
                 const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
                 if (!evRelacionado || getStatusTurno(evRelacionado.data) !== "ONLINE") return false;
-                
                 const nomeMatch = c.nome && c.nome.toUpperCase().includes(busca);
                 const telMatch = (c.tel || c.telefone) && (c.tel || c.telefone).includes(busca);
                 return nomeMatch || telMatch;
             });
 
             cont.innerHTML = filtrados.length === 0 ? 
-                '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Sistema em Segurança<br><span class="text-[10px]">Busca liberada apenas para eventos ONLINE (21h às 05h)</span></div>' : '';
+                '<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum registro ativo encontrado</div>' : '';
             
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
                 const isCasal = c.tipo_entrada === "CASAL";
                 const v = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
-
                 const div = document.createElement('div');
-                div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${c.entrou ? 'entrou' : ''}`;
+                div.className = `client-card p-8 rounded-[2.5rem] mb-4 ${c.entrou ? 'entrou' : ''}`;
                 div.innerHTML = `
                     <div class="flex flex-col gap-4 text-white">
-                        <div class="flex justify-between items-center">
+                        <div class="flex justify-between items-center text-white">
                             <div class="flex items-center gap-4 text-white">
-                                <h3 class="text-2xl font-black uppercase italic text-white leading-none">${c.nome}</h3>
-                                <p class="text-lg font-bold text-zinc-400 font-mono italic leading-none">${c.tel || c.telefone || ''}</p>
+                                <h3 class="text-2xl font-black uppercase italic text-white leading-none text-white">${c.nome}</h3>
+                                <p class="text-lg font-bold text-zinc-400 font-mono italic leading-none text-white">${c.tel || c.telefone || ''}</p>
                             </div>
                             <div>
-                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-6 py-3 rounded-xl border border-green-500/20">CONFIRMADO</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.4)]">LIBERAR AGORA</button>`}
+                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-6 py-3 rounded-xl border border-green-500/20 text-white">OK</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all text-white">LIBERAR</button>`}
                             </div>
                         </div>
-                        <div class="h-[1px] bg-zinc-900/50 w-full"></div>
+                        <div class="h-[1px] bg-zinc-900/50 w-full text-white"></div>
                         <div class="flex flex-wrap items-center gap-6 text-white">
-                            <span class="text-[10px] text-zinc-400 font-black uppercase italic tracking-widest">${c.evento}</span>
-                            <div class="flex items-center gap-3 border-l border-zinc-800 pl-6 text-white">
-                                <span class="text-[8px] text-zinc-600 font-black uppercase tracking-[0.2em]">VALOR:</span>
-                                <span class="text-2xl font-black italic text-yellow-500 leading-none">R$ ${v || '---'}</span>
+                            <span class="text-[10px] text-zinc-400 font-black uppercase italic text-white">${c.evento}</span>
+                            <div class="flex items-center gap-3 border-l border-zinc-800 pl-6 text-white text-white">
+                                <span class="text-[8px] text-zinc-600 font-black uppercase text-white">R$ ${v || '---'}</span>
                             </div>
                         </div>
                     </div>`;
