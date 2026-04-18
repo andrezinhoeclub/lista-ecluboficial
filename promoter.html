@@ -20,7 +20,7 @@
 
     <div id="loginPromoter" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050508]">
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-blue-500/20 border shadow-2xl">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 mx-auto mb-8 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 mx-auto mb-8">
             <h1 class="text-3xl font-black mb-8 uppercase italic tracking-tighter text-white">Promoter <span class="text-sky-400">Access</span></h1>
             
             <div id="step-user">
@@ -41,9 +41,9 @@
         <header class="flex justify-between items-center mb-12">
             <div>
                 <p class="text-sky-400 text-[10px] font-black uppercase tracking-[0.3em] mb-1">E-Club Oficial</p>
-                <h1 id="boasVindas" class="text-4xl font-black uppercase italic leading-none">---</h1>
+                <h1 id="boasVindas" class="text-4xl font-black uppercase italic leading-none text-white">---</h1>
             </div>
-            <button onclick="location.reload()" class="bg-red-500/10 p-3 px-6 rounded-2xl text-red-500 font-black text-[10px] border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">Sair</button>
+            <button onclick="location.reload()" class="bg-red-500/10 p-3 px-6 rounded-2xl text-red-500 font-black text-[10px] border border-red-500/20">Sair</button>
         </header>
 
         <section class="space-y-10">
@@ -53,7 +53,7 @@
             </div>
             
             <div>
-                <h3 class="text-[11px] font-black uppercase text-sky-400 mb-4 tracking-[0.2em] ml-2 italic">📈 Performance em Eventos</h3>
+                <h3 class="text-[11px] font-black uppercase text-sky-400 mb-4 tracking-[0.2em] ml-2 italic text-white">📈 Performance em Eventos</h3>
                 <div id="listaEventosPromoter" class="space-y-4"></div>
             </div>
         </section>
@@ -106,7 +106,6 @@
                 currentPromoter = n;
                 document.getElementById('step-user').classList.add('hidden');
                 document.getElementById('step-password').classList.remove('hidden');
-                document.getElementById('msgErro').classList.add('hidden');
             } else { document.getElementById('msgErro').classList.remove('hidden'); }
         }
 
@@ -125,14 +124,14 @@
             document.getElementById('interfacePrincipal').classList.remove('hidden');
             document.getElementById('boasVindas').innerText = currentPromoter.toUpperCase();
 
-            // Escuta global de reservas
+            // Sincronização em Tempo Real das Reservas
             onSnapshot(collection(db, "lista_eventos"), (snap) => {
                 todasReservasGlobal = snap.docs.map(d => d.data());
                 renderizarPerformance();
-                atualizarLinks();
+                if (dados.tipo === "aniversario") carregarLinksAniv();
             });
 
-            // Escuta de eventos ativos
+            // Sincronização dos Eventos
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
                 eventosAtivos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data));
                 renderizarPerformance();
@@ -147,11 +146,10 @@
                     b.innerHTML = "🎂 Criar Link VIP";
                     document.getElementById('barraBotoes').appendChild(b);
                 }
-                atualizarLinks();
             }
         }
 
-        function atualizarLinks() {
+        function carregarLinksAniv() {
             onSnapshot(collection(db, "links_aniversario"), (snap) => {
                 const meusLinks = snap.docs.map(d => ({id: d.id, ...d.data()}))
                     .filter(l => l.promoter.toLowerCase() === currentPromoter.toLowerCase());
@@ -163,12 +161,16 @@
             const cont = document.getElementById('listaEventosPromoter');
             if(!cont) return;
             cont.innerHTML = eventosAtivos.map(ev => {
-                const ind = todasReservasGlobal.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase() === currentPromoter.toLowerCase()).length;
+                // Aqui está o segredo: ele conta ignorando se é maiúsculo ou minúsculo
+                const ind = todasReservasGlobal.filter(r => 
+                    r.evento === ev.nome && 
+                    (r.promoter || '').toLowerCase() === currentPromoter.toLowerCase()
+                ).length;
                 const ger = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
                 return `
                     <div class="glass p-6 rounded-[2.5rem] border-l-4 border-l-sky-500 blue-glow flex justify-between items-center mb-4">
                         <div>
-                            <h4 class="text-[13px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4>
+                            <h4 class="text-[13px] font-black uppercase italic text-white">${ev.nome}</h4>
                             <p class="text-[9px] text-zinc-500 font-bold mt-2">${ev.data.split('-').reverse().join('/')}</p>
                         </div>
                         <div class="flex gap-5 text-right">
@@ -183,7 +185,10 @@
             const cont = document.getElementById('listaLinksAniv');
             if(!cont) return;
             cont.innerHTML = links.map(link => {
-                const qtd = todasReservasGlobal.filter(r => r.evento === link.festa && (r.aniversariante || '').toUpperCase() === link.aniversariante.toUpperCase()).length;
+                const qtd = todasReservasGlobal.filter(r => 
+                    r.evento === link.festa && 
+                    (r.aniversariante || '').toUpperCase() === link.aniversariante.toUpperCase()
+                ).length;
                 return `
                     <div class="glass p-5 rounded-[2rem] flex justify-between items-center border-l-4 border-l-purple-500 purple-glow mb-2">
                         <div class="truncate mr-4 text-left">
@@ -191,7 +196,7 @@
                             <p class="text-[8px] text-zinc-500 uppercase truncate">${link.festa}</p>
                         </div>
                         <div class="flex items-center gap-4">
-                            <div class="text-right"><p class="text-[14px] font-black text-white">${qtd}</p><p class="text-[7px] text-purple-400 font-black">LISTA</p></div>
+                            <div class="text-right"><p class="text-[14px] font-black">${qtd}</p><p class="text-[7px] text-purple-400 font-black">LISTA</p></div>
                             <button onclick="copiarLinkInteligente('${link.id}', '${link.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-4 py-2 rounded-xl text-[9px] font-black uppercase border border-purple-500/30">Copiar</button>
                         </div>
                     </div>`;
