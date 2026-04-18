@@ -20,12 +20,16 @@
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
+        
+        /* Estilo do Alerta de Teste */
+        @keyframes pulse-alert { 0% { background-color: rgba(234, 179, 8, 0.1); } 50% { background-color: rgba(234, 179, 8, 0.3); } 100% { background-color: rgba(234, 179, 8, 0.1); } }
+        .alert-teste { animation: pulse-alert 2s infinite; border: 1px solid #eab308; color: #eab308; text-align: center; font-weight: 900; font-style: italic; padding: 10px; margin-bottom: 15px; border-radius: 10px; text-transform: uppercase; font-size: 11px; letter-spacing: 2px;}
     </style>
 </head>
 <body class="flex h-screen">
 
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
-        <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border">
+        <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
             <div class="space-y-4">
@@ -33,7 +37,7 @@
                 <div id="areaSenha" class="hidden">
                     <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
                 </div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4">ENTRAR NO SISTEMA</button>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ENTRAR NO SISTEMA</button>
             </div>
         </div>
     </div>
@@ -53,8 +57,8 @@
         </aside>
 
         <main class="flex-grow flex flex-col">
-            <header class="p-8 border-b border-zinc-900 bg-black/20">
-                <div class="max-w-5xl mx-auto flex gap-8 items-center">
+            <header class="p-8 border-b border-zinc-900 bg-black/20 relative">
+                <div class="max-w-5xl mx-auto flex gap-8 items-center relative">
                     <div class="relative flex-grow">
                         <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
                         <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR CLIENTE NO EVENTO ONLINE..." class="w-full p-6 pl-16 rounded-[2rem] text-sm font-bold uppercase text-white shadow-2xl">
@@ -67,9 +71,14 @@
             </header>
 
             <section class="flex-grow p-8 overflow-y-auto bg-[#030303] relative">
+                
+                <div id="alertaModoTeste" class="alert-teste hidden max-w-5xl mx-auto">
+                    ⚠️ MODO DE TESTE ATIVO - TRAVAS DE HORÁRIO DESATIVADAS
+                </div>
+
                 <div id="painelRegras" class="max-w-5xl mx-auto mb-10">
-                    <div class="glass p-8 rounded-[2.5rem] border-l-4 border-l-yellow-500 bg-yellow-500/5">
-                        <h3 class="text-yellow-500 font-black uppercase italic text-sm mb-4 tracking-widest italic">● Regras Operacionais e Horários</h3>
+                    <div class="glass p-8 rounded-[2.5rem] border-l-4 border-l-yellow-500 bg-yellow-500/5 shadow-2xl">
+                        <h3 class="text-yellow-500 font-black uppercase italic text-sm mb-4 tracking-widest">● Regras Operacionais e Horários</h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div class="bg-black/40 p-5 rounded-2xl border border-white/5">
                                 <p class="text-[8px] text-zinc-500 font-black uppercase mb-2">Turno de Trabalho</p>
@@ -108,9 +117,14 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
+        let isModoTeste = false; // VARIÁVEL GLOBAL DO MODO TESTE
 
         const getStatusTurno = (dataEvento) => {
+            // SE O MODO TESTE ESTIVER ATIVADO, TODOS OS EVENTOS FICAM ONLINE
+            if (isModoTeste) return "ONLINE"; 
+
             const agora = new Date();
             const hora = agora.getHours();
             const hoje = agora.toISOString().split('T')[0];
@@ -126,30 +140,58 @@
         window.verificarOuLogar = async () => {
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
+            const btn = document.getElementById('btnAcao');
+            const erroMsg = document.getElementById('erro');
+
             if (stepLogin === 0) {
+                btn.innerText = "VERIFICANDO...";
                 const docSnap = await getDoc(doc(db, "configuracoes", n));
                 if (docSnap.exists()) {
                     usuarioData = docSnap.data();
                     stepLogin = 1;
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
-                    document.getElementById('btnAcao').innerText = "AUTENTICAR";
+                    btn.innerText = "AUTENTICAR";
+                } else {
+                    btn.innerText = "ENTRAR NO SISTEMA";
+                    alert("Operador não encontrado.");
                 }
             } else {
+                btn.innerText = "AUTENTICANDO...";
                 if (usuarioData.senha === s) {
                     operadorLogado = n;
                     document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
                     document.getElementById('telaLogin').classList.add('hidden');
                     document.getElementById('interfacePrincipal').classList.remove('hidden');
                     iniciarEscutas();
+                } else { 
+                    alert("Senha incorreta"); 
+                    btn.innerText = "AUTENTICAR";
                 }
             }
         };
 
         function iniciarEscutas() {
+            // NOVO: ESCUTA O COMANDO DE "MODO TESTE" DO PAINEL MASTER
+            onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
+                const alerta = document.getElementById('alertaModoTeste');
+                if (snap.exists() && snap.data().modo_teste === true) {
+                    isModoTeste = true;
+                    alerta.classList.remove('hidden');
+                } else {
+                    isModoTeste = false;
+                    alerta.classList.add('hidden');
+                }
+                
+                // Sempre que o modo mudar, ele reprocessa a barra lateral e a busca
+                if (bancoEventos.length > 0) {
+                    renderizarSidebar();
+                    processarPesquisa();
+                }
+            });
+
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
-                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}))
-                                .filter(ev => getStatusTurno(ev.data) !== "ENCERRADO");
+                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
                 
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
@@ -159,18 +201,23 @@
                         const dataEntrada = new Date(c.data_entrada);
                         const hojeCheck = new Date();
                         const limite = new Date();
+                        
                         if (hojeCheck.getHours() < 5) {
                             limite.setDate(limite.getDate() - 1);
                             limite.setHours(21, 0, 0);
                         } else {
                             limite.setHours(21, 0, 0);
                         }
+                        
+                        // NO MODO TESTE, ELE CONTA TODOS OS CHECK-INS, IGNORANDO O HORÁRIO
+                        if (isModoTeste) return true;
+                        
                         return dataEntrada >= limite;
                     }).length;
 
                     document.getElementById('total-checkins').innerText = totalTurno;
-                    processarPesquisa();
                     renderizarSidebar();
+                    processarPesquisa();
                 });
             });
         }
@@ -178,7 +225,11 @@
         function renderizarSidebar() {
             const cont = document.getElementById('lista-eventos-sidebar');
             cont.innerHTML = '';
-            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+            
+            // Filtra os eventos baseados no status. No modo teste, nenhum será "ENCERRADO".
+            const eventosFiltrados = bancoEventos.filter(ev => getStatusTurno(ev.data) !== "ENCERRADO");
+            
+            eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
                 const total = bancoClientes.filter(c => c.evento === ev.nome).length;
                 cont.innerHTML += `
@@ -197,19 +248,32 @@
         window.processarPesquisa = () => {
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
-            if (busca.length < 2) { cont.innerHTML = ''; return; }
+            
+            if (busca.length < 2) { 
+                cont.innerHTML = ''; 
+                return; 
+            }
             
             const filtrados = bancoClientes.filter(c => {
                 const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
+                // A BUSCA SÓ FUNCIONA SE O EVENTO ESTIVER ONLINE (O que inclui o Modo Teste)
                 if (!evRelacionado || getStatusTurno(evRelacionado.data) !== "ONLINE") return false;
+                
                 const nomeMatch = c.nome && c.nome.toUpperCase().includes(busca);
                 const telMatch = (c.tel || c.telefone) && (c.tel || c.telefone).includes(busca);
                 return nomeMatch || telMatch;
             });
 
-            cont.innerHTML = filtrados.length === 0 ? 
-                '<div class="py-40 text-center font-black uppercase text-zinc-800 italic tracking-widest">Nenhum cliente ativo encontrado<br><span class="text-[8px] font-bold italic opacity-40">Busca permitida apenas para eventos online</span></div>' : '';
+            if (filtrados.length === 0) {
+                cont.innerHTML = `
+                    <div class="py-40 text-center font-black uppercase text-zinc-800 italic tracking-widest">
+                        Nenhum cliente ativo encontrado<br>
+                        <span class="text-[8px] font-bold italic opacity-40">Busca permitida apenas para eventos online</span>
+                    </div>`;
+                return;
+            }
             
+            cont.innerHTML = '';
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
                 const isCasal = c.tipo_entrada === "CASAL";
@@ -235,6 +299,7 @@
                                 <span class="text-[8px] text-zinc-600 font-black uppercase tracking-[0.2em]">VALOR:</span>
                                 <span class="text-2xl font-black italic text-yellow-500 leading-none">R$ ${v || '---'}</span>
                             </div>
+                            ${c.aniversariante ? `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-400 font-black uppercase tracking-[0.2em]">ANIVERSARIANTE:</span><span class="text-xs font-black italic text-white leading-none">${c.aniversariante}</span></div>` : ''}
                         </div>
                     </div>`;
                 cont.appendChild(div);
