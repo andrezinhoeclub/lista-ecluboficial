@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@800&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #050508; background-image: radial-gradient(circle at top right, #1e1b4b 0%, #050508 100%); color: #fff; min-height: 100vh; }
+        body { font-family: 'Inter', sans-serif; background: #050508; background-image: radial-gradient(circle at top right, #1e1b4b, #050508 100%); color: #fff; min-height: 100vh; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .blue-glow { box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); border-color: rgba(59, 130, 246, 0.3); }
         .purple-glow { box-shadow: 0 0 20px rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.3); }
@@ -21,7 +21,7 @@
     <div id="loginPromoter" class="flex flex-col items-center justify-center min-h-[90vh]">
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-blue-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 mx-auto mb-8 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-            <h1 class="text-3xl font-black mb-8 uppercase italic tracking-tighter text-white text-white">Promoter <span class="text-blue-500 text-sky-400">Access</span></h1>
+            <h1 class="text-3xl font-black mb-8 uppercase italic tracking-tighter text-white">Promoter <span class="text-sky-400">Access</span></h1>
             <div id="step-user">
                 <input type="text" id="userPromoter" placeholder="NOME DE USUÁRIO" class="w-full bg-black/50 border border-zinc-800 p-5 rounded-2xl outline-none focus:border-sky-400 text-center font-bold uppercase text-xs mb-4 text-white">
                 <button onclick="validarUsuario()" class="w-full bg-sky-500 text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all">Continuar</button>
@@ -40,7 +40,7 @@
                 <p class="text-sky-400 text-[10px] font-black uppercase tracking-[0.3em] mb-1">E-Club Oficial</p>
                 <h1 id="boasVindas" class="text-4xl font-black uppercase italic leading-none text-white">---</h1>
             </div>
-            <button onclick="location.reload()" class="bg-red-500/10 p-3 px-6 rounded-2xl text-red-500 font-black text-[10px] border border-red-500/20 hover:bg-red-500 hover:text-white transition-all">Sair</button>
+            <button onclick="location.reload()" class="bg-red-500/10 p-3 px-6 rounded-2xl text-red-500 font-black text-[10px] border border-red-500/20">Sair</button>
         </header>
 
         <section class="space-y-10">
@@ -51,18 +51,20 @@
             
             <div>
                 <h3 class="text-[11px] font-black uppercase text-sky-400 mb-4 tracking-[0.2em] ml-2 italic">📈 Performance em Eventos</h3>
-                <div id="listaEventosPromoter" class="space-y-4 text-white"></div>
+                <div id="listaEventosPromoter" class="space-y-4 text-white">
+                    <p class="text-center py-10 text-zinc-700 font-black uppercase text-[10px] italic">Carregando performance...</p>
+                </div>
             </div>
         </section>
 
-        <div id="footerAcoes" class="fixed bottom-0 left-0 w-full p-6 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-40">
+        <div id="footerAcoes" class="fixed bottom-0 left-0 w-full p-6 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-40 text-white">
             <div class="max-w-md mx-auto flex gap-4" id="barraBotoes">
                 <button onclick="copiarLinkReservas()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[11px] tracking-widest shadow-lg active:scale-95 transition-all">Link Geral</button>
             </div>
         </div>
     </div>
 
-    <div id="modalAniversario" class="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 hidden flex items-center justify-center p-6 text-white text-white">
+    <div id="modalAniversario" class="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 hidden flex items-center justify-center p-6 text-white text-white text-white">
         <div class="glass max-w-sm w-full p-10 rounded-[3.5rem] border-purple-500/30 border text-center shadow-2xl">
             <h2 class="text-2xl font-black text-purple-400 uppercase italic mb-8">Novo Aniversariante</h2>
             <div class="text-left space-y-4">
@@ -93,16 +95,7 @@
         
         let currentPromoter = "";
         let todasReservasGlobal = [];
-        let meusLinksAniversario = [];
         let eventosAtivos = [];
-
-        window.mascaraTelefone = (i) => {
-            let v = i.value.replace(/\D/g, "").substring(0, 11);
-            if (v.length > 0) v = "(" + v;
-            if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3);
-            if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
-            i.value = v;
-        };
 
         window.validarUsuario = async function() {
             const n = document.getElementById('userPromoter').value.trim().toLowerCase();
@@ -130,19 +123,18 @@
             document.getElementById('interfacePrincipal').classList.remove('hidden');
             document.getElementById('boasVindas').innerText = currentPromoter.toUpperCase();
 
-            // ESCUTA 1: Reservas (Para calcular os números)
+            // ESCUTA RESERVAS
             onSnapshot(collection(db, "lista_eventos"), (snap) => {
-                todasReservasGlobal = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                todasReservasGlobal = snap.docs.map(d => d.data());
                 renderizarInterface();
             });
 
-            // ESCUTA 2: Eventos Ativos
+            // ESCUTA EVENTOS
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
-                eventosAtivos = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(a.data) - new Date(b.data));
+                eventosAtivos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data));
                 renderizarInterface();
             });
 
-            // ESCUTA 3: Links de Aniversário (Se for do tipo aniversário)
             if(dados.tipo === "aniversario") {
                 document.getElementById('secaoMeusLinks').classList.remove('hidden');
                 if(!document.getElementById('btnVip')) {
@@ -154,78 +146,62 @@
                 }
                 
                 onSnapshot(collection(db, "links_aniversario"), (snap) => {
-                    meusLinksAniversario = snap.docs
-                        .map(d => ({id: d.id, ...d.data()}))
-                        .filter(link => link.promoter.toLowerCase() === currentPromoter.toLowerCase());
-                    renderizarLinks();
+                    const meusLinks = snap.docs.map(d => ({id: d.id, ...d.data()}))
+                        .filter(l => l.promoter.toLowerCase() === currentPromoter.toLowerCase());
+                    renderizarLinks(meusLinks);
                 });
             }
         }
 
         function renderizarInterface() {
-            renderizarEventos();
-            renderizarLinks();
-        }
-
-        function renderizarLinks() {
-            const cont = document.getElementById('listaLinksAniv');
-            if(!cont) return;
-            cont.innerHTML = meusLinksAniversario.length === 0 ? '<p class="text-[9px] text-zinc-600 uppercase italic ml-2">Nenhum link criado.</p>' : '';
-            
-            meusLinksAniversario.forEach(link => {
-                // Conta reservas vinculadas a este link específico
-                const qtd = todasReservasGlobal.filter(r => 
-                    r.evento === link.festa && 
-                    (r.aniversariante === link.aniversariante || r.nome_aniversariante === link.aniversariante)
-                ).length;
-
-                cont.innerHTML += `
-                    <div class="glass p-5 rounded-[2rem] flex justify-between items-center border-l-4 border-l-purple-500 purple-glow">
-                        <div class="truncate mr-4 text-white">
-                            <p class="text-[11px] font-black text-white uppercase italic">${link.aniversariante}</p>
-                            <p class="text-[8px] text-zinc-500 uppercase truncate font-bold mt-1">${link.festa}</p>
-                        </div>
-                        <div class="flex items-center gap-4 text-white">
-                            <div class="text-right">
-                                <p class="text-[14px] font-black text-white leading-none">${qtd}</p>
-                                <p class="text-[7px] text-purple-400 font-black uppercase mt-1">LISTA</p>
-                            </div>
-                            <button onclick="copiarLinkInteligente('${link.id}', '${link.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all active:scale-90 border border-purple-500/30">Copiar</button>
-                        </div>
-                    </div>`;
-            });
-        }
-
-        function renderizarEventos() {
             const cont = document.getElementById('listaEventosPromoter');
-            if(!cont) return;
+            if(!cont || eventosAtivos.length === 0) return;
             cont.innerHTML = '';
             
             eventosAtivos.forEach(ev => {
-                // Reservas da Fabi (currentPromoter) para este evento
-                const ind = todasReservasGlobal.filter(r => r.evento === ev.nome && r.promoter.toLowerCase() === currentPromoter.toLowerCase()).length;
-                // Reservas totais do evento
+                const ind = todasReservasGlobal.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase() === currentPromoter.toLowerCase()).length;
                 const ger = todasReservasGlobal.filter(r => r.evento === ev.nome).length;
                 
                 cont.innerHTML += `
-                    <div class="glass p-6 rounded-[2.5rem] border-l-4 border-l-sky-500 blue-glow flex justify-between items-center">
-                        <div class="text-white text-white">
-                            <h4 class="text-[13px] font-black uppercase text-white italic leading-tight">${ev.nome}</h4>
-                            <p class="text-[9px] text-zinc-500 font-bold uppercase mt-2 tracking-widest italic">${ev.data.split('-').reverse().join('/')}</p>
+                    <div class="glass p-6 rounded-[2.5rem] border-l-4 border-l-sky-500 blue-glow flex justify-between items-center text-white">
+                        <div>
+                            <h4 class="text-[13px] font-black uppercase text-white italic leading-tight text-white">${ev.nome}</h4>
+                            <p class="text-[9px] text-zinc-500 font-bold uppercase mt-2 italic">${ev.data.split('-').reverse().join('/')}</p>
                         </div>
                         <div class="flex gap-5 text-right text-white">
-                            <div class="text-white">
-                                <p class="text-2xl font-black text-sky-400 leading-none">${ind}</p>
-                                <p class="text-[7px] text-sky-500/50 font-black uppercase mt-1">MINHAS</p>
-                            </div>
-                            <div class="border-l border-white/5 pl-5 text-white">
-                                <p class="text-2xl font-black text-white leading-none">${ger}</p>
-                                <p class="text-[7px] text-zinc-600 font-black uppercase mt-1 tracking-tighter">GERAL</p>
-                            </div>
+                            <div><p class="text-2xl font-black text-sky-400 leading-none">${ind}</p><p class="text-[7px] text-sky-500 font-black uppercase mt-1">MINHAS</p></div>
+                            <div class="border-l border-white/5 pl-5"><p class="text-2xl font-black text-white leading-none">${ger}</p><p class="text-[7px] text-zinc-600 font-black uppercase mt-1">GERAL</p></div>
                         </div>
                     </div>`;
             });
         }
+
+        function renderizarLinks(links) {
+            const cont = document.getElementById('listaLinksAniv');
+            if(!cont) return;
+            cont.innerHTML = links.length === 0 ? '<p class="text-[9px] text-zinc-600 uppercase italic ml-2">Nenhum link criado.</p>' : '';
+            links.forEach(link => {
+                const qtd = todasReservasGlobal.filter(r => r.evento === link.festa && (r.aniversariante === link.aniversariante)).length;
+                cont.innerHTML += `
+                    <div class="glass p-5 rounded-[2rem] flex justify-between items-center border-l-4 border-l-purple-500 purple-glow text-white">
+                        <div class="truncate mr-4"><p class="text-[11px] font-black text-white uppercase italic text-white">${link.aniversariante}</p><p class="text-[8px] text-zinc-500 uppercase truncate font-bold mt-1">${link.festa}</p></div>
+                        <div class="flex items-center gap-4 text-white">
+                            <div class="text-right"><p class="text-[14px] font-black text-white leading-none">${qtd}</p><p class="text-[7px] text-purple-400 font-black uppercase mt-1">LISTA</p></div>
+                            <button onclick="copiarLinkInteligente('${link.id}', '${link.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-4 py-2 rounded-xl text-[9px] font-black uppercase active:scale-90 border border-purple-500/30">Copiar</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        window.copiarLinkInteligente = (id, aniv) => {
+            const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?id=' + id;
+            navigator.clipboard.writeText(`*Convite VIP: Aniversário de ${aniv}* 🎂\n\nConfirme seu nome na lista oficial aqui:\n${url}`).then(() => alert("Texto copiado!"));
+        };
+
+        window.copiarLinkReservas = () => {
+            const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?ref=' + currentPromoter;
+            navigator.clipboard.writeText(url).then(() => alert("Link Geral Copiado!"));
+        };
 
         window.abrirModalAniv = () => {
             const s = document.getElementById('selectEventoAniv');
@@ -240,24 +216,19 @@
             const nome = document.getElementById('nomeAniversariante').value.trim().toUpperCase();
             const tel = document.getElementById('telAniversariante').value.trim();
             if(!nome || tel.length < 14) return alert("Preencha nome e celular!");
-            const btn = document.getElementById('btnGerar');
-            btn.disabled = true; btn.innerText = "GRAVANDO...";
             try {
                 await addDoc(collection(db, "links_aniversario"), { promoter: currentPromoter, aniversariante: nome, festa: festa, data_criacao: new Date().toISOString() });
                 await addDoc(collection(db, "lista_eventos"), { nome: nome, tel: tel, evento: festa, tipo_entrada: "ANIVERSARIANTE", promoter: currentPromoter, aniversariante: nome, entrou: false, data_reserva: new Date().toISOString() });
-                fecharModalAniv();
-                alert("Link VIP Criado!");
-            } catch (e) { alert("Erro."); } finally { btn.disabled = false; btn.innerText = "Criar Link VIP ✨"; }
+                fecharModalAniv(); alert("Link VIP Criado!");
+            } catch (e) { alert("Erro."); }
         };
 
-        window.copiarLinkInteligente = (id, aniv) => {
-            const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?id=' + id;
-            navigator.clipboard.writeText(`*Convite VIP: Aniversário de ${aniv}* 🎂\n\nConfirme seu nome na lista oficial aqui:\n${url}`).then(() => alert("Texto copiado!"));
-        };
-
-        window.copiarLinkReservas = () => {
-            const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?ref=' + currentPromoter;
-            navigator.clipboard.writeText(url).then(() => alert("Link Geral Copiado!"));
+        window.mascaraTelefone = (i) => {
+            let v = i.value.replace(/\D/g, "").substring(0, 11);
+            if (v.length > 0) v = "(" + v;
+            if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3);
+            if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
+            i.value = v;
         };
     </script>
 </body>
