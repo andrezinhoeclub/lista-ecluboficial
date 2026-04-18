@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <title>E-CLUB | Reservas e Vendas</title>
+    <title>E-CLUB | Reservas e Listas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -16,8 +16,9 @@
         .btn-lista { background: #eab308; color: #000; font-weight: 900; text-transform: uppercase; }
         .btn-secundario { background: #111; border: 1px solid #27272a; color: #fff; font-weight: 800; text-transform: uppercase; font-size: 10px; }
         .site-input { background: #000 !important; border: 1px solid #27272a !important; color: white !important; }
+        .site-input:disabled { opacity: 0.2; cursor: not-allowed; }
         .glass-modal { background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); }
-        .btn-tipo { background: #0c0c0e; border: 1px solid #27272a; transition: 0.3s; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 110px; }
+        .btn-tipo { background: #0c0c0e; border: 1px solid #27272a; transition: 0.3s; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100px; }
         .btn-tipo.active { border-color: #eab308; background: rgba(234, 179, 8, 0.1); }
     </style>
 </head>
@@ -28,58 +29,39 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 w-auto">
         </header>
         <div id="listaEventos" class="space-y-8">
-            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando festas...</div>
+            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando...</div>
         </div>
     </div>
 
     <div id="modalForm" class="hidden fixed inset-0 z-50 glass-modal flex items-center justify-center p-6">
         <div class="w-full max-w-sm bg-[#121214] border border-white/10 p-8 rounded-[3rem] text-center">
-            <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-2 tracking-widest text-sm">Reserva</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-8">Preencha os dados abaixo</p>
+            <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-2 tracking-widest text-sm">Reserva de Lista</h2>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-8">Selecione o tipo para liberar os campos</p>
             
             <div class="space-y-4 text-left">
                 <div class="grid grid-cols-2 gap-3 mb-4">
-                    <button onclick="setTipo('CASAL')" id="btn-tipo-casal" class="btn-tipo p-4 rounded-2xl">
-                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-1">Casal</span>
+                    <button onclick="setTipo('CASAL')" id="btn-tipo-casal" class="btn-tipo p-4 rounded-2xl text-white">
+                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-2">Casal</span>
                         <span id="preco-casal-modal" class="text-lg font-black italic text-white uppercase text-center">---</span>
-                        <span id="legenda-casal" class="hidden text-[8px] font-black uppercase text-zinc-600 mt-1">Sem consumação</span>
                     </button>
-                    <button onclick="setTipo('SOLTEIRO')" id="btn-tipo-solteiro" class="btn-tipo p-4 rounded-2xl">
-                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-1">Solteiro</span>
+                    <button onclick="setTipo('SOLTEIRO')" id="btn-tipo-solteiro" class="btn-tipo p-4 rounded-2xl text-white">
+                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-2">Solteiro</span>
                         <span id="preco-solteiro-modal" class="text-lg font-black italic text-white uppercase text-center">---</span>
-                        <span id="legenda-solteiro" class="hidden text-[8px] font-black uppercase text-zinc-600 mt-1">Sem consumação</span>
                     </button>
                 </div>
 
                 <input type="text" id="nome-cliente" disabled placeholder="NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase">
                 <input type="tel" id="tel-cliente" disabled oninput="mascaraTelefone(this)" placeholder="(41) 99999-9999" class="w-full site-input p-5 rounded-2xl font-bold text-xs">
                 
-                <button onclick="processarFluxo()" id="btn-confirmar" disabled class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action shadow-xl mt-4 disabled:opacity-20">Confirmar</button>
+                <button onclick="finalizarPedido()" id="btn-confirmar" disabled class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action shadow-xl mt-4 disabled:opacity-20">Confirmar</button>
                 <button onclick="fecharModal()" class="w-full text-zinc-600 font-bold uppercase text-[9px] mt-2">Cancelar</button>
             </div>
-        </div>
-    </div>
-
-    <div id="modalPix" class="hidden fixed inset-0 z-[60] glass-modal flex items-center justify-center p-6 text-center">
-        <div class="w-full max-w-sm bg-zinc-900 border border-white/10 p-8 rounded-[3rem]">
-            <h2 class="text-yellow-500 font-black uppercase italic mb-2 text-sm">Pagamento PIX</h2>
-            <p class="text-zinc-500 text-[9px] font-bold uppercase mb-6">Escaneie ou copie o código abaixo</p>
-            <div id="pixLoading" class="py-10 text-zinc-500 font-bold text-[10px] animate-pulse">GERANDO QR CODE...</div>
-            <div id="pixContent" class="hidden">
-                <div class="bg-white p-4 rounded-3xl inline-block mb-6">
-                    <img id="imgQrCode" class="w-48 h-48 mx-auto" src="">
-                </div>
-                <textarea id="payloadPix" readonly class="w-full p-4 bg-black border border-zinc-800 rounded-xl text-[9px] font-mono text-zinc-400 h-20 mb-4 resize-none"></textarea>
-                <button onclick="copiarPix()" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-xs mb-4">Copiar Código</button>
-            </div>
-            <button onclick="location.reload()" class="w-full text-zinc-500 font-bold uppercase text-[9px] py-2">Voltar / Sair</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -92,21 +74,17 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const functions = getFunctions(app);
 
         let eventosCache = [];
         let eventoAtivo = null;
-        let modoAtivo = ''; let tipoAtivo = '';
-        let params = new URLSearchParams(window.location.search);
+        let tipoAtivo = '';
+        const params = new URLSearchParams(window.location.search);
         let nomeAniv = params.get('aniv') || "";
         let idLink = params.get('id');
 
-        const formatarMoeda = (valor) => {
-            if (!valor || valor === "" || valor === 0) return "R$ 0,00";
-            if (valor.toString().includes("R$")) return valor.toString().toUpperCase();
-            let v = valor.toString().replace(/\s/g, "").replace(",", ".");
-            let n = parseFloat(v);
-            return isNaN(n) ? valor.toString().toUpperCase() : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const formatarValor = (v) => {
+            if(!v || v === "") return "VALOR NA PORTARIA";
+            return v.toString().toUpperCase();
         };
 
         async function carregarPagina() {
@@ -118,19 +96,19 @@
             eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             const container = document.getElementById('listaEventos');
             container.innerHTML = '';
+
             eventosCache.forEach(ev => {
                 const card = document.createElement('div');
                 card.className = "festa-card";
                 card.innerHTML = `
                     ${ev.imagem ? `<img src="${ev.imagem}" class="img-banner">` : ''}
-                    <div class="p-8 text-center">
+                    <div class="p-8 text-center text-white">
                         <p class="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-2">${ev.data.split('-').reverse().join('/')}</p>
                         <h3 class="text-3xl font-black uppercase italic leading-tight mb-8">${ev.nome}</h3>
                         <div class="space-y-3">
-                            <button onclick="abrirFluxo('${ev.id}', 'LISTA')" class="w-full btn-lista py-5 rounded-2xl btn-action text-sm">Colocar nome na lista</button>
-                            <div class="grid grid-cols-2 gap-3">
-                                <button onclick="abrirFluxo('${ev.id}', 'ANTECIPADO')" class="btn-secundario py-4 rounded-2xl">Venda Antecipada</button>
-                                <button class="btn-secundario py-4 rounded-2xl opacity-40 cursor-not-allowed">Camarote</button>
+                            <button onclick="abrirFluxo('${ev.id}')" class="w-full btn-lista py-5 rounded-2xl btn-action text-sm">Colocar nome na lista</button>
+                            <div class="grid grid-cols-1">
+                                <a href="https://wa.me/5541995040506?text=Olá, gostaria de reservar um camarote para a festa ${ev.nome}" target="_blank" class="btn-secundario py-4 rounded-2xl text-center">Reservar Camarote</a>
                             </div>
                         </div>
                     </div>
@@ -139,25 +117,32 @@
             });
         }
 
-        window.abrirFluxo = (id, modo) => {
+        window.abrirFluxo = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
-            modoAtivo = modo;
+            
             let vC, vS;
-            const legendas = document.querySelectorAll('[id^="legenda-"]');
-            if (modo === 'LISTA') {
-                vC = (nomeAniv !== "") ? eventoAtivo.desc_casal : eventoAtivo.valor_casal;
-                vS = (nomeAniv !== "") ? eventoAtivo.desc_solteiro : eventoAtivo.valor_solteiro;
-                document.getElementById('modal-titulo').innerText = 'Reserva de Lista';
-                legendas.forEach(l => l.classList.add('hidden'));
+            if (nomeAniv !== "") {
+                vC = eventoAtivo.desc_casal;
+                vS = eventoAtivo.desc_solteiro;
+                document.getElementById('modal-titulo').innerText = 'Lista de Aniversário';
             } else {
-                vC = eventoAtivo.valor_antecipado_casal;
-                vS = eventoAtivo.valor_antecipado_solteiro;
-                document.getElementById('modal-titulo').innerText = 'Venda Antecipada PIX';
-                legendas.forEach(l => l.classList.remove('hidden'));
+                vC = eventoAtivo.valor_casal;
+                vS = eventoAtivo.valor_solteiro;
+                document.getElementById('modal-titulo').innerText = 'Reserva de Lista';
             }
-            document.getElementById('preco-casal-modal').innerText = formatarMoeda(vC);
-            document.getElementById('preco-solteiro-modal').innerText = formatarMoeda(vS);
+
+            document.getElementById('preco-casal-modal').innerText = formatarValor(vC);
+            document.getElementById('preco-solteiro-modal').innerText = formatarValor(vS);
             document.getElementById('modalForm').classList.remove('hidden');
+            
+            // Reset campos
+            document.getElementById('nome-cliente').value = "";
+            document.getElementById('tel-cliente').value = "";
+            document.getElementById('nome-cliente').disabled = true;
+            document.getElementById('tel-cliente').disabled = true;
+            document.getElementById('btn-confirmar').disabled = true;
+            document.getElementById('btn-tipo-casal').classList.remove('active');
+            document.getElementById('btn-tipo-solteiro').classList.remove('active');
         };
 
         window.setTipo = (tipo) => {
@@ -169,59 +154,19 @@
             document.getElementById('btn-confirmar').disabled = false;
         };
 
-        window.processarFluxo = async () => {
+        window.finalizarPedido = async () => {
             const n = document.getElementById('nome-cliente').value.trim();
             const t = document.getElementById('tel-cliente').value.trim();
             if (!n || t.length < 14) return alert("Preencha nome e telefone.");
 
-            if (modoAtivo === 'LISTA') {
-                await addDoc(collection(db, "lista_eventos"), {
-                    nome: n.toUpperCase(), tel: t, evento: eventoAtivo.nome,
-                    tipo_entrada: tipoAtivo, categoria: "LISTA",
-                    aniversariante: nomeAniv.toUpperCase(), pago: false,
-                    data_reserva: new Date().toISOString()
-                });
-                alert("Nome enviado com sucesso!"); location.reload();
-            } else {
-                // ABRE MODAL DE PIX E CHAMA FUNÇÃO SEGURA
-                document.getElementById('modalForm').classList.add('hidden');
-                document.getElementById('modalPix').classList.remove('hidden');
-                chamarGeradorPix(n, t);
-            }
-        };
-
-        async function chamarGeradorPix(nome, tel) {
-            let valorRaw = tipoAtivo === 'CASAL' ? eventoAtivo.valor_antecipado_casal : eventoAtivo.valor_antecipado_solteiro;
-            let valorNum = parseFloat(String(valorRaw).replace("R$", "").replace(/\s/g, "").replace(",", "."));
-
-            const gerarPix = httpsCallable(functions, 'gerarPix');
-
-            try {
-                const result = await gerarPix({ 
-                    nome: nome, 
-                    tel: tel, 
-                    valor: valorNum, 
-                    evento: eventoAtivo.nome,
-                    tipo: tipoAtivo
-                });
-
-                if (result.data.success) {
-                    document.getElementById('imgQrCode').src = `data:image/png;base64,${result.data.qrCode}`;
-                    document.getElementById('payloadPix').value = result.data.payload;
-                    document.getElementById('pixLoading').classList.add('hidden');
-                    document.getElementById('pixContent').classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error(error);
-                alert("Erro ao gerar pagamento. Tente novamente.");
-                location.reload();
-            }
-        }
-
-        window.copiarPix = () => {
-            const area = document.getElementById('payloadPix');
-            area.select(); document.execCommand('copy');
-            alert("Código Copiado!");
+            await addDoc(collection(db, "lista_eventos"), {
+                nome: n.toUpperCase(), tel: t, evento: eventoAtivo.nome,
+                tipo_entrada: tipoAtivo, categoria: "LISTA",
+                aniversariante: nomeAniv.toUpperCase(),
+                data_reserva: new Date().toISOString()
+            });
+            alert("Confirmado! Seu nome está na lista.");
+            location.reload();
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
@@ -232,6 +177,7 @@
             if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
             i.value = v;
         };
+
         carregarPagina();
     </script>
 </body>
