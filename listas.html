@@ -19,7 +19,6 @@
         .site-input:disabled { opacity: 0.2; cursor: not-allowed; }
         .glass-modal { background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); }
         
-        /* Modal com scroll interno para não sumir botão */
         .modal-scroll { max-height: 90vh; overflow-y: auto; scrollbar-width: none; }
         .modal-scroll::-webkit-scrollbar { display: none; }
 
@@ -31,34 +30,34 @@
 </head>
 <body class="p-4 flex flex-col min-h-screen">
 
-    <div class="max-w-md mx-auto w-full flex-grow">
-        <header class="flex justify-center py-10">
+    <div class="max-w-md mx-auto w-full flex-grow text-white">
+        <header class="flex justify-center py-10 text-white">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 w-auto">
         </header>
-        <div id="listaEventos" class="space-y-8">
-            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Restaurando layout...</div>
+        <div id="listaEventos" class="space-y-8 text-white">
+            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Filtrando eventos ativos...</div>
         </div>
     </div>
 
-    <div id="modalForm" class="hidden fixed inset-0 z-50 glass-modal flex items-center justify-center p-6">
-        <div class="modal-scroll w-full max-w-sm bg-[#121214] border border-white/10 p-8 rounded-[3rem] text-center shadow-2xl">
-            <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-2 tracking-widest text-sm">Reserva de Lista</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-8">Escolha Casal ou Solteiro para liberar</p>
+    <div id="modalForm" class="hidden fixed inset-0 z-50 glass-modal flex items-center justify-center p-6 text-white text-white">
+        <div class="modal-scroll w-full max-w-sm bg-[#121214] border border-white/10 p-8 rounded-[3rem] text-center shadow-2xl text-white">
+            <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-2 tracking-widest text-sm text-white text-white">Reserva de Lista</h2>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-8 text-white text-white">Escolha Casal ou Solteiro para liberar</p>
             
-            <div class="space-y-4 text-left">
-                <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="space-y-4 text-left text-white text-white">
+                <div class="grid grid-cols-2 gap-3 mb-4 text-white">
                     <button onclick="setTipo('CASAL')" id="btn-tipo-casal" class="btn-tipo rounded-2xl text-white">
-                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-2">Casal</span>
+                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-2 text-white">Casal</span>
                         <span id="preco-casal-modal" class="text-[11px] font-black italic text-white uppercase text-center leading-tight">---</span>
                     </button>
-                    <button onclick="setTipo('SOLTEIRO')" id="btn-tipo-solteiro" class="btn-tipo rounded-2xl text-white">
-                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-2">Solteiro</span>
+                    <button onclick="setTipo('SOLTEIRO')" id="btn-tipo-solteiro" class="btn-tipo rounded-2xl text-white text-white">
+                        <span class="text-[9px] font-black uppercase text-zinc-500 mb-2 text-white">Solteiro</span>
                         <span id="preco-solteiro-modal" class="text-[11px] font-black italic text-white uppercase text-center leading-tight">---</span>
                     </button>
                 </div>
 
-                <input type="text" id="nome-cliente" disabled placeholder="NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase">
-                <input type="tel" id="tel-cliente" disabled oninput="mascaraTelefone(this)" placeholder="(41) 99999-9999" class="w-full site-input p-5 rounded-2xl font-bold text-xs">
+                <input type="text" id="nome-cliente" disabled placeholder="NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase text-white">
+                <input type="tel" id="tel-cliente" disabled oninput="mascaraTelefone(this)" placeholder="(41) 99999-9999" class="w-full site-input p-5 rounded-2xl font-bold text-xs text-white">
                 
                 <button onclick="finalizarPedido()" id="btn-confirmar" disabled class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action shadow-xl mt-4 disabled:opacity-20">Confirmar Presença</button>
                 
@@ -102,29 +101,48 @@
                 const docAniv = await getDoc(doc(db, "links_aniversario", idLink));
                 if (docAniv.exists()) { nomeAniv = docAniv.data().aniversariante; }
             }
+
+            // Pega a data de hoje no formato YYYY-MM-DD
+            const agora = new Date();
+            const hojeStr = agora.toISOString().split('T')[0];
+
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            eventosCache = [];
+            snap.forEach(d => {
+                const ev = { id: d.id, ...d.data() };
+                // Só adiciona se a data do evento for hoje ou no futuro
+                if (ev.data >= hojeStr) {
+                    eventosCache.push(ev);
+                }
+            });
+
             const container = document.getElementById('listaEventos');
             container.innerHTML = '';
 
+            // Ordena por data (mais próxima primeiro)
             eventosCache.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const card = document.createElement('div');
                 card.className = "festa-card";
                 card.innerHTML = `
                     ${ev.imagem ? `<img src="${ev.imagem}" class="img-banner">` : ''}
                     <div class="p-8 text-center text-white">
-                        <p class="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-2">${ev.data.split('-').reverse().join('/')}</p>
-                        <h3 class="text-3xl font-black uppercase italic leading-tight mb-8">${ev.nome}</h3>
+                        <p class="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-2 text-white">${ev.data.split('-').reverse().join('/')}</p>
+                        <h3 class="text-3xl font-black uppercase italic leading-tight mb-8 text-white">${ev.nome}</h3>
                         <div class="space-y-3">
                             <button onclick="abrirFluxo('${ev.id}')" class="w-full btn-lista py-5 rounded-2xl btn-action text-sm">Nome na Lista</button>
                             <div class="grid grid-cols-1">
-                                <a href="https://wa.me/5541995040506?text=Olá, gostaria de reservar um camarote para a festa ${ev.nome}" target="_blank" class="btn-secundario py-4 rounded-2xl text-center btn-action">Camarotes</a>
+                                <a href="https://wa.me/5541995040506?text=Olá, gostaria de reservar um camarote para a festa ${ev.nome}" target="_blank" class="btn-secundario py-4 rounded-2xl text-center btn-action text-white">Reservar Camarote</a>
                             </div>
                         </div>
                     </div>
                 `;
                 container.appendChild(card);
             });
+
+            if (eventosCache.length === 0) {
+                container.innerHTML = '<p class="text-center py-20 text-zinc-500 font-bold uppercase text-xs">Nenhum evento disponível no momento.</p>';
+            }
         }
 
         window.abrirFluxo = (id) => {
@@ -179,7 +197,7 @@
                     aniversariante: nomeAniv.toUpperCase(),
                     data_reserva: new Date().toISOString()
                 });
-                alert("Confirmado! Nome na lista.");
+                alert("Confirmado! Seu nome está na lista.");
                 location.reload();
             } catch (e) { 
                 alert("Erro ao enviar."); 
