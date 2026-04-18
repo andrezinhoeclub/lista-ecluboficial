@@ -4,69 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <title>E-CLUB | Checkout de Ingressos</title>
+    <title>E-CLUB | Reservas e Listas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #000; color: #fff; }
         .btn-action { transition: all 0.2s ease; }
         .btn-action:active { transform: scale(0.96); }
-        .tab-btn { background: #111; border: 1px solid #27272a; color: #52525b; transition: 0.3s; font-size: 10px; font-weight: 900; text-transform: uppercase; }
-        .tab-btn.active { background: #eab308; border-color: #eab308; color: black; box-shadow: 0 0 15px rgba(234,179,8,0.3); }
-        .card-ingresso { background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 2rem; transition: 0.3s; }
-        .card-ingresso.selected { border-color: #eab308; background: rgba(234,179,8,0.05); }
+        .festa-card { background: #000; border: 1px solid #1a1a1a; border-radius: 2.5rem; overflow: hidden; margin-bottom: 2rem; }
+        .aniv-card { background: linear-gradient(145deg, #1a1033 0%, #000 100%); border: 2px solid #9333ea; box-shadow: 0 0 30px rgba(147, 51, 234, 0.2); }
+        .purple-glow { text-shadow: 0 0 15px rgba(147, 51, 234, 0.8); }
+        .price-box { background: rgba(147, 51, 234, 0.05); border: 2px solid rgba(255, 255, 255, 0.05); transition: 0.3s; cursor: pointer; }
+        .price-box.active { background: rgba(147, 51, 234, 0.2); border-color: #9333ea; transform: scale(1.02); box-shadow: 0 0 15px rgba(147, 51, 234, 0.4); }
+        .type-btn { background: #111; border: 1px solid #27272a; color: white; transition: 0.3s; }
+        .type-btn.active { background: #eab308; border-color: #eab308; color: black; font-weight: 900; }
         .site-input { background: #000 !important; border: 1px solid #27272a !important; color: white !important; }
-        .site-input:focus { border-color: #eab308 !important; outline: none; }
-        .glass-modal { background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); }
+        .site-input:focus { border-color: #9333ea !important; outline: none; }
     </style>
 </head>
 <body class="p-4 flex flex-col min-h-screen">
 
     <div class="max-w-md mx-auto w-full flex-grow">
-        <header class="flex justify-center py-8">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-14 w-auto">
+        <header class="flex justify-center py-10">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-16 w-auto">
         </header>
 
-        <div class="grid grid-cols-3 gap-2 mb-8">
-            <button onclick="mudarAba('antecipado')" id="tab-antecipado" class="tab-btn p-4 rounded-2xl active">Antecipado</button>
-            <button onclick="mudarAba('reserva')" id="tab-reserva" class="tab-btn p-4 rounded-2xl">Lista</button>
-            <button onclick="mudarAba('aniversario')" id="tab-aniversario" class="tab-btn p-4 rounded-2xl">Aniv</button>
+        <div id="listaEventos" class="space-y-8">
+            <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Buscando convite...</div>
         </div>
 
-        <div id="listaEventos" class="space-y-6">
+        <footer class="mt-16 mb-12 border-t border-zinc-900 pt-10 text-center">
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <a href="https://wa.me/5541995040506" target="_blank" class="bg-[#25D366] p-5 rounded-2xl text-black font-black uppercase text-[11px] btn-action text-center">WhatsApp</a>
+                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="bg-gradient-to-r from-orange-500 via-red-500 to-purple-600 p-5 rounded-2xl text-white font-black uppercase text-[11px] btn-action text-center">Instagram</a>
             </div>
-
-        <div id="form-final" class="hidden mt-10 space-y-4 border-t border-zinc-900 pt-10">
-            <h3 class="text-center text-yellow-500 font-black uppercase italic text-sm mb-6">Finalizar Inscrição</h3>
-            <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase">
-            <input type="tel" id="tel-cliente" oninput="mascaraTelefone(this)" placeholder="(41) 99999-9999" class="w-full site-input p-5 rounded-2xl font-bold text-xs">
-            
-            <div id="info-pagamento" class="bg-zinc-900/50 p-6 rounded-3xl text-center border border-white/5">
-                <p class="text-[9px] text-zinc-500 uppercase font-black mb-1">Total a pagar agora</p>
-                <p id="total-display" class="text-3xl font-black text-white italic">R$ 0,00</p>
+            <div class="border-2 border-yellow-500 p-8 rounded-[2.5rem]">
+                <p class="text-[9px] text-yellow-500 font-black uppercase mb-2 tracking-widest">Onde Estamos</p>
+                <p class="text-sm font-black italic text-white mb-1 leading-tight">Rua Albino Kaminski, 645 - Bairro Alto</p>
+                <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter text-white">Curitiba - PR</p>
             </div>
-
-            <button onclick="processarPedido()" id="btn-finalizar" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-[11px] tracking-widest btn-action shadow-xl">
-                Gerar PIX e Confirmar
-            </button>
-        </div>
+        </footer>
     </div>
 
-    <div id="modalPix" class="hidden fixed inset-0 z-[60] glass-modal flex items-center justify-center p-6 text-center">
-        <div class="w-full max-w-sm bg-zinc-900 border border-white/10 p-8 rounded-[3rem]">
-            <h2 class="text-yellow-500 font-black uppercase italic mb-2 tracking-widest text-sm">Pagamento PIX</h2>
-            <div class="bg-white p-4 rounded-3xl inline-block mb-6 mt-4">
-                <img id="imgQrCode" class="w-48 h-48 mx-auto" src="">
-            </div>
-            <textarea id="payloadPix" readonly class="w-full p-4 bg-black border border-zinc-800 rounded-xl text-[9px] font-mono text-zinc-400 h-20 mb-4 resize-none select-all"></textarea>
-            <button onclick="copiarPix()" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl uppercase text-xs mb-4">Copiar Código</button>
-            <button onclick="confirmarPedidoNoFirebase()" class="w-full text-zinc-500 font-bold uppercase text-[9px] tracking-widest py-2">Já paguei / Concluir</button>
-        </div>
+    <div id="telaSucesso" class="hidden fixed inset-0 bg-black/98 z-50 flex flex-col items-center justify-center p-6 text-center text-white">
+        <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 text-4xl">✓</div>
+        <h2 class="text-2xl font-black uppercase italic mb-2">Confirmado!</h2>
+        <p class="text-zinc-500 text-xs uppercase mb-10">Nome enviado para a portaria.</p>
+        <button onclick="location.reload()" class="w-full max-w-xs bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] btn-action">Sair</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -79,126 +68,160 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        
+        const params = new URLSearchParams(window.location.search);
+        const idLink = params.get('id'); // Novo parâmetro ID
+        
+        // Mantém suporte aos links antigos por enquanto
+        let refPromoter = params.get('ref') || "direto";
+        let nomeAniv = params.get('aniv');
+        let festaFixa = params.get('festa');
 
-        let abaAtual = 'antecipado';
-        let eventoSelecionado = null;
-        let tipoIngressoSelecionado = null;
-        let valorSelecionado = 0;
-        let eventosCache = [];
-
-        window.mudarAba = (aba) => {
-            abaAtual = aba;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab-'+aba).classList.add('active');
-            renderizarCards();
-            document.getElementById('form-final').classList.add('hidden');
+        window.mascaraTelefone = (input) => {
+            let v = input.value.replace(/\D/g, "");
+            if (v.length > 11) v = v.substring(0, 11);
+            if (v.length > 0) v = "(" + v;
+            if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3);
+            if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
+            input.value = v;
         };
 
-        async function carregarEventos() {
-            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            eventosCache = [];
-            snap.forEach(d => eventosCache.push({ id: d.id, ...d.data() }));
-            renderizarCards();
-        }
-
-        function renderizarCards() {
-            const container = document.getElementById('listaEventos');
-            container.innerHTML = '';
-
-            eventosCache.forEach(ev => {
-                let vCasal, vSolteiro;
-                
-                if (abaAtual === 'antecipado') {
-                    vCasal = ev.valor_antecipado_casal || 0;
-                    vSolteiro = ev.valor_antecipado_solteiro || 0;
-                } else if (abaAtual === 'reserva') {
-                    vCasal = ev.valor_casal || 0;
-                    vSolteiro = ev.valor_solteiro || 0;
-                } else {
-                    vCasal = ev.desc_casal || 0;
-                    vSolteiro = ev.desc_solteiro || 0;
+        async function carregarPagina() {
+            // Se tiver ID, busca os dados do link primeiro
+            if (idLink) {
+                const docAniv = await getDoc(doc(db, "links_aniversario", idLink));
+                if (docAniv.exists()) {
+                    const d = docAniv.data();
+                    nomeAniv = d.aniversariante;
+                    festaFixa = d.festa;
+                    refPromoter = d.promoter;
+                    // Muda o título para o WhatsApp ler
+                    document.title = "Convite VIP: Aniversário de " + nomeAniv;
                 }
+            }
 
-                const html = `
-                    <div class="space-y-4">
-                        <div class="text-center mb-4">
-                            <h2 class="text-lg font-black uppercase italic">${ev.nome}</h2>
-                            <p class="text-[10px] text-zinc-500 font-bold uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div onclick="selecionarIngresso('${ev.id}', 'CASAL', ${vCasal})" class="card-ingresso p-6 text-center cursor-pointer btn-action">
-                                <p class="text-[8px] text-zinc-500 font-black uppercase mb-1">Casal</p>
-                                <p class="text-xl font-black italic">R$ ${vCasal}</p>
+            const container = document.getElementById('listaEventos');
+            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+            const hoje = new Date().toLocaleDateString('en-CA');
+            
+            let eventos = [];
+            snap.forEach(doc => {
+                const d = doc.data();
+                if (!d.data || d.data >= hoje) eventos.push({ id: doc.id, ...d });
+            });
+
+            if (festaFixa) {
+                eventos = eventos.filter(ev => ev.nome === festaFixa);
+            }
+            
+            eventos.sort((a,b) => new Date(a.data) - new Date(b.data));
+
+            if (eventos.length === 0) {
+                container.innerHTML = '<div class="text-center py-20 text-zinc-500 font-bold uppercase text-xs">Nenhum evento disponível ou link expirado.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            eventos.forEach(ev => {
+                const card = document.createElement('div');
+                card.className = nomeAniv ? "festa-card aniv-card" : "festa-card";
+                
+                const vCasal = nomeAniv ? (ev.desc_casal || '---') : (ev.valor_casal || '---');
+                const vSolteiro = nomeAniv ? (ev.desc_solteiro || '---') : (ev.valor_solteiro || '---');
+
+                card.innerHTML = `
+                    ${!nomeAniv ? `<img src="${ev.imagem}" class="w-full block">` : ''}
+                    <div class="p-8 text-center">
+                        ${nomeAniv ? `
+                            <div class="mb-8">
+                                <p class="text-purple-400 font-black uppercase text-[11px] tracking-[0.4em] mb-3 italic">Convite VIP</p>
+                                <h3 class="text-4xl font-black uppercase italic text-white purple-glow leading-tight">${nomeAniv}</h3>
+                                <p class="text-zinc-500 text-[10px] font-bold mt-4 px-4 uppercase italic">"Comemore comigo na E-CLUB! Confirme seu nome na lista abaixo."</p>
                             </div>
-                            <div onclick="selecionarIngresso('${ev.id}', 'SOLTEIRO', ${vSolteiro})" class="card-ingresso p-6 text-center cursor-pointer btn-action">
-                                <p class="text-[8px] text-zinc-500 font-black uppercase mb-1">Solteiro</p>
-                                <p class="text-xl font-black italic">R$ ${vSolteiro}</p>
+                            <div class="grid grid-cols-2 gap-4 mb-8">
+                                <div id="box-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'CASAL', '${vCasal}')" class="price-box p-5 rounded-3xl btn-action border border-zinc-800">
+                                    <p class="text-[9px] text-zinc-500 uppercase font-black mb-1">Casal</p>
+                                    <p class="text-lg font-black text-white italic leading-tight">R$ ${vCasal}</p>
+                                </div>
+                                <div id="box-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'SOLTEIRO', '${vSolteiro}')" class="price-box p-5 rounded-3xl btn-action border border-zinc-800">
+                                    <p class="text-[9px] text-zinc-500 uppercase font-black mb-1">Solteiro</p>
+                                    <p class="text-lg font-black text-white italic leading-tight">R$ ${vSolteiro}</p>
+                                </div>
+                            </div>
+                        ` : `
+                            <p class="text-[9px] text-yellow-500 font-black uppercase tracking-widest mb-1 leading-none">${ev.data.split('-').reverse().join('/')}</p>
+                            <h3 class="text-2xl font-black uppercase italic leading-tight mb-8 text-white">${ev.nome}</h3>
+                            <button onclick="iniciarReserva('${ev.id}')" id="btn-init-${ev.id}" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-xs btn-action">Colocar nome na lista</button>
+                        `}
+                        
+                        <div id="step-reserva-${ev.id}" class="hidden space-y-6 pt-6 border-t border-white/10 mt-6">
+                            ${!nomeAniv ? `
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button id="btn-casal-${ev.id}" onclick="selecionarTipo('${ev.id}', 'CASAL', '${vCasal}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase">Casal</button>
+                                    <button id="btn-solteiro-${ev.id}" onclick="selecionarTipo('${ev.id}', 'SOLTEIRO', '${vSolteiro}')" class="type-btn p-5 rounded-2xl text-[10px] font-black uppercase">Solteiro</button>
+                                </div>
+                            ` : ''}
+
+                            <div id="form-${ev.id}" class="hidden space-y-4 text-left">
+                                <div class="bg-white/5 p-4 rounded-2xl text-center border border-white/10">
+                                    <p class="text-[8px] text-zinc-500 uppercase font-black">Valor na Lista</p>
+                                    <p id="valor-display-${ev.id}" class="text-2xl font-black text-white italic">R$ 0,00</p>
+                                </div>
+                                <input type="text" id="nome-${ev.id}" placeholder="SEU NOME COMPLETO" class="w-full site-input p-5 rounded-2xl font-bold text-xs uppercase">
+                                <input type="tel" id="tel-${ev.id}" oninput="mascaraTelefone(this)" placeholder="(DDD) 00000-0000" class="w-full site-input p-5 rounded-2xl font-bold text-xs">
+                                <button onclick="enviarReserva('${ev.id}', '${ev.nome}')" id="btn-final-${ev.id}" class="w-full bg-white text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest btn-action">Finalizar Cadastro</button>
                             </div>
                         </div>
                     </div>
                 `;
-                container.innerHTML += html;
+                container.appendChild(card);
             });
         }
 
-        window.selecionarIngresso = (evId, tipo, valor) => {
-            eventoSelecionado = eventosCache.find(e => e.id === evId);
-            tipoIngressoSelecionado = tipo;
-            valorSelecionado = valor;
-
-            document.getElementById('total-display').innerText = `R$ ${valor.toFixed(2).replace('.', ',')}`;
-            document.getElementById('form-final').classList.remove('hidden');
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        window.iniciarReserva = (id) => {
+            document.getElementById('btn-init-'+id).classList.add('hidden');
+            document.getElementById('step-reserva-'+id).classList.remove('hidden');
         };
 
-        window.processarPedido = async () => {
-            const nome = document.getElementById('nome-cliente').value.trim();
-            const tel = document.getElementById('tel-cliente').value.trim();
-            const btn = document.getElementById('btn-finalizar');
-
-            if (!nome || tel.length < 14) return alert("Preencha nome e telefone corretamente.");
-
-            btn.innerText = "GERANDO PIX...";
-            btn.disabled = true;
-
-            // Chamar a função do Asaas (Como configurado anteriormente)
-            // Aqui você deve inserir a lógica de fetch para a API do Asaas que enviamos antes
-            // Para teste, simularemos a abertura do modal
-            alert("Gerando PIX para: " + tipoIngressoSelecionado + " - Valor: R$ " + valorSelecionado);
-            document.getElementById('modalPix').classList.remove('hidden');
-            btn.innerText = "Gerar PIX e Confirmar";
-            btn.disabled = false;
+        window.selecionarTipo = (id, tipo, valor) => {
+            if(nomeAniv) {
+                document.getElementById('box-casal-'+id).classList.remove('active');
+                document.getElementById('box-solteiro-'+id).classList.remove('active');
+                document.getElementById('box-'+tipo.toLowerCase()+'-'+id).classList.add('active');
+            } else {
+                document.getElementById('btn-casal-'+id).classList.remove('active');
+                document.getElementById('btn-solteiro-'+id).classList.remove('active');
+                document.getElementById('btn-'+tipo.toLowerCase()+'-'+id).classList.add('active');
+            }
+            document.getElementById('valor-display-'+id).innerText = "R$ " + valor;
+            document.getElementById('step-reserva-'+id).classList.remove('hidden');
+            document.getElementById('form-'+id).classList.remove('hidden');
+            document.getElementById('form-'+id).setAttribute('data-tipo', tipo);
         };
 
-        window.confirmarPedidoNoFirebase = async () => {
-            const nome = document.getElementById('nome-cliente').value.toUpperCase();
-            const tel = document.getElementById('tel-cliente').value;
-
-            await addDoc(collection(db, "lista_eventos"), {
-                nome,
-                tel,
-                evento: eventoSelecionado.nome,
-                tipo_entrada: tipoIngressoSelecionado,
-                categoria: abaAtual.toUpperCase(),
-                valor: valorSelecionado,
-                pago: abaAtual === 'antecipado', // Se for antecipado, marca como aguardando confirmação pix
-                data_reserva: new Date().toISOString()
-            });
-
-            document.getElementById('modalPix').classList.add('hidden');
-            alert("RESERVA ENVIADA COM SUCESSO!");
-            location.reload();
+        window.enviarReserva = async (id, nomeFesta) => {
+            const nome = document.getElementById('nome-'+id).value.trim();
+            const tel = document.getElementById('tel-'+id).value.trim();
+            const tipo = document.getElementById('form-'+id).getAttribute('data-tipo');
+            if (!nome || tel.length < 14) return alert("Preencha nome e telefone.");
+            
+            try {
+                await addDoc(collection(db, "lista_eventos"), {
+                    nome: nome.toUpperCase(),
+                    tel: tel,
+                    evento: festaFixa || nomeFesta,
+                    tipo_entrada: tipo,
+                    promoter: refPromoter.toLowerCase(),
+                    aniversariante: nomeAniv ? nomeAniv.toUpperCase() : "",
+                    tipo: nomeAniv ? "ANIVERSARIO" : "NORMAL",
+                    entrou: false,
+                    data_reserva: new Date().toISOString()
+                });
+                document.getElementById('telaSucesso').classList.remove('hidden');
+            } catch (e) { alert("Erro ao enviar."); }
         };
 
-        window.mascaraTelefone = (i) => {
-            let v = i.value.replace(/\D/g, "").substring(0, 11);
-            if (v.length > 0) v = "(" + v;
-            if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3);
-            if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
-            i.value = v;
-        };
-
-        carregarEventos();
+        carregarPagina();
     </script>
 </body>
 </html>
