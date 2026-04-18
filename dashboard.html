@@ -58,7 +58,12 @@
                         <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Relatório Rápido</h2>
                         <select id="filtro-promoter-excel" class="w-full p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white" onchange="gerarListaCheckins()"></select>
                         <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[11px] font-mono text-zinc-400 mb-4" placeholder="Dados para exportação..."></textarea>
-                        <button onclick="copiarOutput()" class="w-full bg-zinc-800 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all">Copiar Lista</button>
+                        <button onclick="copiarOutput()" class="w-full bg-zinc-800 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all mb-6">Copiar Lista</button>
+                        
+                        <div class="pt-6 border-t border-white/5">
+                            <h2 class="text-[9px] font-black uppercase text-red-500 mb-3 tracking-widest">Manutenção do Sistema</h2>
+                            <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all italic">Limpar Base de Clientes</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -66,7 +71,7 @@
 
         <section id="aba-festas" class="hidden space-y-8 text-white">
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento</h2>
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Configurar Evento</h2>
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input type="hidden" id="edit_evento_id">
                     <input type="text" id="nome_festa" placeholder="Nome do Evento" class="p-4 rounded-2xl font-bold md:col-span-3 text-white" required>
@@ -84,24 +89,24 @@
 
         <section id="aba-equipe" class="hidden space-y-12 text-white">
             <div class="glass-card p-8 border-l-4 border-l-yellow-500">
-                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Promoters</h2>
+                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Gestão de Promoters</h2>
                 <form id="formPromoter" class="flex flex-col md:flex-row gap-3 mb-10 text-white">
                     <input type="text" id="nome_promoter" placeholder="NOME DO PROMOTER" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
-                    <select id="tipo_promoter" class="p-4 rounded-2xl font-bold text-xs">
+                    <select id="tipo_promoter" class="p-4 rounded-2xl font-bold text-xs text-white">
                         <option value="padrao">LISTA PADRÃO</option>
                         <option value="aniversario">LISTA ANIVERSÁRIO (VIP)</option>
                     </select>
-                    <button type="submit" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black transition-all hover:bg-yellow-500">Salvar</button>
+                    <button type="submit" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black transition-all hover:bg-yellow-500 text-white">Adicionar</button>
                 </form>
                 <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
             <div class="glass-card p-8 border-l-4 border-l-green-500">
-                <h2 class="text-green-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Portaria</h2>
+                <h2 class="text-green-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Gestão de Portaria</h2>
                 <form id="formPortaria" class="flex flex-col md:flex-row gap-3 mb-10 text-white">
                     <input type="text" id="login_portaria" placeholder="NOME DO OPERADOR" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
-                    <button type="submit" class="bg-green-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-green-500 transition-all">Cadastrar</button>
+                    <button type="submit" class="bg-green-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-green-500 transition-all text-white">Cadastrar</button>
                 </form>
-                <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-white"></div>
             </div>
         </section>
 
@@ -128,7 +133,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -150,7 +155,6 @@
             document.getElementById(id).classList.remove('hidden'); b.classList.add('active'); 
         };
 
-        // ESCUTAS EM TEMPO REAL (CORRIGIDO)
         onSnapshot(collection(db, "lista_eventos"), snap => { 
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderizarRelatorios();
@@ -183,6 +187,18 @@
             renderizarAniversarios();
         });
 
+        window.limparBaseDeDados = async () => {
+            if (!confirm("ATENÇÃO CRÍTICA: Isso apagará TODOS os clientes cadastrados em todas as listas. Deseja continuar?")) return;
+            if (!confirm("Tem certeza absoluta? Essa ação não pode ser desfeita.")) return;
+            try {
+                const querySnapshot = await getDocs(collection(db, "lista_eventos"));
+                const batch = writeBatch(db);
+                querySnapshot.forEach((docSnap) => batch.delete(docSnap.ref));
+                await batch.commit();
+                alert("Base de clientes limpa com sucesso!");
+            } catch (error) { alert("Erro ao limpar dados!"); }
+        };
+
         function renderizarRelatorios() {
             const container = document.getElementById('container-bolhas');
             if(!container) return;
@@ -192,7 +208,7 @@
             container.innerHTML = ativos.map(ev => {
                 const res = dadosReservas.filter(r => r.evento === ev.nome).length;
                 const chk = dadosReservas.filter(r => r.evento === ev.nome && r.entrou).length;
-                return `<div class="event-bubble p-6"><p class="text-[9px] font-black text-yellow-500 uppercase mb-1">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-sm font-black uppercase text-white mb-6 h-10 overflow-hidden leading-tight">${ev.nome}</h4><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-lg font-black">${res}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Entrou</p><p class="text-lg font-black text-green-500">${chk}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Conv.</p><p class="text-lg font-black text-blue-500">${res > 0 ? Math.round((chk/res)*100) : 0}%</p></div></div></div>`;
+                return `<div class="event-bubble p-6"><p class="text-[9px] font-black text-yellow-500 uppercase mb-1 italic">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-sm font-black uppercase text-white mb-6 h-10 overflow-hidden leading-tight">${ev.nome}</h4><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-lg font-black text-white">${res}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Entrou</p><p class="text-lg font-black text-green-500">${chk}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Conv.</p><p class="text-lg font-black text-blue-500">${res > 0 ? Math.round((chk/res)*100) : 0}%</p></div></div></div>`;
             }).join('');
 
             const stats = {};
@@ -202,8 +218,8 @@
                 stats[p].res++; if(r.entrou) stats[p].chk++;
             });
             const medals = ['🥇', '🥈', '🥉'];
-            document.getElementById('lista-ranking-reservas').innerHTML = Object.entries(stats).sort((a,b) => b[1].res - a[1].res).slice(0,5).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.res}</p></div>`).join('');
-            document.getElementById('lista-ranking-checkins').innerHTML = Object.entries(stats).sort((a,b) => b[1].chk - a[1].chk).slice(0,5).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.chk}</p></div>`).join('');
+            document.getElementById('lista-ranking-reservas').innerHTML = Object.entries(stats).sort((a,b) => b[1].res - a[1].res).slice(0,5).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center mb-2"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.res}</p></div>`).join('');
+            document.getElementById('lista-ranking-checkins').innerHTML = Object.entries(stats).sort((a,b) => b[1].chk - a[1].chk).slice(0,5).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 mb-2"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.chk}</p></div>`).join('');
         }
 
         function renderizarGridConfig() {
@@ -233,7 +249,7 @@
             tbody.innerHTML = dadosAniv.map(link => {
                 const ev = dadosEventos.find(e => e.nome === link.festa);
                 const data = ev ? ev.data.split('-').reverse().join('/') : '---';
-                const qtd = dadosReservas.filter(r => r.evento === link.festa && r.aniversariante === link.aniversariante).length;
+                const qtd = dadosReservas.filter(r => r.evento === link.festa && (r.aniversariante === link.aniversariante || r.nome_aniversariante === link.aniversariante)).length;
                 return `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4">${data}</td><td class="py-4 uppercase">${link.promoter}</td><td class="py-4 font-black text-purple-400 uppercase">${link.aniversariante}</td><td class="py-4 text-center font-black text-white">${qtd}</td><td class="py-4 text-right pr-4"><button onclick="removerItem('links_aniversario', '${link.id}')" class="text-red-500">Remover</button></td></tr>`;
             }).join('');
         }
@@ -277,7 +293,7 @@
             if(!p) return;
             const lista = dadosReservas.filter(r => (r.promoter || '').toUpperCase() === p && r.entrou);
             let t = "NOME\tTELEFONE\n";
-            lista.forEach(r => t += `${r.nome}\t${r.tel || '---'}\n`);
+            lista.forEach(r => t += `${r.nome}\t${r.tel || r.telefone || '---'}\n`);
             document.getElementById('output-excel').value = t;
         };
 
