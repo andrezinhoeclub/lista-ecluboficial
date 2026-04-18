@@ -34,29 +34,22 @@
         <div id="listaEventos" class="space-y-8">
             <div class="animate-pulse text-center py-20 text-zinc-800 font-black uppercase text-[10px]">Carregando...</div>
         </div>
-
-        <footer class="mt-16 mb-12 border-t border-zinc-900 pt-10 text-center">
-            <div class="grid grid-cols-2 gap-4 mb-8">
-                <a href="https://wa.me/5541995040506" target="_blank" class="bg-[#25D366] p-5 rounded-2xl text-black font-black uppercase text-[11px] btn-action text-center">WhatsApp</a>
-                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="bg-gradient-to-r from-orange-500 via-red-500 to-purple-600 p-5 rounded-2xl text-white font-black uppercase text-[11px] btn-action text-center">Instagram</a>
-            </div>
-        </footer>
     </div>
 
     <div id="modalForm" class="hidden fixed inset-0 z-50 glass-modal flex items-center justify-center p-6 text-white text-white">
         <div class="w-full max-w-sm bg-[#121214] border border-white/10 p-8 rounded-[3rem] text-center text-white text-white">
             <h2 id="modal-titulo" class="text-yellow-500 font-black uppercase italic mb-2 tracking-widest text-sm text-white">Reserva</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-8 text-white text-white text-white">Escolha Casal ou Solteiro para liberar os campos</p>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-8 text-white">Escolha Casal ou Solteiro para liberar os campos</p>
             
             <div class="space-y-4 text-left text-white text-white">
                 <div class="grid grid-cols-2 gap-3 mb-4 text-white">
                     <button onclick="setTipo('CASAL')" id="btn-tipo-casal" class="btn-tipo p-5 rounded-2xl text-white">
-                        <span class="t-label text-[9px] font-black uppercase text-zinc-500 mb-1 text-white">Casal</span>
+                        <span class="t-label text-[9px] font-black uppercase text-zinc-500 mb-1">Casal</span>
                         <span id="preco-casal-modal" class="text-lg font-black italic text-white text-white">R$ 0,00</span>
                         <span class="t-sub text-[8px] font-black uppercase text-zinc-600 mt-1">Sem consumação</span>
                     </button>
                     <button onclick="setTipo('SOLTEIRO')" id="btn-tipo-solteiro" class="btn-tipo p-5 rounded-2xl text-white">
-                        <span class="t-label text-[9px] font-black uppercase text-zinc-500 mb-1 text-white">Solteiro</span>
+                        <span class="t-label text-[9px] font-black uppercase text-zinc-500 mb-1">Solteiro</span>
                         <span id="preco-solteiro-modal" class="text-lg font-black italic text-white text-white">R$ 0,00</span>
                         <span class="t-sub text-[8px] font-black uppercase text-zinc-600 mt-1">Sem consumação</span>
                     </button>
@@ -96,9 +89,11 @@
         let nomeAniv = params.get('aniv');
         let festaFixa = params.get('festa');
 
+        // FUNÇÃO DE MOEDA CORRIGIDA
         const formatarMoeda = (valor) => {
             if (!valor || valor === "" || valor === "0") return "R$ 0,00";
-            let n = parseFloat(valor.toString().replace(',', '.'));
+            let limpo = valor.toString().replace("R$", "").replace(/\s/g, "").replace(",", ".");
+            let n = parseFloat(limpo);
             return isNaN(n) ? "R$ 0,00" : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         };
 
@@ -135,7 +130,7 @@
                     <div class="festa-content text-center">
                         <p class="text-[10px] text-yellow-500 font-black uppercase tracking-[0.3em] mb-2 leading-none">${ev.data.split('-').reverse().join('/')}</p>
                         <h3 class="text-3xl font-black uppercase italic leading-tight mb-8 text-white">${ev.nome}</h3>
-                        ${nomeAniv ? `<p class="text-[10px] text-purple-400 font-black uppercase mb-6 italic tracking-widest">CONVITE VIP: ${nomeAniv}</p>` : ''}
+                        ${nomeAniv ? `<p class="text-[10px] text-purple-400 font-black uppercase mb-6 italic tracking-widest text-white">CONVITE VIP: ${nomeAniv}</p>` : ''}
                         <div class="space-y-3">
                             <button onclick="abrirFluxo('${ev.id}', 'LISTA')" class="w-full btn-lista py-5 rounded-2xl btn-action text-sm">Colocar nome na lista</button>
                             <div class="grid grid-cols-2 gap-3">
@@ -155,10 +150,17 @@
             
             let vC, vS;
             if (modo === 'LISTA') {
-                // LÓGICA CORRIGIDA: Usa desc_casal se houver aniversariante
-                vC = nomeAniv ? eventoAtivo.desc_casal : eventoAtivo.valor_casal;
-                vS = nomeAniv ? eventoAtivo.desc_solteiro : eventoAtivo.valor_solteiro;
-                document.getElementById('modal-titulo').innerText = nomeAniv ? 'Lista de Aniversário' : 'Reserva de Lista';
+                // SE tiver aniversariante na URL ou no Link, usa campos de DESCONTO. 
+                // CASO CONTRÁRIO (LISTA NORMAL), usa campos VALOR padrão.
+                if (nomeAniv && nomeAniv !== "") {
+                    vC = eventoAtivo.desc_casal;
+                    vS = eventoAtivo.desc_solteiro;
+                    document.getElementById('modal-titulo').innerText = 'Lista de Aniversário';
+                } else {
+                    vC = eventoAtivo.valor_casal;
+                    vS = eventoAtivo.valor_solteiro;
+                    document.getElementById('modal-titulo').innerText = 'Reserva de Lista';
+                }
             } else {
                 vC = eventoAtivo.valor_antecipado_casal;
                 vS = eventoAtivo.valor_antecipado_solteiro;
@@ -168,7 +170,6 @@
             document.getElementById('preco-casal-modal').innerText = formatarMoeda(vC);
             document.getElementById('preco-solteiro-modal').innerText = formatarMoeda(vS);
             
-            // Reset modal e trava campos
             document.getElementById('nome-cliente').value = "";
             document.getElementById('tel-cliente').value = "";
             document.getElementById('nome-cliente').disabled = true;
@@ -176,7 +177,6 @@
             document.getElementById('btn-confirmar').disabled = true;
             document.getElementById('btn-tipo-casal').classList.remove('active');
             document.getElementById('btn-tipo-solteiro').classList.remove('active');
-            
             document.getElementById('modalForm').classList.remove('hidden');
         };
 
@@ -185,18 +185,15 @@
             document.getElementById('btn-tipo-casal').classList.remove('active');
             document.getElementById('btn-tipo-solteiro').classList.remove('active');
             document.getElementById('btn-tipo-' + tipo.toLowerCase()).classList.add('active');
-            
-            // Libera campos após seleção
             document.getElementById('nome-cliente').disabled = false;
             document.getElementById('tel-cliente').disabled = false;
             document.getElementById('btn-confirmar').disabled = false;
-            document.getElementById('nome-cliente').focus();
         };
 
         window.finalizarPedido = async () => {
             const n = document.getElementById('nome-cliente').value.trim();
             const t = document.getElementById('tel-cliente').value.trim();
-            if (!n || t.length < 14) return alert("Preencha nome e telefone.");
+            if (!n || t.length < 14) return alert("Preencha seu nome e telefone corretamente.");
 
             try {
                 await addDoc(collection(db, "lista_eventos"), {
@@ -206,9 +203,9 @@
                     aniversariante: nomeAniv ? nomeAniv.toUpperCase() : "",
                     pago: false, data_reserva: new Date().toISOString()
                 });
-                alert("Confirmado! Nome na lista.");
+                alert("Confirmado! Seu nome está na lista.");
                 location.reload();
-            } catch (e) { alert("Erro ao enviar."); }
+            } catch (e) { alert("Erro ao enviar. Tente novamente."); }
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
