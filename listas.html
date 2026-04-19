@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <title>E-CLUB | Reservas & Pix ⚡</title>
+    <title>E-CLUB | Reservas ⚡</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -18,11 +18,9 @@
         }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .btn-lista { background: #eab308; color: #000; font-weight: 900; }
-        .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; }
         .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; }
         .banner-img { width: 100%; height: auto; display: block; opacity: 1; }
         
-        /* Botões de Seleção Compactos */
         .btn-sel { 
             background: rgba(255,255,255,0.03); 
             border: 2px solid rgba(255,255,255,0.05); 
@@ -32,10 +30,6 @@
             border-color: #eab308; 
             background: rgba(234, 179, 8, 0.05);
             box-shadow: 0 0 20px rgba(234, 179, 8, 0.1);
-        }
-        .btn-sel-pix.active { 
-            border-color: #00f5d4; 
-            background: rgba(0, 245, 212, 0.05);
         }
     </style>
 </head>
@@ -51,7 +45,7 @@
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative">
             
-            <h2 id="modal-titulo" class="font-black uppercase italic mb-1 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
+            <h2 id="modal-titulo" class="font-black uppercase italic mb-1 tracking-tighter text-xl text-yellow-500">🔥 NOME NA LISTA</h2>
             <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic">Preencha os dados abaixo</p>
 
             <div class="grid grid-cols-2 gap-3 mb-6">
@@ -69,7 +63,7 @@
                 <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
                 <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
                 
-                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95">Confirmar Presença</button>
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95 btn-lista">Confirmar Presença</button>
             </div>
 
             <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic">Voltar</button>
@@ -92,7 +86,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = 'CASAL'; let eFluxoPix = false;
+        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = 'CASAL';
 
         const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
 
@@ -117,46 +111,28 @@
                     <div class="p-8">
                         <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter">${ev.nome}</h3>
                         <div class="space-y-4">
-                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA LISTA</button>
-                            <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO</button>
+                            <button onclick="iniciarFluxo('${ev.id}')" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA LISTA</button>
                         </div>
                     </div>
                 </div>`).join('');
         }
 
-        window.iniciarFluxo = (id, isPix) => {
+        window.iniciarFluxo = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
-            eFluxoPix = isPix;
-            tipoAtivo = 'CASAL'; // Reset padrão
+            tipoAtivo = 'CASAL';
             
-            const titulo = document.getElementById('modal-titulo');
-            titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : "🔥 NOME NA LISTA";
-            titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-1 tracking-tighter text-xl" : "text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl";
-
-            document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? eventoAtivo.ant_casal : eventoAtivo.valor_casal);
-            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? eventoAtivo.ant_solteiro : eventoAtivo.valor_solteiro);
+            document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.valor_casal);
+            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.valor_solteiro);
             
-            selecionarTipo('CASAL'); // Inicia com Casal selecionado visualmente
+            selecionarTipo('CASAL');
             document.getElementById('modalForm').classList.remove('hidden');
         };
 
         window.selecionarTipo = (tipo) => {
             tipoAtivo = tipo;
-            const bCasal = document.getElementById('btn-casal');
-            const bSolteiro = document.getElementById('btn-solteiro');
-            
-            // Remove classes
-            bCasal.classList.remove('active', 'btn-sel-pix');
-            bSolteiro.classList.remove('active', 'btn-sel-pix');
-            
-            // Aplica as classes baseadas no fluxo e tipo
-            const btnAlvo = tipo === 'CASAL' ? bCasal : bSolteiro;
-            btnAlvo.classList.add('active');
-            if (eFluxoPix) btnAlvo.classList.add('btn-sel-pix');
-
-            const btnFinal = document.getElementById('btn-final-acao');
-            btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
-            btnFinal.className = eFluxoPix ? "w-full btn-pix-main py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl" : "w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl";
+            document.getElementById('btn-casal').classList.remove('active');
+            document.getElementById('btn-solteiro').classList.remove('active');
+            document.getElementById(tipo === 'CASAL' ? 'btn-casal' : 'btn-solteiro').classList.add('active');
         };
 
         window.processarFinalizacao = async () => {
@@ -165,25 +141,16 @@
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
             
             const btn = document.getElementById('btn-final-acao');
-            const originalText = btn.innerText;
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
             try {
-                const docRef = await addDoc(collection(db, "lista_eventos"), {
+                await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
                     promoter: "direto", data_reserva: new Date().toISOString(), entrou: false, pago: false
                 });
-
-                if (eFluxoPix) {
-                    const linkPag = tipoAtivo === 'CASAL' ? eventoAtivo.link_pag_casal : eventoAtivo.link_pag_solteiro;
-                    window.location.href = linkPag + "?external_reference=" + docRef.id;
-                } else {
-                    alert("Confirmado!"); location.reload();
-                }
+                alert("Confirmado!"); location.reload();
             } catch (e) { 
-                alert("Erro!"); 
-                btn.disabled = false; 
-                btn.innerText = originalText; 
+                alert("Erro!"); btn.disabled = false; btn.innerText = "Confirmar Presença"; 
             }
         };
 
