@@ -15,7 +15,7 @@
         .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; }
         .btn-edit { background: #22c55e; color: #fff; font-weight: 900; }
         
-        /* ESTILO ANIVERSARIANTE */
+        /* ESTILO ANIVERSARIANTE VIP (Segunda a Domingo) */
         .card-aniversariante {
             background: linear-gradient(90deg, rgba(234, 179, 8, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%) !important;
             border-left: 6px solid #eab308 !important;
@@ -44,7 +44,7 @@
                 <div id="areaSenha" class="hidden">
                     <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50 input-field">
                 </div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ACESSAR SISTEMA</button>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all text-white">ACESSAR SISTEMA</button>
             </div>
         </div>
     </div>
@@ -72,12 +72,12 @@
                         <input type="text" id="cpf" placeholder="CPF COMPLETO" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskCPF(this)" onblur="validarDuplicidade('cpf')" required>
                         <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" onchange="updateIdade(this.value)" required>
                         
-                        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 flex justify-between items-center">
+                        <div class="bg-zinc-900/50 p-4 rounded-xl border border-zinc-800/50 flex justify-between items-center text-white">
                              <p class="text-[8px] font-black text-zinc-500 uppercase">Idade</p>
                              <p id="idadeDisplay" class="text-lg font-black text-yellow-500">--</p>
                         </div>
 
-                        <textarea id="obs" placeholder="OBSERVAÇÕES..." class="w-full p-4 rounded-xl input-field font-bold text-[10px] uppercase h-20 resize-none"></textarea>
+                        <textarea id="obs" placeholder="OBSERVAÇÕES..." class="w-full p-4 rounded-xl input-field font-bold text-[10px] uppercase h-20 resize-none text-white"></textarea>
                         <button type="submit" id="btnSalvar" class="w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-2 active:scale-95 transition-all text-white">Confirmar e Liberar</button>
                         <button type="button" id="btnCancelarEdicao" onclick="limparFormulario()" class="hidden w-full bg-zinc-800 text-zinc-400 py-3 rounded-2xl uppercase text-[9px] font-black mt-2">Cancelar Edição</button>
                     </form>
@@ -86,8 +86,8 @@
 
             <main class="lg:col-span-2 space-y-6">
                 <div class="relative w-full">
-                    <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase pl-14 shadow-2xl border-white/10" oninput="filtrarClientes()">
-                    <span class="absolute left-6 top-5 opacity-30 text-xl">🔍</span>
+                    <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase pl-14 shadow-2xl border-white/10 text-white" oninput="filtrarClientes()">
+                    <span class="absolute left-6 top-5 opacity-30 text-xl text-white">🔍</span>
                 </div>
                 <div class="glass-card rounded-[2.5rem] overflow-hidden min-h-[400px]">
                     <div id="listaSolteiras" class="divide-y divide-zinc-900"></div>
@@ -114,31 +114,23 @@
         const colRef = collection(db, "cadastro_solteiras");
         let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
 
-        // --- LÓGICA DE ANIVERSÁRIO (SEMANA ATUAL) ---
+        // --- LÓGICA DE ANIVERSÁRIO (SEGUNDA A DOMINGO) ---
         function checkAniversarioSemana(dataNasc) {
             if (!dataNasc) return false;
             const hoje = new Date();
             const nasc = new Date(dataNasc + "T12:00:00");
             
-            // Início e Fim da semana atual (Domingo a Sábado)
-            const d1 = new Date(hoje); d1.setDate(hoje.getDate() - hoje.getDay()); d1.setHours(0,0,0,0);
-            const d2 = new Date(hoje); d2.setDate(hoje.getDate() + (6 - hoje.getDay())); d2.setHours(23,59,59,999);
-
-            // Data do aniversário este ano
-            const niverEsteAno = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate(), 12, 0, 0);
+            // Pega o dia da semana (0 = Dom, 1 = Seg, ..., 6 = Sab)
+            const diaSemana = hoje.getDay();
             
-            return niverEsteAno >= d1 && niverEsteAno <= d2;
-        }
+            // Calcula diferença para chegar na Segunda-feira (considerando 0 como Domingo)
+            const diffParaSegunda = (diaSemana === 0 ? 6 : diaSemana - 1);
+            
+            const seg = new Date(hoje); seg.setDate(hoje.getDate() - diffParaSegunda); seg.setHours(0,0,0,0);
+            const dom = new Date(seg); dom.setDate(seg.getDate() + 6); dom.setHours(23,59,59,999);
 
-        function isValidCPF(cpf) {
-            cpf = cpf.replace(/[^\d]+/g,'');
-            if(cpf.length != 11 || !!cpf.match(/(\d)\1{10}/)) return false;
-            let add = 0; for (let i=0; i < 9; i ++) add += parseInt(cpf.charAt(i)) * (10 - i);
-            let rev = 11 - (add % 11); if (rev == 10 || rev == 11) rev = 0;
-            if (rev != parseInt(cpf.charAt(9))) return false;
-            add = 0; for (let i = 0; i < 10; i ++) add += parseInt(cpf.charAt(i)) * (11 - i);
-            rev = 11 - (add % 11); if (rev == 10 || rev == 11) rev = 0;
-            return rev == parseInt(cpf.charAt(10));
+            const niverEsteAno = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate(), 12, 0, 0);
+            return niverEsteAno >= seg && niverEsteAno <= dom;
         }
 
         window.verificarOuLogar = async () => {
@@ -194,9 +186,10 @@
             document.getElementById('editId').value = "";
             document.getElementById('btnSalvar').innerText = "Confirmar e Liberar";
             document.getElementById('btnSalvar').className = "w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-2 active:scale-95 transition-all text-white";
-            document.getElementById('tituloForm').innerText = "Cadastro / Entrada";
             document.getElementById('btnCancelarEdicao').classList.add('hidden');
             document.getElementById('idadeDisplay').innerText = "--";
+            document.getElementById('cpf').classList.remove('field-success', 'field-error');
+            document.getElementById('tel').classList.remove('field-success', 'field-error');
         };
 
         window.validarDuplicidade = async (campo) => {
@@ -220,6 +213,16 @@
                     document.getElementById('btnSalvar').className = "w-full btn-edit py-5 rounded-2xl uppercase text-xs shadow-xl mt-2 active:scale-95 transition-all text-white";
                     document.getElementById('btnCancelarEdicao').classList.remove('hidden');
                 }
+            }
+        };
+
+        // --- FUNÇÃO DE CHECK-IN GLOBAL ---
+        window.dispararCheckin = async (id) => {
+            try {
+                await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
+                alert("Liberada com sucesso!");
+            } catch (e) {
+                alert("Erro ao liberar!");
             }
         };
 
@@ -249,9 +252,9 @@
                             <h3 class="text-xl font-black uppercase text-white">${c.nome}</h3>
                             ${isNiver ? '<span class="bg-yellow-500 text-black px-3 py-1 rounded-lg text-[9px] font-black animate-bounce">🎂 ANIVERSARIANTE</span>' : ''}
                         </div>
-                        <p class="text-[10px] text-zinc-500 font-bold uppercase mt-1">🆔 ${c.cpf} | 📱 ${c.tel} | 📅 VISITA: <span class="${naCasa ? 'text-green-500' : 'text-white'}">${u ? u.toLocaleDateString('pt-BR') : '---'}</span></p>
+                        <p class="text-[10px] text-zinc-500 font-bold uppercase mt-1">🆔 ${c.cpf} | 📱 ${c.tel} | 📅 VISITA: <span class="${naCasa ? 'text-green-500 font-black' : 'text-white'}">${u ? u.toLocaleDateString('pt-BR') : '---'}</span></p>
                     </div>
-                    <div>${naCasa ? '✓' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase">Liberar</button>`}</div>`;
+                    <div>${naCasa ? '✓' : `<button onclick="dispararCheckin('${c.id}')" class="bg-green-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase hover:bg-green-500 transition-all">Liberar</button>`}</div>`;
                 container.appendChild(div);
             });
         }
@@ -260,21 +263,38 @@
             e.preventDefault();
             const btn = document.getElementById('btnSalvar');
             const idEx = document.getElementById('editId').value;
-            const nome = document.getElementById('nome').value.toUpperCase();
-            const tel = document.getElementById('tel').value;
-            const cpf = document.getElementById('cpf').value;
-            if (!isValidCPF(cpf)) { alert("CPF INVÁLIDO!"); return; }
+            const cpfLimpo = document.getElementById('cpf').value.replace(/\D/g,"");
+
+            // Validação matemática de CPF
+            const cpfValido = (c) => {
+                if(c.length != 11 || !!c.match(/(\d)\1{10}/)) return false;
+                let a = 0; for (let i=0; i < 9; i ++) a += parseInt(c.charAt(i)) * (10 - i);
+                let r = 11 - (a % 11); if (r == 10 || r == 11) r = 0;
+                if (r != parseInt(c.charAt(9))) return false;
+                a = 0; for (let i = 0; i < 10; i ++) a += parseInt(c.charAt(i)) * (11 - i);
+                r = 11 - (a % 11); if (r == 10 || r == 11) r = 0;
+                return r == parseInt(c.charAt(10));
+            };
+
+            if (!cpfValido(cpfLimpo)) { alert("CPF INVÁLIDO!"); return; }
+
             btn.disabled = true; btn.innerText = "SALVANDO...";
             try {
-                const dados = { nome, tel, cpf, nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() };
+                const dados = { 
+                    nome: document.getElementById('nome').value.toUpperCase(), 
+                    tel: document.getElementById('tel').value, 
+                    cpf: document.getElementById('cpf').value, 
+                    nascimento: document.getElementById('nascimento').value, 
+                    obs: document.getElementById('obs').value.toUpperCase(), 
+                    ultima_visita: serverTimestamp() 
+                };
                 if (idEx) await updateDoc(doc(db, "cadastro_solteiras", idEx), dados);
                 else await addDoc(colRef, { ...dados, bloqueada: false });
                 alert("Concluído!"); limparFormulario();
-            } catch (e) { alert("Erro!"); }
+            } catch (e) { alert("Erro ao salvar!"); }
             finally { btn.disabled = false; }
         });
 
-        window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase().trim();
             if (b.length > 0) {
