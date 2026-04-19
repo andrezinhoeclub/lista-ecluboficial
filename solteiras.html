@@ -219,19 +219,14 @@
                     const tudoJunto = `${nomeCli} ${cpfCli} ${telCli}`;
                     return termos.every(termo => tudoJunto.includes(termo));
                 });
-
                 if (filtrados.length === 0) {
                     render([], true);
                     document.getElementById('nome').focus();
-                } else {
-                    render(filtrados, true);
-                }
-            } else {
-                render(clientesCache, false);
-            }
+                } else { render(filtrados, true); }
+            } else { render(clientesCache, false); }
         };
 
-        // --- SUBMIT COM TRAVA DE SEGURANÇA (TRY/FINALLY) ---
+        // --- SUBMIT COM TRAVA DE DUPLICIDADE ---
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSalvar');
@@ -242,15 +237,8 @@
             const telLimpo = telRaw.replace(/\D/g, "");
             const cpfLimpo = cpfRaw.replace(/\D/g, "");
 
-            if (telLimpo.length < 11) {
-                alert("TELEFONE INCOMPLETO!");
-                document.getElementById('tel').focus();
-                return;
-            }
-
-            if (cpfLimpo.length < 11) {
-                alert("CPF INCOMPLETO!");
-                document.getElementById('cpf').focus();
+            if (telLimpo.length < 11 || cpfLimpo.length < 11) {
+                alert("DADOS INCOMPLETOS!");
                 return;
             }
 
@@ -258,17 +246,24 @@
             btn.innerText = "PROCESSANDO...";
 
             try {
+                // BUSCA DUPLA: Procura por CPF ou por Telefone
                 const qCpf = query(colRef, where("cpf", "==", cpfRaw));
-                const snap = await getDocs(qCpf);
+                const qTel = query(colRef, where("tel", "==", telRaw));
                 
-                if (!snap.empty) {
-                    const ex = snap.docs[0];
-                    if(ex.data().bloqueada) alert("BLACKLIST!");
-                    else { 
+                const [snapCpf, snapTel] = await Promise.all([getDocs(qCpf), getDocs(qTel)]);
+                
+                // Se achou em qualquer uma das buscas
+                if (!snapCpf.empty || !snapTel.empty) {
+                    const ex = !snapCpf.empty ? snapCpf.docs[0] : snapTel.docs[0];
+                    
+                    if(ex.data().bloqueada) {
+                        alert("ERRO: CLIENTE NA BLACKLIST!");
+                    } else { 
                         await updateDoc(doc(db, "cadastro_solteiras", ex.id), { ultima_visita: serverTimestamp() }); 
-                        alert("Check-in ok!"); 
+                        alert("CLIENTE JÁ CADASTRADA!\nCheck-in realizado com sucesso."); 
                     }
                 } else {
+                    // SE NÃO EXISTE NADA DUPLICADO, CADASTRA NOVO
                     await addDoc(colRef, { 
                         nome, 
                         tel: telRaw, 
@@ -288,9 +283,8 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Erro ao salvar! Tente novamente.");
+                alert("Erro técnico! Tente novamente.");
             } finally {
-                // ESTA LINHA É A CHAVE: ELA SEMPRE VAI RODAR E DESTRAVAR O BOTÃO
                 btn.disabled = false;
                 btn.innerText = "Salvar e Liberar";
             }
