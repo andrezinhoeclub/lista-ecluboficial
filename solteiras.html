@@ -231,7 +231,7 @@
             }
         };
 
-        // --- REGRAS DE OBRIGATORIEDADE E VALIDAÇÃO ---
+        // --- SUBMIT COM TRAVA DE SEGURANÇA (TRY/FINALLY) ---
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSalvar');
@@ -239,20 +239,17 @@
             const telRaw = document.getElementById('tel').value;
             const cpfRaw = document.getElementById('cpf').value;
 
-            // Limpeza para validação de tamanho
             const telLimpo = telRaw.replace(/\D/g, "");
             const cpfLimpo = cpfRaw.replace(/\D/g, "");
 
-            // Validação de Telefone (DDD + 9 + 8 dígitos = 11)
             if (telLimpo.length < 11) {
-                alert("TELEFONE INCOMPLETO!\nDigite o DDD + Número (ex: 41999998888).");
+                alert("TELEFONE INCOMPLETO!");
                 document.getElementById('tel').focus();
                 return;
             }
 
-            // Validação de CPF (11 dígitos)
             if (cpfLimpo.length < 11) {
-                alert("CPF INCOMPLETO!\nDigite os 11 dígitos do CPF.");
+                alert("CPF INCOMPLETO!");
                 document.getElementById('cpf').focus();
                 return;
             }
@@ -260,32 +257,43 @@
             btn.disabled = true;
             btn.innerText = "PROCESSANDO...";
 
-            const qCpf = query(colRef, where("cpf", "==", cpfRaw));
-            const snap = await getDocs(qCpf);
-            
-            if (!snap.empty) {
-                const ex = snap.docs[0];
-                if(ex.data().bloqueada) alert("BLACKLIST!");
-                else { await updateDoc(doc(db, "cadastro_solteiras", ex.id), { ultima_visita: serverTimestamp() }); alert("Check-in ok!"); }
-            } else {
-                await addDoc(colRef, { 
-                    nome, 
-                    tel: telRaw, 
-                    cpf: cpfRaw, 
-                    nascimento: document.getElementById('nascimento').value, 
-                    obs: document.getElementById('obs').value.toUpperCase(), 
-                    ultima_visita: serverTimestamp(), 
-                    bloqueada: false 
-                });
-                alert("Cadastrada com sucesso!");
+            try {
+                const qCpf = query(colRef, where("cpf", "==", cpfRaw));
+                const snap = await getDocs(qCpf);
+                
+                if (!snap.empty) {
+                    const ex = snap.docs[0];
+                    if(ex.data().bloqueada) alert("BLACKLIST!");
+                    else { 
+                        await updateDoc(doc(db, "cadastro_solteiras", ex.id), { ultima_visita: serverTimestamp() }); 
+                        alert("Check-in ok!"); 
+                    }
+                } else {
+                    await addDoc(colRef, { 
+                        nome, 
+                        tel: telRaw, 
+                        cpf: cpfRaw, 
+                        nascimento: document.getElementById('nascimento').value, 
+                        obs: document.getElementById('obs').value.toUpperCase(), 
+                        ultima_visita: serverTimestamp(), 
+                        bloqueada: false 
+                    });
+                    alert("Cadastrada com sucesso!");
+                }
+                
+                document.getElementById('formSolteira').reset();
+                document.getElementById('idadeDisplay').innerText = "--";
+                document.getElementById('buscaCliente').value = ""; 
+                document.getElementById('buscaCliente').focus(); 
+
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao salvar! Tente novamente.");
+            } finally {
+                // ESTA LINHA É A CHAVE: ELA SEMPRE VAI RODAR E DESTRAVAR O BOTÃO
+                btn.disabled = false;
+                btn.innerText = "Salvar e Liberar";
             }
-            
-            document.getElementById('formSolteira').reset();
-            document.getElementById('idadeDisplay').innerText = "--";
-            document.getElementById('buscaCliente').value = ""; 
-            document.getElementById('buscaCliente').focus(); 
-            btn.disabled = false;
-            btn.innerText = "Salvar e Liberar";
         });
 
         window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
