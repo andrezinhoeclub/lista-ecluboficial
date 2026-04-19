@@ -9,26 +9,44 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; min-height: 100vh; background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #050508; 
+            color: #fff; 
+            min-height: 100vh; 
+            background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); 
+        }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .btn-lista { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; }
         .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; box-shadow: 0 10px 25px rgba(0, 191, 165, 0.2); }
         .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; }
-        .banner-img { width: 100%; height: 240px; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.05); opacity: 0.8; }
+        
+        /* AJUSTE DAS IMAGENS: Agora aparecem inteiras e maiores */
+        .banner-img { 
+            width: 100%; 
+            height: auto; /* Deixa a imagem definir a altura sozinha */
+            display: block;
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+            opacity: 1; /* Imagem com brilho total */
+        }
+        
         .btn-sel { background: #13131c; border: 1px solid rgba(255,255,255,0.05); transition: 0.2s; }
     </style>
 </head>
 <body class="p-4 flex flex-col items-center">
     
     <div class="max-w-md w-full">
-        <header class="flex justify-center py-10"><img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16"></header>
-        <div id="listaEventos" class="space-y-10"></div>
+        <header class="flex justify-center py-10">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-20">
+        </header>
+
+        <div id="listaEventos" class="space-y-12"></div>
     </div>
 
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6 text-white">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-10 rounded-[3.5rem] text-center shadow-2xl relative">
             <h2 id="modal-titulo" class="font-black uppercase italic mb-2 tracking-tighter text-xl text-yellow-500">Reserva E-Club</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[10px] font-bold uppercase mb-8 tracking-widest italic">Escolha sua opção</p>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[10px] font-bold uppercase mb-8 tracking-widest italic text-center">Escolha sua opção</p>
 
             <div id="etapa-tipo" class="grid grid-cols-1 gap-4 mb-8">
                 <button onclick="selecionarTipo('CASAL')" class="btn-sel p-6 rounded-[2.5rem] flex items-center justify-between">
@@ -80,11 +98,12 @@
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             const container = document.getElementById('listaEventos');
+            
             container.innerHTML = eventosCache.map(ev => `
-                <div class="glass overflow-hidden rounded-[3.5rem] border-white/5 shadow-2xl">
-                    ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="banner-img bg-zinc-900"></div>`}
+                <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
+                    ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black">E-CLUB</div>`}
                     <div class="p-8">
-                        <h3 class="text-2xl font-black uppercase italic mb-8 text-white">${ev.nome}</h3>
+                        <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter">${ev.nome}</h3>
                         <div class="space-y-4">
                             <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-6 rounded-3xl text-sm italic font-black">📝 NOME NA LISTA</button>
                             <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-6 rounded-3xl text-sm italic font-black">⚡ PIX ANTECIPADO</button>
@@ -100,7 +119,7 @@
             document.getElementById('etapa-dados').classList.add('hidden');
             const titulo = document.getElementById('modal-titulo');
             titulo.innerText = isPix ? "Pix Antecipado" : "Lista E-Club";
-            titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-2 tracking-tighter text-xl" : "text-yellow-500 font-black uppercase italic mb-2 tracking-tighter text-xl";
+            titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-2 tracking-tighter text-xl text-center" : "text-yellow-500 font-black uppercase italic mb-2 tracking-tighter text-xl text-center";
 
             document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? eventoAtivo.ant_casal : eventoAtivo.valor_casal);
             document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? eventoAtivo.ant_solteiro : eventoAtivo.valor_solteiro);
@@ -132,7 +151,6 @@
 
                 if (eFluxoPix) {
                     const linkPag = tipoAtivo === 'CASAL' ? eventoAtivo.link_pag_casal : eventoAtivo.link_pag_solteiro;
-                    // CORREÇÃO AQUI: ?external_reference para links mpago.la
                     window.location.href = linkPag + "?external_reference=" + docRef.id;
                 } else {
                     alert("Confirmado!"); location.reload();
