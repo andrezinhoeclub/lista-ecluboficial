@@ -11,11 +11,13 @@
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; }
         .glass-card { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .input-field { background: #0f0f10 !important; border: 1px solid #27272a !important; color: #fff !important; }
-        .input-field:focus { border-color: #eab308 !important; outline: none; }
+        .input-field:focus { border-color: #eab308 !important; outline: none; box-shadow: 0 0 15px rgba(234, 179, 8, 0.1); }
         .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; }
         .item-cliente { border-bottom: 1px solid #1a1a1a; transition: 0.3s; }
         .cliente-bloqueada { background: linear-gradient(90deg, rgba(153, 27, 27, 0.4) 0%, rgba(5, 5, 5, 1) 100%) !important; border-left: 6px solid #ef4444 !important; }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -59,7 +61,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <aside class="lg:col-span-1">
-                <div class="glass-card p-6 rounded-[2.5rem] sticky top-8 border-white/5">
+                <div class="glass-card p-6 rounded-[2.5rem] sticky top-8 border-white/5 shadow-2xl">
                     <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Cadastro</h2>
                     <form id="formSolteira" class="space-y-4">
                         <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" required>
@@ -73,27 +75,14 @@
             </aside>
 
             <main class="lg:col-span-2 space-y-6">
-                <input type="text" id="buscaCliente" placeholder="PESQUISAR CLIENTE..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase shadow-2xl" oninput="filtrarClientes()">
+                <div class="relative w-full">
+                    <input type="text" id="buscaCliente" placeholder="PESQUISAR: NOME, CPF OU WHATSAPP..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase pl-14 shadow-2xl border-white/10" oninput="filtrarClientes()">
+                    <span class="absolute left-6 top-5 opacity-30 text-xl text-white">🔍</span>
+                </div>
                 <div class="glass-card rounded-[2.5rem] overflow-hidden min-h-[400px]">
                     <div id="listaSolteiras" class="divide-y divide-zinc-900"></div>
                 </div>
             </main>
-        </div>
-    </div>
-
-    <div id="modalEdit" class="hidden fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-6">
-        <div class="glass-card p-8 rounded-[3rem] w-full max-w-md border-zinc-800 border-2 text-center">
-            <h2 class="text-yellow-500 font-black uppercase italic mb-6 tracking-widest text-sm">Prontuário da Cliente</h2>
-            <input type="hidden" id="editId">
-            <input type="hidden" id="statusBloqueio">
-            <textarea id="editObsField" class="w-full p-6 rounded-2xl input-field font-bold text-xs uppercase h-48 resize-none mb-6"></textarea>
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="fecharModal()" class="bg-zinc-800 py-5 rounded-2xl uppercase text-[10px] font-black">Cancelar</button>
-                <button onclick="salvarObs()" class="bg-white text-black py-5 rounded-2xl uppercase text-[10px] font-black">Salvar Obs</button>
-            </div>
-            <div class="mt-4 pt-4 border-t border-zinc-800">
-                <button id="btnToggleBloqueio" onclick="toggleBloqueio()" class="w-full py-5 rounded-2xl uppercase text-[11px] font-black transition-all"></button>
-            </div>
         </div>
     </div>
 
@@ -138,21 +127,18 @@
             document.getElementById('telaLogin').classList.add('hidden');
             document.getElementById('conteudo-sistema').classList.remove('hidden');
             iniciarEscutas();
-            faxina90Dias(); // FAXINA SÓ AQUI NESTE SISTEMA
+            faxina90Dias(); 
         }
 
-        // --- FUNÇÃO DE FAXINA EXCLUSIVA PARA SOLTEIRAS ---
         async function faxina90Dias() {
             const limite = new Date();
             limite.setDate(limite.getDate() - 90);
             const snap = await getDocs(colRef);
             snap.forEach(async (d) => {
                 const data = d.data();
-                if (data.bloqueada === true) return; // PROTEGE BLACKLIST
+                if (data.bloqueada === true) return;
                 const ultima = data.ultima_visita ? data.ultima_visita.toDate() : null;
-                if (!ultima || ultima < limite) {
-                    await deleteDoc(doc(db, "cadastro_solteiras", d.id));
-                }
+                if (!ultima || ultima < limite) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
             });
         }
 
@@ -186,8 +172,17 @@
             const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
 
             let paraExibir = isBusca ? dados : dados.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte);
+            
             if (paraExibir.length === 0) {
-                container.innerHTML = `<div class="p-20 text-center opacity-30 uppercase font-black text-xs italic">Nenhuma solteira encontrada</div>`;
+                if (isBusca) {
+                    container.innerHTML = `
+                        <div class="p-20 text-center">
+                            <p class="text-red-500 font-black uppercase italic text-sm mb-4 animate-pulse">⚠️ CLIENTE NÃO ENCONTRADA</p>
+                            <p class="opacity-50 uppercase font-bold text-[10px]">REALIZE O NOVO CADASTRO AO LADO</p>
+                        </div>`;
+                } else {
+                    container.innerHTML = `<div class="p-20 text-center opacity-30 uppercase font-black text-xs italic">Nenhuma solteira na casa</div>`;
+                }
                 return;
             }
 
@@ -202,36 +197,38 @@
                     <div class="flex-grow">
                         <div class="flex items-center gap-3">
                             <h3 class="text-xl font-black uppercase text-white">${c.nome}</h3>
-                            ${bloqueada ? '<span class="bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-black">⚠️ BLOQUEADA</span>' : ''}
+                            ${bloqueada ? '<span class="bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-black">⚠️ BLACKLIST</span>' : ''}
                         </div>
-                        <p class="text-[10px] text-zinc-500 font-bold mt-1">🆔 ${c.cpf} | ${c.tel} | ÚLTIMA: ${u ? u.toLocaleDateString('pt-BR') : 'NUNCA'}</p>
+                        <p class="text-[10px] text-zinc-500 font-bold mt-1 uppercase">🆔 ${c.cpf} | 📱 ${c.tel} | Visita: ${u ? u.toLocaleDateString('pt-BR') : '---'}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="abrirModal('${c.id}', \`${c.obs || ''}\`)" class="bg-zinc-800 text-white px-6 py-4 rounded-2xl text-[9px] font-black uppercase">OBS</button>
-                        ${bloqueada ? '<span class="text-red-500 font-black uppercase px-6 py-4 italic">BANNED</span>' : (naCasa ? '<span class="text-green-500 font-black px-6 py-4">✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase">Liberar</button>`)}
+                        ${bloqueada ? '<span class="text-red-500 font-black uppercase px-6 py-4 italic">Proibida</span>' : (naCasa ? '<span class="text-green-500 font-black px-6 py-4">✓</span>' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase hover:bg-green-500">Liberar</button>`)}
                     </div>`;
                 container.appendChild(div);
             });
         }
 
-        window.abrirModal = (id, obs) => {
-            const c = clientesCache.find(x => x.id === id);
-            document.getElementById('editId').value = id;
-            document.getElementById('editObsField').value = obs;
-            document.getElementById('statusBloqueio').value = c.bloqueada;
-            const btnB = document.getElementById('btnToggleBloqueio');
-            btnB.innerText = c.bloqueada ? "DESBLOQUEAR" : "BLOQUEAR (BLACKLIST)";
-            btnB.className = `w-full py-5 rounded-2xl uppercase text-[11px] font-black ${c.bloqueada ? 'bg-green-600' : 'bg-red-600'}`;
-            document.getElementById('modalEdit').classList.remove('hidden');
-        };
+        window.filtrarClientes = () => {
+            const b = document.getElementById('buscaCliente').value.toUpperCase();
+            if (b.length > 0) {
+                const tLimpo = b.replace(/\D/g, "");
+                const filtrados = clientesCache.filter(c => {
+                    const nM = c.nome.includes(b);
+                    const cM = c.cpf.replace(/\D/g, "").includes(tLimpo);
+                    const tM = c.tel.replace(/\D/g, "").includes(tLimpo);
+                    return nM || (tLimpo && (cM || tM));
+                });
 
-        window.fecharModal = () => document.getElementById('modalEdit').classList.add('hidden');
-        window.salvarObs = async () => { await updateDoc(doc(db, "cadastro_solteiras", document.getElementById('editId').value), { obs: document.getElementById('editObsField').value.toUpperCase() }); fecharModal(); };
-        window.toggleBloqueio = async () => {
-            const id = document.getElementById('editId').value;
-            const isB = document.getElementById('statusBloqueio').value === 'true';
-            await updateDoc(doc(db, "cadastro_solteiras", id), { bloqueada: !isB, obs: document.getElementById('editObsField').value.toUpperCase() });
-            fecharModal();
+                if (filtrados.length === 0) {
+                    render([], true);
+                    // PULO DO GATO: SE NÃO ACHOU, JOGA O FOCO NO NOME
+                    document.getElementById('nome').focus();
+                } else {
+                    render(filtrados, true);
+                }
+            } else {
+                render(clientesCache, false);
+            }
         };
 
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
@@ -250,6 +247,8 @@
                 alert("Cadastrada!");
             }
             document.getElementById('formSolteira').reset();
+            document.getElementById('buscaCliente').value = ""; // LIMPA A BUSCA
+            document.getElementById('buscaCliente').focus(); // VOLTA O FOCO PRA BUSCA
         });
 
         window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
@@ -258,11 +257,6 @@
             document.getElementById('contagemEvento').innerText = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
             document.getElementById('contadorTotal').innerText = clientesCache.length;
         }
-        window.filtrarClientes = () => {
-            const b = document.getElementById('buscaCliente').value.toUpperCase();
-            if (b.length > 0) render(clientesCache.filter(c => c.nome.includes(b) || c.cpf.includes(b)), true);
-            else render(clientesCache, false);
-        };
     </script>
 </body>
 </html>
