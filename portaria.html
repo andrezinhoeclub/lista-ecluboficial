@@ -67,7 +67,6 @@
             </header>
 
             <section class="flex-grow p-8 overflow-y-auto bg-[#030303] relative">
-                
                 <div id="alertaModoTeste" class="alert-teste hidden max-w-5xl mx-auto">
                     ⚠️ MODO DE TESTE ATIVO - TRAVAS DE HORÁRIO DESATIVADAS
                 </div>
@@ -117,14 +116,19 @@
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false;
 
+        // --- CORREÇÃO DO BUG DAS 21H ---
         const getStatusTurno = (dataEvento) => {
             if (isModoTeste) return "ONLINE"; 
 
             const agora = new Date();
             const hora = agora.getHours();
-            const hoje = agora.toISOString().split('T')[0];
-            const ontem = new Date(agora); ontem.setDate(ontem.getDate() - 1);
-            const ontemISO = ontem.toISOString().split('T')[0];
+            
+            // Pega a data local YYYY-MM-DD ignorando o fuso de Londres
+            const hoje = agora.toLocaleDateString('en-CA'); 
+            
+            const ontemObj = new Date(agora); 
+            ontemObj.setDate(ontemObj.getDate() - 1);
+            const ontemISO = ontemObj.toLocaleDateString('en-CA');
 
             if (hora >= 21 && dataEvento === hoje) return "ONLINE";
             if (hora < 5 && dataEvento === ontemISO) return "ONLINE";
@@ -277,7 +281,6 @@
                 } else {
                     const isCasal = c.tipo_entrada === "CASAL";
                     const vCalc = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
-                    
                     const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
                     valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
                     
@@ -286,14 +289,17 @@
                     }
                 }
 
-                // --- NOVA LÓGICA DE IDENTIFICAÇÃO DE STATUS CASAL/SOLTEIRO COM COR ---
+                // --- LÓGICA DE STATUS + SELO PIX PAGO ---
                 let labelStatusHTML = '';
                 if (c.tipo_entrada === "CASAL") {
                     labelStatusHTML = `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👫 CASAL</span>`;
                 } else if (c.tipo_entrada === "SOLTEIRO") {
                     labelStatusHTML = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👤 SOLTEIRO</span>`;
                 }
-                // --- FIM DA LÓGICA DE STATUS ---
+
+                if (c.pago === true) {
+                    labelStatusHTML += `<span class="ml-2 bg-blue-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">⚡ PIX PAGO</span>`;
+                }
 
                 const div = document.createElement('div');
                 div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${corBordaEspecial} ${c.entrou ? 'entrou' : ''}`;
@@ -310,18 +316,15 @@
                         </div>
                         <div class="h-[1px] bg-zinc-900/50 w-full"></div>
                         <div class="flex flex-wrap items-center gap-6">
-                            
                             <div class="flex items-center gap-3">
                                 <span class="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
                                     PROMOTER: <span class="text-blue-400">${c.promoter || 'DIRETO'}</span>
                                 </span>
                                 <span class="text-zinc-700">|</span>
-                                
                                 ${labelStatusHTML}
-                                ${labelStatusHTML ? '<span class="text-zinc-700">|</span>' : ''}
+                                <span class="text-zinc-700">|</span>
                                 <span class="text-[10px] text-zinc-400 font-black uppercase italic tracking-widest">${c.evento}</span>
                             </div>
-
                             <div class="flex items-center gap-3 border-l border-zinc-800 pl-6">
                                 <span class="text-[8px] text-zinc-600 font-black uppercase tracking-[0.2em]">VALOR:</span>
                                 <span class="text-2xl font-black italic ${c.tipo_entrada === "ANIVERSARIANTE" ? 'text-green-500' : 'text-yellow-500'} leading-none">${valorExibicao}</span>
