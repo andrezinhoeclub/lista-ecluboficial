@@ -117,16 +117,11 @@
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false;
 
-        // --- FUNÇÃO DE STATUS CORRIGIDA ---
         const getStatusTurno = (dataEvento) => {
             if (isModoTeste) return "ONLINE"; 
-
             const agora = new Date();
             const hora = agora.getHours();
-            
-            // Pega a data local (Curitiba) em formato YYYY-MM-DD
             const hoje = agora.toLocaleDateString('en-CA'); 
-            
             const ontemObj = new Date(agora); 
             ontemObj.setDate(ontemObj.getDate() - 1);
             const ontemISO = ontemObj.toLocaleDateString('en-CA');
@@ -197,14 +192,12 @@
                         const dataEntrada = new Date(c.data_entrada);
                         const hojeCheck = new Date();
                         const limite = new Date();
-                        
                         if (hojeCheck.getHours() < 5) {
                             limite.setDate(limite.getDate() - 1);
                             limite.setHours(21, 0, 0);
                         } else {
                             limite.setHours(21, 0, 0);
                         }
-                        
                         if (isModoTeste) return true;
                         return dataEntrada >= limite;
                     }).length;
@@ -216,22 +209,15 @@
             });
         }
 
-        // --- RENDERIZAR COM LÓGICA DE VISIBILIDADE DO PAINEL ---
         function renderizarSidebar() {
             const cont = document.getElementById('lista-eventos-sidebar');
             cont.innerHTML = '';
-            
             const eventosFiltrados = bancoEventos.filter(ev => getStatusTurno(ev.data) !== "ENCERRADO");
-            
-            // ESCONDER REGRAS SE HOUVER EVENTO ONLINE
             const temEventoOnline = eventosFiltrados.some(ev => getStatusTurno(ev.data) === "ONLINE");
             const painelRegras = document.getElementById('painelRegras');
             
-            if (temEventoOnline) {
-                painelRegras.classList.add('hidden');
-            } else {
-                painelRegras.classList.remove('hidden');
-            }
+            if (temEventoOnline) { painelRegras.classList.add('hidden'); } 
+            else { painelRegras.classList.remove('hidden'); }
 
             eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
@@ -253,68 +239,54 @@
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
             
-            if (busca.length < 2) { 
-                cont.innerHTML = ''; 
-                return; 
-            }
+            if (busca.length < 2) { cont.innerHTML = ''; return; }
             
             const filtrados = bancoClientes.filter(c => {
                 const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
                 if (!evRelacionado || getStatusTurno(evRelacionado.data) !== "ONLINE") return false;
-                
                 const nomeMatch = c.nome && c.nome.toUpperCase().includes(busca);
                 const telMatch = (c.tel || c.telefone) && (c.tel || c.telefone).includes(busca);
                 return nomeMatch || telMatch;
             });
 
             if (filtrados.length === 0) {
-                cont.innerHTML = `
-                    <div class="py-40 text-center font-black uppercase text-zinc-800 italic tracking-widest">
-                        Nenhum cliente ativo encontrado<br>
-                        <span class="text-[8px] font-bold italic opacity-40">Busca permitida apenas para eventos online</span>
-                    </div>`;
+                cont.innerHTML = `<div class="py-40 text-center font-black uppercase text-zinc-800 italic tracking-widest">Nenhum cliente ativo encontrado</div>`;
                 return;
             }
             
             cont.innerHTML = '';
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
-                
                 let valorExibicao = '---';
                 let badgeDestaque = '';
                 let corDestaqueNome = 'text-white';
-                let corBordaEspecial = '';
                 
                 if (c.tipo_entrada === "ANIVERSARIANTE") {
                     valorExibicao = "FREE";
                     corDestaqueNome = 'text-green-400';
-                    corBordaEspecial = 'border border-green-500/30';
                     badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-[0.2em]">👑 DONO(A) DA FESTA</span></div>`;
                 } else {
                     const isCasal = c.tipo_entrada === "CASAL";
                     const vCalc = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
                     const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
                     valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
-                    
                     if (c.aniversariante) {
                         badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-400 font-black uppercase tracking-[0.2em]">CONVIDADO DE:</span><span class="text-xs font-black italic text-white leading-none">${c.aniversariante}</span></div>`;
                     }
                 }
 
-                // --- STATUS + SELO PIX PAGO ---
                 let labelStatusHTML = '';
                 if (c.tipo_entrada === "CASAL") {
                     labelStatusHTML = `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👫 CASAL</span>`;
                 } else if (c.tipo_entrada === "SOLTEIRO") {
                     labelStatusHTML = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👤 SOLTEIRO</span>`;
                 }
-
                 if (c.pago === true) {
                     labelStatusHTML += `<span class="ml-2 bg-blue-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">⚡ PIX PAGO</span>`;
                 }
 
                 const div = document.createElement('div');
-                div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${corBordaEspecial} ${c.entrou ? 'entrou' : ''}`;
+                div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${c.entrou ? 'entrou' : ''}`;
                 div.innerHTML = `
                     <div class="flex flex-col gap-4 text-white">
                         <div class="flex justify-between items-center">
@@ -330,7 +302,7 @@
                         <div class="flex flex-wrap items-center gap-6">
                             <div class="flex items-center gap-3">
                                 <span class="text-[10px] text-zinc-500 font-black uppercase tracking-widest">
-                                    PROMOTER: <span class="text-blue-400">${c.promoter || 'DIRETO'}</span>
+                                    <span class="text-blue-400">${c.promoter || 'DIRETO'}</span>
                                 </span>
                                 <span class="text-zinc-700">|</span>
                                 ${labelStatusHTML}
@@ -349,11 +321,7 @@
         };
 
         window.confirmarCheckin = async (id) => {
-            await updateDoc(doc(db, "lista_eventos", id), { 
-                entrou: true, 
-                porteiro: operadorLogado, 
-                data_entrada: new Date().toISOString() 
-            });
+            await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
         };
     </script>
 </body>
