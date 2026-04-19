@@ -14,7 +14,7 @@
         .input-field:focus { border-color: #eab308 !important; outline: none; box-shadow: 0 0 15px rgba(234, 179, 8, 0.1); }
         .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; }
         .btn-edit { background: #22c55e; color: #fff; font-weight: 900; }
-        .btn-off { background: #1a1a1a !important; color: #333 !important; cursor: not-allowed !important; pointer-events: none; }
+        .btn-off { background: #1a1a1a !important; color: #333 !important; cursor: not-allowed !important; pointer-events: none; opacity: 0.5; }
         .item-cliente { border-bottom: 1px solid #1a1a1a; transition: 0.3s; }
         .cliente-bloqueada { background: linear-gradient(90deg, rgba(153, 27, 27, 0.4) 0%, rgba(5, 5, 5, 1) 100%) !important; border-left: 6px solid #ef4444 !important; }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
@@ -35,7 +35,6 @@
                 </div>
                 <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">CONTINUAR</button>
             </div>
-            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden italic text-center">Acesso negado</p>
         </div>
     </div>
 
@@ -51,7 +50,7 @@
                 </div>
             </div>
             <div class="flex gap-4">
-                <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-center min-w-[120px]">
+                <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-center min-w-[140px]">
                     <p class="text-[8px] font-black text-zinc-500 uppercase">Check-ins Turno</p>
                     <p id="contagemEvento" class="text-xl font-black text-green-500">0</p>
                 </div>
@@ -62,20 +61,22 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <aside class="lg:col-span-1">
                 <div class="glass-card p-6 rounded-[2.5rem] sticky top-8 border-white/5 shadow-2xl">
-                    <h2 id="tituloForm" class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Cadastro</h2>
-                    <form id="formSolteira" class="space-y-4">
-                        <input type="hidden" id="editId">
-                        <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" required>
-                        <input type="tel" id="tel" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" onblur="validarDuplicidade('tel')" required>
-                        <input type="text" id="cpf" placeholder="CPF COMPLETO" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskCPF(this)" onblur="validarDuplicidade('cpf')" required>
-                        <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" onchange="updateIdade(this.value)" required>
-                        <textarea id="obs" placeholder="OBSERVAÇÕES..." class="w-full p-4 rounded-xl input-field font-bold text-[10px] uppercase h-20 resize-none"></textarea>
-                        
-                        <button type="submit" id="btnSalvar" class="w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-2 active:scale-95 transition-all">Confirmar Entrada</button>
-                        <button type="button" id="btnCancelarEdicao" onclick="limparFormulario()" class="hidden w-full bg-zinc-800 text-zinc-400 py-3 rounded-2xl uppercase text-[9px] font-black mt-2">Cancelar Edição</button>
-                    </form>
-                    <div id="msgBloqueioHorario" class="hidden mt-4 p-4 border border-red-500/20 bg-red-500/5 rounded-2xl text-center">
-                        <p class="text-[10px] text-red-500 font-black uppercase italic">🚫 Sistema Restrito<br>Abertura: 21:00h</p>
+                    <div id="formContainer">
+                        <h2 id="tituloForm" class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Cadastro</h2>
+                        <form id="formSolteira" class="space-y-4">
+                            <input type="hidden" id="editId">
+                            <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" required>
+                            <input type="tel" id="tel" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" onblur="validarDuplicidade('tel')" required>
+                            <input type="text" id="cpf" placeholder="CPF COMPLETO" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskCPF(this)" onblur="validarDuplicidade('cpf')" required>
+                            <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" onchange="updateIdade(this.value)" required>
+                            <textarea id="obs" placeholder="OBSERVAÇÕES..." class="w-full p-4 rounded-xl input-field font-bold text-[10px] uppercase h-20 resize-none"></textarea>
+                            <button type="submit" id="btnSalvar" class="w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-2 active:scale-95 transition-all">Confirmar Entrada</button>
+                            <button type="button" id="btnCancelarEdicao" onclick="limparFormulario()" class="hidden w-full bg-zinc-800 text-zinc-400 py-3 rounded-2xl uppercase text-[9px] font-black mt-2">Cancelar Edição</button>
+                        </form>
+                    </div>
+                    <div id="msgBloqueioAgenda" class="hidden py-10 text-center">
+                        <p class="text-red-500 font-black uppercase italic text-sm leading-tight">🔒 SISTEMA RESTRITO</p>
+                        <p class="text-zinc-500 text-[8px] font-bold uppercase mt-4 tracking-widest leading-relaxed">Não há eventos ativos<br>na agenda para este horário.</p>
                     </div>
                 </div>
             </aside>
@@ -108,15 +109,29 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const colRef = collection(db, "cadastro_solteiras");
-        let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
+        let clientesCache = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false;
 
-        // --- LÓGICA DE HORÁRIO RESTRITO ---
-        const isTurnoAberto = () => {
+        // --- LÓGICA DE TURNO BASEADA NA AGENDA ---
+        const getStatusAgenda = () => {
             if (isModoTeste) return true;
             const agora = new Date();
             const hora = agora.getHours();
-            return (hora >= 21 || hora < 5); // Aberto das 21h às 05h
+            
+            // Pega a data local correta (AAAA-MM-DD)
+            const hoje = agora.toLocaleDateString('en-CA'); 
+            const ontemObj = new Date(agora); ontemObj.setDate(ontemObj.getDate() - 1);
+            const ontem = ontemObj.toLocaleDateString('en-CA');
+
+            // Janela 21h - 05h
+            if (hora >= 21) {
+                // Procura evento HOJE
+                return bancoEventos.some(ev => ev.data === hoje);
+            } else if (hora < 5) {
+                // Procura evento ONTEM
+                return bancoEventos.some(ev => ev.data === ontem);
+            }
+            return false; // Fora do horário padrão
         };
 
         const getLimiteTurno = () => {
@@ -167,32 +182,40 @@
         };
 
         function iniciarEscutas() {
-            // Sincroniza Modo Teste da Dashboard
+            // Escuta Configurações (Modo Teste)
             onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
                 isModoTeste = snap.exists() && snap.data().modo_teste === true;
                 const alerta = document.getElementById('alertaModoTeste');
-                const btnSalvar = document.getElementById('btnSalvar');
-                const msgBloqueio = document.getElementById('msgBloqueioHorario');
-
                 if (isModoTeste) alerta.classList.remove('hidden'); else alerta.classList.add('hidden');
-
-                // Trava visual do formulário
-                if (!isTurnoAberto()) {
-                    btnSalvar.classList.add('btn-off');
-                    btnSalvar.innerText = "SISTEMA BLOQUEADO";
-                    msgBloqueio.classList.remove('hidden');
-                } else {
-                    btnSalvar.classList.remove('btn-off');
-                    btnSalvar.innerText = document.getElementById('editId').value ? "ATUALIZAR E LIBERAR" : "Confirmar Entrada";
-                    msgBloqueio.classList.add('hidden');
-                }
-                atualizarContadores(); filtrarClientes();
+                refreshInterface();
             });
 
+            // Escuta Agenda de Eventos Ativos
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
+                bancoEventos = snapEv.docs.map(d => d.data());
+                refreshInterface();
+            });
+
+            // Escuta Lista de Solteiras
             onSnapshot(colRef, (snap) => {
                 clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 atualizarContadores(); filtrarClientes();
             });
+        }
+
+        function refreshInterface() {
+            const aberto = getStatusAgenda();
+            const form = document.getElementById('formContainer');
+            const msg = document.getElementById('msgBloqueioAgenda');
+            
+            if (aberto) {
+                form.classList.remove('hidden');
+                msg.classList.add('hidden');
+            } else {
+                form.classList.add('hidden');
+                msg.classList.remove('hidden');
+            }
+            atualizarContadores(); filtrarClientes();
         }
 
         window.maskCPF = (i) => {
@@ -269,9 +292,7 @@
                 div.innerHTML = `
                     <div>
                         <h3 class="text-xl font-black uppercase text-white">${c.nome}</h3>
-                        <p class="text-[10px] text-zinc-500 font-bold uppercase mt-1">
-                            🆔 ${c.cpf} | 📱 ${c.tel} | 📅 VISITA: <span class="text-white">${u ? u.toLocaleDateString('pt-BR') : 'NEVER'}</span>
-                        </p>
+                        <p class="text-[10px] text-zinc-500 font-bold uppercase mt-1">🆔 ${c.cpf} | 📱 ${c.tel} | 📅 VISITA: <span class="text-white">${u ? u.toLocaleDateString('pt-BR') : '---'}</span></p>
                     </div>
                     <div>${naCasa ? '✓' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase">Liberar</button>`}</div>`;
                 container.appendChild(div);
@@ -280,8 +301,6 @@
 
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!isTurnoAberto()) { alert("ACESSO RESTRITO: O sistema só abre às 21:00h."); return; }
-            
             const btn = document.getElementById('btnSalvar');
             const idEx = document.getElementById('editId').value;
             const nome = document.getElementById('nome').value.toUpperCase();
@@ -293,20 +312,17 @@
             try {
                 if (idEx) {
                     await updateDoc(doc(db, "cadastro_solteiras", idEx), { nome, tel, cpf, nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() });
-                    alert("Dados atualizados!");
+                    alert("Atualizado!");
                 } else {
                     await addDoc(colRef, { nome, tel, cpf, nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp(), bloqueada: false });
                     alert("Cadastrada!");
                 }
                 limparFormulario();
-            } catch (e) { alert("Erro ao salvar!"); }
+            } catch (e) { alert("Erro!"); }
             finally { btn.disabled = false; btn.innerText = "Confirmar Entrada"; }
         });
 
-        window.checkin = async (id) => {
-            if (!isTurnoAberto()) { alert("FORA DO HORÁRIO!"); return; }
-            await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
-        };
+        window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
 
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase().trim();
@@ -318,8 +334,7 @@
 
         function atualizarContadores() { 
             const corte = getLimiteTurno();
-            const total = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
-            document.getElementById('contagemEvento').innerText = total;
+            document.getElementById('contagemEvento').innerText = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
         }
     </script>
 </body>
