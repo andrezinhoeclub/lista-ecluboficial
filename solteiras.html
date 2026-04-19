@@ -65,8 +65,8 @@
                     <h2 class="text-yellow-500 font-black uppercase italic text-sm mb-6">Novo Cadastro</h2>
                     <form id="formSolteira" class="space-y-4">
                         <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" required>
-                        <input type="tel" id="tel" placeholder="WHATSAPP" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" required>
-                        <input type="text" id="cpf" placeholder="CPF" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskCPF(this)" required>
+                        <input type="tel" id="tel" placeholder="WHATSAPP (DDD + NÚMERO)" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskTel(this)" required>
+                        <input type="text" id="cpf" placeholder="CPF COMPLETO" class="w-full p-4 rounded-xl input-field font-bold text-xs" oninput="maskCPF(this)" required>
                         <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field font-bold text-xs uppercase" onchange="updateIdade(this.value)" required>
                         <textarea id="obs" placeholder="OBSERVAÇÕES..." class="w-full p-4 rounded-xl input-field font-bold text-[10px] uppercase h-20 resize-none"></textarea>
                         <button type="submit" id="btnSalvar" class="w-full btn-gold py-5 rounded-2xl uppercase text-xs shadow-xl mt-2 active:scale-95 transition-all">Salvar e Liberar</button>
@@ -208,28 +208,21 @@
             });
         }
 
-        // --- NOVA LÓGICA DE PESQUISA MULTI-CRITÉRIO ---
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase().trim();
             if (b.length > 0) {
-                // Divide a busca por espaços (ex: "MARIA 6901")
                 const termos = b.split(/\s+/);
-
                 const filtrados = clientesCache.filter(c => {
                     const nomeCli = c.nome.toUpperCase();
                     const cpfCli = c.cpf.replace(/\D/g, "");
                     const telCli = c.tel.replace(/\D/g, "");
-                    
-                    // Texto completo onde a busca vai procurar
                     const tudoJunto = `${nomeCli} ${cpfCli} ${telCli}`;
-
-                    // Verifica se TODOS os termos digitados estão na ficha da cliente
                     return termos.every(termo => tudoJunto.includes(termo));
                 });
 
                 if (filtrados.length === 0) {
                     render([], true);
-                    document.getElementById('nome').focus(); // Foco no cadastro se não achar
+                    document.getElementById('nome').focus();
                 } else {
                     render(filtrados, true);
                 }
@@ -238,24 +231,61 @@
             }
         };
 
+        // --- REGRAS DE OBRIGATORIEDADE E VALIDAÇÃO ---
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const btn = document.getElementById('btnSalvar');
             const nome = document.getElementById('nome').value.toUpperCase();
-            const tel = document.getElementById('tel').value;
-            const cpf = document.getElementById('cpf').value;
-            const qCpf = query(colRef, where("cpf", "==", cpf));
+            const telRaw = document.getElementById('tel').value;
+            const cpfRaw = document.getElementById('cpf').value;
+
+            // Limpeza para validação de tamanho
+            const telLimpo = telRaw.replace(/\D/g, "");
+            const cpfLimpo = cpfRaw.replace(/\D/g, "");
+
+            // Validação de Telefone (DDD + 9 + 8 dígitos = 11)
+            if (telLimpo.length < 11) {
+                alert("TELEFONE INCOMPLETO!\nDigite o DDD + Número (ex: 41999998888).");
+                document.getElementById('tel').focus();
+                return;
+            }
+
+            // Validação de CPF (11 dígitos)
+            if (cpfLimpo.length < 11) {
+                alert("CPF INCOMPLETO!\nDigite os 11 dígitos do CPF.");
+                document.getElementById('cpf').focus();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "PROCESSANDO...";
+
+            const qCpf = query(colRef, where("cpf", "==", cpfRaw));
             const snap = await getDocs(qCpf);
+            
             if (!snap.empty) {
                 const ex = snap.docs[0];
                 if(ex.data().bloqueada) alert("BLACKLIST!");
                 else { await updateDoc(doc(db, "cadastro_solteiras", ex.id), { ultima_visita: serverTimestamp() }); alert("Check-in ok!"); }
             } else {
-                await addDoc(colRef, { nome, tel, cpf, nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp(), bloqueada: false });
-                alert("Cadastrada!");
+                await addDoc(colRef, { 
+                    nome, 
+                    tel: telRaw, 
+                    cpf: cpfRaw, 
+                    nascimento: document.getElementById('nascimento').value, 
+                    obs: document.getElementById('obs').value.toUpperCase(), 
+                    ultima_visita: serverTimestamp(), 
+                    bloqueada: false 
+                });
+                alert("Cadastrada com sucesso!");
             }
+            
             document.getElementById('formSolteira').reset();
+            document.getElementById('idadeDisplay').innerText = "--";
             document.getElementById('buscaCliente').value = ""; 
             document.getElementById('buscaCliente').focus(); 
+            btn.disabled = false;
+            btn.innerText = "Salvar e Liberar";
         });
 
         window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
