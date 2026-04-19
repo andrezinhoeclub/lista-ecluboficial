@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; }
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow-x: hidden; }
         .glass-card { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .input-field { background: #0f0f10 !important; border: 1px solid #27272a !important; color: #fff !important; }
         .input-field:focus { border-color: #eab308 !important; outline: none; box-shadow: 0 0 15px rgba(234, 179, 8, 0.1); }
@@ -76,7 +76,7 @@
 
             <main class="lg:col-span-2 space-y-6">
                 <div class="relative w-full">
-                    <input type="text" id="buscaCliente" placeholder="PESQUISAR: NOME, CPF OU WHATSAPP..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase pl-14 shadow-2xl border-white/10" oninput="filtrarClientes()">
+                    <input type="text" id="buscaCliente" placeholder="PESQUISAR: MARIA 6901, NOME, CPF..." class="w-full p-5 rounded-2xl input-field text-sm font-bold uppercase pl-14 shadow-2xl border-white/10" oninput="filtrarClientes()">
                     <span class="absolute left-6 top-5 opacity-30 text-xl text-white">🔍</span>
                 </div>
                 <div class="glass-card rounded-[2.5rem] overflow-hidden min-h-[400px]">
@@ -208,21 +208,28 @@
             });
         }
 
+        // --- NOVA LÓGICA DE PESQUISA MULTI-CRITÉRIO ---
         window.filtrarClientes = () => {
-            const b = document.getElementById('buscaCliente').value.toUpperCase();
+            const b = document.getElementById('buscaCliente').value.toUpperCase().trim();
             if (b.length > 0) {
-                const tLimpo = b.replace(/\D/g, "");
+                // Divide a busca por espaços (ex: "MARIA 6901")
+                const termos = b.split(/\s+/);
+
                 const filtrados = clientesCache.filter(c => {
-                    const nM = c.nome.includes(b);
-                    const cM = c.cpf.replace(/\D/g, "").includes(tLimpo);
-                    const tM = c.tel.replace(/\D/g, "").includes(tLimpo);
-                    return nM || (tLimpo && (cM || tM));
+                    const nomeCli = c.nome.toUpperCase();
+                    const cpfCli = c.cpf.replace(/\D/g, "");
+                    const telCli = c.tel.replace(/\D/g, "");
+                    
+                    // Texto completo onde a busca vai procurar
+                    const tudoJunto = `${nomeCli} ${cpfCli} ${telCli}`;
+
+                    // Verifica se TODOS os termos digitados estão na ficha da cliente
+                    return termos.every(termo => tudoJunto.includes(termo));
                 });
 
                 if (filtrados.length === 0) {
                     render([], true);
-                    // PULO DO GATO: SE NÃO ACHOU, JOGA O FOCO NO NOME
-                    document.getElementById('nome').focus();
+                    document.getElementById('nome').focus(); // Foco no cadastro se não achar
                 } else {
                     render(filtrados, true);
                 }
@@ -247,8 +254,8 @@
                 alert("Cadastrada!");
             }
             document.getElementById('formSolteira').reset();
-            document.getElementById('buscaCliente').value = ""; // LIMPA A BUSCA
-            document.getElementById('buscaCliente').focus(); // VOLTA O FOCO PRA BUSCA
+            document.getElementById('buscaCliente').value = ""; 
+            document.getElementById('buscaCliente').focus(); 
         });
 
         window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
