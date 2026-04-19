@@ -67,6 +67,7 @@
             </header>
 
             <section class="flex-grow p-8 overflow-y-auto bg-[#030303] relative">
+                
                 <div id="alertaModoTeste" class="alert-teste hidden max-w-5xl mx-auto">
                     ⚠️ MODO DE TESTE ATIVO - TRAVAS DE HORÁRIO DESATIVADAS
                 </div>
@@ -116,14 +117,14 @@
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false;
 
-        // --- CORREÇÃO DO BUG DAS 21H ---
+        // --- FUNÇÃO DE STATUS CORRIGIDA ---
         const getStatusTurno = (dataEvento) => {
             if (isModoTeste) return "ONLINE"; 
 
             const agora = new Date();
             const hora = agora.getHours();
             
-            // Pega a data local YYYY-MM-DD ignorando o fuso de Londres
+            // Pega a data local (Curitiba) em formato YYYY-MM-DD
             const hoje = agora.toLocaleDateString('en-CA'); 
             
             const ontemObj = new Date(agora); 
@@ -215,12 +216,23 @@
             });
         }
 
+        // --- RENDERIZAR COM LÓGICA DE VISIBILIDADE DO PAINEL ---
         function renderizarSidebar() {
             const cont = document.getElementById('lista-eventos-sidebar');
             cont.innerHTML = '';
             
             const eventosFiltrados = bancoEventos.filter(ev => getStatusTurno(ev.data) !== "ENCERRADO");
             
+            // ESCONDER REGRAS SE HOUVER EVENTO ONLINE
+            const temEventoOnline = eventosFiltrados.some(ev => getStatusTurno(ev.data) === "ONLINE");
+            const painelRegras = document.getElementById('painelRegras');
+            
+            if (temEventoOnline) {
+                painelRegras.classList.add('hidden');
+            } else {
+                painelRegras.classList.remove('hidden');
+            }
+
             eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
                 const total = bancoClientes.filter(c => c.evento === ev.nome).length;
@@ -289,7 +301,7 @@
                     }
                 }
 
-                // --- LÓGICA DE STATUS + SELO PIX PAGO ---
+                // --- STATUS + SELO PIX PAGO ---
                 let labelStatusHTML = '';
                 if (c.tipo_entrada === "CASAL") {
                     labelStatusHTML = `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👫 CASAL</span>`;
