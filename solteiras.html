@@ -19,6 +19,10 @@
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .field-error { border-color: #ef4444 !important; border-width: 2px !important; }
+        .field-success { border-color: #22c55e !important; border-width: 2px !important; }
+        @keyframes pulse-alert { 0% { background-color: rgba(234, 179, 8, 0.1); } 50% { background-color: rgba(234, 179, 8, 0.3); } 100% { background-color: rgba(234, 179, 8, 0.1); } }
+        .alert-teste { animation: pulse-alert 2s infinite; border: 1px solid #eab308; color: #eab308; text-align: center; font-weight: 900; font-style: italic; padding: 10px; margin-bottom: 15px; border-radius: 10px; text-transform: uppercase; font-size: 11px; letter-spacing: 2px;}
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -34,11 +38,13 @@
                 </div>
                 <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">CONTINUAR</button>
             </div>
-            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden italic text-center">Acesso negado: verifique os dados</p>
+            <p id="msgErro" class="text-red-500 text-[10px] font-black uppercase mt-6 hidden italic text-center">Acesso negado</p>
         </div>
     </div>
 
     <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto">
+        <div id="alertaModoTeste" class="alert-teste hidden">⚠️ MODO DE TESTE ATIVO - TRAVAS DE HORÁRIO DESATIVADAS</div>
+
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center gap-4">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-12">
@@ -49,7 +55,7 @@
             </div>
             <div class="flex gap-4">
                 <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl text-center min-w-[120px]">
-                    <p class="text-[8px] font-black text-zinc-500 uppercase">Check-ins Hoje</p>
+                    <p class="text-[8px] font-black text-zinc-500 uppercase">Check-ins Turno</p>
                     <p id="contagemEvento" class="text-xl font-black text-green-500">0</p>
                 </div>
                 <button onclick="location.reload()" class="bg-red-500/10 border border-red-500/20 text-red-500 px-4 rounded-2xl font-black uppercase text-[9px]">Sair</button>
@@ -108,8 +114,8 @@
         const db = getFirestore(app);
         const colRef = collection(db, "cadastro_solteiras");
         let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
+        let isModoTeste = false;
 
-        // VALIDAÇÃO CPF
         function isValidCPF(cpf) {
             cpf = cpf.replace(/[^\d]+/g,'');
             if(cpf.length != 11 || !!cpf.match(/(\d)\1{10}/)) return false;
@@ -125,30 +131,40 @@
             return rev == parseInt(cpf.charAt(10));
         }
 
-        // --- LOGIN DESTRAVADO ---
+        // --- LÓGICA DE TURNO SINCRONIZADA ---
+        const getLimiteTurno = () => {
+            if (isModoTeste) return new Date(0); // Se teste, volta ao início dos tempos
+            const agora = new Date();
+            const limite = new Date();
+            if (agora.getHours() < 5) {
+                limite.setDate(limite.getDate() - 1);
+                limite.setHours(21, 0, 0, 0);
+            } else {
+                limite.setHours(21, 0, 0, 0);
+            }
+            return limite;
+        };
+
         window.verificarOuLogar = async () => {
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
             const btn = document.getElementById('btnAcao');
             const erro = document.getElementById('msgErro');
-
             erro.classList.add('hidden');
 
             if (stepLogin === 0) {
                 btn.innerText = "VERIFICANDO...";
-                try {
-                    const docSnap = await getDoc(doc(db, "configuracoes", n));
-                    if (docSnap.exists()) {
-                        usuarioData = docSnap.data(); stepLogin = 1;
-                        document.getElementById('areaSenha').classList.remove('hidden');
-                        document.getElementById('inputNomeUsuario').readOnly = true;
-                        btn.innerText = "ENTRAR";
-                    } else {
-                        erro.innerText = "OPERADOR NÃO ENCONTRADO";
-                        erro.classList.remove('hidden');
-                        btn.innerText = "CONTINUAR";
-                    }
-                } catch (e) { alert("Erro de conexão!"); btn.innerText = "CONTINUAR"; }
+                const docSnap = await getDoc(doc(db, "configuracoes", n));
+                if (docSnap.exists()) {
+                    usuarioData = docSnap.data(); stepLogin = 1;
+                    document.getElementById('areaSenha').classList.remove('hidden');
+                    document.getElementById('inputNomeUsuario').readOnly = true;
+                    btn.innerText = "ENTRAR";
+                } else {
+                    erro.innerText = "OPERADOR NÃO ENCONTRADO";
+                    erro.classList.remove('hidden');
+                    btn.innerText = "CONTINUAR";
+                }
             } else {
                 if (usuarioData.senha === s) {
                     operadorLogado = n;
@@ -164,9 +180,33 @@
         };
 
         function iniciarEscutas() {
+            // Escuta Modo Teste da Dashboard
+            onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
+                const alerta = document.getElementById('alertaModoTeste');
+                if (snap.exists() && snap.data().modo_teste === true) {
+                    isModoTeste = true;
+                    alerta.classList.remove('hidden');
+                } else {
+                    isModoTeste = false;
+                    alerta.classList.add('hidden');
+                }
+                atualizarContadores(); filtrarClientes();
+            });
+
             onSnapshot(colRef, (snap) => {
                 clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 atualizarContadores(); filtrarClientes();
+            });
+        }
+
+        async function faxina90Dias() {
+            const limite = new Date(); limite.setDate(limite.getDate() - 90);
+            const snap = await getDocs(colRef);
+            snap.forEach(async (d) => {
+                const data = d.data();
+                if (data.bloqueada === true) return;
+                const ultima = data.ultima_visita ? data.ultima_visita.toDate() : null;
+                if (!ultima || ultima < limite) await deleteDoc(doc(db, "cadastro_solteiras", d.id));
             });
         }
 
@@ -208,7 +248,7 @@
             );
 
             if (jaExiste && document.getElementById('editId').value !== jaExiste.id) {
-                if (confirm(`CLIENTE JÁ CADASTRADA: ${jaExiste.nome}\n\nOK: Fazer Check-in rápido.\nCANCELAR: Editar dados.`)) {
+                if (confirm(`CLIENTE CADASTRADA: ${jaExiste.nome}\n\nOK: Fazer Check-in rápido.\nCANCELAR: Editar dados.`)) {
                     await updateDoc(doc(db, "cadastro_solteiras", jaExiste.id), { ultima_visita: serverTimestamp() });
                     alert("Check-in realizado!");
                     limparFormulario();
@@ -227,6 +267,28 @@
                 }
             }
         };
+
+        function render(dados, isBusca = false) {
+            const container = document.getElementById('listaSolteiras');
+            const corte = getLimiteTurno();
+            
+            let paraExibir = isBusca ? dados : dados.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte);
+            
+            if (paraExibir.length === 0) {
+                container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic">${isBusca ? 'NÃO ENCONTRADA' : 'NENHUMA NA CASA AGORA'}</div>`;
+                return;
+            }
+            container.innerHTML = '';
+            paraExibir.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
+                const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
+                const naCasa = u && u >= corte;
+                const div = document.createElement('div');
+                div.className = `item-cliente p-6 flex justify-between items-center ${c.bloqueada ? 'cliente-bloqueada' : (naCasa ? 'bg-green-500/5' : '')}`;
+                div.innerHTML = `<div><h3 class="text-xl font-black uppercase text-white">${c.nome}</h3><p class="text-[10px] text-zinc-500 font-bold uppercase">🆔 ${c.cpf} | 📱 ${c.tel}</p></div>
+                    <div>${naCasa ? '✓' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase">Liberar</button>`}</div>`;
+                container.appendChild(div);
+            });
+        }
 
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -251,29 +313,8 @@
             finally { btn.disabled = false; btn.innerText = "Confirmar Entrada"; }
         });
 
-        function render(dados, isBusca = false) {
-            const container = document.getElementById('listaSolteiras');
-            const agora = new Date();
-            const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
-            let paraExibir = isBusca ? dados : dados.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte);
-            
-            if (paraExibir.length === 0) {
-                container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic">NENHUMA ENCONTRADA</div>`;
-                return;
-            }
-            container.innerHTML = '';
-            paraExibir.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
-                const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
-                const naCasa = u && u >= corte;
-                const div = document.createElement('div');
-                div.className = `item-cliente p-6 flex justify-between items-center ${c.bloqueada ? 'cliente-bloqueada' : (naCasa ? 'bg-green-500/5' : '')}`;
-                div.innerHTML = `<div><h3 class="text-xl font-black uppercase text-white">${c.nome}</h3><p class="text-[10px] text-zinc-500 font-bold uppercase">🆔 ${c.cpf} | 📱 ${c.tel}</p></div>
-                    <div>${naCasa ? '✓' : `<button onclick="checkin('${c.id}')" class="bg-green-600 text-white px-6 py-3 rounded-xl text-[9px] font-black uppercase">Liberar</button>`}</div>`;
-                container.appendChild(div);
-            });
-        }
-
         window.checkin = async (id) => await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
+        
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase().trim();
             if (b.length > 0) {
@@ -281,9 +322,11 @@
                 render(clientesCache.filter(c => termos.every(t => `${c.nome.toUpperCase()} ${c.cpf} ${c.tel}`.includes(t))), true);
             } else { render(clientesCache, false); }
         };
+
         function atualizarContadores() { 
-            const agora = new Date(); const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
-            document.getElementById('contagemEvento').innerText = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
+            const corte = getLimiteTurno();
+            const total = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
+            document.getElementById('contagemEvento').innerText = total;
         }
     </script>
 </body>
