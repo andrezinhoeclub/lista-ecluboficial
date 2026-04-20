@@ -3,437 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB MASTER | Command Center</title>
+    <title>Club Manager Pro | Painel Administrativo</title>
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e4e4e7; }
-        .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; }
-        .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
-        .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
-        .btn-menu.active-danger { background: #ef4444; color: #fff; font-weight: 800; border-color: #f87171; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
-        .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
-        .scroll-x::-webkit-scrollbar { height: 6px; }
-        .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
-        .event-bubble { flex: 0 0 auto; width: 280px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
-        input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
-        .mini-capa { width: 100%; height: 80px; object-fit: cover; border-bottom: 1px solid #1a1a1c; opacity: 0.6; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #334155; margin: 0; }
+        
+        /* Sidebar Estilo SaaS Moderno */
+        .sidebar { background: #1e293b; border-right: 1px solid #e2e8f0; transition: 0.3s; }
+        .nav-link { 
+            color: #94a3b8; transition: 0.2s; cursor: pointer; display: flex; 
+            align-items: center; gap: 12px; padding: 14px 20px; border-radius: 12px; 
+            font-weight: 600; font-size: 13px; 
+        }
+        .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+        .nav-link.active { border-left: 4px solid #3b82f6; }
+
+        /* Dashboard Cards */
+        .module-card { 
+            background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; 
+            padding: 30px; transition: 0.3s; text-align: center; cursor: pointer; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+        }
+        .module-card:hover { transform: translateY(-4px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .icon-box { 
+            width: 56px; height: 56px; margin: 0 auto 15px; display: flex; 
+            align-items: center; justify-content: center; font-size: 24px; 
+            border-radius: 16px; background: #f1f5f9; color: #3b82f6; 
+        }
+
+        /* Tabelas Clean */
+        .glass-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .admin-table th { background: #f8fafc; padding: 16px 24px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        .admin-table td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+
+        /* Calendário SaaS */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; }
+        .calendar-day { min-height: 100px; border: 0.5px solid #f1f5f9; padding: 10px; }
+        .day-header { background: #f1f5f9; padding: 12px; text-align: center; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+        .event-tag { background: #334155; color: #fff; font-size: 8px; padding: 3px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Inputs e Botões */
+        .admin-input { background: #fff !important; border: 1px solid #e2e8f0 !important; color: #1e293b !important; outline: none; transition: 0.3s; }
+        .admin-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+        .btn-primary { background: #2563eb; color: #fff; font-weight: 800; padding: 12px 24px; border-radius: 12px; font-size: 12px; transition: 0.3s; }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+
+        .modal-overlay { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="flex min-h-screen">
 
-    <div class="max-w-7xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
-            <div class="flex items-center gap-4">
-                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 w-auto">
-                <div>
-                    <h1 class="text-2xl font-black uppercase italic tracking-tighter text-yellow-500 leading-none">Command Center</h1>
-                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 italic text-white">E-CLUB MANAGEMENT</p>
-                </div>
-            </div>
-            <nav class="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 overflow-x-auto">
-                <button onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu active px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Relatórios</button>
-                <button onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Eventos</button>
-                <button onclick="trocarAba('aba-equipe', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Equipe</button>
-                <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-purple-400">Listas</button>
-                <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
-            </nav>
-        </header>
+    <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50">
+        <div class="mb-10 px-4 flex flex-col items-center">
+            <img id="club-logo" src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mb-2 object-contain">
+            <p id="club-name" class="text-[10px] font-extrabold uppercase tracking-widest text-blue-400 italic">ADMIN CENTRAL</p>
+        </div>
+        <nav class="space-y-1 flex-grow">
+            <div onclick="showSection('dash')" id="link-dash" class="nav-link active"><span>🏠</span> Dashboard</div>
+            <div onclick="showSection('usuarios')" id="link-usuarios" class="nav-link"><span>👥</span> Equipe</div>
+            <div onclick="showSection('eventos')" id="link-eventos" class="nav-link"><span>📅</span> Eventos</div>
+            <div onclick="showSection('listas')" id="link-listas" class="nav-link"><span>📝</span> Config. Listas</div>
+            <div onclick="showSection('espacos')" id="link-espacos" class="nav-link"><span>🛋️</span> Espaços</div>
+            <div onclick="showSection('relatorios')" id="link-relatorios" class="nav-link"><span>📈</span> Relatórios</div>
+            <div onclick="showSection('carteira')" id="link-carteira" class="nav-link"><span>💰</span> Carteira</div>
+        </nav>
+        <div class="pt-6 border-t border-slate-700">
+            <div class="nav-link text-red-400 hover:text-red-300"><span>🚪</span> Sair</div>
+        </div>
+    </aside>
 
-        <section id="aba-relatorios" class="space-y-8">
-            <div class="glass-card p-8">
-                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance por Evento</h2>
-                <div id="container-bolhas" class="scroll-x"></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <div class="glass-card p-8 border-t-4 border-t-yellow-500 text-center text-white">
-                    <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest">🏆 Pódio de Reservas</h2>
-                    <div id="lista-ranking-reservas" class="space-y-4 text-left"></div>
-                </div>
-                <div class="glass-card p-8 border-t-4 border-t-green-500 text-center text-white">
-                    <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest">🔥 Pódio de Check-ins</h2>
-                    <div id="lista-ranking-checkins" class="space-y-4 text-left"></div>
-                </div>
-                <div class="flex flex-col gap-8">
-                    <div class="glass-card p-8 border-t-4 border-t-blue-600">
-                        <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Relatório Rápido</h2>
-                        <select id="filtro-promoter-excel" class="w-full p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white" onchange="gerarListaCheckins()"></select>
-                        <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[11px] font-mono text-zinc-400 mb-4" placeholder="Dados para exportação..."></textarea>
-                        <button onclick="copiarOutput()" class="w-full bg-zinc-800 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all mb-2">Copiar Lista</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="aba-festas" class="hidden space-y-8 text-white">
-            <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Configurar Evento</h2>
-                <form id="formEvento" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <input type="hidden" id="edit_evento_id">
-                    <input type="text" id="nome_festa" placeholder="Nome do Evento" class="p-4 rounded-2xl font-bold md:col-span-3 text-white" required>
-                    <input type="date" id="data_festa" class="p-4 rounded-2xl font-bold uppercase text-xs text-white" required>
-                    <input type="text" id="valor_casal" placeholder="Casal R$" class="p-4 rounded-2xl font-bold text-white">
-                    <input type="text" id="valor_solteiro" placeholder="Solteiro R$" class="p-4 rounded-2xl font-bold text-white">
-                    <input type="text" id="desc_casal" placeholder="Casal Aniv R$" class="p-4 rounded-2xl font-bold text-purple-400">
-                    <input type="text" id="desc_solteiro" placeholder="Solteiro Aniv R$" class="p-4 rounded-2xl font-bold text-purple-400">
-                    <input type="url" id="url_banner" placeholder="URL da Capa" class="md:col-span-4 p-4 rounded-2xl font-bold text-white">
-                    <button type="submit" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento</button>
-                </form>
-            </div>
-            <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </section>
-
-        <section id="aba-equipe" class="hidden space-y-12 text-white">
-            <div class="glass-card p-8 border-l-4 border-l-yellow-500">
-                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Gestão de Promoters</h2>
-                <form id="formPromoter" class="flex flex-col md:flex-row gap-3 mb-10 text-white">
-                    <input type="text" id="nome_promoter" placeholder="NOME DO PROMOTER" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
-                    <select id="tipo_promoter" class="p-4 rounded-2xl font-bold text-xs text-white">
-                        <option value="padrao">LISTA PADRÃO</option>
-                        <option value="aniversario">LISTA ANIVERSÁRIO (VIP)</option>
-                        <option value="visualizar">APENAS VISUALIZAR</option>
-                    </select>
-                    <button type="submit" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black transition-all hover:bg-yellow-500 text-white">Adicionar</button>
-                </form>
-                <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </div>
-            <div class="glass-card p-8 border-l-4 border-l-green-500">
-                <h2 class="text-green-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Gestão de Portaria</h2>
-                <form id="formPortaria" class="flex flex-col md:flex-row gap-3 mb-10 text-white">
-                    <input type="text" id="login_portaria" placeholder="NOME DO OPERADOR" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
-                    <button type="submit" class="bg-green-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-green-500 transition-all text-white">Cadastrar</button>
-                </form>
-                <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-white"></div>
-            </div>
-        </section>
-
-        <section id="aba-aniversarios" class="hidden space-y-8 text-white">
-            <div class="glass-card p-8 border-l-4 border-l-purple-500">
-                <h2 class="text-purple-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Listas de Aniversariantes</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5">
-                                <th class="pb-4 pl-4">Data</th>
-                                <th class="pb-4">Promoter</th>
-                                <th class="pb-4">Aniversariante</th>
-                                <th class="pb-4 text-center">Reservas</th>
-                                <th class="pb-4 text-right pr-4">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabela-aniversarios-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <section id="aba-config" class="hidden space-y-8 text-white">
-            <div class="glass-card p-8 border-l-4 border-l-red-500">
-                <h2 class="text-red-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurações do Sistema</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-blue-500/10 border border-blue-500/40 p-8 rounded-3xl text-center flex flex-col justify-between shadow-[0_0_20px_rgba(59,130,246,0.05)]">
-                        <div>
-                            <h3 class="text-blue-400 font-black uppercase tracking-widest text-sm mb-2">Modo Teste (Portaria)</h3>
-                            <p class="text-zinc-400 text-[10px] mb-8 font-bold leading-relaxed">Destrava os horários da portaria temporariamente para você testar a busca. Clique novamente para restaurar as regras.</p>
-                        </div>
-                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] tracking-widest">🔓 LIBERAR TESTE</button>
-                    </div>
-
-                    <div class="bg-red-500/5 border border-red-500/20 p-8 rounded-3xl text-center flex flex-col justify-between">
-                        <div>
-                            <h3 class="text-red-400 font-black uppercase tracking-widest text-sm mb-2">Limpar Clientes</h3>
-                            <p class="text-zinc-500 text-[10px] mb-8 font-bold leading-relaxed">Apaga apenas as reservas cadastradas. Ideal para usar após o fim de semana, preparando a casa para a próxima semana.</p>
-                        </div>
-                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all">Limpar Base</button>
-                    </div>
-
-                    <div class="bg-red-500/10 border border-red-500/40 p-8 rounded-3xl text-center flex flex-col justify-between shadow-[0_0_20px_rgba(239,68,68,0.05)]">
-                        <div>
-                            <h3 class="text-red-500 font-black uppercase tracking-widest text-sm mb-2">Zerar Sistema</h3>
-                            <p class="text-zinc-400 text-[10px] mb-8 font-bold leading-relaxed">Apaga <span class="text-red-400">TODAS as reservas</span>, <span class="text-red-400">TODOS os eventos</span> e <span class="text-red-400">links VIP</span>. Ação drástica e irreversível.</p>
-                        </div>
-                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] tracking-widest">⚠️ ZERAR TUDO</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
-            authDomain: "teste-de-reserva.firebaseapp.com",
-            projectId: "teste-de-reserva",
-            storageBucket: "teste-de-reserva.firebasestorage.app",
-            messagingSenderId: "163395694876",
-            appId: "1:163395694876:web:8b1116a0483af951548ad9"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    <main class="flex-grow lg:ml-64 p-6 lg:p-12">
         
-        let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = [];
-        let modoTesteAtivo = false;
+        <section id="section-dash" class="space-y-10">
+            <header>
+                <h2 class="text-3xl font-extrabold tracking-tight text-slate-800 italic">Central de Comando</h2>
+                <p class="text-slate-400 font-bold text-xs mt-1 uppercase tracking-widest">Gestão: <span id="dash-club-title" class="text-blue-600">---</span></p>
+            </header>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div onclick="showSection('usuarios')" class="module-card"><div class="icon-box">👥</div><p class="text-xs font-extrabold uppercase text-slate-600">Equipe</p></div>
+                <div onclick="showSection('eventos')" class="module-card"><div class="icon-box">📅</div><p class="text-xs font-extrabold uppercase text-slate-600">Calendário</p></div>
+                <div onclick="showSection('listas')" class="module-card"><div class="icon-box">📝</div><p class="text-xs font-extrabold uppercase text-slate-600">Regras Listas</p></div>
+                <div onclick="showSection('relatorios')" class="module-card"><div class="icon-box">📈</div><p class="text-xs font-extrabold uppercase text-slate-600">Relatórios</p></div>
+                <div onclick="showSection('espacos')" class="module-card"><div class="icon-box">🛋️</div><p class="text-xs font-extrabold uppercase text-slate-600">Espaços</p></div>
+                <div onclick="showSection('carteira')" class="module-card"><div class="icon-box">💰</div><p class="text-xs font-extrabold uppercase text-slate-600">Carteira</p></div>
+            </div>
+        </section>
 
-        window.trocarAba = (id, btn, type) => { 
-            document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
-            document.querySelectorAll('.btn-menu').forEach(x => {
-                x.classList.remove('active');
-                x.classList.remove('active-danger');
-            }); 
-            document.getElementById(id).classList.remove('hidden'); 
-            
-            if (type === 'danger') {
-                btn.classList.add('active-danger');
-            } else {
-                btn.classList.add('active'); 
-            }
-        };
+        <section id="section-usuarios" class="hidden space-y-8">
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Gestão de Equipe</h2><button onclick="openModal('modalPromoter')" class="btn-primary">+ ADICIONAR PROMOTER</button></div>
+            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Promoter</th><th>Acesso</th><th class="text-right">Ações</th></tr></thead><tbody id="tabela-promoters"></tbody></table></div>
+        </section>
 
-        onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
-            const btn = document.getElementById('btnModoTeste');
-            if (snap.exists()) {
-                modoTesteAtivo = snap.data().modo_teste === true;
-            } else {
-                modoTesteAtivo = false;
-            }
-            
-            if (btn) {
-                if (modoTesteAtivo) {
-                    btn.innerHTML = "🛑 FINALIZAR TESTE (BLOQUEAR)";
-                    btn.className = "w-full bg-red-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-red-700 transition-all shadow-[0_0_20px_rgba(220,38,38,0.3)] tracking-widest";
-                } else {
-                    btn.innerHTML = "🔓 LIBERAR TESTE NA PORTARIA";
-                    btn.className = "w-full bg-blue-600 text-white text-[11px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] tracking-widest";
-                }
-            }
-        });
+        <section id="section-eventos" class="hidden space-y-8">
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Calendário de Eventos</h2><button onclick="openModal('modalEvento')" class="btn-primary">+ NOVO EVENTO</button></div>
+            <div class="calendar-grid"><div class="day-header">Dom</div><div class="day-header">Seg</div><div class="day-header">Ter</div><div class="day-header">Qua</div><div class="day-header">Qui</div><div class="day-header">Sex</div><div class="day-header">Sáb</div><div id="calendar-body" class="contents"></div></div>
+        </section>
 
-        window.toggleModoTeste = async () => {
-            try {
-                await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true });
-            } catch (e) {
-                alert("Erro ao alterar o modo de teste!");
-            }
-        };
+        <section id="section-listas" class="hidden space-y-8">
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Regras de Listas</h2><button onclick="openModal('modalLista')" class="btn-primary">+ NOVA REGRA</button></div>
+            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Nome da Lista</th><th>Obrigatoriedade</th><th>Gêneros</th><th>Status</th></tr></thead><tbody id="tabela-regras"></tbody></table></div>
+        </section>
 
-        onSnapshot(collection(db, "lista_eventos"), snap => { 
-            dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderizarRelatorios();
-            renderizarAniversarios();
-        });
+    </main>
 
-        onSnapshot(collection(db, "eventos"), snap => { 
-            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderizarRelatorios();
-            renderizarGridConfig();
-            renderizarAniversarios();
-        });
-
-        onSnapshot(collection(db, "promoters"), snap => { 
-            dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
-            renderizarEquipe();
-            document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Promoter</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
-        });
-
-        onSnapshot(collection(db, "configuracoes"), snap => {
-            const cont = document.getElementById('lista-portaria');
-            if(cont) cont.innerHTML = snap.docs.map(d => {
-                const l = d.data();
-                if (d.id === 'sistema') return ''; 
-                return `<div class="glass-card p-6 border-l-4 border-l-green-500 flex justify-between items-center mb-2"><div><p class="text-xs font-black uppercase text-white">${l.login || d.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${l.senha || '---'}</p></div><button onclick="removerItem('configuracoes', '${d.id}')" class="text-red-500 font-black">✕</button></div>`;
-            }).join('');
-        });
-
-        onSnapshot(collection(db, "links_aniversario"), snap => {
-            dadosAniv = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderizarAniversarios();
-        });
-
-        window.limparBaseDeDados = async () => {
-            if (!confirm("Isso apagará TODOS os clientes cadastrados em todas as listas. Deseja continuar?")) return;
-            try {
-                const querySnapshot = await getDocs(collection(db, "lista_eventos"));
-                const batch = writeBatch(db);
-                querySnapshot.forEach((docSnap) => batch.delete(docSnap.ref));
-                await batch.commit();
-                alert("Base de clientes limpa com sucesso! Pronto para a próxima semana.");
-            } catch (error) { alert("Erro ao limpar dados!"); }
-        };
-
-        window.zerarSistemaCompleto = async () => {
-            if (!confirm("⚠️ PERIGO: Isso apagará TODOS os clientes, TODOS os eventos e TODOS os links de aniversário! Tem certeza?")) return;
-            if (!confirm("⚠️ CONFIRMAÇÃO FINAL: O sistema ficará completamente vazio. Esta ação é irreversível. Deseja continuar?")) return;
-            try {
-                const b1 = writeBatch(db);
-                const q1 = await getDocs(collection(db, "lista_eventos"));
-                q1.forEach(d => b1.delete(d.ref));
-                await b1.commit();
-
-                const b2 = writeBatch(db);
-                const q2 = await getDocs(collection(db, "eventos"));
-                q2.forEach(d => b2.delete(d.ref));
-                await b2.commit();
-
-                const b3 = writeBatch(db);
-                const q3 = await getDocs(collection(db, "links_aniversario"));
-                q3.forEach(d => b3.delete(d.ref));
-                await b3.commit();
-
-                alert("SISTEMA ZERADO COM SUCESSO!");
-                location.reload();
-            } catch (error) { alert("Erro ao zerar o sistema!"); }
-        };
-
-        function renderizarRelatorios() {
-            const container = document.getElementById('container-bolhas');
-            if(!container) return;
-            const ativos = dadosEventos.filter(e => e.ativo).sort((a,b) => new Date(a.data) - new Date(b.data));
-
-            container.innerHTML = ativos.map(ev => {
-                const res = dadosReservas.filter(r => r.evento === ev.nome).length;
-                const chk = dadosReservas.filter(r => r.evento === ev.nome && r.entrou).length;
-                return `<div class="event-bubble p-6"><p class="text-[9px] font-black text-yellow-500 uppercase mb-1 italic">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-sm font-black uppercase text-white mb-6 h-10 overflow-hidden leading-tight">${ev.nome}</h4><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-lg font-black text-white">${res}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Entrou</p><p class="text-lg font-black text-green-500">${chk}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Conv.</p><p class="text-lg font-black text-blue-500">${res > 0 ? Math.round((chk/res)*100) : 0}%</p></div></div></div>`;
-            }).join('');
-
-            const stats = {};
-            dadosReservas.forEach(r => {
-                const p = (r.promoter || 'DIRETO').toUpperCase();
-                if(!stats[p]) stats[p] = { res: 0, chk: 0 };
-                stats[p].res++; if(r.entrou) stats[p].chk++;
-            });
-            const medals = ['🥇', '🥈', '🥉'];
-            document.getElementById('lista-ranking-reservas').innerHTML = Object.entries(stats).sort((a,b) => b[1].res - a[1].res).slice(0,5).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center mb-2"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.res}</p></div>`).join('');
-            document.getElementById('lista-ranking-checkins').innerHTML = Object.entries(stats).sort((a,b) => b[1].chk - a[1].chk).slice(0,5).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 mb-2"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.chk}</p></div>`).join('');
-        }
-
-        function renderizarGridConfig() {
-            const grid = document.getElementById('grid-eventos-config');
-            const ordenada = [...dadosEventos].sort((a,b) => new Date(a.data) - new Date(b.data));
-            grid.innerHTML = ordenada.map(ev => `
-                <div class="glass-card overflow-hidden border border-white/5 p-5">
-                    <img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4">
-                    <div class="flex justify-between mb-2">
-                        <p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p>
-                        <span class="${ev.ativo ? 'text-green-500' : 'text-red-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span>
+    <div id="modalEvento" class="hidden fixed inset-0 z-[999] modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-extrabold text-slate-800 mb-8 uppercase italic tracking-tighter">Configurar Novo Evento</h3>
+            <form id="formEvento" class="space-y-6">
+                <div>
+                    <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Nome da Festa</label>
+                    <input type="text" id="ev-nome" placeholder="EX: NOITE DA NOSTALGIA" class="w-full admin-input p-5 rounded-2xl font-bold uppercase text-xs" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Data</label>
+                        <input type="date" id="ev-data" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
                     </div>
-                    <h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4>
-                    <div class="flex justify-between">
-                        <button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase">Editar</button>
-                        <button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase">Excluir</button>
+                    <div>
+                        <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Hora de Início</label>
+                        <input type="time" id="ev-hora" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
                     </div>
-                </div>`).join('');
-        }
-
-        function renderizarEquipe() {
-            document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => {
-                let tipoLabel = 'LISTA PADRÃO';
-                let corBorda = 'border-l-yellow-500';
-                
-                if (p.tipo === 'aniversario') {
-                    tipoLabel = 'LISTA ANIVERSÁRIO (VIP)';
-                } else if (p.tipo === 'visualizar') {
-                    tipoLabel = 'APENAS VISUALIZAR';
-                    corBorda = 'border-l-blue-500';
-                }
-
-                const senhaVisivel = p.senha ? p.senha : 'NÃO CADASTRADA';
-                return `
-                <div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 ${corBorda}">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p>
-                            <p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${senhaVisivel}</p>
-                            <p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tipoLabel}</p>
-                        </div>
-                        <div class="flex gap-4">
-                            <button onclick="editarPromoter('${p.id}', '${p.tipo}', '${p.senha || ''}')" class="text-blue-400 text-[10px] font-black uppercase hover:text-blue-300">Editar</button>
-                            <button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase hover:text-red-400">✕</button>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        function renderizarAniversarios() {
-            const tbody = document.getElementById('tabela-aniversarios-body');
-            tbody.innerHTML = dadosAniv.map(link => {
-                const ev = dadosEventos.find(e => e.nome === link.festa);
-                const data = ev ? ev.data.split('-').reverse().join('/') : '---';
-                const qtd = dadosReservas.filter(r => r.evento === link.festa && (r.aniversariante === link.aniversariante || r.nome_aniversariante === link.aniversariante)).length;
-                return `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4">${data}</td><td class="py-4 uppercase">${link.promoter}</td><td class="py-4 font-black text-purple-400 uppercase">${link.aniversariante}</td><td class="py-4 text-center font-black text-white">${qtd}</td><td class="py-4 text-right pr-4"><button onclick="removerItem('links_aniversario', '${link.id}')" class="text-red-500">Remover</button></td></tr>`;
-            }).join('');
-        }
-
-        window.prepararEdicaoEvento = (id) => {
-            const ev = dadosEventos.find(e => e.id === id);
-            document.getElementById('edit_evento_id').value = ev.id;
-            document.getElementById('nome_festa').value = ev.nome;
-            document.getElementById('data_festa').value = ev.data;
-            document.getElementById('valor_casal').value = ev.valor_casal || "";
-            document.getElementById('valor_solteiro').value = ev.valor_solteiro || "";
-            document.getElementById('desc_casal').value = ev.desc_casal || "";
-            document.getElementById('desc_solteiro').value = ev.desc_solteiro || "";
-            document.getElementById('url_banner').value = ev.imagem || "";
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
-
-        window.editarPromoter = async (id, tipoAtual, senhaAtual) => {
-            const op = prompt(`⚙️ EDITAR PROMOTER: ${id.toUpperCase()}\n\n1 - LISTA PADRÃO\n2 - LISTA ANIVERSÁRIO\n3 - APENAS VISUALIZAR\n4 - ALTERAR SENHA\n\nDigite a opção desejada (1, 2, 3 ou 4):`);
-            
-            if (!op) return;
-            
-            let updates = {};
-
-            if (op === '1') updates.tipo = 'padrao';
-            if (op === '2') updates.tipo = 'aniversario';
-            if (op === '3') updates.tipo = 'visualizar';
-            if (op === '4') {
-                const novaSenha = prompt("Digite a NOVA SENHA para " + id.toUpperCase() + ":");
-                if (novaSenha !== null) updates.senha = novaSenha.trim();
-            }
-
-            if (Object.keys(updates).length > 0) {
-                await updateDoc(doc(db, "promoters", id), updates);
-            }
-        };
-
-        document.getElementById('formEvento').addEventListener('submit', async e => {
-            e.preventDefault(); const id = document.getElementById('edit_evento_id').value;
-            const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, imagem: document.getElementById('url_banner').value, ativo: true };
-            if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
-            e.target.reset(); document.getElementById('edit_evento_id').value = "";
-        });
-
-        document.getElementById('formPromoter').addEventListener('submit', async e => {
-            e.preventDefault(); const n = document.getElementById('nome_promoter').value.trim(); const t = document.getElementById('tipo_promoter').value;
-            await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true });
-            e.target.reset();
-        });
-
-        document.getElementById('formPortaria').addEventListener('submit', async e => {
-            e.preventDefault(); const login = document.getElementById('login_portaria').value.trim().toLowerCase();
-            await setDoc(doc(db, "configuracoes", login), { login: login, senha: "" }, { merge: true });
-            e.target.reset();
-        });
-
-        window.removerItem = async (c, i) => { if(confirm("Apagar?")) await deleteDoc(doc(db, c, i)); };
-
-        window.gerarListaCheckins = () => {
-            const p = document.getElementById('filtro-promoter-excel').value;
-            if(!p) return;
-            const lista = dadosReservas.filter(r => (r.promoter || '').toUpperCase() === p && r.entrou);
-            let t = "NOME\tTELEFONE\n";
-            lista.forEach(r => t += `${r.nome}\t${r.tel || r.telefone || '---'}\n`);
-            document.getElementById('output-excel').value = t;
-        };
-
-        window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado!"); };
-    </script>
-</body>
-</html>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Banner (Importar Imagem)</label>
+                    <input type="file" id="ev-file" accept="image/*" class="hidden" onchange="document.getElementById('lb-ev').innerText = this.files[0].name">
+                    <label for="ev-file" class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all text-slate-400">
+                        <span class="text-2xl mb-2">📸</span>
+                        <span id="lb-ev" class="text-[10px] font-extrabold uppercase">Escolher do dispositivo</span>
+                    </label>
+                </div>
+                <div>
+                    <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Informações Adicionais</label>
+                    <textarea id="ev-info" placeholder="ATRAÇÕES, REGRAS OU DETALHES..." class="w-full admin-input p-5 rounded-2xl font-bold text-[10px] h-24 uppercase resize-none"></textarea>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" id="btnSalvarEvento" class="flex-grow bg-blue-600 text-white py-5 rounded-2xl font-extrabold uppercase text-xs shadow-lg">Salvar Evento</button>
+                    <button type="button" onclick="closeModal('modalEvento')" class="px-6 text-slate-400 font-extrabold uppercase text-[10px]">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
