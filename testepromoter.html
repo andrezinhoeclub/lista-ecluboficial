@@ -25,7 +25,7 @@
             <div id="fluxo-login">
                 <input type="text" id="usuario" placeholder="DIGITE SEU USUÁRIO" class="w-full p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-4">
                 <div id="campo-senha" class="hidden">
-                    <input type="password" id="senha" placeholder="DIGITE SUA SENHA" class="w-full p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-4 border-white/20">
+                    <input type="password" id="senha" placeholder="AGUARDE..." class="w-full p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-4">
                 </div>
                 <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all">CONTINUAR</button>
             </div>
@@ -54,7 +54,7 @@
 
         <div id="navAcoes" class="fixed bottom-0 left-0 w-full p-6 bg-black/90 backdrop-blur-xl border-t border-white/5 z-40">
             <div class="max-w-md mx-auto flex gap-3">
-                <div class="flex-grow flex gap-2">
+                <div id="areaLinkGeral" class="flex-grow flex gap-2">
                     <button onclick="abrirLinkGeral()" class="flex-grow gold-gradient text-black font-black py-5 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">ABRIR MEU LINK</button>
                     <button onclick="copiarLinkGeral()" class="gold-gradient text-black font-black px-5 rounded-2xl shadow-xl active:scale-95 transition-all text-lg">📋</button>
                 </div>
@@ -106,13 +106,13 @@
                         logado = u;
                         statsPromoter = snap.data();
                         
-                        // --- LÓGICA DA SENHA (CADASTRE VS DIGITE) ---
+                        // LÓGICA DE PRIMEIRO ACESSO (O QUE VOCÊ PEDIU)
                         if (!statsPromoter.senha || statsPromoter.senha === "") {
                             inputSenha.placeholder = "CADASTRE SUA SENHA";
-                            inputSenha.style.borderColor = "#a855f7"; // Brilho roxo para avisar que é novo
+                            inputSenha.style.border = "1px solid #a855f7"; // Borda roxa para destacar
                         } else {
                             inputSenha.placeholder = "DIGITE SUA SENHA";
-                            inputSenha.style.borderColor = "#333";
+                            inputSenha.style.border = "1px solid #333";
                         }
 
                         document.getElementById('campo-senha').classList.remove('hidden');
@@ -124,7 +124,6 @@
                     }
                 } catch (e) { btn.innerText = "CONTINUAR"; }
             } else {
-                // Valida a senha
                 if (statsPromoter.senha === s || !statsPromoter.senha) {
                     if (!statsPromoter.senha) await updateDoc(doc(db, "promoters", logado), { senha: s });
                     document.getElementById('telaLogin').style.display = 'none';
@@ -136,15 +135,11 @@
         };
 
         function iniciarSistema() {
-            // --- TRAVA DE VISUALIZAÇÃO (BOTÕES SUMIREM) ---
-            const nav = document.getElementById('navAcoes');
+            // TRAVA DE VISUALIZAÇÃO: Se for 'visualizar', apaga todos os botões de ação
             if (statsPromoter.tipo === "visualizar") {
-                nav.style.display = 'none'; // Some com os botões de link
-            } else {
-                nav.style.display = 'block'; // Garante que apareça para os outros
+                document.getElementById('navAcoes').classList.add('hidden');
             }
 
-            // Se for aniversário, mostra a seção e o botão extra
             if (statsPromoter.tipo === "aniversario") {
                 document.getElementById('secaoAniversario').classList.remove('hidden');
                 document.getElementById('btnCriarLink').classList.remove('hidden');
@@ -169,9 +164,9 @@
             const cont = document.getElementById('listaAniversarios');
             if(!cont) return;
             cont.innerHTML = links.map(l => {
-                const count = reservas.filter(r => (r.evento || '').toLowerCase() === (l.festa || '').toLowerCase() && (r.aniversariante || '').toLowerCase() === (l.aniversariante || '').toLowerCase()).length;
+                const count = reservas.filter(r => (r.evento || '').toLowerCase().trim() === (l.festa || '').toLowerCase().trim() && (r.aniversariante || '').toLowerCase().trim() === (l.aniversariante || '').toLowerCase().trim()).length;
                 return `<div class="glass p-5 rounded-[2rem] flex justify-between items-center border-l-4 border-purple-500 mb-4">
-                    <div class="text-left"><p class="text-[11px] font-black uppercase">${l.aniversariante}</p><p class="text-[8px] text-zinc-500 font-bold">${l.festa}</p></div>
+                    <div class="text-left"><p class="text-[11px] font-black uppercase italic">${l.aniversariante}</p><p class="text-[8px] text-zinc-500 font-bold">${l.festa}</p></div>
                     <div class="flex items-center gap-4"><div class="text-right"><p class="text-lg font-black">${count}</p></div>
                     <button onclick="copyAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-4 py-2 rounded-xl text-[9px] font-black uppercase">Copiar</button></div>
                 </div>`;
@@ -180,11 +175,11 @@
 
         function renderPerformance() {
             document.getElementById('listaPerformance').innerHTML = eventos.map(ev => {
-                const ind = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase() === logado).length;
+                const ind = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase().trim() === logado).length;
                 const ger = reservas.filter(r => r.evento === ev.nome).length;
                 return `<div class="glass p-6 rounded-[2.5rem] border-l-4 border-sky-500 flex justify-between items-center mb-4">
-                    <div class="text-left"><h4 class="text-[13px] font-black uppercase italic">${ev.nome}</h4><p class="text-[9px] text-zinc-500 font-bold">${ev.data.split('-').reverse().join('/')}</p></div>
-                    <div class="flex gap-5"><div><p class="text-2xl font-black text-sky-400">${ind}</p><p class="text-[7px] text-sky-500 font-black">MINHAS</p></div>
+                    <div class="text-left text-white"><h4 class="text-[13px] font-black uppercase italic">${ev.nome}</h4><p class="text-[9px] text-zinc-500 font-bold">${ev.data.split('-').reverse().join('/')}</p></div>
+                    <div class="flex gap-5 text-right"><div><p class="text-2xl font-black text-sky-400">${ind}</p><p class="text-[7px] text-sky-500 font-black">MINHAS</p></div>
                     <div class="border-l border-white/5 pl-5"><p class="text-2xl font-black text-white">${ger}</p><p class="text-[7px] text-zinc-600 font-black">GERAL</p></div></div>
                 </div>`;
             }).join('');
@@ -192,7 +187,7 @@
 
         window.abrirLinkGeral = () => { window.open(window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?ref=' + logado, '_blank'); };
         window.copiarLinkGeral = () => { const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?ref=' + logado; navigator.clipboard.writeText(url).then(() => alert("Copiado!")); };
-        window.copyAniv = (id, n) => { const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?id=' + id; navigator.clipboard.writeText(`*Convite VIP: Aniversário de ${n}* 🎂\n${url}`).then(() => alert("Copiado!")); };
+        window.copyAniv = (id, n) => { const url = window.location.origin + window.location.pathname.replace('promoter.html', 'listas.html') + '?id=' + id; navigator.clipboard.writeText(`*Aniversário de ${n}* 🎂\n${url}`).then(() => alert("Copiado!")); };
         window.abrirModalAniv = () => { document.getElementById('selEvento').innerHTML = eventos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join(''); document.getElementById('modalAniv').classList.remove('hidden'); };
         window.fecharModalAniv = () => { document.getElementById('modalAniv').classList.add('hidden'); };
         window.criarLinkAniv = async () => {
