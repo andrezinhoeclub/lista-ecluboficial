@@ -18,6 +18,7 @@
         }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .btn-lista { background: #eab308; color: #000; font-weight: 900; }
+        .btn-lista:disabled { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; }
         .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; transition: 0.3s; }
         .site-input:disabled { opacity: 0.3; cursor: not-allowed; }
         .banner-img { width: 100%; height: auto; display: block; opacity: 1; }
@@ -65,7 +66,7 @@
                 <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white" disabled>
                 <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white" disabled>
                 
-                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95 disabled:opacity-20 disabled:grayscale" disabled>Confirmar Presença ✨</button>
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95" disabled>Confirmar Presença ✨</button>
             </div>
 
             <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic">Voltar</button>
@@ -92,6 +93,8 @@
         const refPromoter = params.get('p') || params.get('ref') || "direto";
 
         let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null;
+
+        const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
 
         async function carregarPagina() {
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
@@ -120,14 +123,21 @@
 
         window.iniciarFluxo = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
-            tipoAtivo = null;
-            document.getElementById('v-modal-casal').innerText = eventoAtivo.valor_casal || "PORTARIA";
-            document.getElementById('v-modal-solteiro').innerText = eventoAtivo.valor_solteiro || "PORTARIA";
+            tipoAtivo = null; 
+            
+            document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.valor_casal);
+            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.valor_solteiro);
+            
             document.getElementById('btn-casal').classList.remove('active');
             document.getElementById('btn-solteiro').classList.remove('active');
+            
+            // Trava campos
             document.getElementById('nome-cliente').disabled = true;
             document.getElementById('tel-cliente').disabled = true;
             document.getElementById('btn-final-acao').disabled = true;
+            document.getElementById('nome-cliente').value = "";
+            document.getElementById('tel-cliente').value = "";
+
             document.getElementById('modalForm').classList.remove('hidden');
         };
 
@@ -135,6 +145,8 @@
             tipoAtivo = tipo;
             document.getElementById('btn-casal').classList.toggle('active', tipo === 'CASAL');
             document.getElementById('btn-solteiro').classList.toggle('active', tipo === 'SOLTEIRO');
+            
+            // Desbloqueia campos
             document.getElementById('nome-cliente').disabled = false;
             document.getElementById('tel-cliente').disabled = false;
             document.getElementById('btn-final-acao').disabled = false;
@@ -143,57 +155,47 @@
         window.processarFinalizacao = async () => {
             const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
             const t = document.getElementById('tel-cliente').value.trim();
-            const tLimpo = t.replace(/\D/g, ""); // APENAS NÚMEROS DIGITADOS
+            const tLimpo = t.replace(/\D/g, "");
 
-            if (!n || tLimpo.length < 10) return alert("Preencha os dados corretamente!");
-
+            if (!n || tLimpo.length < 10) return alert("Preencha Nome e Telefone corretamente!");
+            
             const btn = document.getElementById('btn-final-acao');
+            const originalText = btn.innerText;
             btn.innerText = "VERIFICANDO..."; btn.disabled = true;
 
             try {
-                // --- BUSCA TUDO DESSE EVENTO ---
+                // --- TRAVA DE DUPLICIDADE BLINDADA ---
                 const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
                 const snap = await getDocs(q);
                 
-                // --- COMPARAÇÃO BLINDADA (Ignora máscaras no banco e no input) ---
                 let jaExiste = false;
-                let donoDaReserva = "";
+                let donoDaReserva = "Link Oficial";
 
                 snap.forEach(docSnap => {
                     const dados = docSnap.data();
-                    const telNoBancoLimpo = dados.tel.replace(/\D/g, "");
-                    
-                    if (telNoBancoLimpo === tLimpo) {
+                    if (dados.tel.replace(/\D/g, "") === tLimpo) {
                         jaExiste = true;
-                        donoDaReserva = dados.promoter;
+                        donoDaReserva = dados.promoter && dados.promoter !== "direto" ? `Promoter ${dados.promoter.toUpperCase()}` : "Link Oficial";
                     }
                 });
 
                 if (jaExiste) {
-                    const origem = (donoDaReserva === "direto" || donoDaReserva === "DIRETO") ? "Link Oficial da Casa" : `Promoter ${donoDaReserva.toUpperCase()}`;
-                    alert(`🚨 ESTE NÚMERO JÁ ESTÁ CADASTRADO!\nEvento: ${eventoAtivo.nome}\nCadastrado via: ${origem}.\n\nNão é necessário cadastrar novamente.`);
-                    btn.innerText = "Confirmar Presença ✨"; btn.disabled = false;
+                    alert(`🚨 OPS! Este número já está na lista deste evento.\nCadastrado através de: ${donoDaReserva}.\n\nNão é necessário cadastrar novamente.`);
+                    btn.disabled = false; btn.innerText = originalText;
                     return;
                 }
 
-                // SALVA A RESERVA
+                // --- SALVAMENTO ---
                 await addDoc(collection(db, "lista_eventos"), {
-                    nome: n,
-                    tel: t,
-                    evento: eventoAtivo.nome,
-                    tipo_entrada: tipoAtivo,
-                    promoter: refPromoter,
-                    data_reserva: new Date().toISOString(),
-                    entrou: false
+                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
+                    promoter: refPromoter, data_reserva: new Date().toISOString(), entrou: false
                 });
 
                 alert("Confirmado! Seu nome está na lista."); 
                 location.reload();
-
             } catch (e) { 
                 alert("Erro ao processar!"); 
-                btn.disabled = false; 
-                btn.innerText = "Confirmar Presença ✨";
+                btn.disabled = false; btn.innerText = originalText; 
             }
         };
 
