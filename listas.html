@@ -30,7 +30,7 @@
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl relative">
             <h2 class="text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
-            <p class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic">Escolha uma opção para liberar</p>
+            <p class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic">Escolha uma opção para liberar os campos</p>
             <div class="grid grid-cols-2 gap-3 mb-6">
                 <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
                     <span class="text-[10px] font-black uppercase opacity-60">👫 Casal</span>
@@ -102,12 +102,11 @@
             try {
                 const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
                 const snap = await getDocs(q);
-                let duplicado = null;
-                snap.forEach(d => { if (d.data().tel.replace(/\D/g, "") === tLimpo) duplicado = d.data(); });
+                let jaExiste = false;
+                snap.forEach(d => { if (d.data().tel.replace(/\D/g, "") === tLimpo) jaExiste = true; });
 
-                if (duplicado) {
-                    const onde = duplicado.promoter === "direto" ? "Link da Casa" : `Promoter ${duplicado.promoter.toUpperCase()}`;
-                    alert(`🚨 ESTE NÚMERO JÁ ESTÁ NA LISTA!\nEvento: ${eventoAtivo.nome}\nVia: ${onde}`);
+                if (jaExiste) {
+                    alert("🚨 ESTE NÚMERO JÁ ESTÁ NA LISTA DESTE EVENTO!");
                     btn.innerText = "Confirmar Presença ✨"; btn.disabled = false;
                     return;
                 }
