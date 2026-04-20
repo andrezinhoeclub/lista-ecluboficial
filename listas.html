@@ -65,8 +65,23 @@
 
         async function carregarPagina() {
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.data.localeCompare(b.data));
-            document.getElementById('listaEventos').innerHTML = eventosCache.map(ev => `
+            
+            // FILTRO DE DATA: Pega apenas de hoje em diante
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            const hojeStr = hoje.toISOString().split('T')[0];
+
+            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .filter(ev => ev.data >= hojeStr) // Filtra eventos passados
+                .sort((a, b) => a.data.localeCompare(b.data));
+
+            const container = document.getElementById('listaEventos');
+            if (eventosCache.length === 0) {
+                container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic uppercase">Nenhum evento disponível</div>`;
+                return;
+            }
+
+            container.innerHTML = eventosCache.map(ev => `
                 <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
                     <img src="${ev.imagem || ''}" class="banner-img">
                     <div class="p-8 text-center">
