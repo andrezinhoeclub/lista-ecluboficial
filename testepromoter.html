@@ -16,13 +16,16 @@
             overflow-x: hidden;
         }
 
+        /* Card Azul Original */
         .card-evento {
             background: rgba(10, 10, 10, 0.9);
             border: 2px solid #0099ff;
             border-radius: 2.5rem;
             box-shadow: 0 0 25px rgba(0, 153, 255, 0.15);
+            transition: 0.3s;
         }
 
+        /* Botão Dourado Original */
         .btn-gold {
             background: linear-gradient(135deg, #bf8511 0%, #eab308 100%);
             color: #000;
@@ -44,7 +47,7 @@
                 <p class="text-[#0099ff] font-black uppercase text-[10px] tracking-[0.2em] mb-1 italic">E-CLUB OFFICIAL</p>
                 <h1 id="nome-promoter" class="text-5xl font-black italic uppercase tracking-tighter leading-none">---</h1>
             </div>
-            <button onclick="sair()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-6 py-2 rounded-2xl font-black text-[10px] uppercase italic">Sair</button>
+            <button onclick="window.history.back()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-6 py-2 rounded-2xl font-black text-[10px] uppercase italic">Sair</button>
         </header>
 
         <section class="space-y-6">
@@ -62,10 +65,10 @@
     </div>
 
     <footer id="footer-acoes" class="fixed bottom-0 left-0 w-full p-5 flex gap-3 bg-black/90 backdrop-blur-xl border-t border-white/5 hidden">
-        <button id="btn-abrir-link" class="flex-grow btn-gold py-6 rounded-[2rem] text-sm font-black shadow-2xl">
+        <button id="btn-abrir-link" class="flex-grow btn-gold py-6 rounded-[2rem] text-sm font-black">
             ABRIR MEU LINK
         </button>
-        <button id="btn-copiar" class="btn-gold px-8 rounded-[2rem] shadow-2xl flex items-center justify-center">
+        <button id="btn-copiar" class="btn-gold px-8 rounded-[2rem] flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2" />
             </svg>
@@ -88,44 +91,59 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Identifica o promoter (por localStorage ou URL)
-        const userURL = new URLSearchParams(window.location.search).get('user');
-        const loginSalvo = userURL || localStorage.getItem('promoter_login');
+        // Pega o nome do promoter pela URL (?user=nome) ou pelo que estiver salvo
+        const urlParams = new URLSearchParams(window.location.search);
+        let userLogin = urlParams.get('user') || localStorage.getItem('promoter_login');
 
-        if (!loginSalvo) {
-            // Se não houver login, você pode decidir se redireciona ou não
-            console.log("Nenhum login detectado.");
+        if (!userLogin) {
+            document.getElementById('nome-promoter').innerText = "LOGIN NECESSÁRIO";
+        } else {
+            userLogin = userLogin.toLowerCase();
+            localStorage.setItem('promoter_login', userLogin);
+            inicializarPainel(userLogin);
         }
 
-        // --- TRAVA DE STATUS E CARREGAMENTO ---
-        onSnapshot(doc(db, "promoters", loginSalvo.toLowerCase()), (snap) => {
-            if (snap.exists()) {
-                const dados = snap.data();
-                document.getElementById('nome-promoter').innerText = dados.nome;
+        async function inicializarPainel(login) {
+            // Busca os dados do promoter para checar o status
+            onSnapshot(doc(db, "promoters", login), (snap) => {
+                if (snap.exists()) {
+                    const dados = snap.data();
+                    const nomeOficial = dados.nome || login;
+                    document.getElementById('nome-promoter').innerText = nomeOficial.toUpperCase();
 
-                const footer = document.getElementById('footer-acoes');
-                
-                // SE O STATUS FOR VISUALIZAR, MANTÉM O FOOTER ESCONDIDO
-                if (dados.tipo === 'visualizar') {
-                    footer.classList.add('hidden'); 
+                    const footer = document.getElementById('footer-acoes');
+                    
+                    // TRAVA DE STATUS: Se for 'visualizar', não mostra os botões
+                    if (dados.tipo === 'visualizar') {
+                        footer.classList.add('hidden'); 
+                    } else {
+                        footer.classList.remove('hidden');
+                        configurarBotoes(nomeOficial);
+                    }
+
+                    carregarPerformance(nomeOficial);
                 } else {
-                    // SE NÃO FOR, MOSTRA OS BOTÕES
-                    footer.classList.remove('hidden');
-                    configurarLinks(dados);
+                    document.getElementById('nome-promoter').innerText = "NÃO ENCONTRADO";
                 }
-
-                carregarPerformance(dados.nome);
-            }
-        });
+            });
+        }
 
         async function carregarPerformance(nomePromoter) {
             const container = document.getElementById('lista-eventos');
+            
+            // Pega eventos e todas as reservas
             const snapEv = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             const snapRes = await getDocs(collection(db, "lista_eventos"));
             const todasReservas = snapRes.docs.map(d => d.data());
 
+            if (snapEv.empty) {
+                container.innerHTML = '<p class="text-zinc-700 text-center font-bold uppercase italic">Nenhum evento ativo.</p>';
+                return;
+            }
+
             container.innerHTML = snapEv.docs.map(docEv => {
                 const ev = docEv.data();
+                // Filtra as minhas reservas e as da casa toda para esse evento
                 const minhas = todasReservas.filter(r => r.evento === ev.nome && (r.promoter || '').toUpperCase() === nomePromoter.toUpperCase()).length;
                 const totalGeral = todasReservas.filter(r => r.evento === ev.nome).length;
 
@@ -133,9 +151,9 @@
                 <div class="card-evento p-8 flex justify-between items-center">
                     <div class="space-y-1">
                         <h3 class="text-2xl font-black uppercase italic tracking-tighter leading-tight">${ev.nome}</h3>
-                        <p class="text-zinc-500 font-bold text-[10px] uppercase tracking-widest">${ev.data.split('-').reverse().join('/')}</p>
+                        <p class="text-zinc-500 font-bold text-[10px] uppercase">${ev.data.split('-').reverse().join('/')}</p>
                     </div>
-                    <div class="flex gap-8 items-center border-l border-white/5 pl-8">
+                    <div class="flex gap-8 items-center border-l border-white/10 pl-8">
                         <div class="text-center">
                             <p class="text-3xl font-black text-blue-400 leading-none">${minhas}</p>
                             <p class="text-[8px] font-black text-blue-400/50 uppercase tracking-widest mt-2">MINHAS</p>
@@ -149,20 +167,14 @@
             }).join('');
         }
 
-        function configurarLinks(dados) {
-            const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/?p=${dados.nome.toLowerCase()}`;
+        function configurarBotoes(nome) {
+            const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/?p=${nome.toLowerCase().replace(/\s/g, '')}`;
             document.getElementById('btn-abrir-link').onclick = () => window.open(link, '_blank');
             document.getElementById('btn-copiar').onclick = () => {
                 navigator.clipboard.writeText(link);
                 alert("LINK COPIADO!");
             };
         }
-
-        window.sair = () => {
-            localStorage.removeItem('promoter_login');
-            location.reload();
-        };
-
     </script>
 </body>
 </html>
