@@ -3,88 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB | Area do Promoter</title>
+    <title>E-CLUB MASTER | Command Center</title>
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow-x: hidden; }
         
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #000; 
-            color: #fff; 
-            overflow-x: hidden;
-        }
+        .sidebar { background: #0c0c0e; border-right: 1px solid #1f1f23; transition: 0.3s; }
+        .nav-link { color: #666; transition: 0.3s; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 13px; }
+        .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.05); }
+        
+        .module-card { background: #111114; border: 1px solid #1f1f23; border-radius: 2.5rem; padding: 40px 20px; transition: 0.4s; text-align: center; cursor: pointer; }
+        .module-card:hover { border-color: #eab308; transform: translateY(-8px); background: #16161a; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .icon-box { width: 64px; height: 64px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 32px; border-radius: 22px; background: rgba(255,255,255,0.03); transition: 0.3s; }
+        .module-card:hover .icon-box { background: rgba(234, 179, 8, 0.1); color: #eab308; }
 
-        /* Estilo dos Cards de Performance */
-        .card-evento {
-            background: rgba(10, 10, 10, 0.9);
-            border: 2px solid #0099ff;
-            border-radius: 2.5rem;
-            box-shadow: 0 0 25px rgba(0, 153, 255, 0.15);
-            transition: 0.3s;
-        }
+        .glass-panel { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; overflow: hidden; }
+        .admin-table th { background: rgba(0,0,0,0.3); padding: 20px 24px; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #444; text-align: left; }
+        .admin-table td { padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 13px; }
 
-        /* Botão Dourado Premium */
-        .btn-gold {
-            background: linear-gradient(135deg, #bf8511 0%, #eab308 100%);
-            color: #000;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 10px 20px rgba(191, 133, 17, 0.3);
-        }
-
-        .btn-gold:active {
-            transform: scale(0.95);
-        }
-
-        /* Scroll Customizado */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-thumb { background: #0099ff; border-radius: 10px; }
+        input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
+        .btn-gold { background: #eab308; color: #000; font-weight: 900; text-transform: uppercase; }
+        
+        .event-bubble { flex: 0 0 auto; width: 280px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
+        .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; }
+        .mini-capa { width: 100%; height: 80px; object-fit: cover; border-bottom: 1px solid #1a1a1c; opacity: 0.6; }
     </style>
 </head>
-<body class="p-6 md:p-12 pb-32">
+<body class="flex min-h-screen">
 
-    <div class="max-w-xl mx-auto space-y-10">
+    <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50">
+        <div class="mb-12 px-4 flex flex-col items-center">
+            <img id="club-logo" src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mb-3">
+            <p class="text-[9px] font-black uppercase tracking-[0.3em] text-[#eab308] italic">E-CLUB MANAGEMENT</p>
+        </div>
+        <nav class="space-y-1 flex-grow">
+            <div onclick="showSection('dash')" id="link-dash" class="nav-link active"><span>📊</span> Dashboard</div>
+            <div onclick="showSection('equipe')" id="link-equipe" class="nav-link"><span>👥</span> Equipe</div>
+            <div onclick="showSection('festas')" id="link-festas" class="nav-link"><span>📅</span> Eventos</div>
+            <div onclick="showSection('aniversarios')" id="link-aniversarios" class="nav-link"><span>📝</span> Listas</div>
+            <div onclick="showSection('config')" id="link-config" class="nav-link"><span>⚙️</span> Ajustes</div>
+        </nav>
+    </aside>
+
+    <main class="flex-grow lg:ml-64 p-6 lg:p-12">
         
-        <header class="flex justify-between items-start">
-            <div>
-                <p class="text-[#0099ff] font-black uppercase text-[10px] tracking-[0.2em] mb-1 italic">E-CLUB OFFICIAL</p>
-                <h1 id="nome-promoter" class="text-5xl font-black italic uppercase tracking-tighter leading-none">---</h1>
+        <section id="section-dash" class="space-y-12">
+            <header>
+                <h2 class="text-4xl font-black italic uppercase tracking-tighter">Central de Comando</h2>
+                <p class="text-zinc-500 text-sm mt-2 font-bold uppercase tracking-widest">Controle total da balada</p>
+            </header>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                <div onclick="showSection('equipe')" class="module-card"><div class="icon-box">👥</div><p class="text-xs font-black uppercase">Equipe</p></div>
+                <div onclick="showSection('festas')" class="module-card"><div class="icon-box">📅</div><p class="text-xs font-black uppercase">Eventos</p></div>
+                <div onclick="showSection('aniversarios')" class="module-card"><div class="icon-box">📝</div><p class="text-xs font-black uppercase">Listas</p></div>
+                <div class="module-card"><div class="icon-box">📈</div><p class="text-xs font-black uppercase">Relatórios</p></div>
+                <div class="module-card"><div class="icon-box">🛋️</div><p class="text-xs font-black uppercase">Espaços</p></div>
+                <div class="module-card"><div class="icon-box">💰</div><p class="text-xs font-black uppercase">Carteira</p></div>
+                <div class="module-card opacity-30"><div class="icon-box">🥂</div><p class="text-xs font-black uppercase">Reservas</p></div>
+                <div onclick="showSection('config')" class="module-card"><div class="icon-box">⚙️</div><p class="text-xs font-black uppercase">Ajustes</p></div>
             </div>
-            <button onclick="sair()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-6 py-2 rounded-2xl font-black text-[10px] uppercase italic">Sair</button>
-        </header>
 
-        <section class="space-y-6">
-            <div class="flex items-center gap-3">
-                <span class="w-8 h-[2px] bg-blue-500"></span>
-                <h2 class="text-blue-400 font-black italic uppercase text-xs tracking-widest">
-                    📈 PERFORMANCE REALTIME
-                </h2>
-            </div>
-            
-            <div id="lista-eventos" class="space-y-4">
-                <div class="animate-pulse text-zinc-800 font-black text-center py-10 uppercase italic">Sincronizando dados...</div>
+            <div class="glass-panel p-8">
+                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6">Performance por Evento</h2>
+                <div id="container-bolhas" class="scroll-x"></div>
             </div>
         </section>
 
-    </div>
+        <section id="section-equipe" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-yellow-500">
+                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8">Gestão de Promoters</h2>
+                <form id="formPromoter" class="flex gap-3 mb-10">
+                    <input type="text" id="nome_promoter" placeholder="NOME DO PROMOTER" class="flex-grow p-4 rounded-2xl font-bold" required>
+                    <select id="tipo_promoter" class="p-4 rounded-2xl font-bold">
+                        <option value="padrao">LISTA PADRÃO</option>
+                        <option value="aniversario">LISTA ANIVERSÁRIO (VIP)</option>
+                        <option value="visualizar">APENAS VISUALIZAR</option>
+                    </select>
+                    <button type="submit" class="btn-gold px-10 rounded-2xl font-black uppercase text-xs">Adicionar</button>
+                </form>
+                <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </section>
 
-    <footer id="footer-acoes" class="fixed bottom-0 left-0 w-full p-5 flex gap-3 bg-black/90 backdrop-blur-xl border-t border-white/5 hidden">
-        <button id="btn-abrir-link" class="flex-grow btn-gold py-6 rounded-[2rem] text-sm font-black shadow-2xl">
-            ABRIR MEU LINK
-        </button>
-        <button id="btn-copiar" class="btn-gold px-8 rounded-[2rem] shadow-2xl flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2" />
-            </svg>
-        </button>
-    </footer>
+        <section id="section-festas" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8">Configurar Evento</h2>
+                <form id="formEvento" class="grid grid-cols-4 gap-4">
+                    <input type="hidden" id="edit_evento_id">
+                    <input type="text" id="nome_festa" placeholder="Nome" class="p-4 rounded-2xl font-bold col-span-3" required>
+                    <input type="date" id="data_festa" class="p-4 rounded-2xl font-bold" required>
+                    <input type="url" id="url_banner" placeholder="URL da Capa" class="col-span-4 p-4 rounded-2xl font-bold">
+                    <button type="submit" id="btnSalvarEvento" class="col-span-4 bg-blue-600 py-5 rounded-3xl font-black uppercase">Salvar Evento</button>
+                </form>
+            </div>
+            <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+        </section>
+
+        <section id="section-aniversarios" class="hidden space-y-8">
+            <div class="glass-panel p-8">
+                <h2 class="text-purple-500 font-black uppercase italic text-xl mb-10">Listas Ativas</h2>
+                <table class="w-full">
+                    <thead><tr class="text-[10px] text-zinc-500 uppercase border-b border-white/5"><th class="pb-4">Data</th><th>Promoter</th><th>Aniversariante</th><th class="text-center">Reservas</th></tr></thead>
+                    <tbody id="tabela-aniversarios-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="section-config" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-red-500">
+                <h2 class="text-red-500 font-black uppercase italic text-xl mb-8">Limpeza do Sistema</h2>
+                <button onclick="limparBaseDeDados()" class="bg-red-600 text-white font-black px-10 py-5 rounded-3xl uppercase">Limpar Reservas</button>
+            </div>
+        </section>
+
+    </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -97,91 +135,93 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        let dadosReservas = []; let dadosEventos = []; let dadosPromoters = [];
 
-        // Recupera o login do promoter
-        const loginSalvo = localStorage.getItem('promoter_login') || new URLSearchParams(window.location.search).get('user');
+        window.showSection = (id) => {
+            document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${id}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(`link-${id}`).classList.add('active');
+        };
 
-        if (!loginSalvo) {
-            window.location.href = 'login.html'; // Redireciona se não houver login
-        }
-
-        // --- MONITORAMENTO DE STATUS E DADOS EM TEMPO REAL ---
-        onSnapshot(doc(db, "promoters", loginSalvo.toLowerCase()), (snap) => {
-            if (snap.exists()) {
-                const dados = snap.data();
-                document.getElementById('nome-promoter').innerText = dados.nome;
-
-                const footer = document.getElementById('footer-acoes');
-                
-                // TRAVA MASTER: Se for 'visualizar', remove os botões da tela
-                if (dados.tipo === 'visualizar') {
-                    footer.classList.add('hidden'); 
-                } else {
-                    footer.classList.remove('hidden');
-                    configurarLinks(dados);
-                }
-
-                carregarPerformance(dados.nome);
-            } else {
-                alert("Promoter não encontrado!");
-            }
+        // --- SNAPSHOTS ---
+        onSnapshot(collection(db, "lista_eventos"), snap => {
+            dadosReservas = snap.docs.map(d => d.data());
+            renderizarRelatorios();
+            renderizarListas();
         });
 
-        async function carregarPerformance(nomePromoter) {
-            const container = document.getElementById('lista-eventos');
-            
-            // Busca Eventos e Reservas
-            const qEventos = query(collection(db, "eventos"), where("ativo", "==", true));
-            const snapEv = await getDocs(qEventos);
-            
-            const qReservas = query(collection(db, "lista_eventos"));
-            const snapRes = await getDocs(qReservas);
-            const todasReservas = snapRes.docs.map(d => d.data());
+        onSnapshot(collection(db, "eventos"), snap => {
+            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderizarRelatorios();
+            renderizarGridEventos();
+        });
 
-            if (snapEv.empty) {
-                container.innerHTML = '<p class="text-zinc-600 font-bold text-center py-10 uppercase italic">Nenhum evento ativo no momento.</p>';
-                return;
-            }
+        onSnapshot(collection(db, "promoters"), snap => {
+            dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderizarEquipe();
+        });
 
-            container.innerHTML = snapEv.docs.map(docEv => {
-                const ev = docEv.data();
-                const minhas = todasReservas.filter(r => r.evento === ev.nome && r.promoter.toUpperCase() === nomePromoter.toUpperCase()).length;
-                const totalGeral = todasReservas.filter(r => r.evento === ev.nome).length;
-
-                return `
-                <div class="card-evento p-8 flex justify-between items-center">
-                    <div class="space-y-1">
-                        <h3 class="text-2xl font-black uppercase italic tracking-tighter leading-tight">${ev.nome}</h3>
-                        <p class="text-zinc-500 font-bold text-[10px] uppercase tracking-widest">${ev.data.split('-').reverse().join('/')}</p>
-                    </div>
-                    <div class="flex gap-8 items-center border-l border-white/5 pl-8">
-                        <div class="text-center">
-                            <p class="text-3xl font-black text-blue-400 leading-none">${minhas}</p>
-                            <p class="text-[8px] font-black text-blue-400/50 uppercase tracking-widest mt-2">MINHAS</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-3xl font-black text-white/20 leading-none">${totalGeral}</p>
-                            <p class="text-[8px] font-black text-white/10 uppercase tracking-widest mt-2">GERAL</p>
-                        </div>
-                    </div>
-                </div>`;
+        // --- RENDERIZAÇÃO ---
+        function renderizarRelatorios() {
+            const cont = document.getElementById('container-bolhas');
+            if(!cont) return;
+            cont.innerHTML = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).map(ev => {
+                const res = dadosReservas.filter(r => r.evento === ev.nome).length;
+                return `<div class="event-bubble p-6"><p class="text-[9px] font-black text-yellow-500 italic mb-1 uppercase">${ev.data}</p><h4 class="text-sm font-black uppercase text-white h-10 truncate">${ev.nome}</h4><div class="mt-4 pt-4 border-t border-white/5"><p class="text-[7px] font-black text-zinc-500 uppercase">Reservas</p><p class="text-2xl font-black">${res}</p></div></div>`;
             }).join('');
         }
 
-        function configurarLinks(dados) {
-            const meuLink = `https://andrezinhoeclub.github.io/lista-ecluboficial/?p=${dados.nome.toLowerCase()}`;
-            
-            document.getElementById('btn-abrir-link').onclick = () => window.open(meuLink, '_blank');
-            document.getElementById('btn-copiar').onclick = () => {
-                navigator.clipboard.writeText(meuLink);
-                alert("LINK COPIADO COM SUCESSO!");
-            };
+        function renderizarEquipe() {
+            const cont = document.getElementById('lista-promoters');
+            cont.innerHTML = dadosPromoters.map(p => {
+                let cor = p.tipo === 'visualizar' ? 'border-l-blue-500' : 'border-l-yellow-500';
+                return `<div class="glass-card p-6 flex justify-between items-center border-l-4 ${cor}"><div><p class="text-xs font-black uppercase">${p.nome || p.id}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${p.tipo}</p></div><button onclick="editarPromoter('${p.id}', '${p.tipo}')" class="text-blue-400 text-[10px] font-black">EDITAR</button></div>`;
+            }).join('');
         }
 
-        window.sair = () => {
-            localStorage.removeItem('promoter_login');
-            window.location.reload();
+        function renderizarGridEventos() {
+            const grid = document.getElementById('grid-eventos-config');
+            grid.innerHTML = dadosEventos.map(ev => `<div class="glass-card overflow-hidden p-5"><img src="${ev.imagem || ''}" class="mini-capa rounded-xl mb-4"><h4 class="text-xs font-black uppercase truncate">${ev.nome}</h4><div class="flex justify-between mt-4"><button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 text-[10px] font-black">X EXCLUIR</button></div></div>`).join('');
+        }
+
+        function renderizarListas() {
+            const tbody = document.getElementById('tabela-aniversarios-body');
+            if(!tbody) return;
+            // Aqui você mapeia os links de aniversario e reservas...
+        }
+
+        // --- AÇÕES ---
+        document.getElementById('formEvento').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvarEvento');
+            btn.innerText = "PROCESSANDO..."; btn.disabled = true;
+            try {
+                const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, imagem: document.getElementById('url_banner').value, ativo: true };
+                await addDoc(collection(db, "eventos"), d);
+                alert("Salvo!");
+                e.target.reset();
+            } finally {
+                btn.innerText = "Salvar Evento"; btn.disabled = false;
+            }
         };
+
+        document.getElementById('formPromoter').onsubmit = async (e) => {
+            e.preventDefault();
+            const n = document.getElementById('nome_promoter').value.trim();
+            const t = document.getElementById('tipo_promoter').value;
+            await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true });
+            e.target.reset();
+        };
+
+        window.editarPromoter = async (id, tipoAtual) => {
+            const op = prompt("1-PADRAO, 2-ANIVERSARIO, 3-VISUALIZAR. Escolha:");
+            let novo = tipoAtual;
+            if(op === '1') novo = 'padrao'; if(op === '2') novo = 'aniversario'; if(op === '3') novo = 'visualizar';
+            await updateDoc(doc(db, "promoters", id), { tipo: novo });
+        };
+
+        window.removerItem = async (c, i) => { if(confirm("Apagar?")) await deleteDoc(doc(db, c, i)); };
 
     </script>
 </body>
