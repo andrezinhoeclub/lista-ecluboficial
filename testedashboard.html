@@ -3,7 +3,378 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Pro | Central de Comando</title>
+    <title>Admin Pro | Central de Comando</title><!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Club | Central de Gestão</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #f8fafc; /* Fundo Leve */
+            color: #1e293b; 
+            overflow-x: hidden; 
+        }
+        
+        /* Sidebar Profissional */
+        .sidebar { background: #1e293b; transition: 0.3s; }
+        .nav-link { 
+            color: #94a3b8; 
+            transition: 0.3s; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 20px; 
+            border-radius: 12px; 
+            font-weight: 600; 
+            font-size: 13px; 
+        }
+        .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
+        
+        /* Dashboard Cards (Estilo SaaS) */
+        .module-card { 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 1.5rem; 
+            padding: 30px; 
+            transition: 0.3s; 
+            text-align: center; 
+            cursor: pointer; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .module-card:hover { 
+            border-color: #3b82f6; 
+            transform: translateY(-4px); 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .icon-box { 
+            width: 56px; 
+            height: 56px; 
+            margin: 0 auto 16px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 24px; 
+            border-radius: 16px; 
+            background: #f1f5f9; 
+            color: #3b82f6;
+        }
+
+        /* Tabelas Clean */
+        .admin-table-container { 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 1.5rem; 
+            overflow: hidden; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .admin-table thead { background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .admin-table th { padding: 16px 24px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px; }
+        .admin-table td { padding: 18px 24px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+
+        /* Calendário Light */
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(7, 1fr); 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 1.5rem; 
+            overflow: hidden; 
+        }
+        .calendar-day { min-height: 100px; border: 0.5px solid #f1f5f9; padding: 10px; position: relative; }
+        .day-header { background: #f8fafc; padding: 14px; text-align: center; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+        .event-tag { background: #3b82f6; color: #fff; font-size: 9px; padding: 4px 8px; border-radius: 6px; margin-top: 4px; font-weight: 700; }
+
+        /* Inputs Modernos */
+        .admin-input { 
+            background: #fff !important; 
+            border: 1px solid #e2e8f0 !important; 
+            color: #1e293b !important; 
+            outline: none; 
+            transition: 0.3s; 
+        }
+        .admin-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
+
+        .btn-primary { background: #3b82f6; color: #fff; font-weight: 800; transition: 0.3s; }
+        .btn-primary:hover { background: #2563eb; }
+
+        /* Modais */
+        .modal-content { background: #ffffff; border-radius: 2rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50">
+        <div class="mb-10 px-4">
+            <img id="club-logo" src="" class="h-10 mb-2 object-contain">
+            <p id="club-name" class="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">---</p>
+        </div>
+        <nav class="space-y-1 flex-grow">
+            <div onclick="showSection('dash')" id="link-dash" class="nav-link active"><span>🏠</span> Dashboard</div>
+            <div onclick="showSection('usuarios')" id="link-usuarios" class="nav-link"><span>👥</span> Usuários</div>
+            <div onclick="showSection('eventos')" id="link-eventos" class="nav-link"><span>📅</span> Eventos</div>
+            <div onclick="showSection('listas')" id="link-listas" class="nav-link"><span>📝</span> Config. Listas</div>
+            <div onclick="showSection('espacos')" id="link-espacos" class="nav-link"><span>🛋️</span> Espaços</div>
+            <div onclick="showSection('carteira')" id="link-carteira" class="nav-link"><span>💰</span> Carteira</div>
+            <div onclick="showSection('relatorios')" id="link-relatorios" class="nav-link"><span>📈</span> Relatórios</div>
+        </nav>
+        <div class="pt-6 border-t border-slate-700"><div class="nav-link text-red-400"><span>🚪</span> Sair do Sistema</div></div>
+    </aside>
+
+    <main class="flex-grow lg:ml-64 p-6 lg:p-10">
+        
+        <section id="section-dash" class="space-y-10">
+            <header>
+                <h2 class="text-3xl font-extrabold tracking-tight text-slate-800">Central de Comando</h2>
+                <p class="text-slate-500 text-sm font-medium">Gestão Administrativa: <span id="dash-club-title" class="text-blue-600">---</span></p>
+            </header>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div onclick="showSection('usuarios')" class="module-card">
+                    <div class="icon-box">👥</div>
+                    <p class="text-xs font-bold uppercase text-slate-600">Equipe</p>
+                </div>
+                <div onclick="showSection('eventos')" class="module-card">
+                    <div class="icon-box">📅</div>
+                    <p class="text-xs font-bold uppercase text-slate-600">Calendário</p>
+                </div>
+                <div onclick="showSection('listas')" class="module-card">
+                    <div class="icon-box">📝</div>
+                    <p class="text-xs font-bold uppercase text-slate-600">Regras Listas</p>
+                </div>
+                <div onclick="showSection('relatorios')" class="module-card">
+                    <div class="icon-box">📈</div>
+                    <p class="text-xs font-bold uppercase text-slate-600">Relatórios</p>
+                </div>
+                <div onclick="showSection('espacos')" class="module-card">
+                    <div class="icon-box">🛋️</div>
+                    <p class="text-xs font-bold uppercase text-slate-600">Espaços</p>
+                </div>
+                <div onclick="showSection('carteira')" class="module-card">
+                    <div class="icon-box">💰</div>
+                    <p class="text-xs font-bold uppercase text-slate-600">Carteira</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-usuarios" class="hidden space-y-8">
+            <header class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800">Gestão de Equipe</h2></header>
+            <div class="admin-table-container">
+                <table class="w-full admin-table">
+                    <thead><tr><th>Usuário</th><th>Permissões</th><th class="text-right">Gerenciar</th></tr></thead>
+                    <tbody id="tabela-usuarios"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="section-eventos" class="hidden space-y-8">
+            <header class="flex justify-between items-center">
+                <h2 class="text-2xl font-extrabold text-slate-800">Calendário de Eventos</h2>
+                <button onclick="openModal('modalEvento')" class="btn-primary px-6 py-3 rounded-xl text-xs uppercase shadow-md">+ Novo Evento</button>
+            </header>
+            <div id="calendar-body" class="calendar-grid"></div>
+        </section>
+
+        <section id="section-listas" class="hidden space-y-8">
+            <header class="flex justify-between items-center">
+                <h2 class="text-2xl font-extrabold text-slate-800">Regras de Listas</h2>
+                <button onclick="openModal('modalLista')" class="btn-primary px-6 py-3 rounded-xl text-xs uppercase shadow-md">+ Nova Regra</button>
+            </header>
+            <div class="admin-table-container">
+                <table class="w-full admin-table">
+                    <thead><tr><th>Nome da Lista</th><th>Exigências</th><th>Gêneros</th><th>Obs</th></tr></thead>
+                    <tbody id="tabela-regras"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="section-relatorios" class="hidden space-y-8">
+            <header><h2 class="text-2xl font-extrabold text-slate-800">Relatórios de Performance</h2></header>
+            <div class="flex flex-col lg:flex-row gap-8">
+                <aside class="lg:w-80 bg-white p-6 rounded-2xl border border-slate-200 h-fit space-y-6">
+                    <p class="text-[10px] font-extrabold text-slate-400 uppercase">Filtros de Pesquisa</p>
+                    <input type="date" class="w-full admin-input p-3 rounded-xl text-xs font-bold">
+                    <button class="w-full bg-emerald-600 text-white py-4 rounded-xl font-extrabold uppercase text-xs">Visualizar Relatório</button>
+                </aside>
+                <div class="flex-grow admin-table-container">
+                    <table class="w-full admin-table">
+                        <thead><tr><th>Evento</th><th>Promoter</th><th>Check-ins</th><th>Conv.</th></tr></thead>
+                        <tbody id="tabela-relatorios"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="section-espacos" class="hidden space-y-8">
+            <header class="flex justify-between items-center">
+                <h2 class="text-2xl font-extrabold text-slate-800">Mapas e Espaços</h2>
+                <button onclick="openModal('modalMapa')" class="btn-primary px-6 py-3 rounded-xl text-xs uppercase">+ Novo Mapa</button>
+            </header>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div id="lista-mapas" class="space-y-4"></div>
+                <div id="map-preview" class="bg-white rounded-3xl border border-slate-200 p-10 flex items-center justify-center text-slate-400 font-bold uppercase text-[10px]">Preview do Mapa</div>
+            </div>
+        </section>
+
+        <section id="section-carteira" class="hidden space-y-8">
+            <header><h2 class="text-2xl font-extrabold text-slate-800">Financeiro</h2></header>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+                    <p class="text-slate-400 text-[10px] font-extrabold uppercase mb-2">Total Recebido (Pix)</p>
+                    <h3 class="text-3xl font-extrabold text-emerald-600">R$ 0,00</h3>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="modalLista" class="hidden fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="modal-content w-full max-w-2xl p-10">
+            <h3 class="text-2xl font-extrabold text-slate-800 mb-8 tracking-tight">Configurar Regra de Acesso</h3>
+            <form id="formLista" class="space-y-6">
+                <input type="text" id="li-nome" placeholder="NOME DA LISTA (EX: VIP SÁBADO)" class="w-full admin-input p-5 rounded-2xl font-bold uppercase text-xs" required>
+                <div class="grid grid-cols-2 gap-10">
+                    <div class="space-y-4">
+                        <p class="text-[10px] font-extrabold text-slate-400 uppercase">Obrigatoriedades</p>
+                        <div class="text-xs font-bold text-slate-600 space-y-3">
+                            <label class="flex items-center gap-3"><input type="checkbox" id="req-cpf" class="w-4 h-4 rounded"> CPF</label>
+                            <label class="flex items-center gap-3"><input type="checkbox" id="req-rg" class="w-4 h-4 rounded"> RG</label>
+                            <label class="flex items-center gap-3"><input type="checkbox" id="req-email" class="w-4 h-4 rounded"> E-MAIL</label>
+                            <label class="flex items-center gap-3"><input type="checkbox" id="req-tel" class="w-4 h-4 rounded"> CELULAR</label>
+                            <label class="flex items-center gap-3 font-extrabold text-blue-600"><input type="checkbox" id="lock-tel" class="w-4 h-4 rounded"> TRAVAR DUPLICADOS</label>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <p class="text-[10px] font-extrabold text-slate-400 uppercase">Gêneros Permitidos</p>
+                        <div class="text-xs font-bold text-slate-600 space-y-3">
+                            <label class="flex items-center gap-3"><input type="checkbox" id="gen-fem" class="w-4 h-4 accent-pink-500"> FEMININO</label>
+                            <label class="flex items-center gap-3"><input type="checkbox" id="gen-masc" class="w-4 h-4 accent-blue-500"> MASCULINO</label>
+                            <label class="flex items-center gap-3"><input type="checkbox" id="gen-casal" class="w-4 h-4 accent-purple-500"> CASAL</label>
+                        </div>
+                    </div>
+                </div>
+                <textarea id="li-obs" placeholder="OBSERVAÇÕES DA REGRA" class="w-full admin-input p-5 rounded-2xl font-bold text-[10px] h-24 uppercase resize-none"></textarea>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-grow btn-primary py-5 rounded-2xl font-extrabold uppercase text-xs shadow-lg">Salvar Regra</button>
+                    <button type="button" onclick="closeModal('modalLista')" class="px-8 text-slate-400 font-extrabold uppercase text-[10px]">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEvento" class="hidden fixed inset-0 z-[999] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="modal-content w-full max-w-lg p-10"><h3 class="text-xl font-extrabold text-slate-800 mb-6">Novo Evento</h3><form id="formEvento" class="space-y-4"><input type="text" id="ev-nome" placeholder="NOME DO EVENTO" class="w-full admin-input p-4 rounded-xl font-bold uppercase text-xs" required><input type="date" id="ev-data" class="w-full admin-input p-4 rounded-xl font-bold text-xs" required><button type="submit" class="w-full btn-primary py-5 rounded-2xl font-extrabold uppercase text-xs">Salvar</button></form></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const params = new URLSearchParams(window.location.search);
+        const clubID = params.get('club') || 'eclub';
+
+        // --- BRANDING DINÂMICO ---
+        const config = { 'eclub': { nome: 'E-CLUB', logo: 'https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png' } };
+        const cur = config[clubID] || { nome: clubID.toUpperCase(), logo: 'https://cdn-icons-png.flaticon.com/512/3843/3843517.png' };
+        document.getElementById('club-name').innerText = cur.nome;
+        document.getElementById('dash-club-title').innerText = cur.nome;
+        document.getElementById('club-logo').src = cur.logo;
+
+        // --- NAVEGAÇÃO ---
+        window.showSection = (id) => {
+            document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${id}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(`link-${id}`)?.classList.add('active');
+            if(id === 'usuarios') loadUsers(); if(id === 'eventos') loadCalendar();
+            if(id === 'listas') loadRules(); if(id === 'espacos') loadMaps();
+        };
+
+        window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        // --- LOADERS ---
+        async function loadUsers() {
+            const q = query(collection(db, "usuarios"), where("clubID", "==", clubID));
+            const s = await getDocs(q); const t = document.getElementById('tabela-usuarios'); t.innerHTML = '';
+            s.forEach(d => {
+                const u = d.data();
+                const perms = Object.keys(u.permissoes || {}).map(p => u.permissoes[p] ? `<span class="bg-blue-100 text-blue-700 text-[9px] font-extrabold px-2 py-1 rounded-md uppercase mr-1">${p}</span>` : '').join('');
+                t.innerHTML += `<tr class="hover:bg-slate-50"><td><p class="font-extrabold uppercase text-xs text-slate-700">${u.nome}</p><p class="text-[10px] text-slate-400 font-bold">${u.email}</p></td><td>${perms || '---'}</td><td class="text-right"><button class="bg-slate-100 p-2 rounded-xl text-slate-400">⚙️</button></td></tr>`;
+            });
+        }
+
+        async function loadCalendar() {
+            const b = document.getElementById('calendar-body'); b.innerHTML = '';
+            const h = new Date(); const f = new Date(h.getFullYear(), h.getMonth(), 1).getDay(); const l = new Date(h.getFullYear(), h.getMonth()+1, 0).getDate();
+            for(let i=0; i<f; i++) b.innerHTML += `<div class="calendar-day bg-slate-50/50"></div>`;
+            for(let d=1; d<=l; d++) {
+                const day = `${h.getFullYear()}-${(h.getMonth()+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+                b.innerHTML += `<div class="calendar-day" id="day-${day}"><span class="day-num text-slate-300 font-extrabold text-[11px]">${d}</span></div>`;
+            }
+            const q = query(collection(db, "eventos"), where("clubID", "==", clubID));
+            const s = await getDocs(q);
+            s.forEach(doc => { const ev = doc.data(); const el = document.getElementById(`day-${ev.data}`); if(el) el.innerHTML += `<div class="event-tag">${ev.nome}</div>`; });
+        }
+
+        async function loadRules() {
+            const q = query(collection(db, "config_listas"), where("clubID", "==", clubID));
+            const s = await getDocs(q); const t = document.getElementById('tabela-regras'); t.innerHTML = '';
+            s.forEach(doc => {
+                const r = doc.data(); const ex = Object.keys(r.exige).filter(k => r.exige[k]).map(k => k.toUpperCase()).join(', ');
+                t.innerHTML += `<tr class="hover:bg-slate-50"><td class="font-extrabold uppercase text-xs text-slate-700">${r.nome}</td><td class="text-[10px] font-bold text-slate-400">EXIGE: ${ex}</td><td><div class="flex gap-1">${r.generos.fem?'<span class="bg-pink-100 text-pink-600 px-2 py-0.5 rounded text-[8px] font-extrabold">FEM</span>':''} ${r.generos.masc?'<span class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[8px] font-extrabold">MASC</span>':''} ${r.generos.casal?'<span class="bg-purple-100 text-purple-600 px-2 py-0.5 rounded text-[8px] font-extrabold">CASAL</span>':''}</div></td><td class="text-[10px] font-bold text-slate-400 uppercase max-w-xs truncate">${r.obs || '---'}</td></tr>`;
+            });
+        }
+
+        async function loadMaps() {
+            const q = query(collection(db, "mapas_casa"), where("clubID", "==", clubID));
+            const s = await getDocs(q); const c = document.getElementById('lista-mapas'); c.innerHTML = '';
+            s.forEach(d => {
+                const m = d.data(); const div = document.createElement('div');
+                div.className = "p-5 bg-white border border-slate-200 rounded-2xl flex justify-between items-center hover:border-blue-500 cursor-pointer transition-all";
+                div.onclick = () => document.getElementById('map-preview').innerHTML = `<img src="${m.url}" class="w-full rounded-2xl shadow-lg border border-slate-100">`;
+                div.innerHTML = `<p class="text-xs font-extrabold text-slate-700 uppercase">${m.nome}</p><button onclick="event.stopPropagation(); deleteMap('${d.id}')" class="text-red-400 font-extrabold text-[9px] uppercase">Excluir</button>`;
+                c.appendChild(div);
+            });
+        }
+        
+        // Handlers Firebase vinculados aos botões...
+        document.getElementById('formLista').onsubmit = async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "config_listas"), {
+                nome: document.getElementById('li-nome').value.toUpperCase(),
+                exige: { cpf: document.getElementById('req-cpf').checked, rg: document.getElementById('req-rg').checked, email: document.getElementById('req-email').checked, tel: document.getElementById('req-tel').checked },
+                lockTel: document.getElementById('lock-tel').checked,
+                generos: { fem: document.getElementById('gen-fem').checked, masc: document.getElementById('gen-masc').checked, casal: document.getElementById('gen-casal').checked },
+                obs: document.getElementById('li-obs').value.toUpperCase(),
+                clubID, ativa: true
+            });
+            alert("Salvo com sucesso!"); closeModal('modalLista'); loadRules();
+        };
+
+        // Inicializa na Dashboard
+        showSection('dash');
+
+    </script>
+</body>
+</html>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
