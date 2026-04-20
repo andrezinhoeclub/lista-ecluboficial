@@ -27,7 +27,7 @@
             <div id="fluxo-login">
                 <input type="text" id="usuario" placeholder="DIGITE SEU USUÁRIO" class="w-full p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-4">
                 <div id="campo-senha" class="hidden">
-                    <input type="password" id="senha" placeholder="DIGITE SUA SENHA" class="w-full p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-4 border-purple-500/50">
+                    <input type="password" id="senha" placeholder="DIGITE SUA SENHA" class="w-full p-5 rounded-2xl outline-none text-center font-bold uppercase text-xs mb-4 border-white/20">
                 </div>
                 <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all">CONTINUAR</button>
             </div>
@@ -100,6 +100,7 @@
             const s = document.getElementById('senha').value.trim();
             const erro = document.getElementById('erro');
             const btn = document.getElementById('btnAcao');
+            const inputSenha = document.getElementById('senha');
             
             if (!logado) {
                 btn.innerText = "VERIFICANDO...";
@@ -108,6 +109,16 @@
                     if (snap.exists()) {
                         logado = u;
                         statsPromoter = snap.data();
+                        
+                        // LÓGICA DE PRIMEIRO ACESSO (O QUE VOCÊ PEDIU)
+                        if (!statsPromoter.senha) {
+                            inputSenha.placeholder = "CADASTRE SUA SENHA";
+                            inputSenha.classList.add('border-purple-500/50');
+                        } else {
+                            inputSenha.placeholder = "DIGITE SUA SENHA";
+                            inputSenha.classList.remove('border-purple-500/50');
+                        }
+
                         document.getElementById('campo-senha').classList.remove('hidden');
                         document.getElementById('usuario').readOnly = true;
                         btn.innerText = "ENTRAR NO PAINEL";
