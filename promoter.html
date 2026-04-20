@@ -54,10 +54,20 @@
         <footer id="navAcoes" class="fixed bottom-0 left-0 w-full p-4 bg-black/60 backdrop-blur-md border-t border-white/5 z-40">
             <div class="max-w-md mx-auto flex gap-2">
                 <button onclick="abrirLinkGeral()" class="flex-[2] gold-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">ABRIR MEU LINK</button>
-                <button onclick="copiarLinkGeral()" class="flex-none bg-zinc-800 text-white border border-white/10 px-5 rounded-2xl text-lg flex items-center justify-center active:scale-95 transition-all">📋</button>
-                <button id="btnNovoAniv" onclick="abrirModalAniv()" class="hidden flex-[1.5] purple-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">NOVO ANIV</button>
+                <button onclick="copiarLinkGeral()" class="flex-none bg-zinc-800 text-white border border-white/10 px-5 rounded-2xl text-lg flex items-center justify-center">📋</button>
+                <button id="btnNovoAniv" onclick="abrirModalAniv()" class="hidden flex-[1.5] purple-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">NOVO ANIV</button>
             </div>
         </footer>
+    </div>
+
+    <div id="modalAniv" class="fixed inset-0 bg-black/95 z-[10000] hidden flex items-center justify-center p-6 text-white">
+        <div class="glass max-w-sm w-full p-8 rounded-[2.5rem] border-purple-500/30 border text-center">
+            <h2 class="text-xl font-black text-purple-400 uppercase italic mb-6">Novo Aniversariante</h2>
+            <select id="selEvento" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white text-xs font-bold uppercase mb-3 outline-none"></select>
+            <input type="text" id="nomeAniv" placeholder="NOME DO ANIVERSARIANTE" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white font-black uppercase text-xs mb-6 outline-none">
+            <button onclick="criarLinkAniv()" class="w-full purple-gradient font-black py-4 rounded-xl uppercase text-xs shadow-xl active:scale-95 transition-all">GERAR LINK VIP ✨</button>
+            <button onclick="fecharModalAniv()" class="w-full text-zinc-600 font-black py-3 uppercase text-[9px] mt-2">FECHAR</button>
+        </div>
     </div>
 
     <script type="module">
@@ -95,30 +105,23 @@
 
         function iniciarSistema() {
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+            const hojeLocal = f.split('/').reverse().join('-');
+
             if (st === "visualizar") document.getElementById('navAcoes').style.display = 'none';
             
-            // DATA LOCAL DO BRASIL PARA O FILTRO
-            const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-            const hojeLocal = f.split('/').reverse().join('-'); // Converte 20/04/2026 para 2026-04-20
-
             if (st === "aniversario") {
-                document.getElementById('secaoAniversario').classList.remove('hidden'); document.getElementById('btnNovoAniv').classList.remove('hidden');
+                document.getElementById('secaoAniversario').classList.remove('hidden'); 
+                document.getElementById('btnNovoAniv').classList.remove('hidden');
                 onSnapshot(collection(db, "links_aniversario"), (snap) => {
                     linksAniv = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(l => (l.promoter || '').toLowerCase().trim() === logado);
                     renderAniversarios();
                 });
             }
-            
-            onSnapshot(collection(db, "lista_eventos"), (snap) => { 
-                reservas = snap.docs.map(d => d.data()); 
-                renderPerformance(); 
-                if (st === "aniversario") renderAniversarios(); 
-            });
-            
+
+            onSnapshot(collection(db, "lista_eventos"), (snap) => { reservas = snap.docs.map(d => d.data()); renderPerformance(); if (st === "aniversario") renderAniversarios(); });
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => { 
-                eventos = snap.docs.map(d => d.data())
-                    .filter(ev => ev.data >= hojeLocal) // FILTRO DEFINITIVO PELA DATA LOCAL
-                    .sort((a,b) => new Date(a.data) - new Date(b.data)); 
+                eventos = snap.docs.map(d => d.data()).filter(ev => ev.data >= hojeLocal).sort((a,b) => new Date(a.data) - new Date(b.data)); 
                 renderPerformance(); 
             });
         }
@@ -133,10 +136,6 @@
 
         function renderPerformance() {
             const container = document.getElementById('listaPerformance');
-            if (eventos.length === 0) {
-                container.innerHTML = `<p class="text-zinc-600 text-center py-10 font-bold text-xs uppercase italic">Nenhum evento futuro</p>`;
-                return;
-            }
             container.innerHTML = eventos.map(ev => {
                 const minhas = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase().trim() === logado).length;
                 const geral = reservas.filter(r => r.evento === ev.nome).length;
@@ -147,6 +146,33 @@
         window.abrirLinkGeral = () => { window.open(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`, '_blank'); };
         window.copiarLinkGeral = () => { navigator.clipboard.writeText(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`).then(() => alert("Copiado!")); };
         window.copiarLinkAniv = (id, n) => { const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?id=${id}`; navigator.clipboard.writeText(`*Convite VIP: Aniversário de ${n}* 🎂\n\nConfirme seu nome aqui:\n${link}`).then(() => alert("Copiado!")); };
+
+        // --- FUNÇÕES QUE FALTAVAM ---
+        window.abrirModalAniv = () => {
+            const sel = document.getElementById('selEvento');
+            if (eventos.length === 0) return alert("Nenhum evento ativo disponível!");
+            sel.innerHTML = eventos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join('');
+            document.getElementById('modalAniv').classList.remove('hidden');
+        };
+
+        window.fecharModalAniv = () => document.getElementById('modalAniv').classList.add('hidden');
+
+        window.criarLinkAniv = async () => {
+            const f = document.getElementById('selEvento').value;
+            const n = document.getElementById('nomeAniv').value.trim().toUpperCase();
+            if (!n) return alert("Digite o nome do aniversariante!");
+            try {
+                await addDoc(collection(db, "links_aniversario"), {
+                    promoter: logado,
+                    aniversariante: n,
+                    festa: f,
+                    criado: new Date().toISOString()
+                });
+                fecharModalAniv();
+                document.getElementById('nomeAniv').value = "";
+                alert("Link criado!");
+            } catch (e) { alert("Erro ao criar!"); }
+        };
     </script>
 </body>
 </html>
