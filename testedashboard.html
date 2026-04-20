@@ -78,7 +78,7 @@
                     <input type="text" id="desc_casal" placeholder="Casal Aniv R$" class="p-4 rounded-2xl font-bold text-purple-400">
                     <input type="text" id="desc_solteiro" placeholder="Solteiro Aniv R$" class="p-4 rounded-2xl font-bold text-purple-400">
                     <input type="url" id="url_banner" placeholder="URL da Capa" class="md:col-span-4 p-4 rounded-2xl font-bold text-white">
-                    <button type="submit" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento</button>
+                    <button type="submit" id="btnSalvarEvento" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento</button>
                 </form>
             </div>
             <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
@@ -108,8 +108,45 @@
             </div>
         </section>
 
-        <section id="aba-aniversarios" class="hidden space-y-8 text-white">...</section>
-        <section id="aba-config" class="hidden space-y-8 text-white">...</section>
+        <section id="aba-aniversarios" class="hidden space-y-8 text-white">
+            <div class="glass-card p-8 border-l-4 border-l-purple-500">
+                <h2 class="text-purple-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Listas de Aniversariantes</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5">
+                                <th class="pb-4 pl-4">Data</th>
+                                <th class="pb-4">Promoter</th>
+                                <th class="pb-4">Aniversariante</th>
+                                <th class="pb-4 text-center">Reservas</th>
+                                <th class="pb-4 text-right pr-4">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-aniversarios-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-config" class="hidden space-y-8 text-white">
+            <div class="glass-card p-8 border-l-4 border-l-red-500">
+                <h2 class="text-red-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurações do Sistema</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-blue-500/10 border border-blue-500/40 p-8 rounded-3xl text-center flex flex-col justify-between">
+                        <h3 class="text-blue-400 font-black uppercase text-sm mb-2">Modo Teste</h3>
+                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600 text-white text-[11px] font-black py-4 rounded-xl uppercase">LIBERAR TESTE</button>
+                    </div>
+                    <div class="bg-red-500/5 border border-red-500/20 p-8 rounded-3xl text-center flex flex-col justify-between">
+                        <h3 class="text-red-400 font-black uppercase text-sm mb-2">Limpar Clientes</h3>
+                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/20 text-red-500 py-4 rounded-xl font-black">LIMPAR BASE</button>
+                    </div>
+                    <div class="bg-red-500/10 border border-red-500/40 p-8 rounded-3xl text-center flex flex-col justify-between">
+                        <h3 class="text-red-500 font-black uppercase text-sm mb-2">Zerar Sistema</h3>
+                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white py-4 rounded-xl font-black">⚠️ ZERAR TUDO</button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
     </div>
 
@@ -143,82 +180,146 @@
             else btn.classList.add('active'); 
         };
 
+        // --- SNAPSHOTS (TRAZENDO OS DADOS DE VOLTA) ---
         onSnapshot(collection(db, "lista_eventos"), snap => { 
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderizarRelatorios();
+            renderizarAniversarios();
         });
 
         onSnapshot(collection(db, "eventos"), snap => { 
             dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderizarRelatorios();
             renderizarGridConfig();
+            renderizarAniversarios();
         });
 
         onSnapshot(collection(db, "promoters"), snap => { 
             dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
             renderizarEquipe();
-            document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Promoter</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
+            const selectExcel = document.getElementById('filtro-promoter-excel');
+            if(selectExcel) selectExcel.innerHTML = '<option value="">Filtrar Promoter</option>' + dadosPromoters.map(p => `<option value="${(p.nome || p.id).toUpperCase()}">${p.nome || p.id}</option>`).join('');
         });
 
-        // --- RENDERIZAR EQUIPE (ADICIONADO O STATUS VISUALIZAR) ---
+        onSnapshot(collection(db, "configuracoes"), snap => {
+            const cont = document.getElementById('lista-portaria');
+            if(cont) cont.innerHTML = snap.docs.map(d => {
+                const l = d.data(); if (d.id === 'sistema') return ''; 
+                return `<div class="glass-card p-6 border-l-4 border-l-green-500 flex justify-between items-center mb-2"><div><p class="text-xs font-black uppercase text-white">${l.login || d.id}</p></div><button onclick="removerItem('configuracoes', '${d.id}')" class="text-red-500">✕</button></div>`;
+            }).join('');
+        });
+
+        onSnapshot(collection(db, "links_aniversario"), snap => {
+            dadosAniv = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderizarAniversarios();
+        });
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO ---
+        function renderizarRelatorios() {
+            const container = document.getElementById('container-bolhas');
+            if(!container) return;
+            container.innerHTML = dadosEventos.filter(e => e.ativo).sort((a,b) => new Date(a.data) - new Date(b.data)).map(ev => {
+                const res = dadosReservas.filter(r => r.evento === ev.nome).length;
+                const chk = dadosReservas.filter(r => r.evento === ev.nome && r.entrou).length;
+                return `<div class="event-bubble p-6"><p class="text-[9px] font-black text-yellow-500 uppercase mb-1 italic">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-sm font-black uppercase text-white h-10 mb-4 leading-tight">${ev.nome}</h4><div class="flex justify-between border-t border-white/5 pt-4"><div><p class="text-[7px] text-zinc-500 font-black">RESERVAS</p><p class="text-lg font-black">${res}</p></div><div><p class="text-[7px] text-zinc-500 font-black">ENTROU</p><p class="text-lg font-black text-green-500">${chk}</p></div></div></div>`;
+            }).join('');
+
+            const stats = {};
+            dadosReservas.forEach(r => {
+                const p = (r.promoter || 'DIRETO').toUpperCase();
+                if(!stats[p]) stats[p] = { res: 0, chk: 0 };
+                stats[p].res++; if(r.entrou) stats[p].chk++;
+            });
+            const medals = ['🥇', '🥈', '🥉'];
+            document.getElementById('lista-ranking-reservas').innerHTML = Object.entries(stats).sort((a,b) => b[1].res - a[1].res).slice(0,5).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center mb-2"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.res}</p></div>`).join('');
+            document.getElementById('lista-ranking-checkins').innerHTML = Object.entries(stats).sort((a,b) => b[1].chk - a[1].chk).slice(0,5).map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 mb-2"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.chk}</p></div>`).join('');
+        }
+
+        function renderizarGridConfig() {
+            const grid = document.getElementById('grid-eventos-config');
+            if(!grid) return;
+            grid.innerHTML = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).map(ev => `
+                <div class="glass-card overflow-hidden p-5">
+                    <img src="${ev.imagem || ''}" class="mini-capa rounded-xl mb-4">
+                    <p class="text-[9px] font-black text-yellow-500 uppercase mb-1">${ev.data.split('-').reverse().join('/')}</p>
+                    <h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4>
+                    <div class="flex justify-between">
+                        <button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase">Editar</button>
+                        <button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase">Excluir</button>
+                    </div>
+                </div>`).join('');
+        }
+
         function renderizarEquipe() {
             document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => {
-                let tipoLabel = 'LISTA PADRÃO';
-                let corBorda = 'border-l-yellow-500';
-                
-                if (p.tipo === 'aniversario') {
-                    tipoLabel = 'LISTA ANIVERSÁRIO (VIP)';
-                } else if (p.tipo === 'visualizar') {
-                    tipoLabel = 'APENAS VISUALIZAR';
-                    corBorda = 'border-l-blue-500';
-                }
+                let tipoLabel = 'LISTA PADRÃO'; let corBorda = 'border-l-yellow-500';
+                if (p.tipo === 'aniversario') tipoLabel = 'LISTA ANIVERSÁRIO (VIP)';
+                else if (p.tipo === 'visualizar') { tipoLabel = 'APENAS VISUALIZAR'; corBorda = 'border-l-blue-500'; }
 
-                const senhaVisivel = p.senha ? p.senha : 'NÃO CADASTRADA';
-                return `
-                <div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 ${corBorda}">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p>
-                            <p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${senhaVisivel}</p>
-                            <p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tipoLabel}</p>
-                        </div>
-                        <div class="flex gap-4">
-                            <button onclick="editarPromoter('${p.id}', '${p.tipo}')" class="text-blue-400 text-[10px] font-black uppercase">Editar</button>
-                            <button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button>
-                        </div>
-                    </div>
-                </div>`;
+                return `<div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 ${corBorda}"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tipoLabel}</p></div><div class="flex gap-4"><button onclick="editarPromoter('${p.id}', '${p.tipo}')" class="text-blue-400 text-[10px] font-black uppercase">Editar</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button></div></div></div>`;
             }).join('');
         }
 
-        // --- EDITAR PROMOTER (INCLUINDO OPÇÃO VISUALIZAR) ---
+        function renderizarAniversarios() {
+            const tbody = document.getElementById('tabela-aniversarios-body');
+            if(!tbody) return;
+            tbody.innerHTML = dadosAniv.map(link => {
+                const ev = dadosEventos.find(e => e.nome === link.festa);
+                const qtd = dadosReservas.filter(r => r.evento === link.festa && (r.aniversariante === link.aniversariante || r.nome_aniversariante === link.aniversariante)).length;
+                return `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4">${ev ? ev.data.split('-').reverse().join('/') : '---'}</td><td class="py-4 uppercase">${link.promoter}</td><td class="py-4 font-black text-purple-400 uppercase">${link.aniversariante}</td><td class="py-4 text-center font-black text-white">${qtd}</td><td class="py-4 text-right pr-4"><button onclick="removerItem('links_aniversario', '${link.id}')" class="text-red-500">Remover</button></td></tr>`;
+            }).join('');
+        }
+
+        // --- EVENTOS E LOGICA ---
         window.editarPromoter = async (id, tipoAtual) => {
-            const op = prompt(`⚙️ EDITAR PROMOTER: ${id.toUpperCase()}\n\n1 - LISTA PADRÃO\n2 - LISTA ANIVERSÁRIO\n3 - APENAS VISUALIZAR\n4 - ALTERAR SENHA\n\nDigite a opção (1, 2, 3 ou 4):`);
+            const op = prompt(`⚙️ EDITAR PROMOTER: ${id.toUpperCase()}\n\n1 - LISTA PADRÃO\n2 - LISTA ANIVERSÁRIO\n3 - APENAS VISUALIZAR\n4 - ALTERAR SENHA\n\nDigite a opção desejada:`);
             if (!op) return;
             let updates = {};
             if (op === '1') updates.tipo = 'padrao';
             if (op === '2') updates.tipo = 'aniversario';
             if (op === '3') updates.tipo = 'visualizar';
-            if (op === '4') {
-                const s = prompt("Nova senha:");
-                if (s) updates.senha = s.trim();
-            }
+            if (op === '4') { const s = prompt("Nova senha:"); if(s) updates.senha = s.trim(); }
             if (Object.keys(updates).length > 0) await updateDoc(doc(db, "promoters", id), updates);
         };
 
-        // ... O restante das suas funções de Relatórios, Eventos e Remoção continuam exatamente iguais ...
+        document.getElementById('formEvento').onsubmit = async e => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvarEvento');
+            btn.innerText = "PROCESSANDO..."; btn.disabled = true;
+            try {
+                const id = document.getElementById('edit_evento_id').value;
+                const d = { 
+                    nome: document.getElementById('nome_festa').value, 
+                    data: document.getElementById('data_festa').value, 
+                    valor_casal: document.getElementById('valor_casal').value, 
+                    valor_solteiro: document.getElementById('valor_solteiro').value, 
+                    desc_casal: document.getElementById('desc_casal').value, 
+                    desc_solteiro: document.getElementById('desc_solteiro').value, 
+                    imagem: document.getElementById('url_banner').value, 
+                    ativo: true 
+                };
+                if(id) await updateDoc(doc(db, "eventos", id), d); 
+                else await addDoc(collection(db, "eventos"), d);
+                e.target.reset(); document.getElementById('edit_evento_id').value = "";
+                alert("Salvo com sucesso!");
+            } catch (error) { alert("Erro ao salvar!"); }
+            finally {
+                // ISSO AQUI DESTRAVA O BOTÃO SEMPRE
+                btn.innerText = "Salvar Evento"; btn.disabled = false;
+            }
+        };
 
-        document.getElementById('formPromoter').addEventListener('submit', async e => {
+        document.getElementById('formPromoter').onsubmit = async e => {
             e.preventDefault(); 
             const n = document.getElementById('nome_promoter').value.trim(); 
             const t = document.getElementById('tipo_promoter').value;
             await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true });
             e.target.reset();
-        });
+        };
 
         window.removerItem = async (c, i) => { if(confirm("Apagar?")) await deleteDoc(doc(db, c, i)); };
-        
-        // (As funções renderizarRelatorios e renderizarGridConfig que você já tinha no original devem ser mantidas aqui)
+        window.gerarListaCheckins = () => { /* Sua função de excel */ };
+        window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado!"); };
     </script>
 </body>
 </html>
