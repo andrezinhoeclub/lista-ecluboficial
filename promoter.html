@@ -26,7 +26,7 @@
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter">PROMOTER <span class="text-sky-400">ACCESS</span></h1>
             <input type="text" id="usuario" placeholder="USUÁRIO" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white">
             <div id="campo-senha" class="hidden">
-                <input type="password" id="senha" placeholder="DIGITE SUA SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white">
+                <input type="password" id="senha" placeholder="SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white">
             </div>
             <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient font-black py-4 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">CONTINUAR</button>
         </div>
@@ -54,8 +54,8 @@
         <footer id="navAcoes" class="fixed bottom-0 left-0 w-full p-4 bg-black/60 backdrop-blur-md border-t border-white/5 z-40">
             <div class="max-w-md mx-auto flex gap-2">
                 <button onclick="abrirLinkGeral()" class="flex-[2] gold-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">ABRIR MEU LINK</button>
-                <button onclick="copiarLinkGeral()" class="flex-none bg-zinc-800 text-white border border-white/10 px-5 rounded-2xl text-lg flex items-center justify-center">📋</button>
-                <button id="btnNovoAniv" onclick="abrirModalAniv()" class="hidden flex-[1.5] purple-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">NOVO ANIV</button>
+                <button onclick="copiarLinkGeral()" class="flex-none bg-zinc-800 text-white border border-white/10 px-5 rounded-2xl text-lg flex items-center justify-center active:scale-95 transition-all">📋</button>
+                <button id="btnNovoAniv" onclick="abrirModalAniv()" class="hidden flex-[1.5] purple-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">NOVO ANIV</button>
             </div>
         </footer>
     </div>
@@ -96,6 +96,11 @@
         function iniciarSistema() {
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             if (st === "visualizar") document.getElementById('navAcoes').style.display = 'none';
+            
+            // DATA LOCAL DO BRASIL PARA O FILTRO
+            const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+            const hojeLocal = f.split('/').reverse().join('-'); // Converte 20/04/2026 para 2026-04-20
+
             if (st === "aniversario") {
                 document.getElementById('secaoAniversario').classList.remove('hidden'); document.getElementById('btnNovoAniv').classList.remove('hidden');
                 onSnapshot(collection(db, "links_aniversario"), (snap) => {
@@ -103,8 +108,19 @@
                     renderAniversarios();
                 });
             }
-            onSnapshot(collection(db, "lista_eventos"), (snap) => { reservas = snap.docs.map(d => d.data()); renderPerformance(); if (st === "aniversario") renderAniversarios(); });
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => { eventos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data)); renderPerformance(); });
+            
+            onSnapshot(collection(db, "lista_eventos"), (snap) => { 
+                reservas = snap.docs.map(d => d.data()); 
+                renderPerformance(); 
+                if (st === "aniversario") renderAniversarios(); 
+            });
+            
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => { 
+                eventos = snap.docs.map(d => d.data())
+                    .filter(ev => ev.data >= hojeLocal) // FILTRO DEFINITIVO PELA DATA LOCAL
+                    .sort((a,b) => new Date(a.data) - new Date(b.data)); 
+                renderPerformance(); 
+            });
         }
 
         function renderAniversarios() {
@@ -117,6 +133,10 @@
 
         function renderPerformance() {
             const container = document.getElementById('listaPerformance');
+            if (eventos.length === 0) {
+                container.innerHTML = `<p class="text-zinc-600 text-center py-10 font-bold text-xs uppercase italic">Nenhum evento futuro</p>`;
+                return;
+            }
             container.innerHTML = eventos.map(ev => {
                 const minhas = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase().trim() === logado).length;
                 const geral = reservas.filter(r => r.evento === ev.nome).length;
