@@ -3,76 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>E-CLUB | Confirmar Nome na Lista ✨</title>
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <title>E-CLUB | Reservas & Pix ⚡</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: #050508; 
-            color: #fff; 
-            min-height: 100vh; 
-            background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); 
-        }
+        body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; min-height: 100vh; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-lista { background: #eab308; color: #000; font-weight: 900; }
-        .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; }
-        .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; }
-        .banner-img { width: 100%; height: auto; display: block; opacity: 1; }
-        
-        /* Botões de Seleção Compactos */
-        .btn-sel { 
-            background: rgba(255,255,255,0.03); 
-            border: 2px solid rgba(255,255,255,0.05); 
-            transition: 0.3s; 
-        }
-        .btn-sel.active { 
-            border-color: #eab308; 
-            background: rgba(234, 179, 8, 0.05);
-            box-shadow: 0 0 20px rgba(234, 179, 8, 0.1);
-        }
-        .btn-sel-pix.active { 
-            border-color: #00f5d4; 
-            background: rgba(0, 245, 212, 0.05);
-        }
+        .gold-gradient { background: linear-gradient(135deg, #eab308 0%, #a16207 100%); }
+        input, select { background: rgba(0,0,0,0.5) !important; color: white !important; border: 1px solid #333 !important; }
+        input:focus { border-color: #eab308 !important; }
     </style>
 </head>
-<body class="p-4 flex flex-col items-center">
-    
-    <div class="max-w-md w-full">
-        <header class="flex justify-center py-6">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
-        </header>
-        <div id="listaEventos" class="space-y-10"></div>
-    </div>
+<body class="p-4 md:p-8 flex items-center justify-center">
 
-    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
-        <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative">
-            
-            <h2 id="modal-titulo" class="font-black uppercase italic mb-1 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic">Preencha os dados abaixo</p>
+    <div class="w-full max-w-md glass p-10 rounded-[3rem] text-center border-white/5 shadow-2xl">
+        <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
+        
+        <div id="loading" class="py-10">
+            <p class="text-zinc-500 font-black uppercase text-xs animate-pulse italic">Carregando convite...</p>
+        </div>
 
-            <div class="grid grid-cols-2 gap-3 mb-6">
-                <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
-                    <span class="text-[10px] font-black uppercase opacity-60">👫 Casal</span>
-                    <span id="v-modal-casal" class="text-xs font-black italic text-white leading-tight">---</span>
+        <div id="form-container" class="hidden">
+            <h1 class="text-3xl font-black mb-2 uppercase italic tracking-tighter">NOME NA <span class="text-yellow-500">LISTA</span></h1>
+            <p id="info-promoter" class="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-8">CONVITE OFICIAL</p>
+
+            <form id="formReserva" class="space-y-4 text-left">
+                <div>
+                    <label class="text-[10px] font-black text-zinc-500 uppercase ml-1">Selecione o Evento</label>
+                    <select id="evento" class="w-full p-5 rounded-2xl outline-none font-bold uppercase text-xs mt-1" required></select>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-zinc-500 uppercase ml-1">Seu Nome Completo</label>
+                    <input type="text" id="nome" placeholder="EX: ANDRÉ SILVA" class="w-full p-5 rounded-2xl outline-none font-bold uppercase text-xs mt-1" required>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-zinc-500 uppercase ml-1">Seu WhatsApp</label>
+                    <input type="tel" id="tel" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full p-5 rounded-2xl outline-none font-bold text-xs mt-1" required>
+                </div>
+
+                <button type="submit" id="btnEnviar" class="w-full gold-gradient text-black font-black py-6 rounded-2xl uppercase text-xs shadow-xl tracking-widest active:scale-95 transition-all mt-4">
+                    CONFIRMAR NA LISTA ✨
                 </button>
-                <button onclick="selecionarTipo('SOLTEIRO')" id="btn-solteiro" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
-                    <span class="text-[10px] font-black uppercase opacity-60">👤 Solteiro</span>
-                    <span id="v-modal-solteiro" class="text-xs font-black italic text-white leading-tight">---</span>
-                </button>
-            </div>
+            </form>
+        </div>
 
-            <div class="space-y-3">
-                <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
-                <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
-                
-                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95">Confirmar Presença</button>
-            </div>
-
-            <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic">Voltar</button>
+        <div id="sucesso" class="hidden py-10">
+            <div class="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">✓</div>
+            <h2 class="text-2xl font-black uppercase italic">Confirmado!</h2>
+            <p class="text-zinc-500 text-xs font-bold mt-2 uppercase">Seu nome já está na portaria.</p>
+            <button onclick="location.reload()" class="mt-8 text-zinc-600 font-black uppercase text-[10px]">Fazer outro cadastro</button>
         </div>
     </div>
 
@@ -92,102 +74,78 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = 'CASAL'; let eFluxoPix = false;
+        const params = new URLSearchParams(window.location.search);
+        const refPromoter = params.get('p') || params.get('ref') || "DIRETO";
 
-        const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
-
-        async function carregarPagina() {
-            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            const agora = new Date();
-            const hojeStr = agora.toLocaleDateString('en-CA'); 
-
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                .filter(ev => ev.data >= hojeStr)
-                .sort((a, b) => a.data.localeCompare(b.data));
-
-            const container = document.getElementById('listaEventos');
-            if (eventosCache.length === 0) {
-                container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic uppercase">Nenhum evento disponível</div>`;
+        async function carregarEventos() {
+            const q = query(collection(db, "eventos"), where("ativo", "==", true));
+            const snap = await getDocs(q);
+            const select = document.getElementById('evento');
+            
+            if (snap.empty) {
+                document.getElementById('loading').innerHTML = "<p class='text-red-500 font-black'>NENHUM EVENTO DISPONÍVEL</p>";
                 return;
             }
 
-            container.innerHTML = eventosCache.map(ev => `
-                <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
-                    ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black uppercase tracking-tighter italic text-xl">E-CLUB</div>`}
-                    <div class="p-8">
-                        <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter">${ev.nome}</h3>
-                        <div class="space-y-4">
-                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA LISTA</button>
-                            <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO</button>
-                        </div>
-                    </div>
-                </div>`).join('');
+            select.innerHTML = snap.docs.map(d => `<option value="${d.data().nome}">${d.data().nome}</option>`).join('');
+            document.getElementById('info-promoter').innerText = "CONVITE POR: " + refPromoter.toUpperCase();
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('form-container').classList.remove('hidden');
         }
 
-        window.iniciarFluxo = (id, isPix) => {
-            eventoAtivo = eventosCache.find(e => e.id === id);
-            eFluxoPix = isPix;
-            tipoAtivo = 'CASAL'; // Reset padrão
-            
-            const titulo = document.getElementById('modal-titulo');
-            titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : "🔥 NOME NA LISTA";
-            titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-1 tracking-tighter text-xl" : "text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl";
+        document.getElementById('formReserva').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnEnviar');
+            const nome = document.getElementById('nome').value.trim().toUpperCase();
+            const telRaw = document.getElementById('tel').value.replace(/\D/g, ""); // Apenas números
+            const evento = document.getElementById('evento').value;
 
-            document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? eventoAtivo.ant_casal : eventoAtivo.valor_casal);
-            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? eventoAtivo.ant_solteiro : eventoAtivo.valor_solteiro);
-            
-            selecionarTipo('CASAL'); // Inicia com Casal selecionado visualmente
-            document.getElementById('modalForm').classList.remove('hidden');
-        };
-
-        window.selecionarTipo = (tipo) => {
-            tipoAtivo = tipo;
-            const bCasal = document.getElementById('btn-casal');
-            const bSolteiro = document.getElementById('btn-solteiro');
-            
-            // Remove classes
-            bCasal.classList.remove('active', 'btn-sel-pix');
-            bSolteiro.classList.remove('active', 'btn-sel-pix');
-            
-            // Aplica as classes baseadas no fluxo e tipo
-            const btnAlvo = tipo === 'CASAL' ? bCasal : bSolteiro;
-            btnAlvo.classList.add('active');
-            if (eFluxoPix) btnAlvo.classList.add('btn-sel-pix');
-
-            const btnFinal = document.getElementById('btn-final-acao');
-            btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
-            btnFinal.className = eFluxoPix ? "w-full btn-pix-main py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl" : "w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl";
-        };
-
-        window.processarFinalizacao = async () => {
-            const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
-            const t = document.getElementById('tel-cliente').value.trim();
-            if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
-            
-            const btn = document.getElementById('btn-final-acao');
-            const originalText = btn.innerText;
-            btn.innerText = "PROCESSANDO..."; btn.disabled = true;
+            btn.innerText = "VERIFICANDO...";
+            btn.disabled = true;
 
             try {
-                const docRef = await addDoc(collection(db, "lista_eventos"), {
-                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
-                    promoter: "direto", data_reserva: new Date().toISOString(), entrou: false, pago: false
+                // --- TRAVA DE DUPLICIDADE ---
+                const qBusca = query(
+                    collection(db, "lista_eventos"), 
+                    where("evento", "==", evento), 
+                    where("tel", "==", document.getElementById('tel').value) // Comparação exata como salva
+                );
+                
+                const snapCheck = await getDocs(qBusca);
+
+                if (!snapCheck.empty) {
+                    const existente = snapCheck.docs[0].data();
+                    const ondeReserva = existente.promoter === "DIRETO" ? "pelo LINK OFICIAL DA CASA" : `através do promoter ${existente.promoter.toUpperCase()}`;
+                    
+                    alert(`🚨 OPS! Este número já está cadastrado para o evento "${evento}" ${ondeReserva}.\n\nNão é necessário cadastrar novamente.`);
+                    btn.innerText = "NÚMERO JÁ CADASTRADO";
+                    return;
+                }
+
+                // Se não achou duplicado, salva normal
+                await addDoc(collection(db, "lista_eventos"), {
+                    nome,
+                    tel: document.getElementById('tel').value,
+                    evento,
+                    promoter: refPromoter.toUpperCase(),
+                    data_reserva: new Date().toISOString(),
+                    entrou: false
                 });
 
-                if (eFluxoPix) {
-                    const linkPag = tipoAtivo === 'CASAL' ? eventoAtivo.link_pag_casal : eventoAtivo.link_pag_solteiro;
-                    window.location.href = linkPag + "?external_reference=" + docRef.id;
-                } else {
-                    alert("Confirmado!"); location.reload();
+                document.getElementById('form-container').classList.add('hidden');
+                document.getElementById('sucesso').classList.remove('hidden');
+
+            } catch (error) {
+                alert("Erro ao processar. Tente novamente.");
+                console.error(error);
+            } finally {
+                if (btn.innerText !== "NÚMERO JÁ CADASTRADO") {
+                    btn.innerText = "CONFIRMAR NA LISTA ✨";
+                    btn.disabled = false;
                 }
-            } catch (e) { 
-                alert("Erro!"); 
-                btn.disabled = false; 
-                btn.innerText = originalText; 
             }
         };
 
-        window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
         window.mask = (i) => {
             let v = i.value.replace(/\D/g, "").substring(0, 11);
             if (v.length > 0) v = "(" + v;
@@ -195,7 +153,8 @@
             if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
             i.value = v;
         };
-        carregarPagina();
+
+        carregarEventos();
     </script>
 </body>
 </html>
