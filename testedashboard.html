@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Club Manager Pro | Painel Administrativo</title>
+    <title>Club Manager Pro | Gestão Administrativa</title>
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -11,10 +11,10 @@
         
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #334155; margin: 0; }
         
-        /* Sidebar Estilo SaaS Moderno */
-        .sidebar { background: #1e293b; border-right: 1px solid #e2e8f0; transition: 0.3s; }
+        /* Sidebar SaaS Style */
+        .sidebar { background: #1e293b; border-right: 1px solid #e2e8f0; }
         .nav-link { 
-            color: #94a3b8; transition: 0.2s; cursor: pointer; display: flex; 
+            color: #94a3b8; transition: 0.3s; cursor: pointer; display: flex; 
             align-items: center; gap: 12px; padding: 14px 20px; border-radius: 12px; 
             font-weight: 600; font-size: 13px; 
         }
@@ -34,29 +34,31 @@
             border-radius: 16px; background: #f1f5f9; color: #3b82f6; 
         }
 
-        /* Tabelas Clean */
+        /* Tabelas e Paineis */
         .glass-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
         .admin-table th { background: #f8fafc; padding: 16px 24px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; text-align: left; }
         .admin-table td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
 
         /* Calendário SaaS */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; }
-        .calendar-day { min-height: 100px; border: 0.5px solid #f1f5f9; padding: 10px; }
-        .day-header { background: #f1f5f9; padding: 12px; text-align: center; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+        .calendar-day { min-height: 100px; border: 0.5px solid #f1f5f9; padding: 10px; position: relative; }
+        .day-header { background: #f1f5f9; padding: 12px; text-align: center; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+        .day-num { font-size: 11px; font-weight: 800; color: #cbd5e1; }
         .event-tag { background: #334155; color: #fff; font-size: 8px; padding: 3px 6px; border-radius: 4px; margin-top: 4px; font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Inputs e Botões */
-        .admin-input { background: #fff !important; border: 1px solid #e2e8f0 !important; color: #1e293b !important; outline: none; transition: 0.3s; }
-        .admin-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
         .btn-primary { background: #2563eb; color: #fff; font-weight: 800; padding: 12px 24px; border-radius: 12px; font-size: 12px; transition: 0.3s; }
         .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+        .admin-input { background: #fff !important; border: 1px solid #e2e8f0 !important; color: #1e293b !important; outline: none; transition: 0.3s; }
+        .admin-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
 
         .modal-overlay { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); }
+        .badge-view-only { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; }
+        .badge-active { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
     </style>
 </head>
 <body class="flex min-h-screen">
 
-    <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50">
+    <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50 shadow-2xl">
         <div class="mb-10 px-4 flex flex-col items-center">
             <img id="club-logo" src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mb-2 object-contain">
             <p id="club-name" class="text-[10px] font-extrabold uppercase tracking-widest text-blue-400 italic">ADMIN CENTRAL</p>
@@ -68,64 +70,49 @@
             <div onclick="showSection('listas')" id="link-listas" class="nav-link"><span>📝</span> Config. Listas</div>
             <div onclick="showSection('espacos')" id="link-espacos" class="nav-link"><span>🛋️</span> Espaços</div>
             <div onclick="showSection('relatorios')" id="link-relatorios" class="nav-link"><span>📈</span> Relatórios</div>
-            <div onclick="showSection('carteira')" id="link-carteira" class="nav-link"><span>💰</span> Carteira</div>
         </nav>
-        <div class="pt-6 border-t border-slate-700">
-            <div class="nav-link text-red-400 hover:text-red-300"><span>🚪</span> Sair</div>
-        </div>
+        <div class="pt-6 border-t border-slate-700"><div class="nav-link text-red-400"><span>🚪</span> Sair</div></div>
     </aside>
 
     <main class="flex-grow lg:ml-64 p-6 lg:p-12">
-        
-        <section id="section-dash" class="space-y-10">
+        <section id="section-dash" class="space-y-12">
             <header>
                 <h2 class="text-3xl font-extrabold tracking-tight text-slate-800 italic">Central de Comando</h2>
-                <p class="text-slate-400 font-bold text-xs mt-1 uppercase tracking-widest">Gestão: <span id="dash-club-title" class="text-blue-600">---</span></p>
+                <p class="text-slate-400 font-bold text-xs mt-1 uppercase">Gestão: <span id="dash-club-title" class="text-blue-600">---</span></p>
             </header>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                 <div onclick="showSection('usuarios')" class="module-card"><div class="icon-box">👥</div><p class="text-xs font-extrabold uppercase text-slate-600">Equipe</p></div>
                 <div onclick="showSection('eventos')" class="module-card"><div class="icon-box">📅</div><p class="text-xs font-extrabold uppercase text-slate-600">Calendário</p></div>
                 <div onclick="showSection('listas')" class="module-card"><div class="icon-box">📝</div><p class="text-xs font-extrabold uppercase text-slate-600">Regras Listas</p></div>
                 <div onclick="showSection('relatorios')" class="module-card"><div class="icon-box">📈</div><p class="text-xs font-extrabold uppercase text-slate-600">Relatórios</p></div>
                 <div onclick="showSection('espacos')" class="module-card"><div class="icon-box">🛋️</div><p class="text-xs font-extrabold uppercase text-slate-600">Espaços</p></div>
-                <div onclick="showSection('carteira')" class="module-card"><div class="icon-box">💰</div><p class="text-xs font-extrabold uppercase text-slate-600">Carteira</p></div>
             </div>
         </section>
 
         <section id="section-usuarios" class="hidden space-y-8">
             <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Gestão de Equipe</h2><button onclick="openModal('modalPromoter')" class="btn-primary">+ ADICIONAR PROMOTER</button></div>
-            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Promoter</th><th>Acesso</th><th class="text-right">Ações</th></tr></thead><tbody id="tabela-promoters"></tbody></table></div>
+            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Promoter</th><th>Status / Permissão</th><th class="text-right">Ações</th></tr></thead><tbody id="tabela-promoters"></tbody></table></div>
         </section>
 
         <section id="section-eventos" class="hidden space-y-8">
-            <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Calendário de Eventos</h2><button onclick="openModal('modalEvento')" class="btn-primary">+ NOVO EVENTO</button></div>
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Calendário</h2><button onclick="openModal('modalEvento')" class="btn-primary">+ NOVO EVENTO</button></div>
             <div class="calendar-grid"><div class="day-header">Dom</div><div class="day-header">Seg</div><div class="day-header">Ter</div><div class="day-header">Qua</div><div class="day-header">Qui</div><div class="day-header">Sex</div><div class="day-header">Sáb</div><div id="calendar-body" class="contents"></div></div>
         </section>
 
         <section id="section-listas" class="hidden space-y-8">
             <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Regras de Listas</h2><button onclick="openModal('modalLista')" class="btn-primary">+ NOVA REGRA</button></div>
-            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Nome da Lista</th><th>Obrigatoriedade</th><th>Gêneros</th><th>Status</th></tr></thead><tbody id="tabela-regras"></tbody></table></div>
+            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Nome</th><th>Exigências</th><th>Gêneros</th><th>Obs</th></tr></thead><tbody id="tabela-regras"></tbody></table></div>
         </section>
-
     </main>
 
     <div id="modalEvento" class="hidden fixed inset-0 z-[999] modal-overlay flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-extrabold text-slate-800 mb-8 uppercase italic tracking-tighter">Configurar Novo Evento</h3>
             <form id="formEvento" class="space-y-6">
-                <div>
-                    <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Nome da Festa</label>
-                    <input type="text" id="ev-nome" placeholder="EX: NOITE DA NOSTALGIA" class="w-full admin-input p-5 rounded-2xl font-bold uppercase text-xs" required>
-                </div>
+                <input type="text" id="ev-nome" placeholder="NOME DO EVENTO" class="w-full admin-input p-5 rounded-2xl font-bold uppercase text-xs" required>
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Data</label>
-                        <input type="date" id="ev-data" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Hora de Início</label>
-                        <input type="time" id="ev-hora" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
-                    </div>
+                    <input type="date" id="ev-data" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
+                    <input type="time" id="ev-hora" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
                 </div>
                 <div class="space-y-2">
                     <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Banner (Importar Imagem)</label>
@@ -135,10 +122,7 @@
                         <span id="lb-ev" class="text-[10px] font-extrabold uppercase">Escolher do dispositivo</span>
                     </label>
                 </div>
-                <div>
-                    <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Informações Adicionais</label>
-                    <textarea id="ev-info" placeholder="ATRAÇÕES, REGRAS OU DETALHES..." class="w-full admin-input p-5 rounded-2xl font-bold text-[10px] h-24 uppercase resize-none"></textarea>
-                </div>
+                <textarea id="ev-info" placeholder="DESCRIÇÃO / ATRAÇÕES / REGRAS..." class="w-full admin-input p-5 rounded-2xl font-bold text-[10px] h-24 uppercase resize-none"></textarea>
                 <div class="flex gap-4 pt-4">
                     <button type="submit" id="btnSalvarEvento" class="flex-grow bg-blue-600 text-white py-5 rounded-2xl font-extrabold uppercase text-xs shadow-lg">Salvar Evento</button>
                     <button type="button" onclick="closeModal('modalEvento')" class="px-6 text-slate-400 font-extrabold uppercase text-[10px]">Cancelar</button>
@@ -146,3 +130,145 @@
             </form>
         </div>
     </div>
+
+    <div id="modalPromoter" class="hidden fixed inset-0 z-[999] modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl">
+            <h3 class="text-xl font-extrabold text-slate-800 mb-8 uppercase italic tracking-tighter">Novo Promoter</h3>
+            <form id="formPromoter" class="space-y-6">
+                <input type="text" id="pro-nome" placeholder="NOME DO PROMOTER" class="w-full admin-input p-5 rounded-2xl font-bold uppercase text-xs" required>
+                <select id="pro-tipo" class="w-full admin-input p-5 rounded-2xl font-bold uppercase text-xs">
+                    <option value="padrao">LISTA PADRÃO</option>
+                    <option value="aniversario">LISTA ANIVERSÁRIO (VIP)</option>
+                    <option value="visualizar">APENAS VISUALIZAR (SEM AÇÕES)</option>
+                </select>
+                <button type="submit" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-extrabold uppercase text-xs">Cadastrar</button>
+                <button type="button" onclick="closeModal('modalPromoter')" class="w-full text-slate-400 font-extrabold uppercase text-[10px] mt-2">Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp, updateDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const params = new URLSearchParams(window.location.search);
+        const clubID = params.get('club') || 'eclub';
+
+        // --- BRANDING ---
+        const config = { 'eclub': { nome: 'E-CLUB', logo: 'https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png' } };
+        const cur = config[clubID] || { nome: clubID.toUpperCase(), logo: 'https://cdn-icons-png.flaticon.com/512/3843/3843517.png' };
+        document.getElementById('club-name').innerText = cur.nome;
+        document.getElementById('dash-club-title').innerText = cur.nome;
+        document.getElementById('club-logo').src = cur.logo;
+
+        // --- NAVEGAÇÃO SPA ---
+        window.showSection = (id) => {
+            document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${id}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(`link-${id}`)?.classList.add('active');
+            if(id === 'usuarios') loadPromoters(); if(id === 'eventos') loadCalendar(); if(id === 'listas') loadRules();
+        };
+
+        window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        // --- MÓDULO EVENTOS (UPLOAD + FIRESTORE) ---
+        document.getElementById('formEvento').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvarEvento');
+            const file = document.getElementById('ev-file').files[0];
+            
+            btn.innerText = "PROCESSANDO...";
+            btn.disabled = true;
+
+            try {
+                let fotoUrl = "";
+                if (file) {
+                    const storageRef = ref(storage, `${clubID}/eventos/${Date.now()}_${file.name}`);
+                    const snapshot = await uploadBytes(storageRef, file);
+                    fotoUrl = await getDownloadURL(snapshot.ref);
+                }
+
+                await addDoc(collection(db, "eventos"), {
+                    nome: document.getElementById('ev-nome').value.toUpperCase(),
+                    data: document.getElementById('ev-data').value,
+                    hora: document.getElementById('ev-hora').value,
+                    info: document.getElementById('ev-info').value.toUpperCase(),
+                    imagem: fotoUrl,
+                    clubID: clubID,
+                    ativa: true,
+                    criadoEm: serverTimestamp()
+                });
+
+                alert("Evento criado com sucesso!");
+                location.reload();
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao salvar! Verifique se as permissões do Firebase Storage estão abertas.");
+            } finally {
+                // ISSO GARANTE QUE O BOTÃO DESTRAVE
+                btn.innerText = "Salvar Evento";
+                btn.disabled = false;
+            }
+        };
+
+        // --- MÓDULO EQUIPE (TRAVA VISUALIZAR) ---
+        async function loadPromoters() {
+            const q = query(collection(db, "promoters"), where("clubID", "==", clubID));
+            const s = await getDocs(q); const t = document.getElementById('tabela-promoters'); t.innerHTML = '';
+            s.forEach(d => {
+                const p = d.data();
+                const isViewOnly = p.tipo === 'visualizar';
+                const badgeClass = isViewOnly ? 'badge-view-only' : 'badge-active';
+                
+                t.innerHTML += `<tr>
+                    <td><p class="font-extrabold text-xs text-slate-700 uppercase">${p.nome || d.id}</p></td>
+                    <td><span class="px-3 py-1 rounded-full font-bold text-[9px] uppercase ${badgeClass}">${isViewOnly ? 'Apenas Visualizar' : p.tipo}</span></td>
+                    <td class="text-right"><button onclick="removerPromoter('${d.id}')" class="text-red-400 font-bold text-[10px]">REMOVER</button></td>
+                </tr>`;
+            });
+        }
+
+        document.getElementById('formPromoter').onsubmit = async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "promoters"), {
+                nome: document.getElementById('pro-nome').value.trim(),
+                tipo: document.getElementById('pro-tipo').value,
+                clubID: clubID,
+                ativa: true
+            });
+            alert("Membro adicionado!"); closeModal('modalPromoter'); loadPromoters();
+        };
+
+        // --- CARREGAR CALENDÁRIO ---
+        async function loadCalendar() {
+            const b = document.getElementById('calendar-body'); b.innerHTML = '';
+            const h = new Date(); const f = new Date(h.getFullYear(), h.getMonth(), 1).getDay(); const l = new Date(h.getFullYear(), h.getMonth()+1, 0).getDate();
+            for(let i=0; i<f; i++) b.innerHTML += `<div class="calendar-day bg-slate-50/50"></div>`;
+            for(let d=1; d<=l; d++) {
+                const day = `${h.getFullYear()}-${(h.getMonth()+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+                b.innerHTML += `<div class="calendar-day" id="day-${day}"><span class="day-num text-slate-300 font-extrabold text-[11px]">${d}</span></div>`;
+            }
+            const q = query(collection(db, "eventos"), where("clubID", "==", clubID));
+            const s = await getDocs(q);
+            s.forEach(doc => { const ev = doc.data(); const el = document.getElementById(`day-${ev.data}`); if(el) el.innerHTML += `<span class="event-tag">${ev.nome}</span>`; });
+        }
+
+        showSection('dash');
+    </script>
+</body>
+</html>
