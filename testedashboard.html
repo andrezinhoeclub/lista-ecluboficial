@@ -180,11 +180,8 @@
             }); 
             document.getElementById(id).classList.remove('hidden'); 
             
-            if (type === 'danger') {
-                btn.classList.add('active-danger');
-            } else {
-                btn.classList.add('active'); 
-            }
+            if (type === 'danger') btn.classList.add('active-danger');
+            else btn.classList.add('active'); 
         };
 
         onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
@@ -320,6 +317,7 @@
                 </div>`).join('');
         }
 
+        // --- FUNÇÃO CORRIGIDA PARA EXIBIR SENHA ---
         function renderizarEquipe() {
             document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => {
                 let tipoLabel = 'LISTA PADRÃO';
@@ -327,11 +325,15 @@
                 if (p.tipo === 'aniversario') tipoLabel = 'LISTA ANIVERSÁRIO (VIP)';
                 if (p.tipo === 'visualizar') { tipoLabel = 'APENAS VISUALIZAR'; corBorda = 'border-l-blue-500'; }
 
+                // Puxa a senha do banco
+                const senhaVisivel = p.senha ? p.senha : 'NÃO CADASTRADA';
+
                 return `
                 <div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 ${corBorda}">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p>
+                            <p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${senhaVisivel}</p>
                             <p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tipoLabel}</p>
                         </div>
                         <div class="flex gap-4">
@@ -367,14 +369,24 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
+        // --- EDITAR PROMOTER CORRIGIDO PARA ALTERAR SENHA ---
         window.editarPromoter = async (id, tipoAtual) => {
-            const op = prompt(`⚙️ EDITAR PROMOTER: ${id.toUpperCase()}\n\n1 - LISTA PADRÃO\n2 - LISTA ANIVERSÁRIO\n3 - APENAS VISUALIZAR\n\nDigite a opção desejada:`);
+            const op = prompt(`⚙️ EDITAR PROMOTER: ${id.toUpperCase()}\n\n1 - LISTA PADRÃO\n2 - LISTA ANIVERSÁRIO\n3 - APENAS VISUALIZAR\n4 - ALTERAR SENHA\n\nDigite a opção desejada:`);
             if (!op) return;
+            
             let updates = {};
             if (op === '1') updates.tipo = 'padrao';
             if (op === '2') updates.tipo = 'aniversario';
             if (op === '3') updates.tipo = 'visualizar';
-            if (Object.keys(updates).length > 0) await updateDoc(doc(db, "promoters", id), updates);
+            if (op === '4') {
+                const novaSenha = prompt("Digite a NOVA SENHA para " + id.toUpperCase() + ":");
+                if (novaSenha !== null) updates.senha = novaSenha.trim();
+            }
+            
+            if (Object.keys(updates).length > 0) {
+                await updateDoc(doc(db, "promoters", id), updates);
+                alert("Atualizado com sucesso!");
+            }
         };
 
         document.getElementById('formEvento').addEventListener('submit', async e => {
@@ -400,7 +412,7 @@
         });
 
         window.removerItem = async (c, i) => { if(confirm("Apagar?")) await deleteDoc(doc(db, c, i)); };
-        window.gerarListaCheckins = () => { /* lógica original */ };
+        
         window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado!"); };
     </script>
 </body>
