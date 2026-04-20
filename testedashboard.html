@@ -5,7 +5,214 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin | Painel de Controle</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style><!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Gestão de Eventos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; }
+        
+        /* Estilo do Calendário (Inspirado no teu print) */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border-top: 1px solid #e5e7eb; border-left: 1px solid #e5e7eb; }
+        .calendar-day { background: #fff; min-height: 120px; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; padding: 8px; }
+        .day-header { background: #f9fafb; font-size: 10px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 10px; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; color: #6b7280; }
+        .event-tag { background: #4b5563; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 6px; margin-top: 4px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+        .day-number { font-size: 12px; font-weight: 900; color: #374151; width: 24px; height: 24px; display: flex; items-center justify-content: center; border-radius: 50%; }
+        .today { background: #eab308; color: #000; }
+
+        .sidebar { background-color: #2d3748; color: #fff; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #cbd5e0; transition: 0.2s; }
+        .nav-link:hover, .nav-link.active { background: #4a5568; color: #fff; }
+        
+        :root { --accent: #eab308; }
+        .btn-primary { background-color: #22c55e; color: #fff; font-weight: 900; padding: 10px 20px; border-radius: 8px; transition: 0.3s; }
+        .btn-primary:hover { background-color: #16a34a; transform: translateY(-1px); }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <aside class="sidebar w-64 hidden md:flex flex-col p-6 fixed inset-y-0">
+        <div class="mb-10 text-center">
+            <h1 class="text-xl font-black italic tracking-tighter uppercase text-white"><span id="club-name">CLUB</span> <span class="text-yellow-500">PRO</span></h1>
+            <p class="text-[9px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Painel Administrativo</p>
+        </div>
+        <nav class="space-y-1">
+            <a href="#" class="nav-link">📊 Início</a>
+            <a href="#" class="nav-link active">📅 Eventos</a>
+            <a href="#" class="nav-link">📝 Listas</a>
+            <a href="#" class="nav-link">👥 Comissários</a>
+            <a href="#" class="nav-link">💰 Financeiro</a>
+        </nav>
+    </aside>
+
+    <main class="flex-grow md:ml-64 p-6 bg-[#f0f2f5]">
+        
+        <header class="flex justify-between items-center mb-8 bg-white p-4 rounded-xl shadow-sm">
+            <div class="flex items-center gap-4">
+                <button class="bg-gray-100 p-2 rounded-lg text-sm font-bold">📅 Abril - 2026</button>
+            </div>
+            <button onclick="abrirModalEvento()" class="btn-primary flex items-center gap-2">
+                <span>+</span> CRIAR EVENTO
+            </button>
+        </header>
+
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+            <div class="grid grid-cols-7">
+                <div class="day-header">Dom</div>
+                <div class="day-header">Seg</div>
+                <div class="day-header">Ter</div>
+                <div class="day-header">Qua</div>
+                <div class="day-header">Qui</div>
+                <div class="day-header">Sex</div>
+                <div class="day-header">Sáb</div>
+            </div>
+            <div id="calendar-body" class="calendar-grid">
+                </div>
+        </div>
+    </main>
+
+    <div id="modalEvento" class="hidden fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
+            <div class="bg-gray-800 p-6 text-white flex justify-between items-center">
+                <h3 class="font-black uppercase italic tracking-tighter">Novo Evento</h3>
+                <button onclick="fecharModal()" class="text-zinc-400 hover:text-white">✕</button>
+            </div>
+            <form id="formNovoEvento" class="p-8 space-y-4">
+                <div>
+                    <label class="text-[10px] font-black uppercase text-zinc-400">Título do Evento</label>
+                    <input type="text" id="ev-nome" class="w-full border-b-2 border-gray-100 p-2 focus:border-green-500 outline-none font-bold uppercase" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-zinc-400">Data</label>
+                        <input type="date" id="ev-data" class="w-full border-b-2 border-gray-100 p-2 focus:border-green-500 outline-none font-bold" required>
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-zinc-400">URL da Imagem (Banner)</label>
+                        <input type="text" id="ev-img" class="w-full border-b-2 border-gray-100 p-2 focus:border-green-500 outline-none text-xs" placeholder="https://...">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 pt-4 border-t border-gray-50">
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-zinc-400">Casal (Lista)</label>
+                        <input type="text" id="ev-valor-casal" class="w-full border-b-2 border-gray-100 p-2 outline-none font-bold" placeholder="R$ 120">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase text-zinc-400">Solteiro (Lista)</label>
+                        <input type="text" id="ev-valor-solteiro" class="w-full border-b-2 border-gray-100 p-2 outline-none font-bold" placeholder="R$ 170">
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black uppercase shadow-lg mt-6">Salvar Evento no Calendário</button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const params = new URLSearchParams(window.location.search);
+        const clubID = params.get('club') || 'eclub';
+
+        let eventosCache = [];
+
+        // GERAR CALENDÁRIO (Simulação Abril 2026)
+        function renderCalendar() {
+            const body = document.getElementById('calendar-body');
+            body.innerHTML = '';
+            
+            // Abril 2026 começa na Quarta-feira (dia 3 da semana)
+            const diasNoMes = 30;
+            const startingDay = 3; 
+
+            // Espaços vazios
+            for(let i=0; i<startingDay; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'calendar-day bg-gray-50/50';
+                body.appendChild(empty);
+            }
+
+            // Dias reais
+            for(let d=1; d<=diasNoMes; d++) {
+                const dayBox = document.createElement('div');
+                dayBox.className = 'calendar-day';
+                dayBox.id = `day-2026-04-${d.toString().padStart(2, '0')}`;
+                
+                const num = document.createElement('div');
+                num.className = 'day-number';
+                if(d === 20) num.classList.add('today'); // Simula destaque no dia 20
+                num.innerText = d;
+                
+                dayBox.appendChild(num);
+                body.appendChild(dayBox);
+            }
+            carregarEventos();
+        }
+
+        async function carregarEventos() {
+            const q = query(collection(db, "eventos"), where("ativo", "==", true));
+            const snap = await getDocs(q);
+            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+            eventosCache.forEach(ev => {
+                const dayEl = document.getElementById(`day-${ev.data}`);
+                if(dayEl) {
+                    const tag = document.createElement('div');
+                    tag.className = 'event-tag';
+                    tag.innerText = ev.nome;
+                    tag.onclick = () => alert(`Evento: ${ev.nome}\nValor: ${ev.valor_casal}`);
+                    dayEl.appendChild(tag);
+                }
+            });
+        }
+
+        window.abrirModalEvento = () => document.getElementById('modalEvento').classList.remove('hidden');
+        window.fecharModal = () => document.getElementById('modalEvento').classList.add('hidden');
+
+        document.getElementById('formNovoEvento').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            btn.innerText = "SALVANDO..."; btn.disabled = true;
+
+            try {
+                const novo = {
+                    nome: document.getElementById('ev-nome').value.toUpperCase(),
+                    data: document.getElementById('ev-data').value,
+                    imagem: document.getElementById('ev-img').value,
+                    valor_casal: document.getElementById('ev-valor-casal').value,
+                    valor_solteiro: document.getElementById('ev-valor-solteiro').value,
+                    ativo: true,
+                    clubID: clubID,
+                    criadoEm: serverTimestamp()
+                };
+                await addDoc(collection(db, "eventos"), novo);
+                alert("Evento cadastrado com sucesso!");
+                location.reload();
+            } catch (err) {
+                alert("Erro ao salvar.");
+                btn.innerText = "Tentar Novamente"; btn.disabled = false;
+            }
+        });
+
+        renderCalendar();
+    </script>
+</body>
+</html>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0a0a0c; color: #fff; }
         .sidebar { background-color: #111114; border-right: 1px solid #1f1f23; }
