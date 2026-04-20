@@ -3,221 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB | Area do Promoter ✨</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <title>E-CLUB | Reservas ✨</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; min-height: 100vh; }
+        body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; min-height: 100vh; background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .gold-gradient { background: linear-gradient(135deg, #eab308 0%, #a16207 100%); }
-        .purple-gradient { background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); }
-        
-        /* Estilo dos Cards Performance (Borda Azul) */
-        .card-performance {
-            background: rgba(10, 10, 10, 0.9);
-            border: 2px solid #0099ff;
-            border-radius: 2.5rem;
-            box-shadow: 0 0 25px rgba(0, 153, 255, 0.15);
-        }
-
-        /* Estilo dos Cards Aniversário (Borda Roxa) */
-        .card-aniv {
-            background: rgba(10, 10, 10, 0.9);
-            border: 2px solid #a855f7;
-            border-radius: 2rem;
-            box-shadow: 0 0 20px rgba(168, 85, 247, 0.1);
-        }
+        .btn-lista { background: #eab308; color: #000; font-weight: 900; }
+        .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; transition: 0.3s; }
+        .site-input:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-sel { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .btn-sel.active { border-color: #eab308; background: rgba(234, 179, 8, 0.05); box-shadow: 0 0 20px rgba(234, 179, 8, 0.1); }
+        .banner-img { width: 100%; height: auto; display: block; }
     </style>
 </head>
-<body class="p-6 md:p-12 pb-32">
-
-    <div id="telaLogin" class="fixed inset-0 z-[999] bg-[#050508] flex items-center justify-center p-6">
-        <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
-            <h1 class="text-3xl font-black mb-8 uppercase italic tracking-tighter">PROMOTER <span class="text-sky-400">ACCESS</span></h1>
-            <input type="text" id="usuario" placeholder="USUÁRIO" class="w-full p-5 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4">
-            <div id="campo-senha" class="hidden">
-                <input type="password" id="senha" placeholder="DIGITE SUA SENHA" class="w-full p-5 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4">
-            </div>
-            <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient text-white font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">CONTINUAR</button>
-        </div>
-    </div>
-
-    <div id="painel" class="hidden max-w-md mx-auto">
-        <header class="flex justify-between items-center mb-12">
-            <div>
-                <p class="text-sky-400 text-[10px] font-black uppercase tracking-[0.3em] mb-1 italic">E-CLUB OFFICIAL</p>
-                <h1 id="nomeHeader" class="text-4xl font-black uppercase italic leading-none">---</h1>
-            </div>
-            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-6 py-2 rounded-2xl font-black text-[10px] uppercase italic">Sair</button>
+<body class="p-4 flex flex-col items-center">
+    <div class="max-w-md w-full">
+        <header class="flex justify-center py-6">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
         </header>
-
-        <section id="secaoAniversario" class="hidden mb-12">
-            <h3 class="text-[11px] font-black uppercase text-purple-400 mb-4 tracking-[0.2em] italic">🎂 MEUS LINKS DE ANIVERSÁRIO</h3>
-            <div id="listaAniversarios" class="space-y-4"></div>
-        </section>
-
-        <section class="space-y-6">
-            <h3 class="text-[11px] font-black uppercase text-sky-400 mb-4 tracking-[0.2em] italic">📈 PERFORMANCE REALTIME</h3>
-            <div id="listaPerformance" class="space-y-4"></div>
-        </section>
-
-        <footer id="navAcoes" class="fixed bottom-0 left-0 w-full p-6 bg-black/90 backdrop-blur-xl border-t border-white/5 z-40">
-            <div class="max-w-md mx-auto flex gap-3">
-                <button onclick="abrirLinkGeral()" class="flex-grow gold-gradient text-black font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">ABRIR MEU LINK</button>
-                <button onclick="copiarLinkGeral()" class="gold-gradient text-black font-black px-6 rounded-2xl text-lg flex items-center justify-center">📋</button>
-                <button id="btnNovoAniv" onclick="abrirModalAniv()" class="hidden flex-grow purple-gradient text-white font-black py-6 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">NOVO ANIV</button>
-            </div>
-        </footer>
+        <div id="listaEventos" class="space-y-10"></div>
     </div>
 
-    <div id="modalAniv" class="fixed inset-0 bg-black/95 z-[10000] hidden flex items-center justify-center p-6 text-white">
-        <div class="glass max-w-sm w-full p-10 rounded-[3.5rem] border-purple-500/30 border text-center">
-            <h2 class="text-2xl font-black text-purple-400 uppercase italic mb-8">Novo Aniversariante</h2>
-            <select id="selEvento" class="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-white text-xs font-bold uppercase mb-4"></select>
-            <input type="text" id="nomeAniv" placeholder="NOME DO ANIVERSARIANTE" class="w-full bg-black border border-zinc-800 p-5 rounded-2xl text-white font-black uppercase text-xs mb-4">
-            <button onclick="criarLinkAniv()" class="w-full purple-gradient text-white font-black py-6 rounded-2xl uppercase text-xs shadow-xl">GERAR LINK VIP ✨</button>
-            <button onclick="fecharModalAniv()" class="w-full text-zinc-600 font-black py-4 uppercase text-[9px] mt-2">FECHAR</button>
+    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
+        <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl relative">
+            <h2 class="text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
+            <p class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic">Escolha uma opção para liberar</p>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
+                    <span class="text-[10px] font-black uppercase opacity-60">👫 Casal</span>
+                    <span id="v-modal-casal" class="text-xs font-black italic text-white leading-tight">---</span>
+                </button>
+                <button onclick="selecionarTipo('SOLTEIRO')" id="btn-solteiro" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
+                    <span class="text-[10px] font-black uppercase opacity-60">👤 Solteiro</span>
+                    <span id="v-modal-solteiro" class="text-xs font-black italic text-white leading-tight">---</span>
+                </button>
+            </div>
+            <div class="space-y-3 text-left">
+                <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase" disabled>
+                <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs" disabled>
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl" disabled>Confirmar Presença ✨</button>
+            </div>
+            <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 italic">Voltar</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
-            authDomain: "teste-de-reserva.firebaseapp.com",
-            projectId: "teste-de-reserva",
-            storageBucket: "teste-de-reserva.firebasestorage.app",
-            messagingSenderId: "163395694876",
-            appId: "1:163395694876:web:8b1116a0483af951548ad9"
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        let logado = ""; let reservas = []; let eventos = []; let dadosPromoter = null; let linksAniv = [];
 
-        window.prosseguirLogin = async () => {
-            const u = document.getElementById('usuario').value.trim().toLowerCase();
-            const s = document.getElementById('senha').value.trim();
-            const btn = document.getElementById('btnAcao');
-            const inputSenha = document.getElementById('senha');
+        const params = new URLSearchParams(window.location.search);
+        const refPromoter = (params.get('p') || params.get('ref') || "direto").toLowerCase().trim();
 
-            if (!logado) {
-                const snap = await getDoc(doc(db, "promoters", u));
-                if (snap.exists()) {
-                    logado = u; dadosPromoter = snap.data();
-                    
-                    if (!dadosPromoter.senha) {
-                        inputSenha.placeholder = "CADASTRE SUA SENHA";
-                        inputSenha.style.border = "1px solid #a855f7";
-                    } else {
-                        inputSenha.placeholder = "DIGITE SUA SENHA";
-                        inputSenha.style.border = "1px solid #333";
-                    }
+        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null;
 
-                    document.getElementById('campo-senha').classList.remove('hidden');
-                    document.getElementById('usuario').readOnly = true;
-                    btn.innerText = "ENTRAR NO PAINEL";
-                } else { alert("Usuário não encontrado"); }
-            } else {
-                if (dadosPromoter.senha === s || !dadosPromoter.senha) {
-                    if (!dadosPromoter.senha) await updateDoc(doc(db, "promoters", logado), { senha: s });
-                    document.getElementById('telaLogin').style.display = 'none';
-                    document.getElementById('painel').classList.remove('hidden');
-                    document.getElementById('nomeHeader').innerText = logado.toUpperCase();
-                    iniciarSistema();
-                } else { alert("Senha incorreta"); }
-            }
-        };
-
-        function iniciarSistema() {
-            if (dadosPromoter.tipo === "visualizar") document.getElementById('navAcoes').style.display = 'none';
-
-            // Se for promoter de aniversário, ativa as funções extras
-            if (dadosPromoter.tipo === "aniversario") {
-                document.getElementById('secaoAniversario').classList.remove('hidden');
-                document.getElementById('btnNovoAniv').classList.remove('hidden');
-                
-                onSnapshot(collection(db, "links_aniversario"), (snap) => {
-                    linksAniv = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(l => (l.promoter || '').toLowerCase().trim() === logado);
-                    renderAniversarios();
-                });
-            }
-
-            onSnapshot(collection(db, "lista_eventos"), (snap) => {
-                reservas = snap.docs.map(d => d.data());
-                renderPerformance();
-                if (dadosPromoter.tipo === "aniversario") renderAniversarios();
-            });
-
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
-                eventos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data));
-                renderPerformance();
-            });
-        }
-
-        function renderAniversarios() {
-            const cont = document.getElementById('listaAniversarios');
-            if(!cont) return;
-            cont.innerHTML = linksAniv.map(l => {
-                const count = reservas.filter(r => 
-                    (r.evento || '').toLowerCase().trim() === (l.festa || '').toLowerCase().trim() && 
-                    (r.aniversariante || '').toLowerCase().trim() === (l.aniversariante || '').toLowerCase().trim()
-                ).length;
-
-                return `
-                <div class="card-aniv p-6 flex justify-between items-center mb-4">
-                    <div class="text-left"><p class="text-[12px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[8px] text-zinc-500 font-bold mt-1">${l.festa}</p></div>
-                    <div class="flex items-center gap-5">
-                        <div class="text-right"><p class="text-xl font-black text-purple-400 leading-none">${count}</p><p class="text-[7px] text-purple-500 font-black mt-1">LISTA</p></div>
-                        <button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-4 py-2 rounded-xl text-[9px] font-black uppercase border border-purple-500/30">Copiar</button>
+        async function carregarPagina() {
+            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.data.localeCompare(b.data));
+            document.getElementById('listaEventos').innerHTML = eventosCache.map(ev => `
+                <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
+                    <img src="${ev.imagem || ''}" class="banner-img">
+                    <div class="p-8 text-center">
+                        <h3 class="text-2xl font-black uppercase italic mb-6 text-white">${ev.nome}</h3>
+                        <button onclick="iniciarFluxo('${ev.id}')" class="w-full btn-lista py-5 rounded-2xl text-xs font-black">📝 COLOCAR NOME NA LISTA</button>
                     </div>
-                </div>`;
-            }).join('');
+                </div>`).join('');
         }
 
-        function renderPerformance() {
-            const container = document.getElementById('listaPerformance');
-            container.innerHTML = eventos.map(ev => {
-                const minhas = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase().trim() === logado).length;
-                const geral = reservas.filter(r => r.evento === ev.nome).length;
-
-                return `
-                <div class="card-performance p-8 flex justify-between items-center mb-4">
-                    <div class="text-left"><h4 class="text-[13px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[9px] text-zinc-500 font-bold mt-2">${ev.data.split('-').reverse().join('/')}</p></div>
-                    <div class="flex gap-8 text-right">
-                        <div><p class="text-3xl font-black text-sky-400 leading-none">${minhas}</p><p class="text-[7px] text-sky-500 font-black mt-2">MINHAS</p></div>
-                        <div class="border-l border-white/5 pl-8"><p class="text-3xl font-black text-white/20 leading-none">${geral}</p><p class="text-[7px] text-white/10 font-black mt-2">GERAL</p></div>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        window.abrirLinkGeral = () => { window.open(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`, '_blank'); };
-        window.copiarLinkGeral = () => { navigator.clipboard.writeText(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`).then(() => alert("Link Geral Copiado!")); };
-        
-        window.copiarLinkAniv = (id, nome) => {
-            const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?id=${id}`;
-            navigator.clipboard.writeText(`*Convite VIP: Aniversário de ${nome}* 🎂\n\nClique no link abaixo para confirmar seu nome:\n${link}`).then(() => alert("Link VIP Copiado!"));
+        window.iniciarFluxo = (id) => {
+            eventoAtivo = eventosCache.find(e => e.id === id);
+            document.getElementById('v-modal-casal').innerText = eventoAtivo.valor_casal || "PORTARIA";
+            document.getElementById('v-modal-solteiro').innerText = eventoAtivo.valor_solteiro || "PORTARIA";
+            document.getElementById('modalForm').classList.remove('hidden');
         };
 
-        window.abrirModalAniv = () => {
-            document.getElementById('selEvento').innerHTML = eventos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join('');
-            document.getElementById('modalAniv').classList.remove('hidden');
+        window.selecionarTipo = (tipo) => {
+            tipoAtivo = tipo;
+            document.getElementById('btn-casal').classList.toggle('active', tipo === 'CASAL');
+            document.getElementById('btn-solteiro').classList.toggle('active', tipo === 'SOLTEIRO');
+            document.getElementById('nome-cliente').disabled = false;
+            document.getElementById('tel-cliente').disabled = false;
+            document.getElementById('btn-final-acao').disabled = false;
         };
-        window.fecharModalAniv = () => document.getElementById('modalAniv').classList.add('hidden');
 
-        window.criarLinkAniv = async () => {
-            const f = document.getElementById('selEvento').value;
-            const n = document.getElementById('nomeAniv').value.trim().toUpperCase();
-            if (!n) return alert("Digite o nome!");
-            await addDoc(collection(db, "links_aniversario"), { promoter: logado, aniversariante: n, festa: f, criado: new Date().toISOString() });
-            fecharModalAniv(); alert("Link Criado!");
+        window.processarFinalizacao = async () => {
+            const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
+            const t = document.getElementById('tel-cliente').value.trim();
+            const tLimpo = t.replace(/\D/g, "");
+            const btn = document.getElementById('btn-final-acao');
+            btn.innerText = "VERIFICANDO..."; btn.disabled = true;
+
+            try {
+                const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
+                const snap = await getDocs(q);
+                let duplicado = null;
+                snap.forEach(d => { if (d.data().tel.replace(/\D/g, "") === tLimpo) duplicado = d.data(); });
+
+                if (duplicado) {
+                    const onde = duplicado.promoter === "direto" ? "Link da Casa" : `Promoter ${duplicado.promoter.toUpperCase()}`;
+                    alert(`🚨 ESTE NÚMERO JÁ ESTÁ NA LISTA!\nEvento: ${eventoAtivo.nome}\nVia: ${onde}`);
+                    btn.innerText = "Confirmar Presença ✨"; btn.disabled = false;
+                    return;
+                }
+
+                await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo, promoter: refPromoter, data_reserva: new Date().toISOString(), entrou: false });
+                alert("Confirmado!"); location.reload();
+            } catch (e) { alert("Erro!"); btn.disabled = false; }
         };
+
+        window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
+        window.mask = (i) => {
+            let v = i.value.replace(/\D/g, "").substring(0, 11);
+            if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
+            i.value = v;
+        };
+        carregarPagina();
     </script>
 </body>
 </html>
