@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-CLUB | Area do Promoter</title>
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #000; 
+            color: #fff; 
+            overflow-x: hidden;
+        }
+
+        .card-evento {
+            background: rgba(10, 10, 10, 0.9);
+            border: 2px solid #0099ff;
+            border-radius: 2.5rem;
+            box-shadow: 0 0 25px rgba(0, 153, 255, 0.15);
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #bf8511 0%, #eab308 100%);
+            color: #000;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 10px 20px rgba(191, 133, 17, 0.3);
+        }
+
+        .btn-gold:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="p-6 md:p-12 pb-32">
+
+    <div class="max-w-xl mx-auto space-y-10">
+        
+        <header class="flex justify-between items-start">
+            <div>
+                <p class="text-[#0099ff] font-black uppercase text-[10px] tracking-[0.2em] mb-1 italic">E-CLUB OFFICIAL</p>
+                <h1 id="nome-promoter" class="text-5xl font-black italic uppercase tracking-tighter leading-none">---</h1>
+            </div>
+            <button onclick="sair()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-6 py-2 rounded-2xl font-black text-[10px] uppercase italic">Sair</button>
+        </header>
+
+        <section class="space-y-6">
+            <div class="flex items-center gap-3">
+                <span class="w-8 h-[2px] bg-blue-500"></span>
+                <h2 class="text-blue-400 font-black italic uppercase text-xs tracking-widest">
+                    📈 PERFORMANCE REALTIME
+                </h2>
+            </div>
+            
+            <div id="lista-eventos" class="space-y-4">
+                </div>
+        </section>
+
+    </div>
+
+    <footer id="footer-acoes" class="fixed bottom-0 left-0 w-full p-5 flex gap-3 bg-black/90 backdrop-blur-xl border-t border-white/5 hidden">
+        <button id="btn-abrir-link" class="flex-grow btn-gold py-6 rounded-[2rem] text-sm font-black shadow-2xl">
+            ABRIR MEU LINK
+        </button>
+        <button id="btn-copiar" class="btn-gold px-8 rounded-[2rem] shadow-2xl flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2" />
+            </svg>
+        </button>
+    </footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Identifica o promoter (por localStorage ou URL)
+        const userURL = new URLSearchParams(window.location.search).get('user');
+        const loginSalvo = userURL || localStorage.getItem('promoter_login');
+
+        if (!loginSalvo) {
+            // Se não houver login, você pode decidir se redireciona ou não
+            console.log("Nenhum login detectado.");
+        }
+
+        // --- TRAVA DE STATUS E CARREGAMENTO ---
+        onSnapshot(doc(db, "promoters", loginSalvo.toLowerCase()), (snap) => {
+            if (snap.exists()) {
+                const dados = snap.data();
+                document.getElementById('nome-promoter').innerText = dados.nome;
+
+                const footer = document.getElementById('footer-acoes');
+                
+                // SE O STATUS FOR VISUALIZAR, MANTÉM O FOOTER ESCONDIDO
+                if (dados.tipo === 'visualizar') {
+                    footer.classList.add('hidden'); 
+                } else {
+                    // SE NÃO FOR, MOSTRA OS BOTÕES
+                    footer.classList.remove('hidden');
+                    configurarLinks(dados);
+                }
+
+                carregarPerformance(dados.nome);
+            }
+        });
+
+        async function carregarPerformance(nomePromoter) {
+            const container = document.getElementById('lista-eventos');
+            const snapEv = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+            const snapRes = await getDocs(collection(db, "lista_eventos"));
+            const todasReservas = snapRes.docs.map(d => d.data());
+
+            container.innerHTML = snapEv.docs.map(docEv => {
+                const ev = docEv.data();
+                const minhas = todasReservas.filter(r => r.evento === ev.nome && (r.promoter || '').toUpperCase() === nomePromoter.toUpperCase()).length;
+                const totalGeral = todasReservas.filter(r => r.evento === ev.nome).length;
+
+                return `
+                <div class="card-evento p-8 flex justify-between items-center">
+                    <div class="space-y-1">
+                        <h3 class="text-2xl font-black uppercase italic tracking-tighter leading-tight">${ev.nome}</h3>
+                        <p class="text-zinc-500 font-bold text-[10px] uppercase tracking-widest">${ev.data.split('-').reverse().join('/')}</p>
+                    </div>
+                    <div class="flex gap-8 items-center border-l border-white/5 pl-8">
+                        <div class="text-center">
+                            <p class="text-3xl font-black text-blue-400 leading-none">${minhas}</p>
+                            <p class="text-[8px] font-black text-blue-400/50 uppercase tracking-widest mt-2">MINHAS</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-3xl font-black text-white/20 leading-none">${totalGeral}</p>
+                            <p class="text-[8px] font-black text-white/10 uppercase tracking-widest mt-2">GERAL</p>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function configurarLinks(dados) {
+            const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/?p=${dados.nome.toLowerCase()}`;
+            document.getElementById('btn-abrir-link').onclick = () => window.open(link, '_blank');
+            document.getElementById('btn-copiar').onclick = () => {
+                navigator.clipboard.writeText(link);
+                alert("LINK COPIADO!");
+            };
+        }
+
+        window.sair = () => {
+            localStorage.removeItem('promoter_login');
+            location.reload();
+        };
+
+    </script>
+</body>
+</html>
