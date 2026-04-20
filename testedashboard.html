@@ -1,179 +1,150 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Admin | Central de Comando</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050508; color: #fff; overflow-x: hidden; }
-        
-        .sidebar { background: #0c0c0e; border-right: 1px solid #1f1f23; transition: 0.3s; }
-        .nav-link { color: #666; transition: 0.3s; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 13px; }
-        .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.05); }
-        
-        /* Dashboard Icons Grid */
-        .module-card { background: #111114; border: 1px solid #1f1f23; border-radius: 24px; padding: 24px; transition: 0.3s; text-align: center; cursor: pointer; }
-        .module-card:hover { border-color: var(--accent); transform: translateY(-5px); background: rgba(255,255,255,0.02); }
-        .icon-box { width: 50px; height: 50px; margin: 0 auto 12px; display: flex; items-center justify-content: center; font-size: 24px; border-radius: 16px; background: rgba(255,255,255,0.03); }
-
-        /* Calendar Grid */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #111114; border: 1px solid #1f1f23; border-radius: 24px; overflow: hidden; }
-        .calendar-day { min-height: 100px; border: 0.5px solid #1f1f23; padding: 8px; position: relative; }
-        .day-header { background: #0c0c0e; padding: 12px; text-align: center; font-size: 10px; font-weight: 900; color: #444; border: 0.5px solid #1f1f23; text-transform: uppercase; }
-        .event-tag { background: #27272a; color: #fff; font-size: 9px; padding: 4px 8px; border-radius: 6px; margin-top: 4px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .day-num { font-size: 11px; font-weight: 900; color: #333; }
-        .today .day-num { color: var(--accent); }
-
-        :root { --accent: #eab308; }
-        .text-accent { color: var(--accent); }
-        .bg-accent { background-color: var(--accent); }
-    </style>
-</head>
-<body class="flex min-h-screen">
-
-    <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50">
-        <div class="mb-10 px-4">
-            <img id="club-logo" src="" class="h-10 mb-2">
-            <p id="club-name" class="text-[9px] font-black uppercase tracking-widest text-accent italic">---</p>
+<section id="section-listas" class="hidden space-y-8">
+    <header class="flex justify-between items-center">
+        <div>
+            <h2 class="text-3xl font-black italic uppercase tracking-tighter">Configuração de Listas</h2>
+            <p class="text-zinc-500 text-sm font-medium">Defina valores e obrigatoriedades para cada tipo de acesso.</p>
         </div>
-        <nav class="space-y-1 flex-grow">
-            <div onclick="showSection('dash')" id="link-dash" class="nav-link active"><span>📊</span> Dashboard</div>
-            <div onclick="showSection('eventos')" id="link-eventos" class="nav-link"><span>📅</span> Eventos</div>
-            <div onclick="showSection('listas')" id="link-listas" class="nav-link"><span>📝</span> Listas Oficiais</div>
-            <div class="nav-link"><span>👥</span> Comissários</div>
-            <div class="nav-link"><span>💰</span> Carteira</div>
-        </nav>
-        <div class="pt-6 border-t border-white/5">
-            <div class="nav-link text-red-500"><span>🚪</span> Sair</div>
+        <button onclick="abrirModalLista()" class="bg-accent text-black font-black px-6 py-3 rounded-2xl text-xs uppercase shadow-lg shadow-yellow-500/10">+ Criar Nova Regra</button>
+    </header>
+
+    <div class="bg-[#111114] rounded-[2.5rem] border border-[#1f1f23] overflow-hidden">
+        <table class="w-full text-left">
+            <thead class="bg-black/20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                <tr>
+                    <th class="p-6">Tipo de Acesso</th>
+                    <th class="p-6">Exige</th>
+                    <th class="p-6">Gênero</th>
+                    <th class="p-6">Valores</th>
+                    <th class="p-6 text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tabela-regras-lista" class="divide-y divide-white/5">
+                </tbody>
+        </table>
+    </div>
+</section>
+
+<div id="modalRegraLista" class="hidden fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#0d0d14] w-full max-w-2xl rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl">
+        <div class="p-8 border-b border-white/5 flex justify-between items-center">
+            <h3 class="font-black uppercase italic tracking-tighter text-xl text-accent">Configurar Regra de Acesso</h3>
+            <button onclick="fecharModalLista()" class="text-zinc-500 hover:text-white">✕</button>
         </div>
-    </aside>
-
-    <main class="flex-grow lg:ml-64 p-6 lg:p-10">
         
-        <section id="section-dash" class="space-y-10">
-            <header>
-                <h2 class="text-3xl font-black italic uppercase tracking-tighter">Painel de Controle</h2>
-                <p class="text-zinc-500 text-sm">Selecione um módulo para gerir a sua balada.</p>
-            </header>
+        <form id="formRegraLista" class="p-8 space-y-8">
+            <div class="space-y-2">
+                <label class="text-[10px] font-black uppercase text-zinc-500">Título da Lista (Ex: Casal Aniversário Sexta)</label>
+                <input type="text" id="regra-nome" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-accent font-bold uppercase text-white" placeholder="NOME DA LISTA (FREE, BÔNUS, CONSUMO)" required>
+            </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <div onclick="showSection('eventos')" class="module-card">
-                    <div class="icon-box">📅</div>
-                    <p class="text-xs font-black uppercase">Eventos</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="space-y-4">
+                    <p class="text-[10px] font-black uppercase text-zinc-500">Gêneros Permitidos</p>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" id="check-fem" class="hidden peer">
+                            <div class="px-4 py-2 rounded-full bg-white/5 border border-white/10 peer-checked:bg-pink-500 peer-checked:border-pink-500 text-[10px] font-black uppercase transition-all">♀ Feminino</div>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" id="check-masc" class="hidden peer">
+                            <div class="px-4 py-2 rounded-full bg-white/5 border border-white/10 peer-checked:bg-blue-500 peer-checked:border-blue-500 text-[10px] font-black uppercase transition-all">♂ Masculino</div>
+                        </label>
+                    </div>
                 </div>
-                <div class="module-card">
-                    <div class="icon-box">👥</div>
-                    <p class="text-xs font-black uppercase">Usuários</p>
-                </div>
-                <div class="module-card">
-                    <div class="icon-box">📣</div>
-                    <p class="text-xs font-black uppercase">Comissários</p>
-                </div>
-                <div onclick="showSection('listas')" class="module-card">
-                    <div class="icon-box">📝</div>
-                    <p class="text-xs font-black uppercase">Listas</p>
-                </div>
-                <div class="module-card">
-                    <div class="icon-box">🛋️</div>
-                    <p class="text-xs font-black uppercase">Espaços</p>
-                </div>
-                <div class="module-card">
-                    <div class="icon-box">💹</div>
-                    <p class="text-xs font-black uppercase">Relatórios</p>
-                </div>
-                <div class="module-card">
-                    <div class="icon-box">💳</div>
-                    <p class="text-xs font-black uppercase">Carteira</p>
-                </div>
-                <div class="module-card">
-                    <div class="icon-box">✉️</div>
-                    <p class="text-xs font-black uppercase">Sugestões</p>
+
+                <div class="space-y-3">
+                    <p class="text-[10px] font-black uppercase text-zinc-500">Campos Obrigatórios</p>
+                    <div class="grid grid-cols-1 gap-2">
+                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-cpf" class="accent-accent"> 🪪 CPF (Bloqueia duplicados)</label>
+                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-tel" class="accent-accent"> 📱 Celular</label>
+                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-nasc" class="accent-accent"> 🎂 Data de Nascimento</label>
+                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-email" class="accent-accent"> 📧 E-mail</label>
+                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-rg" class="accent-accent"> 🆔 RG</label>
+                    </div>
                 </div>
             </div>
-        </section>
 
-        <section id="section-eventos" class="hidden space-y-8">
-            <header class="flex justify-between items-center">
-                <h2 class="text-3xl font-black italic uppercase tracking-tighter">Calendário</h2>
-                <button class="bg-accent text-black font-black px-6 py-3 rounded-2xl text-xs uppercase shadow-lg shadow-yellow-500/10">+ Criar Evento</button>
-            </header>
-
-            <div class="calendar-grid">
-                <div class="day-header">Dom</div><div class="day-header">Seg</div><div class="day-header">Ter</div>
-                <div class="day-header">Qua</div><div class="day-header">Qui</div><div class="day-header">Sex</div><div class="day-header">Sáb</div>
-                <div id="calendar-body" class="contents"></div>
+            <div class="grid grid-cols-2 gap-4 pt-6 border-t border-white/5">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-zinc-500">Valor Casal</label>
+                    <input type="text" id="regra-v-casal" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold text-white outline-none" placeholder="R$ 120,00">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-zinc-500">Valor Solteiro</label>
+                    <input type="text" id="regra-v-solteiro" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold text-white outline-none" placeholder="R$ 170,00">
+                </div>
             </div>
-        </section>
 
-    </main>
+            <button type="submit" class="w-full bg-accent text-black py-6 rounded-[2rem] font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Salvar Configuração de Lista</button>
+        </form>
+    </div>
+</div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+<script type="module">
+    // ... (Mantém o código anterior de Firebase) ...
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
-            authDomain: "teste-de-reserva.firebaseapp.com",
-            projectId: "teste-de-reserva",
-            storageBucket: "teste-de-reserva.firebasestorage.app",
-            messagingSenderId: "163395694876",
-            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+    window.abrirModalLista = () => document.getElementById('modalRegraLista').classList.remove('hidden');
+    window.fecharModalLista = () => document.getElementById('modalRegraLista').classList.add('hidden');
+
+    // Lógica para Salvar a Regra no Firebase
+    document.getElementById('formRegraLista').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.innerText = "SALVANDO..."; btn.disabled = true;
+
+        const regra = {
+            nome: document.getElementById('regra-nome').value.toUpperCase(),
+            valorCasal: document.getElementById('regra-v-casal').value,
+            valorSolteiro: document.getElementById('regra-v-solteiro').value,
+            exige: {
+                cpf: document.getElementById('req-cpf').checked,
+                tel: document.getElementById('req-tel').checked,
+                nascimento: document.getElementById('req-nasc').checked,
+                email: document.getElementById('req-email').checked,
+                rg: document.getElementById('req-rg').checked
+            },
+            generos: {
+                fem: document.getElementById('check-fem').checked,
+                masc: document.getElementById('check-masc').checked
+            },
+            clubID: clubID,
+            ativa: true
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const params = new URLSearchParams(window.location.search);
-        const clubID = params.get('club') || 'eclub';
+        try {
+            await addDoc(collection(db, "config_listas"), regra);
+            alert("Regra de lista criada com sucesso!");
+            location.reload();
+        } catch (err) { alert("Erro ao salvar."); btn.disabled = false; }
+    });
 
-        // Branding Dinâmico
-        const config = {
-            'eclub': { nome: 'E-CLUB', cor: '#eab308', logo: 'https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png' },
-            'baladateste': { nome: 'TESTE CLUB', cor: '#00f5d4', logo: 'https://cdn-icons-png.flaticon.com/512/3843/3843517.png' }
-        };
-        const current = config[clubID] || config['eclub'];
-        document.documentElement.style.setProperty('--accent', current.cor);
-        document.getElementById('club-name').innerText = current.nome;
-        document.getElementById('club-logo').src = current.logo;
+    // Função para carregar a tabela (Chamar no showSection('listas'))
+    async function carregarRegrasLista() {
+        const q = query(collection(db, "config_listas"), where("clubID", "==", clubID));
+        const snap = await getDocs(q);
+        const container = document.getElementById('tabela-regras-lista');
+        container.innerHTML = '';
 
-        // Alternar Seções
-        window.showSection = (name) => {
-            document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
-            document.getElementById(`section-${name}`).classList.remove('hidden');
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.getElementById(`link-${name}`)?.classList.add('active');
-            if(name === 'eventos') renderCalendar();
-        };
-
-        // Gerar Calendário
-        async function renderCalendar() {
-            const body = document.getElementById('calendar-body');
-            body.innerHTML = '';
-            const hoje = new Date();
-            const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1).getDay();
-            const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
-
-            // Espaços vazios
-            for(let i=0; i<primeiroDia; i++) body.innerHTML += `<div class="calendar-day bg-black/20"></div>`;
-
-            // Dias do mês
-            for(let d=1; d<=diasNoMes; d++) {
-                const dataFormatada = `${hoje.getFullYear()}-${(hoje.getMonth()+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-                body.innerHTML += `<div class="calendar-day" id="day-${dataFormatada}"><span class="day-num">${d}</span></div>`;
-            }
-
-            // Buscar eventos no Firebase para este clube
-            const q = query(collection(db, "eventos"), where("clubID", "==", clubID));
-            const snap = await getDocs(q);
-            snap.forEach(doc => {
-                const ev = doc.data();
-                const dayEl = document.getElementById(`day-${ev.data}`);
-                if(dayEl) {
-                    dayEl.innerHTML += `<div class="event-tag">${ev.nome}</div>`;
-                }
-            });
-        }
-    </script>
-</body>
-</html>
+        snap.forEach(doc => {
+            const r = doc.data();
+            const exibeExige = Object.keys(r.exige).filter(k => r.exige[k]).map(k => k.toUpperCase()).join(', ');
+            
+            container.innerHTML += `
+                <tr class="hover:bg-white/[0.02] transition-all">
+                    <td class="p-6"><span class="font-bold text-white">${r.nome}</span></td>
+                    <td class="p-6 text-[10px] font-bold text-zinc-500">${exibeExige || 'NADA'}</td>
+                    <td class="p-6">
+                        <div class="flex gap-1">
+                            ${r.generos.fem ? '<span class="bg-pink-500/20 text-pink-500 px-2 py-1 rounded-md text-[8px] font-black uppercase">Feminino</span>' : ''}
+                            ${r.generos.masc ? '<span class="bg-blue-500/20 text-blue-500 px-2 py-1 rounded-md text-[8px] font-black uppercase">Masculino</span>' : ''}
+                        </div>
+                    </td>
+                    <td class="p-6 text-xs font-black text-accent italic">C: ${r.valorCasal} | S: ${r.valorSolteiro}</td>
+                    <td class="p-6 text-right">
+                        <button class="text-zinc-600 hover:text-white font-black text-[10px] uppercase">Ações ▾</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+</script>
