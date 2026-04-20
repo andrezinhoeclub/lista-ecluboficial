@@ -1,150 +1,283 @@
-<section id="section-listas" class="hidden space-y-8">
-    <header class="flex justify-between items-center">
-        <div>
-            <h2 class="text-3xl font-black italic uppercase tracking-tighter">Configuração de Listas</h2>
-            <p class="text-zinc-500 text-sm font-medium">Defina valores e obrigatoriedades para cada tipo de acesso.</p>
-        </div>
-        <button onclick="abrirModalLista()" class="bg-accent text-black font-black px-6 py-3 rounded-2xl text-xs uppercase shadow-lg shadow-yellow-500/10">+ Criar Nova Regra</button>
-    </header>
-
-    <div class="bg-[#111114] rounded-[2.5rem] border border-[#1f1f23] overflow-hidden">
-        <table class="w-full text-left">
-            <thead class="bg-black/20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">
-                <tr>
-                    <th class="p-6">Tipo de Acesso</th>
-                    <th class="p-6">Exige</th>
-                    <th class="p-6">Gênero</th>
-                    <th class="p-6">Valores</th>
-                    <th class="p-6 text-right">Ações</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-regras-lista" class="divide-y divide-white/5">
-                </tbody>
-        </table>
-    </div>
-</section>
-
-<div id="modalRegraLista" class="hidden fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-[#0d0d14] w-full max-w-2xl rounded-[3rem] border border-white/10 overflow-hidden shadow-2xl">
-        <div class="p-8 border-b border-white/5 flex justify-between items-center">
-            <h3 class="font-black uppercase italic tracking-tighter text-xl text-accent">Configurar Regra de Acesso</h3>
-            <button onclick="fecharModalLista()" class="text-zinc-500 hover:text-white">✕</button>
-        </div>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Pro | Central de Comando</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050508; color: #fff; overflow-x: hidden; }
         
-        <form id="formRegraLista" class="p-8 space-y-8">
-            <div class="space-y-2">
-                <label class="text-[10px] font-black uppercase text-zinc-500">Título da Lista (Ex: Casal Aniversário Sexta)</label>
-                <input type="text" id="regra-nome" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-accent font-bold uppercase text-white" placeholder="NOME DA LISTA (FREE, BÔNUS, CONSUMO)" required>
+        /* Layout */
+        .sidebar { background: #0c0c0e; border-right: 1px solid #1f1f23; transition: 0.3s; }
+        .nav-link { color: #666; transition: 0.3s; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 13px; }
+        .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.05); }
+        
+        /* Dashboard Cards */
+        .module-card { background: #111114; border: 1px solid #1f1f23; border-radius: 24px; padding: 24px; transition: 0.3s; text-align: center; cursor: pointer; }
+        .module-card:hover { border-color: var(--accent); transform: translateY(-5px); background: rgba(255,255,255,0.02); }
+        .icon-box { width: 50px; height: 50px; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 16px; background: rgba(255,255,255,0.03); }
+
+        /* Calendário */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #111114; border: 1px solid #1f1f23; border-radius: 24px; overflow: hidden; }
+        .calendar-day { min-height: 110px; border: 0.5px solid #1f1f23; padding: 8px; position: relative; }
+        .day-header { background: #0c0c0e; padding: 12px; text-align: center; font-size: 10px; font-weight: 900; color: #444; border: 0.5px solid #1f1f23; text-transform: uppercase; }
+        .event-tag { background: #27272a; color: #fff; font-size: 9px; padding: 4px 8px; border-radius: 6px; margin-top: 4px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .day-num { font-size: 11px; font-weight: 900; color: #333; }
+        
+        /* Inputs */
+        .admin-input { background: rgba(255,255,255,0.03) !important; border: 1px solid rgba(255,255,255,0.08) !important; color: #fff !important; outline: none; }
+        .admin-input:focus { border-color: var(--accent) !important; }
+
+        :root { --accent: #eab308; }
+        .text-accent { color: var(--accent); }
+        .bg-accent { background-color: var(--accent); }
+        .border-accent { border-color: var(--accent); }
+    </style>
+</head>
+<body class="flex min-h-screen">
+
+    <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50">
+        <div class="mb-10 px-4">
+            <img id="club-logo" src="" class="h-10 mb-2">
+            <p id="club-name" class="text-[9px] font-black uppercase tracking-widest text-accent italic">---</p>
+        </div>
+        <nav class="space-y-1 flex-grow">
+            <div onclick="showSection('dash')" id="link-dash" class="nav-link active"><span>📊</span> Dashboard</div>
+            <div onclick="showSection('eventos')" id="link-eventos" class="nav-link"><span>📅</span> Eventos</div>
+            <div onclick="showSection('listas')" id="link-listas" class="nav-link"><span>📝</span> Config. Listas</div>
+            <div class="nav-link"><span>📣</span> Comissários</div>
+            <div class="nav-link"><span>💰</span> Financeiro</div>
+            <div class="nav-link"><span>⚙️</span> Ajustes</div>
+        </nav>
+        <div class="pt-6 border-t border-white/5">
+            <div class="nav-link text-red-500"><span>🚪</span> Sair</div>
+        </div>
+    </aside>
+
+    <main class="flex-grow lg:ml-64 p-6 lg:p-10">
+        
+        <section id="section-dash" class="space-y-10">
+            <header>
+                <h2 class="text-3xl font-black italic uppercase tracking-tighter">Central de Comando</h2>
+                <p class="text-zinc-500 text-sm">Bem-vindo, <span id="user-display" class="text-white">Administrador</span>.</p>
+            </header>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div onclick="showSection('eventos')" class="module-card">
+                    <div class="icon-box">📅</div>
+                    <p class="text-xs font-black uppercase">Eventos</p>
+                </div>
+                <div onclick="showSection('listas')" class="module-card">
+                    <div class="icon-box">📝</div>
+                    <p class="text-xs font-black uppercase">Config. Listas</p>
+                </div>
+                <div class="module-card">
+                    <div class="icon-box">📣</div>
+                    <p class="text-xs font-black uppercase">Comissários</p>
+                </div>
+                <div class="module-card">
+                    <div class="icon-box">🥂</div>
+                    <p class="text-xs font-black uppercase">Reservas</p>
+                </div>
+                <div class="module-card">
+                    <div class="icon-box">📊</div>
+                    <p class="text-xs font-black uppercase">Relatórios</p>
+                </div>
+                <div class="module-card">
+                    <div class="icon-box">💰</div>
+                    <p class="text-xs font-black uppercase">Carteira</p>
+                </div>
             </div>
+        </section>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div class="space-y-4">
-                    <p class="text-[10px] font-black uppercase text-zinc-500">Gêneros Permitidos</p>
-                    <div class="flex gap-4">
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" id="check-fem" class="hidden peer">
-                            <div class="px-4 py-2 rounded-full bg-white/5 border border-white/10 peer-checked:bg-pink-500 peer-checked:border-pink-500 text-[10px] font-black uppercase transition-all">♀ Feminino</div>
-                        </label>
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" id="check-masc" class="hidden peer">
-                            <div class="px-4 py-2 rounded-full bg-white/5 border border-white/10 peer-checked:bg-blue-500 peer-checked:border-blue-500 text-[10px] font-black uppercase transition-all">♂ Masculino</div>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="space-y-3">
-                    <p class="text-[10px] font-black uppercase text-zinc-500">Campos Obrigatórios</p>
-                    <div class="grid grid-cols-1 gap-2">
-                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-cpf" class="accent-accent"> 🪪 CPF (Bloqueia duplicados)</label>
-                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-tel" class="accent-accent"> 📱 Celular</label>
-                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-nasc" class="accent-accent"> 🎂 Data de Nascimento</label>
-                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-email" class="accent-accent"> 📧 E-mail</label>
-                        <label class="flex items-center gap-3 text-xs font-bold text-zinc-400"><input type="checkbox" id="req-rg" class="accent-accent"> 🆔 RG</label>
-                    </div>
-                </div>
+        <section id="section-eventos" class="hidden space-y-8">
+            <header class="flex justify-between items-center">
+                <h2 class="text-3xl font-black italic uppercase tracking-tighter">Calendário</h2>
+                <button onclick="openModal('modalEvento')" class="bg-accent text-black font-black px-6 py-3 rounded-2xl text-[10px] uppercase shadow-lg shadow-yellow-500/10">+ Criar Evento</button>
+            </header>
+            <div class="calendar-grid">
+                <div class="day-header">Dom</div><div class="day-header">Seg</div><div class="day-header">Ter</div>
+                <div class="day-header">Qua</div><div class="day-header">Qui</div><div class="day-header">Sex</div><div class="day-header">Sáb</div>
+                <div id="calendar-body" class="contents"></div>
             </div>
+        </section>
 
-            <div class="grid grid-cols-2 gap-4 pt-6 border-t border-white/5">
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-zinc-500">Valor Casal</label>
-                    <input type="text" id="regra-v-casal" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold text-white outline-none" placeholder="R$ 120,00">
-                </div>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-black uppercase text-zinc-500">Valor Solteiro</label>
-                    <input type="text" id="regra-v-solteiro" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl font-bold text-white outline-none" placeholder="R$ 170,00">
-                </div>
+        <section id="section-listas" class="hidden space-y-8">
+            <header class="flex justify-between items-center">
+                <h2 class="text-3xl font-black italic uppercase tracking-tighter">Regras de Listas</h2>
+                <button onclick="openModal('modalLista')" class="bg-accent text-black font-black px-6 py-3 rounded-2xl text-[10px] uppercase">+ Nova Regra</button>
+            </header>
+            <div class="bg-[#111114] rounded-[2.5rem] border border-[#1f1f23] overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-black/20 text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+                        <tr>
+                            <th class="p-6">Nome da Lista</th>
+                            <th class="p-6">Obrigatoriedade</th>
+                            <th class="p-6">Gêneros</th>
+                            <th class="p-6">Valores Base</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-regras" class="divide-y divide-white/5"></tbody>
+                </table>
             </div>
+        </section>
+    </main>
 
-            <button type="submit" class="w-full bg-accent text-black py-6 rounded-[2rem] font-black uppercase text-xs shadow-xl active:scale-95 transition-all">Salvar Configuração de Lista</button>
-        </form>
+    <div id="modalEvento" class="hidden fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-[#0d0d14] w-full max-w-lg rounded-[2.5rem] border border-white/10 p-8">
+            <h3 class="text-xl font-black uppercase italic mb-6 text-accent">Novo Evento</h3>
+            <form id="formEvento" class="space-y-4">
+                <input type="text" id="ev-nome" placeholder="NOME DO EVENTO" class="w-full admin-input p-4 rounded-xl font-bold uppercase text-xs" required>
+                <input type="date" id="ev-data" class="w-full admin-input p-4 rounded-xl font-bold text-xs" required>
+                <input type="text" id="ev-img" placeholder="URL DA IMAGEM" class="w-full admin-input p-4 rounded-xl text-[10px]">
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="ev-v-casal" placeholder="VALOR CASAL" class="admin-input p-4 rounded-xl font-bold text-xs">
+                    <input type="text" id="ev-v-solteiro" placeholder="VALOR SOLTEIRO" class="admin-input p-4 rounded-xl font-bold text-xs">
+                </div>
+                <button type="submit" class="w-full bg-accent text-black py-5 rounded-2xl font-black uppercase text-xs mt-4">Salvar no Calendário</button>
+                <button type="button" onclick="closeModal('modalEvento')" class="w-full text-zinc-500 text-[10px] font-black uppercase mt-2">Cancelar</button>
+            </form>
+        </div>
     </div>
-</div>
 
-<script type="module">
-    // ... (Mantém o código anterior de Firebase) ...
+    <div id="modalLista" class="hidden fixed inset-0 z-[999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-[#0d0d14] w-full max-w-xl rounded-[2.5rem] border border-white/10 p-8">
+            <h3 class="text-xl font-black uppercase italic mb-6 text-accent">Regra de Acesso</h3>
+            <form id="formLista" class="space-y-6">
+                <input type="text" id="li-nome" placeholder="NOME DA REGRA (EX: LISTA VIP)" class="w-full admin-input p-4 rounded-xl font-bold uppercase text-xs" required>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <p class="text-[9px] font-black text-zinc-500 uppercase">Campos Obrigatórios</p>
+                        <div class="space-y-1 text-xs font-bold text-zinc-400">
+                            <label class="flex items-center gap-2"><input type="checkbox" id="req-cpf"> CPF</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="req-tel"> TELEFONE</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="req-nasc"> NASCIMENTO</label>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-[9px] font-black text-zinc-500 uppercase">Gêneros</p>
+                        <div class="space-y-1 text-xs font-bold text-zinc-400">
+                            <label class="flex items-center gap-2"><input type="checkbox" id="gen-fem"> FEMININO</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" id="gen-masc"> MASCULINO</label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-accent text-black py-5 rounded-2xl font-black uppercase text-xs">Salvar Regra</button>
+                <button type="button" onclick="closeModal('modalLista')" class="w-full text-zinc-500 text-[10px] font-black uppercase mt-2">Cancelar</button>
+            </form>
+        </div>
+    </div>
 
-    window.abrirModalLista = () => document.getElementById('modalRegraLista').classList.remove('hidden');
-    window.fecharModalLista = () => document.getElementById('modalRegraLista').classList.add('hidden');
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // Lógica para Salvar a Regra no Firebase
-    document.getElementById('formRegraLista').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector('button');
-        btn.innerText = "SALVANDO..."; btn.disabled = true;
-
-        const regra = {
-            nome: document.getElementById('regra-nome').value.toUpperCase(),
-            valorCasal: document.getElementById('regra-v-casal').value,
-            valorSolteiro: document.getElementById('regra-v-solteiro').value,
-            exige: {
-                cpf: document.getElementById('req-cpf').checked,
-                tel: document.getElementById('req-tel').checked,
-                nascimento: document.getElementById('req-nasc').checked,
-                email: document.getElementById('req-email').checked,
-                rg: document.getElementById('req-rg').checked
-            },
-            generos: {
-                fem: document.getElementById('check-fem').checked,
-                masc: document.getElementById('check-masc').checked
-            },
-            clubID: clubID,
-            ativa: true
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
         };
 
-        try {
-            await addDoc(collection(db, "config_listas"), regra);
-            alert("Regra de lista criada com sucesso!");
-            location.reload();
-        } catch (err) { alert("Erro ao salvar."); btn.disabled = false; }
-    });
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const params = new URLSearchParams(window.location.search);
+        const clubID = params.get('club') || 'eclub';
 
-    // Função para carregar a tabela (Chamar no showSection('listas'))
-    async function carregarRegrasLista() {
-        const q = query(collection(db, "config_listas"), where("clubID", "==", clubID));
-        const snap = await getDocs(q);
-        const container = document.getElementById('tabela-regras-lista');
-        container.innerHTML = '';
+        // Configuração de Branding
+        const config = {
+            'eclub': { nome: 'E-CLUB', cor: '#eab308', logo: 'https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png' },
+            'baladateste': { nome: 'BALADA TESTE', cor: '#00f5d4', logo: 'https://cdn-icons-png.flaticon.com/512/3843/3843517.png' }
+        };
+        const cur = config[clubID] || config['eclub'];
+        document.documentElement.style.setProperty('--accent', cur.cor);
+        document.getElementById('club-name').innerText = cur.nome;
+        document.getElementById('club-logo').src = cur.logo;
 
-        snap.forEach(doc => {
-            const r = doc.data();
-            const exibeExige = Object.keys(r.exige).filter(k => r.exige[k]).map(k => k.toUpperCase()).join(', ');
-            
-            container.innerHTML += `
-                <tr class="hover:bg-white/[0.02] transition-all">
-                    <td class="p-6"><span class="font-bold text-white">${r.nome}</span></td>
-                    <td class="p-6 text-[10px] font-bold text-zinc-500">${exibeExige || 'NADA'}</td>
-                    <td class="p-6">
-                        <div class="flex gap-1">
-                            ${r.generos.fem ? '<span class="bg-pink-500/20 text-pink-500 px-2 py-1 rounded-md text-[8px] font-black uppercase">Feminino</span>' : ''}
-                            ${r.generos.masc ? '<span class="bg-blue-500/20 text-blue-500 px-2 py-1 rounded-md text-[8px] font-black uppercase">Masculino</span>' : ''}
-                        </div>
-                    </td>
-                    <td class="p-6 text-xs font-black text-accent italic">C: ${r.valorCasal} | S: ${r.valorSolteiro}</td>
-                    <td class="p-6 text-right">
-                        <button class="text-zinc-600 hover:text-white font-black text-[10px] uppercase">Ações ▾</button>
-                    </td>
-                </tr>
-            `;
-        });
-    }
-</script>
+        // Navegação
+        window.showSection = (id) => {
+            document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${id}`).classList.remove('hidden');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById(`link-${id}`)?.classList.add('active');
+            if(id === 'eventos') loadCalendar();
+            if(id === 'listas') loadRules();
+        };
+
+        window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+
+        // Lógica Calendário
+        async function loadCalendar() {
+            const body = document.getElementById('calendar-body');
+            body.innerHTML = '';
+            const hoje = new Date();
+            const first = new Date(hoje.getFullYear(), hoje.getMonth(), 1).getDay();
+            const last = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+
+            for(let i=0; i<first; i++) body.innerHTML += `<div class="calendar-day bg-black/40"></div>`;
+            for(let d=1; d<=last; d++) {
+                const dayStr = `${hoje.getFullYear()}-${(hoje.getMonth()+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+                body.innerHTML += `<div class="calendar-day" id="day-${dayStr}"><span class="day-num">${d}</span></div>`;
+            }
+
+            const q = query(collection(db, "eventos"), where("clubID", "==", clubID));
+            const snap = await getDocs(q);
+            snap.forEach(doc => {
+                const ev = doc.data();
+                const el = document.getElementById(`day-${ev.data}`);
+                if(el) el.innerHTML += `<div class="event-tag">${ev.nome}</div>`;
+            });
+        }
+
+        // Lógica Regras de Listas
+        async function loadRules() {
+            const q = query(collection(db, "config_listas"), where("clubID", "==", clubID));
+            const snap = await getDocs(q);
+            const table = document.getElementById('tabela-regras');
+            table.innerHTML = '';
+            snap.forEach(doc => {
+                const r = doc.data();
+                table.innerHTML += `
+                    <tr class="hover:bg-white/5 transition-all">
+                        <td class="p-6 font-bold text-white uppercase text-xs">${r.nome}</td>
+                        <td class="p-6 text-[9px] font-black text-zinc-500 uppercase italic">CPF: ${r.exige.cpf ? 'SIM' : 'NÃO'} | TEL: ${r.exige.tel ? 'SIM' : 'NÃO'}</td>
+                        <td class="p-6">
+                            <span class="text-[8px] font-black px-2 py-1 bg-white/5 rounded-md">${r.generos.fem ? 'FEM' : ''} ${r.generos.masc ? 'MASC' : ''}</span>
+                        </td>
+                        <td class="p-6 text-accent font-black italic text-xs">MASTER SETUP</td>
+                    </tr>`;
+            });
+        }
+
+        // Forms Handlers
+        document.getElementById('formEvento').onsubmit = async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "eventos"), {
+                nome: document.getElementById('ev-nome').value.toUpperCase(),
+                data: document.getElementById('ev-data').value,
+                imagem: document.getElementById('ev-img').value,
+                valor_casal: document.getElementById('ev-v-casal').value,
+                valor_solteiro: document.getElementById('ev-v-solteiro').value,
+                clubID: clubID, ativa: true, criadoEm: serverTimestamp()
+            });
+            alert("Evento salvo!"); location.reload();
+        };
+
+        document.getElementById('formLista').onsubmit = async (e) => {
+            e.preventDefault();
+            await addDoc(collection(db, "config_listas"), {
+                nome: document.getElementById('li-nome').value.toUpperCase(),
+                exige: { cpf: document.getElementById('req-cpf').checked, tel: document.getElementById('req-tel').checked, nascimento: document.getElementById('req-nasc').checked },
+                generos: { fem: document.getElementById('gen-fem').checked, masc: document.getElementById('gen-masc').checked },
+                clubID: clubID
+            });
+            alert("Regra salva!"); showSection('listas');
+        };
+    </script>
+</body>
+</html>
