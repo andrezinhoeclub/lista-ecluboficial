@@ -8,38 +8,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        
-        /* Ajuste para permitir rolagem e evitar cortes */
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background: #000; 
-            color: #fff; 
-            min-height: 100vh; 
-            margin: 0;
-            overflow-x: hidden;
-            overflow-y: auto; /* Garante a rolagem vertical */
-        }
-
+        body { font-family: 'Inter', sans-serif; background: #000; color: #fff; min-height: 100vh; margin: 0; overflow-y: auto; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .gold-gradient { background: linear-gradient(135deg, #bf8511 0%, #eab308 100%); color: #000; }
         .purple-gradient { background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); color: #fff; }
-        
-        /* Cards Mais Compactos */
-        .card-performance { 
-            background: rgba(10, 10, 10, 0.9); 
-            border: 1px solid #0099ff; 
-            border-radius: 1.5rem; /* Bordas mais sutis */
-            box-shadow: 0 5px 15px rgba(0, 153, 255, 0.05); 
-        }
-        
-        .card-aniv { 
-            background: rgba(10, 10, 10, 0.9); 
-            border: 1px solid #a855f7; 
-            border-radius: 1.5rem; 
-            box-shadow: 0 5px 15px rgba(168, 85, 247, 0.05); 
-        }
-
-        /* Esconder scrollbar mas manter funcionalidade (opcional) */
+        .card-performance { background: rgba(10, 10, 10, 0.9); border: 1px solid #0099ff; border-radius: 1.5rem; }
+        .card-aniv { background: rgba(10, 10, 10, 0.9); border: 1px solid #a855f7; border-radius: 1.5rem; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
@@ -49,16 +23,17 @@
     <div id="telaLogin" class="fixed inset-0 z-[999] bg-[#000] flex items-center justify-center p-6">
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8">
-            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PROMOTER <span class="text-sky-400">ACCESS</span></h1>
-            <input type="text" id="usuario" placeholder="USUÁRIO" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 outline-none text-white">
+            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter">PROMOTER <span class="text-sky-400">ACCESS</span></h1>
+            <input type="text" id="usuario" placeholder="USUÁRIO" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white">
             <div id="campo-senha" class="hidden">
-                <input type="password" id="senha" placeholder="DIGITE SUA SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 outline-none text-white">
+                <input type="password" id="senha" placeholder="SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white">
             </div>
             <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient font-black py-4 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">CONTINUAR</button>
         </div>
     </div>
 
-    <div id="painel" class="hidden max-w-md mx-auto pb-44"> <header class="flex justify-between items-center mb-8">
+    <div id="painel" class="hidden max-w-md mx-auto pb-44">
+        <header class="flex justify-between items-center mb-8">
             <div>
                 <p class="text-sky-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1 italic">E-CLUB OFFICIAL</p>
                 <h1 id="nomeHeader" class="text-3xl font-black uppercase italic leading-none">---</h1>
@@ -99,15 +74,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
-            authDomain: "teste-de-reserva.firebaseapp.com",
-            projectId: "teste-de-reserva",
-            storageBucket: "teste-de-reserva.firebasestorage.app",
-            messagingSenderId: "163395694876",
-            appId: "1:163395694876:web:8b1116a0483af951548ad9"
-        };
-
+        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
@@ -118,21 +85,18 @@
             const s = document.getElementById('senha').value.trim();
             const btn = document.getElementById('btnAcao');
             const inputSenha = document.getElementById('senha');
-
             if (!logado) {
                 const snap = await getDoc(doc(db, "promoters", u));
                 if (snap.exists()) {
                     logado = u; dadosPromoter = snap.data();
                     if (!dadosPromoter.senha) { inputSenha.placeholder = "CADASTRE SUA SENHA"; inputSenha.style.border = "1px solid #a855f7"; }
-                    document.getElementById('campo-senha').classList.remove('hidden');
-                    document.getElementById('usuario').readOnly = true;
+                    document.getElementById('campo-senha').classList.remove('hidden'); document.getElementById('usuario').readOnly = true;
                     btn.innerText = "ENTRAR NO PAINEL";
                 } else { alert("Usuário não encontrado"); }
             } else {
                 if (dadosPromoter.senha === s || !dadosPromoter.senha) {
                     if (!dadosPromoter.senha) await updateDoc(doc(db, "promoters", logado), { senha: s });
-                    document.getElementById('telaLogin').style.display = 'none';
-                    document.getElementById('painel').classList.remove('hidden');
+                    document.getElementById('telaLogin').style.display = 'none'; document.getElementById('painel').classList.remove('hidden');
                     document.getElementById('nomeHeader').innerText = logado.toUpperCase();
                     iniciarSistema();
                 } else { alert("Senha incorreta"); }
@@ -140,37 +104,24 @@
         };
 
         function iniciarSistema() {
-            const statusLimpo = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-
-            if (statusLimpo === "visualizar") document.getElementById('navAcoes').style.display = 'none';
-
-            if (statusLimpo === "aniversario") {
-                document.getElementById('secaoAniversario').classList.remove('hidden');
-                document.getElementById('btnNovoAniv').classList.remove('hidden');
+            const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            if (st === "visualizar") document.getElementById('navAcoes').style.display = 'none';
+            if (st === "aniversario") {
+                document.getElementById('secaoAniversario').classList.remove('hidden'); document.getElementById('btnNovoAniv').classList.remove('hidden');
                 onSnapshot(collection(db, "links_aniversario"), (snap) => {
                     linksAniv = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(l => (l.promoter || '').toLowerCase().trim() === logado);
                     renderAniversarios();
                 });
             }
-
-            onSnapshot(collection(db, "lista_eventos"), (snap) => {
-                reservas = snap.docs.map(d => d.data());
-                renderPerformance();
-                if (statusLimpo === "aniversario") renderAniversarios();
-            });
-
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => {
-                eventos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data));
-                renderPerformance();
-            });
+            onSnapshot(collection(db, "lista_eventos"), (snap) => { reservas = snap.docs.map(d => d.data()); renderPerformance(); if (st === "aniversario") renderAniversarios(); });
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => { eventos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data)); renderPerformance(); });
         }
 
         function renderAniversarios() {
-            const cont = document.getElementById('listaAniversarios');
-            if(!cont) return;
+            const cont = document.getElementById('listaAniversarios'); if(!cont) return;
             cont.innerHTML = linksAniv.map(l => {
                 const count = reservas.filter(r => (r.evento || '').toLowerCase().trim() === (l.festa || '').toLowerCase().trim() && (r.aniversariante || '').toLowerCase().trim() === (l.aniversariante || '').toLowerCase().trim()).length;
-                return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30 active:scale-90">Copiar</button></div></div>`;
+                return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
             }).join('');
         }
 
@@ -185,13 +136,12 @@
 
         window.abrirLinkGeral = () => { window.open(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`, '_blank'); };
         window.copiarLinkGeral = () => { navigator.clipboard.writeText(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`).then(() => alert("Copiado!")); };
-        window.copiarLinkAniv = (id, n) => { const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?id=${id}`; navigator.clipboard.writeText(`*Convite VIP: Aniversário de ${n}* 🎂\n\nConfirme seu nome aqui:\n${link}`).then(() => alert("Link VIP Copiado!")); };
+        window.copiarLinkAniv = (id, n) => { const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?id=${id}`; navigator.clipboard.writeText(`*Convite VIP: Aniversário de ${n}* 🎂\n\nConfirme seu nome aqui:\n${link}`).then(() => alert("Copiado!")); };
         window.abrirModalAniv = () => { document.getElementById('selEvento').innerHTML = eventos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join(''); document.getElementById('modalAniv').classList.remove('hidden'); };
         window.fecharModalAniv = () => document.getElementById('modalAniv').classList.add('hidden');
         window.criarLinkAniv = async () => {
             const f = document.getElementById('selEvento').value; const n = document.getElementById('nomeAniv').value.trim().toUpperCase();
-            if (!n) return alert("Digite o nome!");
-            await addDoc(collection(db, "links_aniversario"), { promoter: logado, aniversariante: n, festa: f, criado: new Date().toISOString() });
+            if (!n) return alert("Digite o nome!"); await addDoc(collection(db, "links_aniversario"), { promoter: logado, aniversariante: n, festa: f, criado: new Date().toISOString() });
             fecharModalAniv(); alert("Link Criado!");
         };
     </script>
