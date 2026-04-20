@@ -3,35 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Club Manager Pro | Gestão</title>
+    <title>Club Manager Pro | Gestão Administrativa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #334155; }
         
-        /* Sidebar Profissional Slate */
-        .sidebar { background: #1e293b; border-right: 1px solid #e2e8f0; }
+        /* Sidebar Estilo SaaS */
+        .sidebar { background: #1e293b; border-right: 1px solid #e2e8f0; transition: 0.3s; }
         .nav-link { color: #94a3b8; transition: 0.3s; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-radius: 12px; font-weight: 600; font-size: 13px; }
         .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.1); }
 
-        /* Cards e Painéis SaaS */
-        .module-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 30px; transition: 0.3s; text-align: center; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .module-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: #3b82f6; }
+        /* Dashboard Cards */
+        .module-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 35px; transition: 0.3s; text-align: center; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .module-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border-color: #3b82f6; }
         .icon-box { width: 56px; height: 56px; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 16px; background: #f1f5f9; color: #3b82f6; }
-        .glass-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
 
-        /* Calendário Clean */
+        /* Painéis e Tabelas Clean */
+        .glass-panel { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .admin-table th { background: #f8fafc; padding: 16px 24px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        .admin-table td { padding: 16px 24px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+
+        /* Calendário (Inspirado em image_de84a6) */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; overflow: hidden; }
         .calendar-day { min-height: 100px; border: 0.5px solid #f1f5f9; padding: 10px; position: relative; }
-        .day-header { background: #f1f5f9; padding: 12px; text-align: center; font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
+        .day-header { background: #f1f5f9; padding: 12px; text-align: center; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; }
         .day-num { font-size: 11px; font-weight: 800; color: #cbd5e1; }
         .event-tag { background: #334155; color: #fff; font-size: 9px; padding: 4px 8px; border-radius: 6px; margin-top: 5px; font-weight: 700; cursor: pointer; }
 
-        /* Estilo dos Inputs */
-        .admin-input { background: #fff !important; border: 1px solid #e2e8f0 !important; color: #1e293b !important; outline: none; transition: 0.3s; }
-        .admin-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
         .btn-primary { background: #2563eb; color: #fff; font-weight: 800; padding: 12px 24px; border-radius: 12px; font-size: 12px; transition: 0.3s; }
         .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+        .admin-input { background: #fff !important; border: 1px solid #e2e8f0 !important; color: #1e293b !important; outline: none; transition: 0.3s; }
+        .admin-input:focus { border-color: #3b82f6 !important; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); }
 
         .modal-overlay { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); }
     </style>
@@ -41,81 +44,74 @@
     <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50 shadow-2xl">
         <div class="mb-10 px-4 flex flex-col items-center">
             <img id="club-logo" src="" class="h-12 mb-2 object-contain">
-            <p id="club-name" class="text-[10px] font-extrabold uppercase tracking-widest text-blue-400">ADMIN CENTRAL</p>
+            <p id="club-name" class="text-[10px] font-extrabold uppercase tracking-widest text-blue-400 italic">ADMIN CENTRAL</p>
         </div>
         <nav class="space-y-1 flex-grow">
             <div onclick="showSection('dash')" id="link-dash" class="nav-link active"><span>🏠</span> Dashboard</div>
             <div onclick="showSection('usuarios')" id="link-usuarios" class="nav-link"><span>👥</span> Usuários</div>
             <div onclick="showSection('eventos')" id="link-eventos" class="nav-link"><span>📅</span> Eventos</div>
             <div onclick="showSection('listas')" id="link-listas" class="nav-link"><span>📝</span> Config. Listas</div>
-            <div onclick="showSection('espacos')" id="link-espacos" class="nav-link"><span>🛋️</span> Espaços</div>
+            <div onclick="showSection('espacos')" id="link-espacos" class="nav-link"><span> Couch</span> Espaços</div>
             <div onclick="showSection('carteira')" id="link-carteira" class="nav-link"><span>💰</span> Carteira</div>
             <div onclick="showSection('relatorios')" id="link-relatorios" class="nav-link"><span>📈</span> Relatórios</div>
         </nav>
-        <div class="pt-6 border-t border-slate-700"><div class="nav-link text-red-400"><span>🚪</span> Sair</div></div>
+        <div class="pt-6 border-t border-slate-700"><div class="nav-link text-red-400"><span>🚪</span> Sair do Sistema</div></div>
     </aside>
 
     <main class="flex-grow lg:ml-64 p-6 lg:p-12">
+        
         <section id="section-dash" class="space-y-12">
             <header>
                 <h2 class="text-3xl font-extrabold tracking-tight text-slate-800 italic">Central de Comando</h2>
-                <p class="text-slate-400 font-bold text-xs mt-1 uppercase">Gestão: <span id="dash-club-title" class="text-blue-600">---</span></p>
+                <p class="text-slate-400 font-bold text-xs mt-1 uppercase tracking-widest">Gestão: <span id="dash-club-title" class="text-blue-600">---</span></p>
             </header>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                 <div onclick="showSection('usuarios')" class="module-card"><div class="icon-box">👥</div><p class="text-xs font-extrabold uppercase text-slate-600">Equipe</p></div>
                 <div onclick="showSection('eventos')" class="module-card"><div class="icon-box">📅</div><p class="text-xs font-extrabold uppercase text-slate-600">Calendário</p></div>
                 <div onclick="showSection('listas')" class="module-card"><div class="icon-box">📝</div><p class="text-xs font-extrabold uppercase text-slate-600">Regras Listas</p></div>
                 <div onclick="showSection('relatorios')" class="module-card"><div class="icon-box">📈</div><p class="text-xs font-extrabold uppercase text-slate-600">Relatórios</p></div>
+                <div onclick="showSection('espacos')" class="module-card"><div class="icon-box">🛋️</div><p class="text-xs font-extrabold uppercase text-slate-600">Espaços</p></div>
+                <div onclick="showSection('carteira')" class="module-card"><div class="icon-box">💰</div><p class="text-xs font-extrabold uppercase text-slate-600">Carteira</p></div>
             </div>
         </section>
 
         <section id="section-eventos" class="hidden space-y-8">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-extrabold text-slate-800 italic">Calendário de Eventos</h2>
-                <button onclick="openModal('modalEvento')" class="btn-primary">+ NOVO EVENTO</button>
-            </div>
-            <div class="calendar-grid">
-                <div class="day-header">Dom</div><div class="day-header">Seg</div><div class="day-header">Ter</div>
-                <div class="day-header">Qua</div><div class="day-header">Qui</div><div class="day-header">Sex</div><div class="day-header">Sáb</div>
-                <div id="calendar-body" class="contents"></div>
-            </div>
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Calendário</h2><button onclick="openModal('modalEvento')" class="btn-primary">+ NOVO EVENTO</button></div>
+            <div class="calendar-grid"><div class="day-header">Dom</div><div class="day-header">Seg</div><div class="day-header">Ter</div><div class="day-header">Qua</div><div class="day-header">Qui</div><div class="day-header">Sex</div><div class="day-header">Sáb</div><div id="calendar-body" class="contents"></div></div>
         </section>
+
+        <section id="section-listas" class="hidden space-y-8">
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Regras de Listas</h2><button onclick="openModal('modalLista')" class="btn-primary">+ NOVA REGRA</button></div>
+            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Nome</th><th>Exige / Trava</th><th>Gêneros</th><th>Obs</th></tr></thead><tbody id="tabela-regras"></tbody></table></div>
+        </section>
+
+        <section id="section-usuarios" class="hidden space-y-8">
+            <div class="flex justify-between items-center"><h2 class="text-2xl font-extrabold text-slate-800 italic">Gestão de Equipe</h2></div>
+            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Usuário</th><th>Acessos</th><th class="text-right">Ação</th></tr></thead><tbody id="tabela-usuarios"></tbody></table></div>
+        </section>
+
     </main>
 
     <div id="modalEvento" class="hidden fixed inset-0 z-[999] modal-overlay flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-extrabold text-slate-800 mb-8 uppercase italic tracking-tighter">Configurar Novo Evento</h3>
-            
             <form id="formEvento" class="space-y-6">
-                <div>
-                    <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Nome do Evento</label>
-                    <input type="text" id="ev-nome" placeholder="EX: NOITE DAS COELHINHAS" class="w-full admin-input p-5 rounded-2xl font-bold uppercase text-xs" required>
-                </div>
-
+                <input type="text" id="ev-nome" placeholder="NOME DO EVENTO" class="w-full admin-input p-5 rounded-2xl font-bold uppercase text-xs" required>
                 <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Data</label>
-                        <input type="date" id="ev-data" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Hora de Início</label>
-                        <input type="time" id="ev-hora" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
-                    </div>
+                    <input type="date" id="ev-data" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
+                    <input type="time" id="ev-hora" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
                 </div>
-
+                
                 <div class="space-y-2">
-                    <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Banner / Flyer (Importar)</label>
+                    <label class="text-[10px] font-extrabold text-slate-400 uppercase">Flyer do Evento</label>
                     <input type="file" id="ev-file" accept="image/*" class="hidden" onchange="updateLabel(this, 'lb-ev')">
                     <label for="ev-file" class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 transition-all">
                         <span class="text-2xl mb-2">📸</span>
-                        <span id="lb-ev" class="text-[10px] font-extrabold text-slate-500 uppercase">Escolher Imagem do Dispositivo</span>
+                        <span id="lb-ev" class="text-[10px] font-extrabold text-slate-500 uppercase">Importar Imagem</span>
                     </label>
                 </div>
 
-                <div>
-                    <label class="text-[10px] font-extrabold text-slate-400 uppercase ml-1">Informações Adicionais / Descrição</label>
-                    <textarea id="ev-info" placeholder="DESCREVA AS ATRAÇÕES, REGRAS OU DETALHES..." class="w-full admin-input p-5 rounded-2xl font-bold text-[10px] h-28 uppercase resize-none"></textarea>
-                </div>
+                <textarea id="ev-info" placeholder="INFORMAÇÕES ADICIONAIS / DESCRIÇÃO" class="w-full admin-input p-5 rounded-2xl font-bold text-[10px] h-24 uppercase resize-none"></textarea>
 
                 <div class="flex gap-4 pt-4">
                     <button type="submit" id="btnSalvarEvento" class="flex-grow bg-blue-600 text-white py-5 rounded-2xl font-extrabold uppercase text-xs shadow-lg">Salvar Evento</button>
@@ -158,14 +154,15 @@
             document.getElementById(`section-${id}`).classList.remove('hidden');
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.getElementById(`link-${id}`)?.classList.add('active');
-            if(id === 'eventos') loadCalendar();
+            if(id === 'usuarios') loadUsers(); if(id === 'eventos') loadCalendar();
+            if(id === 'listas') loadRules();
         };
 
         window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
         window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
-        window.updateLabel = (i, id) => { document.getElementById(id).innerText = i.files[0] ? i.files[0].name : "Escolher Imagem"; };
+        window.updateLabel = (i, id) => { document.getElementById(id).innerText = i.files[0] ? i.files[0].name : "Importar Imagem"; };
 
-        // --- SALVAMENTO COM TRATAMENTO DE ERRO (PARA NÃO TRAVAR) ---
+        // --- UPLOAD MASTER COM ANTI-TRAVAMENTO ---
         document.getElementById('formEvento').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSalvarEvento');
@@ -176,14 +173,12 @@
 
             try {
                 let fotoUrl = "";
-                // Se houver arquivo, faz upload
                 if (file) {
                     const storageRef = ref(storage, `${clubID}/eventos/${Date.now()}_${file.name}`);
                     const snapshot = await uploadBytes(storageRef, file);
                     fotoUrl = await getDownloadURL(snapshot.ref);
                 }
 
-                // Salva no Banco de Dados
                 await addDoc(collection(db, "eventos"), {
                     nome: document.getElementById('ev-nome').value.toUpperCase(),
                     data: document.getElementById('ev-data').value,
@@ -199,27 +194,36 @@
                 location.reload();
 
             } catch (err) {
-                console.error("Erro fatal:", err);
-                alert("Erro ao salvar. Verifique se o Firebase Storage está ativado nas regras.");
+                console.error(err);
+                alert("Erro ao salvar! Verifique se o Firebase Storage está ativado nas Regras (Rules) para permitir leitura/escrita.");
             } finally {
-                // Independente de erro ou sucesso, libera o botão
+                // Isso garante que o botão destrave mesmo se der erro
                 btn.innerText = "Salvar Evento";
                 btn.disabled = false;
             }
         };
 
-        // --- CARREGAR CALENDÁRIO ---
+        // --- CARREGADORES ---
         async function loadCalendar() {
             const b = document.getElementById('calendar-body'); b.innerHTML = '';
             const h = new Date(); const f = new Date(h.getFullYear(), h.getMonth(), 1).getDay(); const l = new Date(h.getFullYear(), h.getMonth()+1, 0).getDate();
-            for(let i=0; i<f; i++) b.innerHTML += `<div class="calendar-day bg-slate-50/30"></div>`;
+            for(let i=0; i<f; i++) b.innerHTML += `<div class="calendar-day bg-slate-50/50"></div>`;
             for(let d=1; d<=l; d++) {
                 const day = `${h.getFullYear()}-${(h.getMonth()+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-                b.innerHTML += `<div class="calendar-day" id="day-${day}"><span class="day-num">${d}</span></div>`;
+                b.innerHTML += `<div class="calendar-day" id="day-${day}"><span class="day-num text-slate-300 font-extrabold text-[11px]">${d}</span></div>`;
             }
             const q = query(collection(db, "eventos"), where("clubID", "==", clubID));
             const s = await getDocs(q);
             s.forEach(doc => { const ev = doc.data(); const el = document.getElementById(`day-${ev.data}`); if(el) el.innerHTML += `<div class="event-tag">${ev.nome}</div>`; });
+        }
+
+        async function loadRules() {
+            const q = query(collection(db, "config_listas"), where("clubID", "==", clubID));
+            const s = await getDocs(q); const t = document.getElementById('tabela-regras'); t.innerHTML = '';
+            s.forEach(doc => {
+                const r = doc.data(); const ex = Object.keys(r.exige).filter(k => r.exige[k]).map(k => k.toUpperCase()).join(', ');
+                t.innerHTML += `<tr><td class="font-extrabold uppercase text-xs text-slate-700 italic">${r.nome}</td><td class="text-[10px] font-bold text-slate-400">EXIGE: ${ex}</td><td><div class="flex gap-1">${r.generos.fem?'<span class="bg-pink-100 text-pink-600 px-2 py-0.5 rounded text-[8px] font-extrabold">FEM</span>':''} ${r.generos.masc?'<span class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded text-[8px] font-extrabold">MASC</span>':''} ${r.generos.casal?'<span class="bg-purple-100 text-purple-600 px-2 py-0.5 rounded text-[8px] font-extrabold">CASAL</span>':''}</div></td><td class="text-[10px] font-bold text-slate-300 uppercase max-w-xs truncate">${r.obs || '---'}</td></tr>`;
+            });
         }
 
         showSection('dash');
