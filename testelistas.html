@@ -143,7 +143,7 @@
         window.processarFinalizacao = async () => {
             const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
             const t = document.getElementById('tel-cliente').value.trim();
-            const tLimpo = t.replace(/\D/g, ""); // PEGA SÓ OS NÚMEROS
+            const tLimpo = t.replace(/\D/g, ""); // APENAS NÚMEROS DIGITADOS
 
             if (!n || tLimpo.length < 10) return alert("Preencha os dados corretamente!");
 
@@ -151,29 +151,50 @@
             btn.innerText = "VERIFICANDO..."; btn.disabled = true;
 
             try {
-                // --- BUSCA DUPLICIDADE REAL (SÓ NÚMEROS) ---
+                // --- BUSCA TUDO DESSE EVENTO ---
                 const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
                 const snap = await getDocs(q);
                 
-                // Filtro manual para garantir que ignore qualquer máscara do banco
-                const duplicado = snap.docs.find(d => d.data().tel.replace(/\D/g, "") === tLimpo);
+                // --- COMPARAÇÃO BLINDADA (Ignora máscaras no banco e no input) ---
+                let jaExiste = false;
+                let donoDaReserva = "";
 
-                if (duplicado) {
-                    const d = duplicado.data();
-                    const origem = d.promoter === "direto" ? "Link Oficial" : `Promoter ${d.promoter.toUpperCase()}`;
-                    alert(`🚨 ESTE NÚMERO JÁ ESTÁ NA LISTA!\nEvento: ${eventoAtivo.nome}\nCadastrado via: ${origem}`);
+                snap.forEach(docSnap => {
+                    const dados = docSnap.data();
+                    const telNoBancoLimpo = dados.tel.replace(/\D/g, "");
+                    
+                    if (telNoBancoLimpo === tLimpo) {
+                        jaExiste = true;
+                        donoDaReserva = dados.promoter;
+                    }
+                });
+
+                if (jaExiste) {
+                    const origem = (donoDaReserva === "direto" || donoDaReserva === "DIRETO") ? "Link Oficial da Casa" : `Promoter ${donoDaReserva.toUpperCase()}`;
+                    alert(`🚨 ESTE NÚMERO JÁ ESTÁ CADASTRADO!\nEvento: ${eventoAtivo.nome}\nCadastrado via: ${origem}.\n\nNão é necessário cadastrar novamente.`);
                     btn.innerText = "Confirmar Presença ✨"; btn.disabled = false;
                     return;
                 }
 
-                // SALVA COM A MÁSCARA PARA O ADMIN VER BONITO, MAS A TRAVA ACIMA É PELO NÚMERO LIMPO
+                // SALVA A RESERVA
                 await addDoc(collection(db, "lista_eventos"), {
-                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
-                    promoter: refPromoter, data_reserva: new Date().toISOString(), entrou: false
+                    nome: n,
+                    tel: t,
+                    evento: eventoAtivo.nome,
+                    tipo_entrada: tipoAtivo,
+                    promoter: refPromoter,
+                    data_reserva: new Date().toISOString(),
+                    entrou: false
                 });
 
-                alert("Confirmado!"); location.reload();
-            } catch (e) { alert("Erro!"); btn.disabled = false; }
+                alert("Confirmado! Seu nome está na lista."); 
+                location.reload();
+
+            } catch (e) { 
+                alert("Erro ao processar!"); 
+                btn.disabled = false; 
+                btn.innerText = "Confirmar Presença ✨";
+            }
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
