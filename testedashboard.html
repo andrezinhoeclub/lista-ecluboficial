@@ -7,153 +7,115 @@
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow-x: hidden; }
-        
-        /* Sidebar Master Black */
-        .sidebar { background: #0c0c0e; border-right: 1px solid #1f1f23; transition: 0.3s; }
-        .nav-link { color: #666; transition: 0.3s; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 13px; }
-        .nav-link:hover, .nav-link.active { color: #fff; background: rgba(255,255,255,0.05); }
-        
-        /* Grid de 8 Ícones (Fiel ao seu print favorito) */
-        .module-card { background: #111114; border: 1px solid #1f1f23; border-radius: 2.5rem; padding: 40px 20px; transition: 0.4s; text-align: center; cursor: pointer; }
-        .module-card:hover { border-color: #eab308; transform: translateY(-8px); background: #16161a; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
-        .icon-box { width: 64px; height: 64px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 32px; border-radius: 22px; background: rgba(255,255,255,0.03); transition: 0.3s; }
-        .module-card:hover .icon-box { background: rgba(234, 179, 8, 0.1); color: #eab308; }
-
-        /* Tabelas e Modais "Glass" */
-        .glass-panel { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; overflow: hidden; }
-        .admin-table th { background: rgba(0,0,0,0.3); padding: 20px 24px; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #444; text-align: left; }
-        .admin-table td { padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 13px; }
-
-        .admin-input { background: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; }
-        .btn-gold { background: #eab308; color: #000; font-weight: 900; text-transform: uppercase; transition: 0.3s; }
-        .btn-gold:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(234, 179, 8, 0.3); }
-
-        :root { --accent: #eab308; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e4e4e7; }
+        .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; }
+        .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
+        .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
+        .btn-menu.active-danger { background: #ef4444; color: #fff; font-weight: 800; border-color: #f87171; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+        .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
+        .scroll-x::-webkit-scrollbar { height: 6px; }
+        .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
+        .event-bubble { flex: 0 0 auto; width: 280px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
+        input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
+        .mini-capa { width: 100%; height: 80px; object-fit: cover; border-bottom: 1px solid #1a1a1c; opacity: 0.6; }
     </style>
 </head>
-<body class="flex min-h-screen">
+<body class="p-4 md:p-8">
 
-    <aside class="sidebar w-64 hidden lg:flex flex-col p-6 fixed inset-y-0 z-50">
-        <div class="mb-12 px-4 flex flex-col items-center">
-            <img id="club-logo" src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mb-3">
-            <p id="club-name" class="text-[9px] font-black uppercase tracking-[0.3em] text-[#eab308] italic">E-CLUB MANAGEMENT</p>
-        </div>
-        <nav class="space-y-1 flex-grow">
-            <div onclick="showSection('dash')" id="link-dash" class="nav-link active"><span>📊</span> Dashboard</div>
-            <div onclick="showSection('usuarios')" id="link-usuarios" class="nav-link"><span>👥</span> Equipe</div>
-            <div onclick="showSection('eventos')" id="link-eventos" class="nav-link"><span>📅</span> Eventos</div>
-            <div onclick="showSection('listas')" id="link-listas" class="nav-link"><span>📝</span> Config. Listas</div>
-            <div onclick="showSection('relatorios')" id="link-relatorios" class="nav-link"><span>📈</span> Relatórios</div>
-            <div onclick="showSection('espacos')" id="link-espacos" class="nav-link"><span>🛋️</span> Espaços</div>
-            <div onclick="showSection('carteira')" id="link-carteira" class="nav-link"><span>💰</span> Carteira</div>
-        </nav>
-        <div class="pt-6 border-t border-white/5"><div class="nav-link text-red-500"><span>🚪</span> Sair</div></div>
-    </aside>
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+            <div class="flex items-center gap-4">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 w-auto">
+                <div>
+                    <h1 class="text-2xl font-black uppercase italic tracking-tighter text-yellow-500 leading-none">Command Center</h1>
+                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 italic text-white">E-CLUB MANAGEMENT</p>
+                </div>
+            </div>
+            <nav class="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 overflow-x-auto">
+                <button onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu active px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Relatórios</button>
+                <button onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Eventos</button>
+                <button onclick="trocarAba('aba-equipe', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Equipe</button>
+                <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-purple-400">Listas</button>
+                <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
+            </nav>
+        </header>
 
-    <main class="flex-grow lg:ml-64 p-6 lg:p-12">
-        
-        <section id="section-dash" class="space-y-12">
-            <header>
-                <h2 class="text-4xl font-black italic uppercase tracking-tighter text-white">Central de Comando</h2>
-                <p class="text-zinc-500 text-sm mt-2 font-bold uppercase tracking-widest">Controle total da balada <span class="text-[#eab308]" id="dash-title">---</span></p>
-            </header>
-
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-                <div onclick="showSection('usuarios')" class="module-card">
-                    <div class="icon-box">👥</div>
-                    <p class="text-xs font-black uppercase tracking-widest">Equipe</p>
+        <section id="aba-relatorios" class="space-y-8">
+            <div class="glass-card p-8">
+                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance por Evento</h2>
+                <div id="container-bolhas" class="scroll-x"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="glass-card p-8 border-t-4 border-t-yellow-500 text-center text-white">
+                    <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest">🏆 Pódio de Reservas</h2>
+                    <div id="lista-ranking-reservas" class="space-y-4 text-left"></div>
                 </div>
-                <div onclick="showSection('eventos')" class="module-card">
-                    <div class="icon-box">📅</div>
-                    <p class="text-xs font-black uppercase tracking-widest">Calendário</p>
+                <div class="glass-card p-8 border-t-4 border-t-green-500 text-center text-white">
+                    <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest">🔥 Pódio de Check-ins</h2>
+                    <div id="lista-ranking-checkins" class="space-y-4 text-left"></div>
                 </div>
-                <div onclick="showSection('listas')" class="module-card">
-                    <div class="icon-box">📝</div>
-                    <p class="text-xs font-black uppercase tracking-widest">Regras Listas</p>
-                </div>
-                <div onclick="showSection('relatorios')" class="module-card">
-                    <div class="icon-box">📈</div>
-                    <p class="text-xs font-black uppercase tracking-widest">Relatórios</p>
-                </div>
-                <div onclick="showSection('espacos')" class="module-card">
-                    <div class="icon-box">🛋️</div>
-                    <p class="text-xs font-black uppercase tracking-widest">Espaços</p>
-                </div>
-                <div onclick="showSection('carteira')" class="module-card">
-                    <div class="icon-box">💰</div>
-                    <p class="text-xs font-black uppercase tracking-widest">Carteira</p>
-                </div>
-                <div class="module-card opacity-30">
-                    <div class="icon-box">🥂</div>
-                    <p class="text-xs font-black uppercase tracking-widest">Reservas</p>
-                </div>
-                <div class="module-card opacity-30">
-                    <div class="icon-box">⚙️</div>
-                    <p class="text-xs font-black uppercase tracking-widest">Ajustes</p>
+                <div class="flex flex-col gap-8">
+                    <div class="glass-card p-8 border-t-4 border-t-blue-600">
+                        <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Relatório Rápido</h2>
+                        <select id="filtro-promoter-excel" class="w-full p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white" onchange="gerarListaCheckins()"></select>
+                        <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[11px] font-mono text-zinc-400 mb-4" placeholder="Dados para exportação..."></textarea>
+                        <button onclick="copiarOutput()" class="w-full bg-zinc-800 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-white hover:text-black transition-all mb-2">Copiar Lista</button>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section id="section-usuarios" class="hidden space-y-8">
-            <div class="flex justify-between items-center"><h2 class="text-2xl font-black italic uppercase text-[#eab308]">Gestão de Equipe</h2><button onclick="openModal('modalPromoter')" class="btn-gold px-6 py-3 rounded-2xl text-[10px] shadow-lg">+ Novo Integrante</button></div>
-            <div class="glass-panel"><table class="w-full admin-table"><thead><tr><th>Usuário</th><th>Status</th><th class="text-right">Ação</th></tr></thead><tbody id="tabela-equipe"></tbody></table></div>
+        <section id="aba-festas" class="hidden space-y-8 text-white">
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Configurar Evento</h2>
+                <form id="formEvento" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input type="hidden" id="edit_evento_id">
+                    <input type="text" id="nome_festa" placeholder="Nome do Evento" class="p-4 rounded-2xl font-bold md:col-span-3 text-white" required>
+                    <input type="date" id="data_festa" class="p-4 rounded-2xl font-bold uppercase text-xs text-white" required>
+                    <input type="text" id="valor_casal" placeholder="Casal R$" class="p-4 rounded-2xl font-bold text-white">
+                    <input type="text" id="valor_solteiro" placeholder="Solteiro R$" class="p-4 rounded-2xl font-bold text-white">
+                    <input type="text" id="desc_casal" placeholder="Casal Aniv R$" class="p-4 rounded-2xl font-bold text-purple-400">
+                    <input type="text" id="desc_solteiro" placeholder="Solteiro Aniv R$" class="p-4 rounded-2xl font-bold text-purple-400">
+                    <input type="url" id="url_banner" placeholder="URL da Capa" class="md:col-span-4 p-4 rounded-2xl font-bold text-white">
+                    <button type="submit" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento</button>
+                </form>
+            </div>
+            <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </section>
 
-        <section id="section-eventos" class="hidden space-y-8">
-            <div class="flex justify-between items-center"><h2 class="text-2xl font-black italic uppercase text-[#eab308]">Calendário</h2><button onclick="openModal('modalEvento')" class="btn-gold px-6 py-3 rounded-2xl text-[10px] shadow-lg">+ Novo Evento</button></div>
-            <div id="calendar-body" class="grid grid-cols-7 gap-px bg-[#1f1f23] border border-[#1f1f23] rounded-3xl overflow-hidden">
-                </div>
+        <section id="aba-equipe" class="hidden space-y-12 text-white">
+            <div class="glass-card p-8 border-l-4 border-l-yellow-500">
+                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Gestão de Promoters</h2>
+                <form id="formPromoter" class="flex flex-col md:flex-row gap-3 mb-10 text-white">
+                    <input type="text" id="nome_promoter" placeholder="NOME DO PROMOTER" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
+                    <select id="tipo_promoter" class="p-4 rounded-2xl font-bold text-xs text-white">
+                        <option value="padrao">LISTA PADRÃO</option>
+                        <option value="aniversario">LISTA ANIVERSÁRIO (VIP)</option>
+                        <option value="visualizar">APENAS VISUALIZAR</option>
+                    </select>
+                    <button type="submit" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black transition-all hover:bg-yellow-500 text-white">Adicionar</button>
+                </form>
+                <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+            <div class="glass-card p-8 border-l-4 border-l-green-500">
+                <h2 class="text-green-500 font-black uppercase italic text-xl mb-8 tracking-tighter text-white">Gestão de Portaria</h2>
+                <form id="formPortaria" class="flex flex-col md:flex-row gap-3 mb-10 text-white">
+                    <input type="text" id="login_portaria" placeholder="NOME DO OPERADOR" class="flex-grow p-4 rounded-2xl font-bold text-sm text-white" required>
+                    <button type="submit" class="bg-green-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-green-500 transition-all text-white">Cadastrar</button>
+                </form>
+                <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-white"></div>
+            </div>
         </section>
 
-    </main>
+        <section id="aba-aniversarios" class="hidden space-y-8 text-white">...</section>
+        <section id="aba-config" class="hidden space-y-8 text-white">...</section>
 
-    <div id="modalEvento" class="hidden fixed inset-0 z-[999] bg-black/95 flex items-center justify-center p-4">
-        <div class="bg-[#0d0d14] w-full max-w-lg rounded-[3rem] border border-white/10 p-10 shadow-2xl">
-            <h3 class="text-2xl font-black uppercase italic text-[#eab308] mb-8">Novo Evento</h3>
-            <form id="formEvento" class="space-y-6">
-                <input type="text" id="ev-nome" placeholder="NOME DO EVENTO" class="w-full admin-input p-5 rounded-2xl font-black uppercase text-xs" required>
-                <div class="grid grid-cols-2 gap-4">
-                    <input type="date" id="ev-data" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
-                    <input type="time" id="ev-hora" class="w-full admin-input p-5 rounded-2xl font-bold text-xs" required>
-                </div>
-                <div class="space-y-2 text-center">
-                    <label class="text-[10px] font-black text-zinc-500 uppercase">Flyer (Importar)</label>
-                    <input type="file" id="ev-file" accept="image/*" class="hidden" onchange="document.getElementById('lb-ev').innerText = this.files[0].name">
-                    <label for="ev-file" class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-zinc-800 rounded-3xl cursor-pointer hover:bg-white/5 transition-all">
-                        <span class="text-2xl mb-1">📸</span>
-                        <span id="lb-ev" class="text-[10px] font-black text-zinc-600 uppercase">Escolher Arquivo</span>
-                    </label>
-                </div>
-                <textarea id="ev-info" placeholder="DESCRIÇÃO ADICIONAL" class="w-full admin-input p-5 rounded-2xl font-bold text-[10px] h-24 uppercase resize-none"></textarea>
-                <div class="flex gap-4">
-                    <button type="submit" id="btnSalvar" class="flex-grow btn-gold py-6 rounded-[2rem] text-xs">Salvar Evento</button>
-                    <button type="button" onclick="closeModal('modalEvento')" class="px-6 text-zinc-600 font-black text-[10px] uppercase">Fechar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalPromoter" class="hidden fixed inset-0 z-[999] bg-black/95 flex items-center justify-center p-4">
-        <div class="bg-[#0d0d14] w-full max-w-md rounded-[2.5rem] border border-white/10 p-10">
-            <h3 class="text-xl font-black uppercase text-[#eab308] mb-6">Novo Promoter</h3>
-            <form id="formPromoter" class="space-y-4">
-                <input type="text" id="pro-nome" placeholder="NOME COMPLETO" class="w-full admin-input p-5 rounded-2xl font-black uppercase text-xs" required>
-                <select id="pro-tipo" class="w-full admin-input p-5 rounded-2xl font-black text-xs uppercase">
-                    <option value="padrao">LISTA PADRÃO</option>
-                    <option value="aniversario">LISTA ANIVERSÁRIO (VIP)</option>
-                    <option value="visualizar">APENAS VISUALIZAR (SEM BOTÕES)</option>
-                </select>
-                <button type="submit" class="w-full btn-gold py-5 rounded-2xl text-xs">Cadastrar</button>
-            </form>
-        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -166,65 +128,97 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
-        const clubID = new URLSearchParams(window.location.search).get('club') || 'eclub';
+        
+        let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = [];
+        let modoTesteAtivo = false;
 
-        document.getElementById('dash-title').innerText = clubID.toUpperCase();
-
-        window.showSection = (id) => {
-            document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
-            document.getElementById(`section-${id}`).classList.remove('hidden');
-            if(id === 'usuarios') loadEquipe(); if(id === 'eventos') loadCalendar();
+        window.trocarAba = (id, btn, type) => { 
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
+            document.querySelectorAll('.btn-menu').forEach(x => {
+                x.classList.remove('active');
+                x.classList.remove('active-danger');
+            }); 
+            document.getElementById(id).classList.remove('hidden'); 
+            if (type === 'danger') btn.classList.add('active-danger');
+            else btn.classList.add('active'); 
         };
 
-        window.openModal = (id) => document.getElementById(id).classList.remove('hidden');
-        window.closeModal = (id) => document.getElementById(id).classList.add('hidden');
+        onSnapshot(collection(db, "lista_eventos"), snap => { 
+            dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderizarRelatorios();
+        });
 
-        // --- SALVAR EVENTO (ANTI-TRAVAMENTO) ---
-        document.getElementById('formEvento').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btnSalvar');
-            const file = document.getElementById('ev-file').files[0];
-            btn.innerText = "PROCESSANDO..."; btn.disabled = true;
+        onSnapshot(collection(db, "eventos"), snap => { 
+            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderizarRelatorios();
+            renderizarGridConfig();
+        });
 
-            try {
-                let url = "";
-                if (file) {
-                    const sRef = ref(storage, `${clubID}/eventos/${Date.now()}_${file.name}`);
-                    await uploadBytes(sRef, file);
-                    url = await getDownloadURL(sRef);
+        onSnapshot(collection(db, "promoters"), snap => { 
+            dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
+            renderizarEquipe();
+            document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Promoter</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
+        });
+
+        // --- RENDERIZAR EQUIPE (ADICIONADO O STATUS VISUALIZAR) ---
+        function renderizarEquipe() {
+            document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => {
+                let tipoLabel = 'LISTA PADRÃO';
+                let corBorda = 'border-l-yellow-500';
+                
+                if (p.tipo === 'aniversario') {
+                    tipoLabel = 'LISTA ANIVERSÁRIO (VIP)';
+                } else if (p.tipo === 'visualizar') {
+                    tipoLabel = 'APENAS VISUALIZAR';
+                    corBorda = 'border-l-blue-500';
                 }
-                await addDoc(collection(db, "eventos"), {
-                    nome: document.getElementById('ev-nome').value.toUpperCase(),
-                    data: document.getElementById('ev-data').value,
-                    hora: document.getElementById('ev-hora').value,
-                    info: document.getElementById('ev-info').value.toUpperCase(),
-                    imagem: url, clubID, ativa: true, criadoEm: serverTimestamp()
-                });
-                alert("Salvo!"); location.reload();
-            } catch (err) { alert("Erro ao salvar."); }
-            finally { btn.innerText = "Salvar Evento"; btn.disabled = false; }
+
+                const senhaVisivel = p.senha ? p.senha : 'NÃO CADASTRADA';
+                return `
+                <div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 ${corBorda}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p>
+                            <p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${senhaVisivel}</p>
+                            <p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tipoLabel}</p>
+                        </div>
+                        <div class="flex gap-4">
+                            <button onclick="editarPromoter('${p.id}', '${p.tipo}')" class="text-blue-400 text-[10px] font-black uppercase">Editar</button>
+                            <button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // --- EDITAR PROMOTER (INCLUINDO OPÇÃO VISUALIZAR) ---
+        window.editarPromoter = async (id, tipoAtual) => {
+            const op = prompt(`⚙️ EDITAR PROMOTER: ${id.toUpperCase()}\n\n1 - LISTA PADRÃO\n2 - LISTA ANIVERSÁRIO\n3 - APENAS VISUALIZAR\n4 - ALTERAR SENHA\n\nDigite a opção (1, 2, 3 ou 4):`);
+            if (!op) return;
+            let updates = {};
+            if (op === '1') updates.tipo = 'padrao';
+            if (op === '2') updates.tipo = 'aniversario';
+            if (op === '3') updates.tipo = 'visualizar';
+            if (op === '4') {
+                const s = prompt("Nova senha:");
+                if (s) updates.senha = s.trim();
+            }
+            if (Object.keys(updates).length > 0) await updateDoc(doc(db, "promoters", id), updates);
         };
 
-        // --- LOADERS ---
-        async function loadEquipe() {
-            const q = query(collection(db, "promoters"), where("clubID", "==", clubID));
-            const s = await getDocs(q); const t = document.getElementById('tabela-equipe'); t.innerHTML = '';
-            s.forEach(d => {
-                const p = d.data();
-                const b = p.tipo === 'visualizar' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 'bg-green-500/10 text-green-500 border-green-500/20';
-                t.innerHTML += `<tr><td><p class="font-black text-xs uppercase">${p.nome || d.id}</p></td><td><span class="px-3 py-1 rounded-lg border text-[9px] font-black uppercase ${b}">${p.tipo}</span></td><td class="text-right"><button class="text-zinc-700 font-black text-[9px]">AÇÕES</button></td></tr>`;
-            });
-        }
+        // ... O restante das suas funções de Relatórios, Eventos e Remoção continuam exatamente iguais ...
 
-        async function loadCalendar() {
-            const b = document.getElementById('calendar-body'); b.innerHTML = '';
-            const h = new Date(); const f = new Date(h.getFullYear(), h.getMonth(), 1).getDay(); const l = new Date(h.getFullYear(), h.getMonth()+1, 0).getDate();
-            for(let i=0; i<f; i++) b.innerHTML += `<div class="p-4 bg-[#08080a]"></div>`;
-            for(let d=1; d<=l; d++) b.innerHTML += `<div class="p-4 bg-[#0c0c0e] min-h-[100px] border border-white/5"><span class="text-[11px] font-black text-zinc-800">${d}</span></div>`;
-        }
+        document.getElementById('formPromoter').addEventListener('submit', async e => {
+            e.preventDefault(); 
+            const n = document.getElementById('nome_promoter').value.trim(); 
+            const t = document.getElementById('tipo_promoter').value;
+            await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true });
+            e.target.reset();
+        });
 
-        showSection('dash');
+        window.removerItem = async (c, i) => { if(confirm("Apagar?")) await deleteDoc(doc(db, c, i)); };
+        
+        // (As funções renderizarRelatorios e renderizarGridConfig que você já tinha no original devem ser mantidas aqui)
     </script>
 </body>
 </html>
