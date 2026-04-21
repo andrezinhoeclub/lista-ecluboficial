@@ -1,202 +1,78 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <title>E-CLUB | Reservas & Pix ⚡</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; min-height: 100vh; background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-lista { background: #eab308; color: #000; font-weight: 900; }
-        .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; }
-        .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; transition: 0.3s; }
-        .site-input:disabled { opacity: 0.3; cursor: not-allowed; }
-        .btn-sel { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05); transition: 0.3s; }
-        .btn-sel.active { border-color: #eab308; background: rgba(234, 179, 8, 0.05); box-shadow: 0 0 20px rgba(234, 179, 8, 0.1); }
-        .btn-sel-pix.active { border-color: #00f5d4; background: rgba(0, 245, 212, 0.05); box-shadow: 0 0 20px rgba(0, 245, 212, 0.1); }
-        .banner-aniv { background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%); }
-    </style>
-</head>
-<body class="p-4 flex flex-col items-center">
-    
-    <div class="max-w-md w-full">
-        <header class="flex justify-center py-6">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
-        </header>
+// --- FUNÇÃO DE FINALIZAÇÃO DE RESERVA (COLE ESTE BLOCO) ---
 
-        <div id="containerAniversario" class="hidden glass rounded-[2.5rem] overflow-hidden border-purple-500/30 border shadow-2xl mb-10">
-            <div class="banner-aniv p-10 text-center">
-                <h1 class="text-4xl font-black uppercase italic tracking-tighter leading-none text-white">HAPPY<br>BIRTHDAY</h1>
-            </div>
-            <div class="p-8 text-center">
-                <p class="text-purple-400 font-black text-[10px] uppercase tracking-widest mb-2 italic">Convite Especial para:</p>
-                <h2 id="nomeAniversariantePagina" class="text-3xl font-black uppercase italic text-white leading-tight mb-6">---</h2>
-                <button onclick="iniciarFluxoAniv()" class="w-full btn-lista py-6 rounded-2xl text-xs font-black shadow-xl active:scale-95 transition-all">📝 CONFIRMAR MEU NOME NA LISTA</button>
-            </div>
-        </div>
+async function finalizarReserva() {
+    // 1. Localiza os elementos da tela
+    const btn = document.getElementById('btn-confirmar');
+    const nomeCliente = document.getElementById('input-nome').value.trim();
+    const telefoneCliente = document.getElementById('input-tel').value.trim();
+    const tipoIngresso = document.querySelector('input[name="tipo"]:checked')?.value; // CASAL ou SOLTEIRO
+    const metodoPagamento = document.querySelector('input[name="pagamento"]:checked')?.value; // pix_antecipado ou portaria
 
-        <div id="listaEventos" class="space-y-10"></div>
-    </div>
+    // 2. Validação básica
+    if (!nomeCliente || !telefoneCliente || !tipoIngresso || !metodoPagamento) {
+        alert("Ops! Preencha todos os campos e selecione a forma de pagamento.");
+        return;
+    }
 
-    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
-        <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-white/10 border shadow-2xl relative">
-            <h2 id="tituloModal" class="text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
-            <p id="subtituloModal" class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic">Escolha uma opção para liberar</p>
+    // Travamos o botão para o cliente não clicar duas vezes
+    const originalText = btn.innerText;
+    btn.innerText = "GERANDO PEDIDO...";
+    btn.disabled = true;
+
+    try {
+        // 3. Salva a reserva no seu Banco de Dados (Firestore)
+        const docRef = await addDoc(collection(db, "lista_eventos"), {
+            cliente: nomeCliente,
+            telefone: telefoneCliente,
+            evento: eventoAtivo.nome,
+            data_evento: eventoAtivo.data,
+            tipo: tipoIngresso,
+            promoter: promoterNome.toUpperCase(),
+            metodo: metodoPagamento,
+            entrou: false,
+            pago: false,
+            data_reserva: new Date().toISOString()
+        });
+
+        // 4. LÓGICA DE PAGAMENTO
+        if (metodoPagamento === 'pix_antecipado') {
             
-            <div class="grid grid-cols-2 gap-3 mb-6">
-                <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
-                    <span class="text-[10px] font-black uppercase opacity-60">👫 Casal</span>
-                    <span id="v-modal-casal" class="text-xs font-black italic text-white leading-tight">---</span>
-                </button>
-                <button onclick="selecionarTipo('SOLTEIRO')" id="btn-solteiro" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
-                    <span class="text-[10px] font-black uppercase opacity-60">👤 Solteiro</span>
-                    <span id="v-modal-solteiro" class="text-xs font-black italic text-white leading-tight">---</span>
-                </button>
-            </div>
+            // Pega o valor da Dashboard (ex: "R$ 50,00") e limpa para enviar (ex: 50.00)
+            const valorRaw = tipoIngresso === 'CASAL' ? eventoAtivo.ant_casal : eventoAtivo.ant_solteiro;
+            const valorLimpo = valorRaw.replace('R$', '').replace(/\s/g, '').replace(',', '.');
 
-            <div class="space-y-3 text-left">
-                <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase" disabled>
-                <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs" disabled>
-                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl active:scale-95 transition-all" disabled>Confirmar Presença ✨</button>
-            </div>
-            <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 italic">Voltar</button>
-        </div>
-    </div>
+            // URL da sua Cloud Function que você acabou de subir
+            const URL_PONTE_MP = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, getDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+            const response = await fetch(URL_PONTE_MP, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    valor: valorLimpo,
+                    titulo: `E-CLUB: ${eventoAtivo.nome} (${tipoIngresso})`,
+                    reservaId: docRef.id // Envia o ID da reserva para o Mercado Pago
+                })
+            });
 
-        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+            const result = await response.json();
 
-        const params = new URLSearchParams(window.location.search);
-        const refID = params.get('id'); 
-        const refPromoter = (params.get('p') || params.get('ref') || "direto").toLowerCase().trim();
-
-        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null; let dadosAnivLink = null; let eFluxoPix = false;
-
-        const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
-
-        async function carregarPagina() {
-            const snapEv = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            eventosCache = snapEv.docs.map(d => ({ id: d.id, ...d.data() }));
-
-            if (refID) {
-                const snapAniv = await getDoc(doc(db, "links_aniversario", refID));
-                if (snapAniv.exists()) {
-                    dadosAnivLink = snapAniv.data();
-                    eventoAtivo = eventosCache.find(e => e.nome === dadosAnivLink.festa);
-                    document.getElementById('nomeAniversariantePagina').innerText = "Aniversário de " + dadosAnivLink.aniversariante;
-                    document.getElementById('containerAniversario').classList.remove('hidden');
-                    document.getElementById('listaEventos').classList.add('hidden');
-                }
+            if (result.url) {
+                // REDIRECIONAMENTO MÁGICO: Joga o cliente para o Checkout do Mercado Pago
+                window.location.href = result.url;
             } else {
-                const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-                const hojeLocal = f.split('/').reverse().join('-');
-                const ativos = eventosCache.filter(ev => ev.data >= hojeLocal).sort((a, b) => a.data.localeCompare(b.data));
-                
-                document.getElementById('listaEventos').innerHTML = ativos.map(ev => `
-                    <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
-                        <img src="${ev.imagem || ''}" class="w-full h-auto">
-                        <div class="p-8 text-center space-y-4">
-                            <h3 class="text-2xl font-black uppercase italic text-white tracking-tighter">${ev.nome}</h3>
-                            <button onclick="iniciarFluxoGeral('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs font-black">📝 NOME NA LISTA</button>
-                            ${ev.ant_casal || ev.ant_solteiro ? `<button onclick="iniciarFluxoGeral('${ev.id}', true)" class="w-full btn-pix-main py-5 rounded-2xl text-xs font-black">⚡ PIX ANTECIPADO</button>` : ''}
-                        </div>
-                    </div>`).join('');
+                throw new Error("Erro ao gerar link de pagamento.");
             }
+
+        } else {
+            // Se for portaria, apenas avisa e manda para a página de sucesso simples
+            alert("Reserva confirmada! Seu nome está na lista da portaria.");
+            window.location.href = "sucesso_lista.html"; 
         }
 
-        window.iniciarFluxoAniv = () => {
-            eFluxoPix = false;
-            document.getElementById('tituloModal').innerText = "🎂 ANIVERSÁRIO VIP";
-            document.getElementById('tituloModal').className = "text-purple-400 font-black uppercase italic mb-1 tracking-tighter text-xl";
-            document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.desc_casal);
-            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.desc_solteiro);
-            document.getElementById('modalForm').classList.remove('hidden');
-        };
-
-        window.iniciarFluxoGeral = (id, isPix) => {
-            eventoAtivo = eventosCache.find(e => e.id === id);
-            eFluxoPix = isPix;
-            document.getElementById('tituloModal').innerText = isPix ? "⚡ PIX ANTECIPADO" : "🔥 NOME NA LISTA";
-            document.getElementById('tituloModal').className = isPix ? "text-emerald-400 font-black uppercase italic mb-1 tracking-tighter text-xl" : "text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl";
-            
-            document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? eventoAtivo.ant_casal : eventoAtivo.valor_casal);
-            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? eventoAtivo.ant_solteiro : eventoAtivo.valor_solteiro);
-            document.getElementById('modalForm').classList.remove('hidden');
-        };
-
-        window.selecionarTipo = (tipo) => {
-            tipoAtivo = tipo;
-            const bC = document.getElementById('btn-casal');
-            const bS = document.getElementById('btn-solteiro');
-            bC.className = bS.className = "btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1";
-            
-            const alvo = tipo === 'CASAL' ? bC : bS;
-            alvo.classList.add('active');
-            if (eFluxoPix) alvo.classList.add('btn-sel-pix');
-
-            document.getElementById('nome-cliente').disabled = false;
-            document.getElementById('tel-cliente').disabled = false;
-            const btnF = document.getElementById('btn-final-acao');
-            btnF.disabled = false;
-            btnF.innerText = eFluxoPix ? "PAGAR COM PIX ⚡" : "CONFIRMAR PRESENÇA ✨";
-            btnF.className = eFluxoPix ? "w-full btn-pix-main py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl" : "w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl";
-        };
-
-        window.processarFinalizacao = async () => {
-            const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
-            const t = document.getElementById('tel-cliente').value.trim();
-            const tLimpo = t.replace(/\D/g, "");
-            if (tLimpo.length < 11) return alert("Por favor, insira o número completo com DDD e 9 dígitos.");
-
-            const btn = document.getElementById('btn-final-acao');
-            btn.innerText = "VERIFICANDO..."; btn.disabled = true;
-
-            try {
-                const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
-                const snap = await getDocs(q);
-                let jaExiste = false;
-                snap.forEach(d => { if (d.data().tel.replace(/\D/g, "") === tLimpo) jaExiste = true; });
-
-                if (jaExiste) {
-                    alert("🚨 ESTE NÚMERO JÁ ESTÁ NA LISTA!");
-                    btn.disabled = false; btn.innerText = eFluxoPix ? "PAGAR COM PIX ⚡" : "CONFIRMAR PRESENÇA ✨";
-                    return;
-                }
-
-                const docRef = await addDoc(collection(db, "lista_eventos"), {
-                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
-                    promoter: dadosAnivLink ? dadosAnivLink.promoter : refPromoter,
-                    aniversariante: dadosAnivLink ? dadosAnivLink.aniversariante : "",
-                    pago: eFluxoPix ? "PENDENTE" : "PORTARIA",
-                    data_reserva: new Date().toISOString(), entrou: false
-                });
-
-                if (eFluxoPix) {
-                    const linkPag = tipoAtivo === 'CASAL' ? eventoAtivo.link_pag_casal : eventoAtivo.link_pag_solteiro;
-                    if (!linkPag) { alert("Link de pagamento não configurado!"); btn.disabled = false; return; }
-                    window.location.href = linkPag + (linkPag.includes('?') ? '&' : '?') + "external_reference=" + docRef.id;
-                } else {
-                    alert("Confirmado! Seu nome está na lista."); location.reload();
-                }
-            } catch (e) { alert("Erro ao processar!"); btn.disabled = false; }
-        };
-
-        window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
-        window.mask = (i) => {
-            let v = i.value.replace(/\D/g, "").substring(0, 11);
-            if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
-            i.value = v;
-        };
-        carregarPagina();
-    </script>
-</body>
-</html>
+    } catch (error) {
+        console.error("Erro no processo:", error);
+        alert("Ocorreu um erro técnico. Tente novamente ou chame o suporte no WhatsApp.");
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
+}
