@@ -122,7 +122,7 @@
                             </div>
                         </div>
                     </div>`).join('');
-            } catch (e) { console.error("Erro ao carregar eventos:", e); }
+            } catch (err) { console.error("Erro ao carregar:", err); }
         }
 
         window.iniciarFluxo = (id, isPix) => {
@@ -145,7 +145,6 @@
             tipoAtivo = tipo;
             const bCasal = document.getElementById('btn-casal');
             const bSolteiro = document.getElementById('btn-solteiro');
-            
             bCasal.classList.remove('active', 'btn-sel-pix');
             bSolteiro.classList.remove('active', 'btn-sel-pix');
             
@@ -161,7 +160,7 @@
         window.processarFinalizacao = async () => {
             const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
             const t = document.getElementById('tel-cliente').value.trim();
-            if (!n || t.length < 14) return alert("Preencha Nome e Telefone completo!");
+            if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
             
             const btn = document.getElementById('btn-final-acao');
             const originalText = btn.innerText;
@@ -170,22 +169,16 @@
             try {
                 // 1. Salva a reserva no Firestore
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
-                    nome: n, 
-                    tel: t, 
-                    evento: eventoAtivo.nome, 
-                    tipo_entrada: tipoAtivo,
-                    promoter: "site_direto", 
-                    data_reserva: new Date().toISOString(), 
-                    entrou: false, 
-                    pago: false,
+                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
+                    promoter: "direto", data_reserva: new Date().toISOString(), entrou: false, pago: false,
                     metodo: eFluxoPix ? 'pix_antecipado' : 'portaria'
                 });
 
-                // 2. Se for PIX, chama a sua Cloud Function automática
                 if (eFluxoPix) {
                     const valorRaw = tipoAtivo === 'CASAL' ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro);
                     const valorLimpo = String(valorRaw).replace('R$', '').replace(/\s/g, '').replace(',', '.');
 
+                    // URL DO SEU PROJETO (SINGULAR - CONFORME TERMINAL)
                     const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
                     const response = await fetch(URL_FUNCAO, {
@@ -199,27 +192,23 @@
                     });
 
                     const data = await response.json();
-
                     if (data.url) {
                         window.location.href = data.url;
                     } else {
-                        throw new Error("Erro ao gerar link de pagamento.");
+                        throw new Error("Link não gerado");
                     }
-
                 } else {
-                    alert("Seu nome foi confirmado na lista! ✨"); 
+                    alert("Confirmado na lista! ✨"); 
                     location.reload();
                 }
             } catch (e) { 
                 console.error(e);
-                alert("Erro ao processar reserva! Verifique sua conexão ou tente novamente."); 
-                btn.disabled = false; 
-                btn.innerText = originalText; 
+                alert("Erro ao processar! Certifique-se de que a Função está pública (allUsers)."); 
+                btn.disabled = false; btn.innerText = originalText; 
             }
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
-        
         window.mask = (i) => {
             let v = i.value.replace(/\D/g, "").substring(0, 11);
             if (v.length > 0) v = "(" + v;
@@ -227,7 +216,6 @@
             if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
             i.value = v;
         };
-
         carregarPagina();
     </script>
 </body>
