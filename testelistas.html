@@ -96,31 +96,33 @@
         const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
 
         async function carregarPagina() {
-            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            const agora = new Date();
-            const hojeStr = agora.toLocaleDateString('en-CA'); 
+            try {
+                const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+                const agora = new Date();
+                const hojeStr = agora.toLocaleDateString('en-CA'); 
 
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                .filter(ev => ev.data >= hojeStr)
-                .sort((a, b) => a.data.localeCompare(b.data));
+                eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                    .filter(ev => ev.data >= hojeStr)
+                    .sort((a, b) => a.data.localeCompare(b.data));
 
-            const container = document.getElementById('listaEventos');
-            if (eventosCache.length === 0) {
-                container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic uppercase">Nenhum evento disponível</div>`;
-                return;
-            }
+                const container = document.getElementById('listaEventos');
+                if (eventosCache.length === 0) {
+                    container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic uppercase">Nenhum evento disponível</div>`;
+                    return;
+                }
 
-            container.innerHTML = eventosCache.map(ev => `
-                <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
-                    ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black uppercase tracking-tighter italic text-xl">E-CLUB</div>`}
-                    <div class="p-8">
-                        <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter">${ev.nome}</h3>
-                        <div class="space-y-4">
-                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA LISTA</button>
-                            <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO</button>
+                container.innerHTML = eventosCache.map(ev => `
+                    <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
+                        ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black uppercase tracking-tighter italic text-xl">E-CLUB</div>`}
+                        <div class="p-8">
+                            <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter">${ev.nome}</h3>
+                            <div class="space-y-4">
+                                <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA LISTA</button>
+                                <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO</button>
+                            </div>
                         </div>
-                    </div>
-                </div>`).join('');
+                    </div>`).join('');
+            } catch (e) { console.error("Erro ao carregar eventos:", e); }
         }
 
         window.iniciarFluxo = (id, isPix) => {
@@ -132,8 +134,8 @@
             titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : "🔥 NOME NA LISTA";
             titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-1 tracking-tighter text-xl text-center" : "text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl text-center";
 
-            document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? eventoAtivo.ant_casal : eventoAtivo.valor_casal);
-            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? eventoAtivo.ant_solteiro : eventoAtivo.valor_solteiro);
+            document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal);
+            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro);
             
             selecionarTipo('CASAL');
             document.getElementById('modalForm').classList.remove('hidden');
@@ -159,7 +161,7 @@
         window.processarFinalizacao = async () => {
             const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
             const t = document.getElementById('tel-cliente').value.trim();
-            if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
+            if (!n || t.length < 14) return alert("Preencha Nome e Telefone completo!");
             
             const btn = document.getElementById('btn-final-acao');
             const originalText = btn.innerText;
@@ -181,11 +183,9 @@
 
                 // 2. Se for PIX, chama a sua Cloud Function automática
                 if (eFluxoPix) {
-                    // Pega o valor da Dashboard e limpa para enviar (ex: "R$ 50,00" -> 50.00)
-                    const valorRaw = tipoAtivo === 'CASAL' ? eventoAtivo.ant_casal : eventoAtivo.ant_solteiro;
-                    const valorLimpo = valorRaw.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+                    const valorRaw = tipoAtivo === 'CASAL' ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro);
+                    const valorLimpo = String(valorRaw).replace('R$', '').replace(/\s/g, '').replace(',', '.');
 
-                    // URL da sua Cloud Function que acabamos de configurar
                     const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
                     const response = await fetch(URL_FUNCAO, {
@@ -201,20 +201,18 @@
                     const data = await response.json();
 
                     if (data.url) {
-                        // Redireciona para o Mercado Pago
                         window.location.href = data.url;
                     } else {
                         throw new Error("Erro ao gerar link de pagamento.");
                     }
 
                 } else {
-                    // Se for apenas lista, avisa e recarrega
                     alert("Seu nome foi confirmado na lista! ✨"); 
                     location.reload();
                 }
             } catch (e) { 
                 console.error(e);
-                alert("Erro ao processar! Tente novamente."); 
+                alert("Erro ao processar reserva! Verifique sua conexão ou tente novamente."); 
                 btn.disabled = false; 
                 btn.innerText = originalText; 
             }
