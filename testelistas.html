@@ -1,83 +1,236 @@
-<script type="module">
-    // Função principal de reserva (Vinculada ao seu botão de confirmar)
-    window.finalizarReserva = async function() {
-        const btn = document.getElementById('btn-confirmar');
-        
-        // 1. Coleta os dados do formulário
-        const nomeCliente = document.getElementById('input-nome')?.value.trim();
-        const telefoneCliente = document.getElementById('input-tel')?.value.trim();
-        const tipoSel = document.querySelector('input[name="tipo"]:checked');
-        const pagSel = document.querySelector('input[name="pagamento"]:checked');
-
-        // 2. Validação: impede o envio se faltar informação
-        if (!nomeCliente || !telefoneCliente || !tipoSel || !pagSel) {
-            alert("Por favor, preencha todos os campos antes de confirmar.");
-            return;
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <title>E-CLUB | Reservas & Pix ⚡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #050508; 
+            color: #fff; 
+            min-height: 100vh; 
+            background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); 
         }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-lista { background: #eab308; color: #000; font-weight: 900; }
+        .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; }
+        .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; }
+        .banner-img { width: 100%; height: auto; display: block; opacity: 1; }
+        
+        .btn-sel { 
+            background: rgba(255,255,255,0.03); 
+            border: 2px solid rgba(255,255,255,0.05); 
+            transition: 0.3s; 
+        }
+        .btn-sel.active { 
+            border-color: #eab308; 
+            background: rgba(234, 179, 8, 0.05);
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.1);
+        }
+        .btn-sel-pix.active { 
+            border-color: #00f5d4; 
+            background: rgba(0, 245, 212, 0.05);
+        }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center">
+    
+    <div class="max-w-md w-full">
+        <header class="flex justify-center py-6">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
+        </header>
+        <div id="listaEventos" class="space-y-10"></div>
+    </div>
 
-        const tipoIngresso = tipoSel.value;
-        const metodoPagamento = pagSel.value;
+    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
+        <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative">
+            
+            <h2 id="modal-titulo" class="font-black uppercase italic mb-1 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic">Preencha os dados abaixo</p>
 
-        // Feedback visual: desativa o botão para evitar cliques duplos
-        const textoOriginal = btn.innerText;
-        btn.innerText = "PROCESSANDO...";
-        btn.disabled = true;
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
+                    <span class="text-[10px] font-black uppercase opacity-60">👫 Casal</span>
+                    <span id="v-modal-casal" class="text-xs font-black italic text-white leading-tight">---</span>
+                </button>
+                <button onclick="selecionarTipo('SOLTEIRO')" id="btn-solteiro" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
+                    <span class="text-[10px] font-black uppercase opacity-60">👤 Solteiro</span>
+                    <span id="v-modal-solteiro" class="text-xs font-black italic text-white leading-tight">---</span>
+                </button>
+            </div>
 
-        try {
-            // 3. Salva a reserva no Firebase (Firestore)
-            // Certifique-se que 'db', 'collection' e 'addDoc' estão disponíveis no seu código
-            const docRef = await addDoc(collection(db, "lista_eventos"), {
-                cliente: nomeCliente,
-                telefone: telefoneCliente,
-                evento: eventoAtivo.nome,
-                data_evento: eventoAtivo.data,
-                tipo: tipoIngresso,
-                promoter: promoterNome.toUpperCase(),
-                metodo: metodoPagamento,
-                pago: false,
-                data_reserva: new Date().toISOString()
-            });
-
-            // 4. Lógica específica para o PIX ANTECIPADO
-            if (metodoPagamento === 'pix_antecipado') {
+            <div class="space-y-3">
+                <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
+                <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
                 
-                // Busca o valor na Dashboard e formata (Ex: de "R$ 50,00" para 50.00)
-                const valorRaw = tipoIngresso === 'CASAL' ? eventoAtivo.ant_casal : eventoAtivo.ant_solteiro;
-                const valorLimpo = valorRaw.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95">Confirmar Presença</button>
+            </div>
 
-                // URL da sua Cloud Function (A "ponte" com o Mercado Pago)
-                const URL_PROJETO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
+            <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic">Voltar</button>
+        </div>
+    </div>
 
-                const response = await fetch(URL_PROJETO, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        valor: valorLimpo,
-                        titulo: `RESERVA: ${eventoAtivo.nome} (${tipoIngresso})`,
-                        reservaId: docRef.id
-                    })
-                });
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-                const data = await response.json();
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
 
-                if (data.url) {
-                    // Redireciona o cliente para o Checkout oficial do Mercado Pago
-                    window.location.href = data.url;
-                } else {
-                    throw new Error("Não foi possível gerar o link de pagamento.");
-                }
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-            } else {
-                // 5. Fluxo para pagamento na Portaria
-                alert("Reserva concluída com sucesso! Seu nome está na lista.");
-                window.location.href = "sucesso_lista.html";
+        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = 'CASAL'; let eFluxoPix = false;
+
+        const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
+
+        async function carregarPagina() {
+            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+            const agora = new Date();
+            const hojeStr = agora.toLocaleDateString('en-CA'); 
+
+            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .filter(ev => ev.data >= hojeStr)
+                .sort((a, b) => a.data.localeCompare(b.data));
+
+            const container = document.getElementById('listaEventos');
+            if (eventosCache.length === 0) {
+                container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic uppercase">Nenhum evento disponível</div>`;
+                return;
             }
 
-        } catch (error) {
-            console.error("Erro no processo:", error);
-            alert("Ocorreu um erro ao processar sua reserva. Tente novamente.");
-            btn.innerText = textoOriginal;
-            btn.disabled = false;
+            container.innerHTML = eventosCache.map(ev => `
+                <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
+                    ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black uppercase tracking-tighter italic text-xl">E-CLUB</div>`}
+                    <div class="p-8">
+                        <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter">${ev.nome}</h3>
+                        <div class="space-y-4">
+                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA LISTA</button>
+                            <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO</button>
+                        </div>
+                    </div>
+                </div>`).join('');
         }
-    };
-</script>
+
+        window.iniciarFluxo = (id, isPix) => {
+            eventoAtivo = eventosCache.find(e => e.id === id);
+            eFluxoPix = isPix;
+            tipoAtivo = 'CASAL'; 
+            
+            const titulo = document.getElementById('modal-titulo');
+            titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : "🔥 NOME NA LISTA";
+            titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-1 tracking-tighter text-xl text-center" : "text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl text-center";
+
+            document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? eventoAtivo.ant_casal : eventoAtivo.valor_casal);
+            document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? eventoAtivo.ant_solteiro : eventoAtivo.valor_solteiro);
+            
+            selecionarTipo('CASAL');
+            document.getElementById('modalForm').classList.remove('hidden');
+        };
+
+        window.selecionarTipo = (tipo) => {
+            tipoAtivo = tipo;
+            const bCasal = document.getElementById('btn-casal');
+            const bSolteiro = document.getElementById('btn-solteiro');
+            
+            bCasal.classList.remove('active', 'btn-sel-pix');
+            bSolteiro.classList.remove('active', 'btn-sel-pix');
+            
+            const btnAlvo = tipo === 'CASAL' ? bCasal : bSolteiro;
+            btnAlvo.classList.add('active');
+            if (eFluxoPix) btnAlvo.classList.add('btn-sel-pix');
+
+            const btnFinal = document.getElementById('btn-final-acao');
+            btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
+            btnFinal.className = eFluxoPix ? "w-full btn-pix-main py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95" : "w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95";
+        };
+
+        window.processarFinalizacao = async () => {
+            const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
+            const t = document.getElementById('tel-cliente').value.trim();
+            if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
+            
+            const btn = document.getElementById('btn-final-acao');
+            const originalText = btn.innerText;
+            btn.innerText = "PROCESSANDO..."; btn.disabled = true;
+
+            try {
+                // 1. Salva a reserva no Firestore
+                const docRef = await addDoc(collection(db, "lista_eventos"), {
+                    nome: n, 
+                    tel: t, 
+                    evento: eventoAtivo.nome, 
+                    tipo_entrada: tipoAtivo,
+                    promoter: "site_direto", 
+                    data_reserva: new Date().toISOString(), 
+                    entrou: false, 
+                    pago: false,
+                    metodo: eFluxoPix ? 'pix_antecipado' : 'portaria'
+                });
+
+                // 2. Se for PIX, chama a sua Cloud Function automática
+                if (eFluxoPix) {
+                    // Pega o valor da Dashboard e limpa para enviar (ex: "R$ 50,00" -> 50.00)
+                    const valorRaw = tipoAtivo === 'CASAL' ? eventoAtivo.ant_casal : eventoAtivo.ant_solteiro;
+                    const valorLimpo = valorRaw.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+
+                    // URL da sua Cloud Function que acabamos de configurar
+                    const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
+
+                    const response = await fetch(URL_FUNCAO, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            valor: valorLimpo,
+                            titulo: `E-CLUB: ${eventoAtivo.nome} (${tipoAtivo})`,
+                            reservaId: docRef.id
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.url) {
+                        // Redireciona para o Mercado Pago
+                        window.location.href = data.url;
+                    } else {
+                        throw new Error("Erro ao gerar link de pagamento.");
+                    }
+
+                } else {
+                    // Se for apenas lista, avisa e recarrega
+                    alert("Seu nome foi confirmado na lista! ✨"); 
+                    location.reload();
+                }
+            } catch (e) { 
+                console.error(e);
+                alert("Erro ao processar! Tente novamente."); 
+                btn.disabled = false; 
+                btn.innerText = originalText; 
+            }
+        };
+
+        window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
+        
+        window.mask = (i) => {
+            let v = i.value.replace(/\D/g, "").substring(0, 11);
+            if (v.length > 0) v = "(" + v;
+            if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3);
+            if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
+            i.value = v;
+        };
+
+        carregarPagina();
+    </script>
+</body>
+</html>
