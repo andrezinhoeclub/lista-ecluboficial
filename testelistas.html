@@ -1,78 +1,84 @@
-// --- FUNÇÃO DE FINALIZAÇÃO DE RESERVA (COLE ESTE BLOCO) ---
+<script type="module">
+    // Garante que a função seja vista pelo botão do HTML
+    window.finalizarReserva = async function() {
+        // 1. Pegando os elementos da tela
+        const btn = document.getElementById('btn-confirmar');
+        const nomeCliente = document.getElementById('input-nome')?.value.trim();
+        const telefoneCliente = document.getElementById('input-tel')?.value.trim();
+        
+        // Verifica qual tipo e qual pagamento foram marcados
+        const tipoSel = document.querySelector('input[name="tipo"]:checked');
+        const pagSel = document.querySelector('input[name="pagamento"]:checked');
 
-async function finalizarReserva() {
-    // 1. Localiza os elementos da tela
-    const btn = document.getElementById('btn-confirmar');
-    const nomeCliente = document.getElementById('input-nome').value.trim();
-    const telefoneCliente = document.getElementById('input-tel').value.trim();
-    const tipoIngresso = document.querySelector('input[name="tipo"]:checked')?.value; // CASAL ou SOLTEIRO
-    const metodoPagamento = document.querySelector('input[name="pagamento"]:checked')?.value; // pix_antecipado ou portaria
-
-    // 2. Validação básica
-    if (!nomeCliente || !telefoneCliente || !tipoIngresso || !metodoPagamento) {
-        alert("Ops! Preencha todos os campos e selecione a forma de pagamento.");
-        return;
-    }
-
-    // Travamos o botão para o cliente não clicar duas vezes
-    const originalText = btn.innerText;
-    btn.innerText = "GERANDO PEDIDO...";
-    btn.disabled = true;
-
-    try {
-        // 3. Salva a reserva no seu Banco de Dados (Firestore)
-        const docRef = await addDoc(collection(db, "lista_eventos"), {
-            cliente: nomeCliente,
-            telefone: telefoneCliente,
-            evento: eventoAtivo.nome,
-            data_evento: eventoAtivo.data,
-            tipo: tipoIngresso,
-            promoter: promoterNome.toUpperCase(),
-            metodo: metodoPagamento,
-            entrou: false,
-            pago: false,
-            data_reserva: new Date().toISOString()
-        });
-
-        // 4. LÓGICA DE PAGAMENTO
-        if (metodoPagamento === 'pix_antecipado') {
-            
-            // Pega o valor da Dashboard (ex: "R$ 50,00") e limpa para enviar (ex: 50.00)
-            const valorRaw = tipoIngresso === 'CASAL' ? eventoAtivo.ant_casal : eventoAtivo.ant_solteiro;
-            const valorLimpo = valorRaw.replace('R$', '').replace(/\s/g, '').replace(',', '.');
-
-            // URL da sua Cloud Function que você acabou de subir
-            const URL_PONTE_MP = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
-
-            const response = await fetch(URL_PONTE_MP, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    valor: valorLimpo,
-                    titulo: `E-CLUB: ${eventoAtivo.nome} (${tipoIngresso})`,
-                    reservaId: docRef.id // Envia o ID da reserva para o Mercado Pago
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.url) {
-                // REDIRECIONAMENTO MÁGICO: Joga o cliente para o Checkout do Mercado Pago
-                window.location.href = result.url;
-            } else {
-                throw new Error("Erro ao gerar link de pagamento.");
-            }
-
-        } else {
-            // Se for portaria, apenas avisa e manda para a página de sucesso simples
-            alert("Reserva confirmada! Seu nome está na lista da portaria.");
-            window.location.href = "sucesso_lista.html"; 
+        // 2. Validação de segurança
+        if (!nomeCliente || !telefoneCliente || !tipoSel || !pagSel) {
+            alert("Preencha seu nome, telefone e escolha as opções de ingresso e pagamento!");
+            return;
         }
 
-    } catch (error) {
-        console.error("Erro no processo:", error);
-        alert("Ocorreu um erro técnico. Tente novamente ou chame o suporte no WhatsApp.");
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-}
+        const tipoIngresso = tipoSel.value;
+        const metodoPagamento = pagSel.value;
+
+        // Feedback visual no botão
+        const originalText = btn.innerText;
+        btn.innerText = "RESERVANDO... AGUARDE";
+        btn.disabled = true;
+
+        try {
+            // 3. Salvando a reserva no Firebase (Firestore)
+            // Nota: Certifique-se que as variáveis 'db', 'collection' e 'addDoc' estão disponíveis no seu script principal
+            const docRef = await addDoc(collection(db, "lista_eventos"), {
+                cliente: nomeCliente,
+                telefone: telefoneCliente,
+                evento: eventoAtivo.nome,
+                data_evento: eventoAtivo.data,
+                tipo: tipoIngresso,
+                promoter: promoterNome.toUpperCase(),
+                metodo: metodoPagamento,
+                pago: false,
+                data_reserva: new Date().toISOString()
+            });
+
+            // 4. Lógica de Pagamento via Mercado Pago
+            if (metodoPagamento === 'pix_antecipado') {
+                
+                // Pega o valor da sua Dashboard e limpa para o formato de número (ex: 50.00)
+                const valorRaw = tipoIngresso === 'CASAL' ? eventoAtivo.ant_casal : eventoAtivo.ant_solteiro;
+                const valorLimpo = valorRaw.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+
+                // A URL da sua Cloud Function que acabamos de subir
+                const URL_CLOUDFUNCTION = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
+
+                const response = await fetch(URL_CLOUDFUNCTION, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        valor: valorLimpo,
+                        titulo: `E-CLUB: ${eventoAtivo.nome} (${tipoIngresso})`,
+                        reservaId: docRef.id
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.url) {
+                    // MÁGICA: Leva o cliente para o QR Code do Mercado Pago
+                    window.location.href = data.url;
+                } else {
+                    throw new Error("Erro ao gerar link de pagamento");
+                }
+
+            } else {
+                // Se for pagamento na portaria
+                alert("Reserva confirmada! Seu nome está na lista.");
+                window.location.href = "sucesso_lista.html"; 
+            }
+
+        } catch (error) {
+            console.error("Erro completo:", error);
+            alert("Ocorreu um erro ao processar sua reserva. Tente novamente.");
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    };
+</script>
