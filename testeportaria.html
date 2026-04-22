@@ -257,62 +257,59 @@
             cont.innerHTML = '';
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => e.nome === c.evento) || {};
+                
+                // 👇 AS VARIÁVEIS DO NOVO DESIGN 👇
                 let valorExibicao = '---';
-                let badgeDestaque = '';
                 let corDestaqueNome = 'text-white';
                 
-                // 👇 A INTELIGÊNCIA SEPARANDO O DONO DA FESTA DOS CONVIDADOS 👇
                 const isCamarote = c.tipo_entrada && c.tipo_entrada.includes("CAMAROTE");
                 const isDonoDaFesta = c.tipo_entrada === "VIP_DONO"; 
-                
+                const isConvidadoAniv = c.aniversariante && c.aniversariante.trim() !== "";
+                const isCasal = c.tipo_entrada === "CASAL";
+                const isSolteiro = c.tipo_entrada === "SOLTEIRO";
+
+                let tagPromoter = `<span class="text-[9px] font-black uppercase tracking-widest text-zinc-400 bg-zinc-900 px-3 py-1.5 rounded-md border border-white/5 shadow-sm">${c.promoter || 'DIRETO'}</span>`;
+                let tagTipo = '';
+                let tagExtra = '';
+                let tagPagamento = '';
+
+                // 👇 1. IDENTIFICAÇÃO E VALORES 👇
                 if (isDonoDaFesta) {
                     valorExibicao = "FREE";
                     corDestaqueNome = 'text-green-400';
-                    badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-[0.2em]">👑 DONO(A) DA FESTA</span></div>`;
+                    tagTipo = `<span class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">VIP</span>`;
+                    tagExtra = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">👑 DONO(A) DA FESTA</span>`;
                 } else if (isCamarote) {
                     valorExibicao = c.valor_pago ? "R$ " + c.valor_pago : "PAGO";
+                    tagTipo = `<span class="bg-cyan-400 text-black px-4 py-1.5 rounded-md text-[11px] font-black uppercase tracking-[0.1em] shadow-[0_0_15px_rgba(34,211,238,0.5)]">💎 ${c.tipo_entrada}</span>`;
                 } else {
-                    const isCasal = c.tipo_entrada === "CASAL";
-                    let vCalc = "";
+                    // É Pista Normal ou Convidado
+                    if (isCasal) tagTipo = `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">👫 CASAL</span>`;
+                    else if (isSolteiro) tagTipo = `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">👤 SOLTEIRO</span>`;
+                    else tagTipo = `<span class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">${c.tipo_entrada || 'PISTA'}</span>`;
 
-                    if (c.metodo === "pix_antecipado") {
-                        vCalc = c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro);
+                    if (isConvidadoAniv) {
+                        tagExtra = `<span class="bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">🎉 CONVIDADO DE: ${c.aniversariante}</span>`;
+                        let vCalc = c.valor_pago || (isCasal ? ev.desc_casal : ev.desc_solteiro);
+                        const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
+                        valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
                     } else {
-                        // Convidado de aniversário ou normal pagando na porta
-                        vCalc = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
-                        
-                        // Trava de segurança: Se o sistema salvou como 'ANIVERSARIANTE' no site listas (em vez de casal/solteiro), cobra solteiro
-                        if (c.tipo_entrada === "ANIVERSARIANTE") {
-                            vCalc = ev.desc_solteiro; 
-                        }
-                    }
-
-                    const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
-                    valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
-                    if (c.aniversariante) {
-                        badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-400 font-black uppercase tracking-[0.2em]">CONVIDADO DE:</span><span class="text-xs font-black italic text-white leading-none">${c.aniversariante}</span></div>`;
+                        let vCalc = "";
+                        if (c.metodo === "pix_antecipado") vCalc = c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro);
+                        else vCalc = isCasal ? ev.valor_casal : ev.valor_solteiro;
+                        const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
+                        valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
                     }
                 }
 
-                // 👇 ETIQUETAS VISUAIS 👇
-                let labelStatusHTML = '';
-                if (c.tipo_entrada === "CASAL") {
-                    labelStatusHTML = `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">👫 CASAL</span>`;
-                } else if (c.tipo_entrada === "SOLTEIRO") {
-                    labelStatusHTML = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">👤 SOLTEIRO</span>`;
-                } else if (c.tipo_entrada === "ANIVERSARIANTE") {
-                    // NOVO: Etiqueta linda pra identificar que é convidado de festa
-                    labelStatusHTML = `<span class="bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">🎉 CONVIDADO VIP</span>`;
-                } else if (isCamarote) {
-                    labelStatusHTML = `<span class="bg-cyan-400 text-black px-4 py-1.5 rounded-md text-[11px] font-black uppercase tracking-[0.1em] shadow-[0_0_15px_rgba(34,211,238,0.5)]">💎 ${c.tipo_entrada}</span>`;
-                }
-
+                // 👇 2. PAGAMENTO 👇
                 if (c.metodo === 'pix_antecipado' && c.pago === true) {
-                    labelStatusHTML += `<span class="ml-3 bg-green-500/10 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">✅ PIX PAGO</span>`;
-                } else if (c.metodo !== 'pix_antecipado') {
-                    labelStatusHTML += `<span class="ml-3 bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">PAGA NA PORTA</span>`;
+                    tagPagamento = `<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">✅ PIX PAGO</span>`;
+                } else if (c.metodo !== 'pix_antecipado' && !isDonoDaFesta) {
+                    tagPagamento = `<span class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">PAGA NA PORTA</span>`;
                 }
 
+                // 👇 3. BOTÃO DE AÇÃO 👇
                 let btnAcaoHTML = '';
                 if (c.entrou) {
                     btnAcaoHTML = '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-6 py-3 rounded-xl border border-green-500/20">CONFIRMADO</span>';
@@ -322,10 +319,12 @@
                     btnAcaoHTML = `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.4)]">LIBERAR AGORA</button>`;
                 }
 
+                // 👇 ESTRUTURA VISUAL DO CARD REFEITA 👇
                 const div = document.createElement('div');
                 div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${c.entrou ? 'entrou' : ''}`;
                 div.innerHTML = `
                     <div class="flex flex-col gap-4 text-white">
+                        
                         <div class="flex justify-between items-center">
                             <div class="flex items-center gap-4">
                                 <h3 class="text-2xl font-black uppercase italic ${corDestaqueNome} leading-none">${c.nome}</h3>
@@ -335,23 +334,23 @@
                                 ${btnAcaoHTML}
                             </div>
                         </div>
+                        
                         <div class="h-[1px] bg-zinc-900/50 w-full"></div>
-                        <div class="flex flex-wrap items-center gap-6">
-                            
-                            <div class="flex items-center gap-3">
-                                <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 bg-[#111] px-3 py-1.5 rounded-md border border-white/5">
-                                    ${c.promoter || 'DIRETO'}
-                                </span>
-                                ${labelStatusHTML}
+                        
+                        <div class="flex justify-between items-center">
+                            <div class="flex flex-wrap items-center gap-2">
+                                ${tagPromoter}
+                                ${tagTipo}
+                                ${tagExtra}
+                                ${tagPagamento}
                             </div>
                             
-                            <div class="flex items-center gap-2 border-l border-zinc-800 pl-4">
+                            <div class="flex items-center gap-2 border-l border-zinc-800 pl-4 ml-4 text-right min-w-[120px] justify-end">
                                 <span class="text-[8px] text-zinc-600 font-black uppercase tracking-[0.2em]">VALOR</span>
-                                <span class="text-xl font-black italic ${isDonoDaFesta ? 'text-green-500' : 'text-yellow-500'} leading-none">${valorExibicao}</span>
+                                <span class="text-xl font-black italic ${isDonoDaFesta ? 'text-green-500' : 'text-yellow-500'} leading-none whitespace-nowrap">${valorExibicao}</span>
                             </div>
-                            
-                            ${badgeDestaque}
                         </div>
+
                     </div>`;
                 cont.appendChild(div);
             });
