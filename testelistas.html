@@ -130,6 +130,31 @@
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
             try {
+                // 👇 A TRAVA DE SEGURANÇA COMEÇA AQUI 👇
+                const qDuplicidade = query(
+                    collection(db, "lista_eventos"), 
+                    where("tel", "==", t), 
+                    where("evento", "==", eventoAtivo.nome)
+                );
+                const snapDuplicidade = await getDocs(qDuplicidade);
+
+                if (!snapDuplicidade.empty) {
+                    const existente = snapDuplicidade.docs[0].data();
+                    
+                    if (existente.pago === true) {
+                        throw new Error("Você já possui uma entrada confirmada (PAGA) para este evento!");
+                    }
+                    
+                    if (existente.metodo === 'pix_antecipado') {
+                        throw new Error("Você já tem um Pix gerado para este evento. Se não pagou, aguarde 5 minutos para o sistema liberar seu número novamente.");
+                    }
+
+                    if (existente.metodo === 'portaria') {
+                        throw new Error("Seu nome já está na lista para este evento!");
+                    }
+                }
+                // 👆 FIM DA TRAVA DE SEGURANÇA 👆
+
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
                     promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false,
@@ -153,13 +178,8 @@
 
                     const data = await resp.json();
                     if (data.url) { 
-                        // 1. Abre o Mercado Pago numa aba separada
                         window.open(data.url, '_blank'); 
-                        
-                        // 2. Avisa o cliente para olhar a outra aba
                         alert("✅ Link gerado! A página de pagamento abriu em uma nova aba. Finalize o Pix por lá!");
-                        
-                        // 3. Fecha a telinha preta e volta o botão ao normal
                         fecharModal();
                         btn.disabled = false; 
                         btn.innerText = originalText;
@@ -171,7 +191,7 @@
                 }
             } catch (e) { 
                 console.error(e);
-                alert("🔴 ALERTA: " + e.message); 
+                alert("🔴 " + e.message); 
                 btn.disabled = false; btn.innerText = originalText; 
             }
         };
