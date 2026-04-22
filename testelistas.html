@@ -50,7 +50,6 @@
     </div>
 
     <script type="module">
-        // Adicionamos o "deleteDoc" aqui na importação!
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
@@ -167,41 +166,55 @@
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
             try {
-                // 👇 FAXINA DIRETO NO SITE 👇
-                const qDuplicidade = query(
-                    collection(db, "lista_eventos"), 
-                    where("tel", "==", t), 
-                    where("evento", "==", eventoAtivo.nome)
-                );
+                // 👇 A NOVA TRAVA DE SEGURANÇA E FAXINA BLINDADA 👇
+                // Faz a busca APENAS pelo telefone (sem precisar de Índice do Google)
+                const qDuplicidade = query(collection(db, "lista_eventos"), where("tel", "==", t));
                 const snapDuplicidade = await getDocs(qDuplicidade);
 
-                if (!snapDuplicidade.empty) {
-                    const existenteDoc = snapDuplicidade.docs[0];
-                    const existente = existenteDoc.data();
-                    
-                    if (existente.pago === true) {
-                        throw new Error("Você já possui uma entrada confirmada (PAGA) para este evento!");
-                    }
-                    
-                    if (existente.metodo === 'pix_antecipado') {
-                        // Calcula o tempo do Pix antigo
-                        const agora = new Date();
-                        const tempoReserva = new Date(existente.data_reserva);
-                        const diffMinutos = (agora - tempoReserva) / (1000 * 60);
+                let deveBloquear = false;
+                let msgErro = "";
 
-                        if (diffMinutos < 5) {
-                            // Menos de 5 min: Bloqueia e mostra o tempo restante exato
-                            const tempoRestante = Math.ceil(5 - diffMinutos);
-                            throw new Error(`🔴 Você já tem um Pix gerado! Aguarde ${tempoRestante} minuto(s) para o sistema liberar seu número novamente.`);
-                        } else {
-                            // Mais de 5 min: O site deleta a reserva fantasma e libera a passagem!
-                            await deleteDoc(existenteDoc.ref);
+                // Verifica TODAS as reservas ligadas a esse telefone
+                for (let docSnap of snapDuplicidade.docs) {
+                    let existente = docSnap.data();
+                    
+                    // Só nos importamos se for o MESMO evento que ele está tentando agora
+                    if (existente.evento === eventoAtivo.nome) {
+                        if (existente.pago === true) {
+                            deveBloquear = true;
+                            msgErro = "Você já possui uma entrada confirmada (PAGA) para este evento!";
+                            break;
                         }
-                    } else if (existente.metodo === 'portaria') {
-                        throw new Error("Seu nome já está na lista para este evento!");
+                        
+                        if (existente.metodo === 'portaria') {
+                            deveBloquear = true;
+                            msgErro = "Seu nome já está na lista para este evento!";
+                            break;
+                        }
+                        
+                        if (existente.metodo === 'pix_antecipado') {
+                            const agora = new Date();
+                            const tempoReserva = new Date(existente.data_reserva);
+                            const diffMinutos = (agora - tempoReserva) / (1000 * 60);
+
+                            if (diffMinutos < 5) {
+                                deveBloquear = true;
+                                const tempoRestante = Math.ceil(5 - diffMinutos);
+                                msgErro = `🔴 Você já tem um Pix pendente! Aguarde ${tempoRestante} minuto(s) para o sistema liberar seu número para nova tentativa.`;
+                                break;
+                            } else {
+                                // Se passou de 5 minutos, o site apaga silenciosamente!
+                                await deleteDoc(docSnap.ref);
+                            }
+                        }
                     }
                 }
-                // 👆 FIM DA FAXINA 👆
+
+                // Se caiu em alguma trava, interrompe o processo na hora
+                if (deveBloquear) {
+                    throw new Error(msgErro);
+                }
+                // 👆 FIM DA NOVA TRAVA BLINDADA 👆
 
                 // Salva no banco
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
@@ -241,7 +254,7 @@
                 }
             } catch (e) { 
                 console.error(e);
-                alert(e.message); // Mostra o alerta limpo pro usuário
+                alert(e.message); 
                 btn.disabled = false; btn.innerText = originalText; 
             }
         };
