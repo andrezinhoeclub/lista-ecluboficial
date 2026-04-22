@@ -123,19 +123,14 @@
                     let temCamaroteAtivo = false;
                     for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`]) temCamaroteAtivo = true; }
 
-                    let botoesAcao = '';
-                    if (temCamaroteAtivo) {
-                        botoesAcao = `
-                            <div class="grid grid-cols-2 gap-3 mt-4">
-                                <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">⚡ PIX PISTA</button>
-                                <button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">💎 CAMAROTE</button>
-                            </div>
-                        `;
-                    } else {
-                        botoesAcao = `
-                            <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-5 mt-4 rounded-2xl text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO (PISTA)</button>
-                        `;
-                    }
+                    // 👇 LAYOUT HARMÔNICO AQUI 👇
+                    let botoesAcao = `
+                        <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95 mb-3">📝 NOME NA LISTA (PORTA)</button>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">⚡ PIX PISTA</button>
+                            ${temCamaroteAtivo ? `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">💎 CAMAROTE</button>` : `<div class="bg-zinc-900 border border-zinc-800 rounded-2xl py-4 flex items-center justify-center"><span class="text-[9px] text-zinc-600 font-bold uppercase italic">S/ Camarote</span></div>`}
+                        </div>
+                    `;
 
                     return `
                     <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
@@ -143,7 +138,6 @@
                         <div class="p-8">
                             <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter text-center">${ev.nome}</h3>
                             <div>
-                                <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA LISTA</button>
                                 ${botoesAcao}
                             </div>
                         </div>
@@ -251,6 +245,7 @@
                         if(temPendente) { status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; }
                     }
 
+                    // Se alguém roubou a vaga ENQUANTO eu estava digitando, me avisa
                     if (numCamaroteSelecionado === i && status !== 'livre') {
                         numCamaroteSelecionado = null;
                         document.getElementById('form-camarote').classList.add('hidden');
@@ -297,9 +292,14 @@
             if (!numCamaroteSelecionado) return alert("Selecione um camarote no mapa!");
             const n = document.getElementById('nome-camarote').value.trim().toUpperCase(); const t = document.getElementById('tel-camarote').value.trim();
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
-            const btn = document.getElementById('btn-final-camarote'); const originalText = btn.innerText; btn.innerText = "GARANTINDO... ⚡"; btn.disabled = true;
+            
+            const btn = document.getElementById('btn-final-camarote'); 
+            const originalText = btn.innerText; 
+            btn.innerText = "GARANTINDO... ⚡"; 
+            btn.disabled = true;
 
             try {
+                // Checa se alguém não roubou no milissegundo final
                 const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome), where("tipo_entrada", "==", `CAMAROTE ${numCamaroteSelecionado}`)));
                 let alguemRoubou = false;
                 checkFinal.forEach(docSnap => {
@@ -309,22 +309,40 @@
                 });
                 if (alguemRoubou) throw new Error("Alguém acabou de garantir este Camarote segundos antes. Escolha outro!");
 
+                // 👇 AQUI ESTÁ A CORREÇÃO MÁGICA: Limpamos a variável ANTES de salvar no banco
+                const camaroteGarantido = numCamaroteSelecionado;
+                numCamaroteSelecionado = null; 
+
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
-                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${numCamaroteSelecionado}`,
+                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${camaroteGarantido}`,
                     promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado',
-                    valor_pago: eventoAtivo[`v_cam${numCamaroteSelecionado}`]
+                    valor_pago: eventoAtivo[`v_cam${camaroteGarantido}`]
                 });
 
-                const valorLimpo = String(eventoAtivo[`v_cam${numCamaroteSelecionado}`]).replace('R$', '').replace(/\s/g, '').replace(',', '.');
-                const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorLimpo, titulo: `CAMAROTE 0${numCamaroteSelecionado} - ${eventoAtivo.nome}`, reservaId: docRef.id }) });
+                const valorLimpo = String(eventoAtivo[`v_cam${camaroteGarantido}`]).replace('R$', '').replace(/\s/g, '').replace(',', '.');
+                const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorLimpo, titulo: `CAMAROTE 0${camaroteGarantido} - ${eventoAtivo.nome}`, reservaId: docRef.id }) });
                 if (!resp.ok) throw new Error("Erro na Função Pix.");
                 const data = await resp.json();
-                if (data.url) { window.open(data.url, '_blank'); alert("✅ Link VIP gerado! Finalize o Pix na aba que abriu."); fecharModalCamarote(); } 
-                else throw new Error("Falha ao gerar link.");
-            } catch (e) { alert("🔴 " + e.message); } finally { btn.disabled = false; btn.innerText = originalText; }
+                
+                if (data.url) { 
+                    window.open(data.url, '_blank'); 
+                    alert("✅ Link VIP gerado! Finalize o Pix na aba que abriu."); 
+                    fecharModalCamarote(); 
+                } else {
+                    throw new Error("Falha ao gerar link.");
+                }
+            } catch (e) { 
+                alert("🔴 " + e.message); 
+            } finally { 
+                btn.disabled = false; btn.innerText = originalText; 
+            }
         };
 
-        window.fecharModalCamarote = () => { if(unsubscribeCamarotes) unsubscribeCamarotes(); document.getElementById('modalCamarote').classList.add('hidden'); };
+        window.fecharModalCamarote = () => { 
+            if(unsubscribeCamarotes) unsubscribeCamarotes(); 
+            numCamaroteSelecionado = null;
+            document.getElementById('modalCamarote').classList.add('hidden'); 
+        };
         window.mask = (i) => {
             let v = i.value.replace(/\D/g, "").substring(0, 11);
             if (v.length > 0) v = "(" + v;
