@@ -220,7 +220,14 @@
 
             eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
-                const total = bancoClientes.filter(c => c.evento === ev.nome).length;
+                
+                // 👇 NOVO: Total ignora quem tem Pix Pendente 👇
+                const total = bancoClientes.filter(c => {
+                    if (c.evento !== ev.nome) return false;
+                    if (c.metodo === 'pix_antecipado' && c.pago !== true) return false; 
+                    return true;
+                }).length;
+
                 cont.innerHTML += `
                     <div class="p-4 rounded-2xl glass border-l-4 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2 shadow-lg">
                         <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
@@ -241,6 +248,9 @@
             if (busca.length < 2) { cont.innerHTML = ''; return; }
             
             const filtrados = bancoClientes.filter(c => {
+                // 👇 NOVO: Oculta o cliente se o Pix ainda estiver pendente 👇
+                if (c.metodo === 'pix_antecipado' && c.pago !== true) return false;
+
                 const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
                 if (!evRelacionado || getStatusTurno(evRelacionado.data) !== "ONLINE") return false;
                 const nomeMatch = c.nome && c.nome.toUpperCase().includes(busca);
@@ -266,30 +276,36 @@
                     badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-[0.2em]">👑 DONO(A) DA FESTA</span></div>`;
                 } else {
                     const isCasal = c.tipo_entrada === "CASAL";
-                    const vCalc = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
+                    let vCalc = "";
+
+                    // 👇 NOVO: Puxa o valor correto (Pix ou Portaria) 👇
+                    if (c.metodo === 'pix_antecipado') {
+                        vCalc = isCasal ? (ev.ant_casal || ev.valor_casal) : (ev.ant_solteiro || ev.valor_solteiro);
+                    } else {
+                        vCalc = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
+                    }
+
                     const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
                     valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
+                    
                     if (c.aniversariante) {
                         badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-400 font-black uppercase tracking-[0.2em]">CONVIDADO DE:</span><span class="text-xs font-black italic text-white leading-none">${c.aniversariante}</span></div>`;
                     }
                 }
 
-                // 👇 AQUI ENTRAM AS NOVAS REGRAS DO PIX E PORTARIA 👇
                 let labelStatusHTML = '';
                 
-                // 1. Tag de Entrada (Casal/Solteiro)
+                // Tag de Entrada (Casal/Solteiro)
                 if (c.tipo_entrada === "CASAL") {
                     labelStatusHTML += `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👫 CASAL</span>`;
                 } else if (c.tipo_entrada === "SOLTEIRO") {
                     labelStatusHTML += `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👤 SOLTEIRO</span>`;
                 }
 
-                // 2. Tag de Pagamento (Pendente/Pago/Portaria)
+                // Tag de Pagamento
                 if (c.metodo === 'pix_antecipado') {
                     if (c.pago === true) {
                         labelStatusHTML += `<span class="ml-2 bg-blue-500/20 text-blue-400 border border-blue-500/50 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">⚡ PIX PAGO ✅</span>`;
-                    } else {
-                        labelStatusHTML += `<span class="ml-2 bg-yellow-500/20 text-yellow-500 border border-yellow-500/50 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">⏳ PIX PENDENTE</span>`;
                     }
                 } else {
                     labelStatusHTML += `<span class="ml-2 bg-zinc-800 text-zinc-300 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">PAGA NA PORTA</span>`;
