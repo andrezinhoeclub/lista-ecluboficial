@@ -13,7 +13,7 @@
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .btn-lista { background: #eab308; color: #000; font-weight: 900; }
         .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; }
-        .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; }
+        .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; transition: 0.3s; }
         .banner-img { width: 100%; height: auto; display: block; opacity: 1; border-radius: 2rem 2rem 0 0; }
         .btn-sel { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05); transition: 0.3s; }
         .btn-sel.active { border-color: #eab308; background: rgba(234, 179, 8, 0.05); box-shadow: 0 0 20px rgba(234, 179, 8, 0.1); }
@@ -29,7 +29,7 @@
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative">
             <h2 id="modal-titulo" class="font-black uppercase italic mb-1 tracking-tighter text-xl text-center">🔥 NOME NA LISTA</h2>
-            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic text-center">Preencha os dados abaixo</p>
+            <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic text-center">Selecione uma opção abaixo</p>
             <div class="grid grid-cols-2 gap-3 mb-6">
                 <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-4 rounded-3xl flex flex-col items-center justify-center gap-1">
                     <span class="text-[10px] font-black uppercase opacity-60">👫 Casal</span>
@@ -43,7 +43,7 @@
             <div class="space-y-3">
                 <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
                 <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
-                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95">Confirmar Presença</button>
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all">Confirmar Presença</button>
             </div>
             <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic">Voltar</button>
         </div>
@@ -67,7 +67,7 @@
 
         const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
-        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = 'CASAL'; let eFluxoPix = false;
+        let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
         const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
 
         async function carregarPagina() {
@@ -100,37 +100,79 @@
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
             eFluxoPix = isPix;
-            tipoAtivo = 'CASAL'; 
+            tipoAtivo = null; // Zera a seleção ao abrir
+            
             const titulo = document.getElementById('modal-titulo');
             titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : "🔥 NOME NA LISTA";
             titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-1 tracking-tighter text-xl text-center" : "text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl text-center";
+            
             document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal);
             document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro);
-            selecionarTipo('CASAL');
+            
+            // Tira o "brilho" dos botões
+            document.getElementById('btn-casal').classList.remove('active', 'btn-sel-pix');
+            document.getElementById('btn-solteiro').classList.remove('active', 'btn-sel-pix');
+            
+            // Pega os campos e o botão final
+            const iNome = document.getElementById('nome-cliente');
+            const iTel = document.getElementById('tel-cliente');
+            const btnFinal = document.getElementById('btn-final-acao');
+            
+            // Zera, bloqueia e apaga os campos
+            iNome.value = '';
+            iTel.value = '';
+            iNome.disabled = true;
+            iTel.disabled = true;
+            iNome.classList.add('opacity-30', 'cursor-not-allowed');
+            iTel.classList.add('opacity-30', 'cursor-not-allowed');
+            
+            // Configura e bloqueia o botão final
+            btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
+            btnFinal.className = (eFluxoPix ? "w-full btn-pix-main" : "w-full btn-lista") + " py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl opacity-30 cursor-not-allowed transition-all";
+            btnFinal.disabled = true;
+
             document.getElementById('modalForm').classList.remove('hidden');
         };
 
         window.selecionarTipo = (tipo) => {
             tipoAtivo = tipo;
-            const bCasal = document.getElementById('btn-casal'); const bSolteiro = document.getElementById('btn-solteiro');
-            bCasal.classList.remove('active', 'btn-sel-pix'); bSolteiro.classList.remove('active', 'btn-sel-pix');
+            const bCasal = document.getElementById('btn-casal'); 
+            const bSolteiro = document.getElementById('btn-solteiro');
+            bCasal.classList.remove('active', 'btn-sel-pix'); 
+            bSolteiro.classList.remove('active', 'btn-sel-pix');
+            
             const btnAlvo = tipo === 'CASAL' ? bCasal : bSolteiro;
-            btnAlvo.classList.add('active'); if (eFluxoPix) btnAlvo.classList.add('btn-sel-pix');
+            btnAlvo.classList.add('active'); 
+            if (eFluxoPix) btnAlvo.classList.add('btn-sel-pix');
+            
+            // Libera e acende os campos
+            const iNome = document.getElementById('nome-cliente');
+            const iTel = document.getElementById('tel-cliente');
             const btnFinal = document.getElementById('btn-final-acao');
-            btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
-            btnFinal.className = eFluxoPix ? "w-full btn-pix-main py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl" : "w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl";
+
+            iNome.disabled = false;
+            iTel.disabled = false;
+            iNome.classList.remove('opacity-30', 'cursor-not-allowed');
+            iTel.classList.remove('opacity-30', 'cursor-not-allowed');
+            
+            // Libera o botão final
+            btnFinal.disabled = false;
+            btnFinal.className = (eFluxoPix ? "w-full btn-pix-main" : "w-full btn-lista") + " py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95";
         };
 
         window.processarFinalizacao = async () => {
+            if (!tipoAtivo) return alert("Selecione se é Casal ou Solteiro!");
+            
             const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
             const t = document.getElementById('tel-cliente').value.trim();
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
+            
             const btn = document.getElementById('btn-final-acao');
             const originalText = btn.innerText;
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
             try {
-                // 👇 A TRAVA DE SEGURANÇA COMEÇA AQUI 👇
+                // Trava de Segurança Contra Duplicidade
                 const qDuplicidade = query(
                     collection(db, "lista_eventos"), 
                     where("tel", "==", t), 
@@ -140,27 +182,25 @@
 
                 if (!snapDuplicidade.empty) {
                     const existente = snapDuplicidade.docs[0].data();
-                    
                     if (existente.pago === true) {
                         throw new Error("Você já possui uma entrada confirmada (PAGA) para este evento!");
                     }
-                    
                     if (existente.metodo === 'pix_antecipado') {
                         throw new Error("Você já tem um Pix gerado para este evento. Se não pagou, aguarde 5 minutos para o sistema liberar seu número novamente.");
                     }
-
                     if (existente.metodo === 'portaria') {
                         throw new Error("Seu nome já está na lista para este evento!");
                     }
                 }
-                // 👆 FIM DA TRAVA DE SEGURANÇA 👆
 
+                // Salva no banco
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
                     promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false,
                     metodo: eFluxoPix ? 'pix_antecipado' : 'portaria'
                 });
 
+                // Se for Pix, chama a função
                 if (eFluxoPix) {
                     const valorRaw = tipoAtivo === 'CASAL' ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro);
                     const valorLimpo = String(valorRaw).replace('R$', '').replace(/\s/g, '').replace(',', '.');
