@@ -99,7 +99,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc, getDocs, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -157,12 +157,50 @@
                     document.getElementById('telaLogin').classList.add('hidden');
                     document.getElementById('interfacePrincipal').classList.remove('hidden');
                     iniciarEscutas();
+                    iniciarFaxinaPortaria(); // Inicia o faxineiro ao logar
                 } else { 
                     alert("Senha incorreta"); 
                     btn.innerText = "AUTENTICAR";
                 }
             }
         };
+
+        // 👇 FUNÇÃO DO FAXINEIRO DE PORTARIA 👇
+        async function iniciarFaxinaPortaria() {
+            console.log("Faxineiro de Portaria iniciado...");
+            setInterval(async () => {
+                const agora = new Date();
+                const cincoMinutosAtras = new Date(agora.getTime() - (5 * 60 * 1000));
+                
+                const qFaxina = query(
+                    collection(db, "lista_eventos"),
+                    where("metodo", "==", "pix_antecipado"),
+                    where("pago", "==", false)
+                );
+
+                try {
+                    const snap = await getDocs(qFaxina);
+                    const batch = writeBatch(db);
+                    let deletados = 0;
+
+                    snap.forEach(docSnap => {
+                        const d = docSnap.data();
+                        const dataReserva = new Date(d.data_reserva);
+                        if (dataReserva < cincoMinutosAtras) {
+                            batch.delete(docSnap.ref);
+                            deletados++;
+                        }
+                    });
+
+                    if (deletados > 0) {
+                        await batch.commit();
+                        console.log(`Faxina: ${deletados} reserva(s) fantasma removida(s).`);
+                    }
+                } catch (err) {
+                    console.error("Erro na faxina:", err);
+                }
+            }, 60000); // Roda a cada 1 minuto (60.000ms)
+        }
 
         function iniciarEscutas() {
             onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
@@ -220,8 +258,6 @@
 
             eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
-                
-                // 👇 NOVO: Total ignora quem tem Pix Pendente 👇
                 const total = bancoClientes.filter(c => {
                     if (c.evento !== ev.nome) return false;
                     if (c.metodo === 'pix_antecipado' && c.pago !== true) return false; 
@@ -248,9 +284,7 @@
             if (busca.length < 2) { cont.innerHTML = ''; return; }
             
             const filtrados = bancoClientes.filter(c => {
-                // 👇 NOVO: Oculta o cliente se o Pix ainda estiver pendente 👇
                 if (c.metodo === 'pix_antecipado' && c.pago !== true) return false;
-
                 const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
                 if (!evRelacionado || getStatusTurno(evRelacionado.data) !== "ONLINE") return false;
                 const nomeMatch = c.nome && c.nome.toUpperCase().includes(busca);
@@ -277,37 +311,28 @@
                 } else {
                     const isCasal = c.tipo_entrada === "CASAL";
                     let vCalc = "";
-
-                    // 👇 NOVO: Puxa o valor correto (Pix ou Portaria) 👇
                     if (c.metodo === 'pix_antecipado') {
                         vCalc = isCasal ? (ev.ant_casal || ev.valor_casal) : (ev.ant_solteiro || ev.valor_solteiro);
                     } else {
                         vCalc = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
                     }
-
                     const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
                     valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
-                    
                     if (c.aniversariante) {
                         badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-400 font-black uppercase tracking-[0.2em]">CONVIDADO DE:</span><span class="text-xs font-black italic text-white leading-none">${c.aniversariante}</span></div>`;
                     }
                 }
 
                 let labelStatusHTML = '';
-                
-                // Tag de Entrada (Casal/Solteiro)
                 if (c.tipo_entrada === "CASAL") {
                     labelStatusHTML += `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👫 CASAL</span>`;
                 } else if (c.tipo_entrada === "SOLTEIRO") {
                     labelStatusHTML += `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👤 SOLTEIRO</span>`;
                 }
 
-                // Tag de Pagamento
-                if (c.metodo === 'pix_antecipado') {
-                    if (c.pago === true) {
-                        labelStatusHTML += `<span class="ml-2 bg-blue-500/20 text-blue-400 border border-blue-500/50 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">⚡ PIX PAGO ✅</span>`;
-                    }
-                } else {
+                if (c.metodo === 'pix_antecipado' && c.pago === true) {
+                    labelStatusHTML += `<span class="ml-2 bg-blue-500/20 text-blue-400 border border-blue-500/50 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">⚡ PIX PAGO ✅</span>`;
+                } else if (c.metodo !== 'pix_antecipado') {
                     labelStatusHTML += `<span class="ml-2 bg-zinc-800 text-zinc-300 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">PAGA NA PORTA</span>`;
                 }
 
