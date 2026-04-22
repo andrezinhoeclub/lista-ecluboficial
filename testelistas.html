@@ -120,23 +120,25 @@
                 }
                 
                 container.innerHTML = eventosCache.map(ev => {
-                    // Verifica se tem pelo menos 1 camarote ativo para mostrar o botão roxo
                     let temCamaroteAtivo = false;
                     for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`]) temCamaroteAtivo = true; }
 
                     let btnCamaroteHTML = '';
                     if (temCamaroteAtivo) {
-                        btnCamaroteHTML = `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">💎 RESERVAR CAMAROTE</button>`;
+                        btnCamaroteHTML = `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 mt-3 rounded-2xl text-[11px] italic font-black transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">💎 MAPA DE CAMAROTES VIP</button>`;
                     }
 
+                    // 👇 NOVO LAYOUT HARMÔNICO EM GRID 👇
                     return `
                     <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
                         ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black uppercase tracking-tighter italic text-xl">E-CLUB</div>`}
                         <div class="p-8">
                             <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter text-center">${ev.nome}</h3>
-                            <div class="space-y-4">
-                                <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA PISTA</button>
-                                <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO (PISTA)</button>
+                            <div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">📝 NOME PISTA</button>
+                                    <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">⚡ PIX PISTA</button>
+                                </div>
                                 ${btnCamaroteHTML}
                             </div>
                         </div>
@@ -145,9 +147,6 @@
             } catch (err) { console.error(err); }
         }
 
-        // ==========================================
-        // FLUXO NORMAL (PISTA) - Mantido Intacto
-        // ==========================================
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id); eFluxoPix = isPix; tipoAtivo = null; 
             const titulo = document.getElementById('modal-titulo');
@@ -178,7 +177,7 @@
             btnFinal.disabled = false; btnFinal.className = (eFluxoPix ? "w-full btn-pix-main" : "w-full btn-lista") + " py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95";
         };
 
-        window.processarFinalizacao = async () => { /* Logica de Pista Mantida - Ocultada por espaço, você já tem ela perfeita! Colarei a mesma lógica de Faxina aqui: */
+        window.processarFinalizacao = async () => {
             if (!tipoAtivo) return alert("Selecione se é Casal ou Solteiro!");
             const n = document.getElementById('nome-cliente').value.trim().toUpperCase(); const t = document.getElementById('tel-cliente').value.trim();
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
@@ -193,7 +192,7 @@
                         if (ex.metodo === 'portaria') { deveBloquear = true; msgErro = "Seu nome já está na lista!"; break; }
                         if (ex.metodo === 'pix_antecipado') {
                             const diffMinutos = (new Date() - new Date(ex.data_reserva)) / 60000;
-                            if (diffMinutos < 5) { deveBloquear = true; msgErro = `Aguarde ${Math.ceil(5 - diffMinutos)} minuto(s) para o sistema liberar seu número para nova tentativa.`; break; } 
+                            if (diffMinutos < 5) { deveBloquear = true; msgErro = `Aguarde ${Math.ceil(5 - diffMinutos)} minuto(s) para nova tentativa.`; break; } 
                             else { await deleteDoc(docSnap.ref); }
                         }
                     }
@@ -211,7 +210,7 @@
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
 
         // ==========================================
-        // NOVO FLUXO: CAMAROTES (EM TEMPO REAL)
+        // FLUXO: CAMAROTES (EM TEMPO REAL)
         // ==========================================
         window.iniciarFluxoCamarote = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
@@ -220,9 +219,8 @@
             document.getElementById('modalCamarote').classList.remove('hidden');
 
             const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
-            if(unsubscribeCamarotes) unsubscribeCamarotes(); // Remove escuta velha se tiver
+            if(unsubscribeCamarotes) unsubscribeCamarotes(); 
             
-            // Liga o "Radar" em Tempo Real
             unsubscribeCamarotes = onSnapshot(q, (snap) => {
                 const reservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 renderizarMapaCamarotes(reservas);
@@ -235,17 +233,11 @@
             
             for(let i=1; i<=8; i++) {
                 if(eventoAtivo[`cam${i}_ativo`]) {
-                    // Pega o valor e a observação
                     const preco = eventoAtivo[`v_cam${i}`] || 'Consulte';
                     const obs = eventoAtivo[`obs_cam${i}`] || 'Espaço Exclusivo';
-                    
-                    // Verifica o status deste camarote
-                    let status = 'livre'; 
-                    let classCor = 'cam-livre';
-                    let icone = '✅';
+                    let status = 'livre'; let classCor = 'cam-livre'; let icone = '✅';
 
                     const resCam = reservas.filter(r => r.tipo_entrada === `CAMAROTE ${i}`);
-                    
                     if (resCam.some(r => r.pago === true)) {
                         status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒';
                     } else {
@@ -254,14 +246,12 @@
                         if(temPendente) { status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; }
                     }
 
-                    // Se esse era o camarote que o cara selecionou e alguém roubou (ou ele expirou), esconde o form
                     if (numCamaroteSelecionado === i && status !== 'livre') {
                         numCamaroteSelecionado = null;
                         document.getElementById('form-camarote').classList.add('hidden');
                         alert(`Oops! O Camarote 0${i} acabou de ser reservado por outra pessoa. Escolha outro!`);
                     }
 
-                    // Se estiver selecionado, muda a cor pra roxo
                     const isSelecionado = (numCamaroteSelecionado === i) ? 'cam-selecionado' : '';
 
                     grid.innerHTML += `
@@ -276,102 +266,60 @@
         }
 
         window.selecionarCamarote = (num, status) => {
-            if (status !== 'livre') return; // Bloqueia clique em vendidos ou aguardando
-            
+            if (status !== 'livre') return; 
             numCamaroteSelecionado = num;
-            
-            // Força a re-renderização da grid para acender o roxo (dispara um evento fake de tempo real)
             const eventTrigger = new Event('refreshGrid'); document.dispatchEvent(eventTrigger);
             
-            // Preenche o resumo do Formulário
             document.getElementById('cam-selecionado-nome').innerText = `CAMAROTE 0${num}`;
             document.getElementById('cam-selecionado-obs').innerText = eventoAtivo[`obs_cam${num}`] || 'Espaço Exclusivo';
             document.getElementById('cam-selecionado-valor').innerText = formatarMoeda(eventoAtivo[`v_cam${num}`]);
             
-            // Limpa e mostra os inputs
             document.getElementById('nome-camarote').value = '';
             document.getElementById('tel-camarote').value = '';
             document.getElementById('form-camarote').classList.remove('hidden');
-            
-            // Rola a tela para o formulário
             document.getElementById('form-camarote').scrollIntoView({ behavior: 'smooth', block: 'end' });
         };
 
-        // Escuta o evento fake para re-colorir sem precisar chamar o banco de dados à toa
         document.addEventListener('refreshGrid', () => {
             const boxes = document.getElementById('grid-camarotes-venda').children;
             for(let i=0; i<boxes.length; i++) {
-                if (boxes[i].innerText.includes(`CAM 0${numCamaroteSelecionado}`)) {
-                    boxes[i].classList.add('cam-selecionado');
-                } else {
-                    boxes[i].classList.remove('cam-selecionado');
-                }
+                if (boxes[i].innerText.includes(`CAM 0${numCamaroteSelecionado}`)) { boxes[i].classList.add('cam-selecionado'); } 
+                else { boxes[i].classList.remove('cam-selecionado'); }
             }
         });
 
         window.processarPixCamarote = async () => {
             if (!numCamaroteSelecionado) return alert("Selecione um camarote no mapa!");
-            
-            const n = document.getElementById('nome-camarote').value.trim().toUpperCase();
-            const t = document.getElementById('tel-camarote').value.trim();
+            const n = document.getElementById('nome-camarote').value.trim().toUpperCase(); const t = document.getElementById('tel-camarote').value.trim();
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
-            
-            const btn = document.getElementById('btn-final-camarote');
-            const originalText = btn.innerText;
-            btn.innerText = "GARANTINDO... ⚡"; btn.disabled = true;
+            const btn = document.getElementById('btn-final-camarote'); const originalText = btn.innerText; btn.innerText = "GARANTINDO... ⚡"; btn.disabled = true;
 
             try {
-                // VERIFICAÇÃO DE SEGUNDO FATAL (Se alguém clicou no milissegundo antes dele)
                 const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome), where("tipo_entrada", "==", `CAMAROTE ${numCamaroteSelecionado}`)));
-                
                 let alguemRoubou = false;
                 checkFinal.forEach(docSnap => {
                     const ex = docSnap.data();
                     if (ex.pago === true) alguemRoubou = true;
                     if (ex.pago === false && ((new Date() - new Date(ex.data_reserva)) / 60000) < 5) alguemRoubou = true;
                 });
+                if (alguemRoubou) throw new Error("Alguém acabou de garantir este Camarote segundos antes. Escolha outro!");
 
-                if (alguemRoubou) {
-                    throw new Error("Putz! Alguém acabou de garantir este Camarote segundos antes de você. Escolha outro!");
-                }
-
-                // Cria a Reserva do Camarote
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${numCamaroteSelecionado}`,
-                    promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false,
-                    metodo: 'pix_antecipado'
+                    promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado',
+                    valor_pago: eventoAtivo[`v_cam${numCamaroteSelecionado}`] // Salva o valor pago exato
                 });
 
-                // Chama a API do Mercado Pago
                 const valorLimpo = String(eventoAtivo[`v_cam${numCamaroteSelecionado}`]).replace('R$', '').replace(/\s/g, '').replace(',', '.');
-                
-                const resp = await fetch(URL_FUNCAO, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ valor: valorLimpo, titulo: `E-CLUB: CAMAROTE 0${numCamaroteSelecionado} - ${eventoAtivo.nome}`, reservaId: docRef.id })
-                });
-
+                const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorLimpo, titulo: `CAMAROTE 0${numCamaroteSelecionado} - ${eventoAtivo.nome}`, reservaId: docRef.id }) });
                 if (!resp.ok) throw new Error("Erro na Função Pix.");
                 const data = await resp.json();
-                
-                if (data.url) { 
-                    window.open(data.url, '_blank'); 
-                    alert("✅ Link VIP gerado! Finalize o Pix na aba que acabou de abrir.");
-                    fecharModalCamarote();
-                } else throw new Error("Falha ao gerar link.");
-
-            } catch (e) { 
-                alert("🔴 " + e.message); 
-            } finally { 
-                btn.disabled = false; btn.innerText = originalText; 
-            }
+                if (data.url) { window.open(data.url, '_blank'); alert("✅ Link VIP gerado! Finalize o Pix na aba que abriu."); fecharModalCamarote(); } 
+                else throw new Error("Falha ao gerar link.");
+            } catch (e) { alert("🔴 " + e.message); } finally { btn.disabled = false; btn.innerText = originalText; }
         };
 
-        window.fecharModalCamarote = () => {
-            if(unsubscribeCamarotes) unsubscribeCamarotes();
-            document.getElementById('modalCamarote').classList.add('hidden');
-        };
-
+        window.fecharModalCamarote = () => { if(unsubscribeCamarotes) unsubscribeCamarotes(); document.getElementById('modalCamarote').classList.add('hidden'); };
         window.mask = (i) => {
             let v = i.value.replace(/\D/g, "").substring(0, 11);
             if (v.length > 0) v = "(" + v;
@@ -379,7 +327,6 @@
             if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
             i.value = v;
         };
-
         carregarPagina();
     </script>
 </body>
