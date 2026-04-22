@@ -157,7 +157,6 @@
 
         window.fecharModalAniv = () => document.getElementById('modalAniv').classList.add('hidden');
 
-        // 👇 MÁSCARA DO TELEFONE 👇
         window.mask = (i) => {
             let v = i.value.replace(/\D/g, "").substring(0, 11);
             if (v.length > 0) v = "(" + v;
@@ -166,7 +165,6 @@
             i.value = v;
         };
 
-        // 👇 LÓGICA DE DUAL-SAVE (LINK + VIP DIRETO NA PORTA) 👇
         window.criarLinkAniv = async () => {
             const f = document.getElementById('selEvento').value;
             const n = document.getElementById('nomeAniv').value.trim().toUpperCase();
@@ -178,7 +176,6 @@
             btn.innerText = "GERANDO..."; btn.disabled = true;
 
             try {
-                // 1. Gera o link para convidar os amigos
                 await addDoc(collection(db, "links_aniversario"), {
                     promoter: logado,
                     aniversariante: n,
@@ -186,12 +183,12 @@
                     criado: new Date().toISOString()
                 });
 
-                // 2. Coloca o dono da lista automaticamente na portaria como FREE (ANIVERSARIANTE)
+                // 👇 AGORA ELE SALVA COMO VIP_DONO PARA NÃO BATER COM OS CONVIDADOS 👇
                 await addDoc(collection(db, "lista_eventos"), {
                     nome: n,
                     tel: t,
                     evento: f,
-                    tipo_entrada: "ANIVERSARIANTE", // <-- A portaria lê isso como FREE/DONO DA FESTA
+                    tipo_entrada: "VIP_DONO", 
                     promoter: logado,
                     data_reserva: new Date().toISOString(),
                     entrou: false,
