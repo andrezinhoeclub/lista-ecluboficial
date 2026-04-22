@@ -16,7 +16,6 @@
         .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
-        /* 👇 Bolha aumentada de 280px para 320px para caber os relatórios financeiros */
         .event-bubble { flex: 0 0 auto; width: 320px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
         input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; }
@@ -217,7 +216,6 @@
             renderizarAniversarios();
         });
 
-        // 👇 A MÁGICA DOS RELATÓRIOS DO PIX ACONTECE AQUI 👇
         function renderizarRelatorios() {
             const container = document.getElementById('container-bolhas');
             if(!container) return;
@@ -226,29 +224,23 @@
             const ativos = dadosEventos.filter(e => e.ativo && e.data >= hojeLocal).sort((a,b) => a.data.localeCompare(b.data));
             
             container.innerHTML = ativos.map(ev => {
-                // Separa todas as reservas deste evento
                 const todasReservas = dadosReservas.filter(r => r.evento === ev.nome);
                 
-                // 1. Lógica do Pix (Apenas quem pagou)
-                const pixPagos = todasReservas.filter(r => r.metodo === 'pix_antecipado' && r.pago === true);
+                // 👇 FILTRO: Ignora Pix Pendentes
+                const reservasValidas = todasReservas.filter(r => r.metodo === 'portaria' || (r.metodo === 'pix_antecipado' && r.pago === true));
+                
+                const pixPagos = reservasValidas.filter(r => r.metodo === 'pix_antecipado');
                 const pixCasal = pixPagos.filter(r => r.tipo_entrada === 'CASAL').length;
                 const pixSolteiro = pixPagos.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
                 
-                // 2. Lógica da Portaria (Quem só colocou o nome e vai pagar lá)
-                const listaPorta = todasReservas.length - pixPagos.length;
-                
-                // 3. Lógica de Check-in (Quem entrou de fato, independente de como pagou)
-                const chk = todasReservas.filter(r => r.entrou).length;
+                const listaPorta = reservasValidas.filter(r => r.metodo === 'portaria').length;
+                const chk = reservasValidas.filter(r => r.entrou).length;
 
-                // 4. Lógica Financeira (Calcula os valores em R$)
                 const parseMoeda = (val) => Number(String(val || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
                 const valCasal = parseMoeda(ev.ant_casal || ev.valor_casal);
                 const valSolteiro = parseMoeda(ev.ant_solteiro || ev.valor_solteiro);
                 
-                const receitaCasal = pixCasal * valCasal;
-                const receitaSolteiro = pixSolteiro * valSolteiro;
-                const receitaTotal = receitaCasal + receitaSolteiro;
-                
+                const receitaTotal = (pixCasal * valCasal) + (pixSolteiro * valSolteiro);
                 const formataBRL = (v) => v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
                 return `
@@ -257,7 +249,6 @@
                         <p class="text-[9px] font-black text-yellow-500 uppercase mb-1 italic">${ev.data.split('-').reverse().join('/')}</p>
                         <h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4>
                     </div>
-                    
                     <div class="bg-blue-900/20 border border-blue-500/20 p-4 rounded-2xl mb-4">
                         <div class="flex justify-between items-center mb-3">
                             <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest">⚡ Receita Pix</span>
@@ -265,14 +256,13 @@
                         </div>
                         <div class="flex justify-between text-[10px] items-center mb-1.5">
                             <div class="text-zinc-500 font-bold"><span class="text-white">${pixCasal}</span> Casais</div>
-                            <div class="font-bold text-zinc-300">${formataBRL(receitaCasal)}</div>
+                            <div class="font-bold text-zinc-300">${formataBRL(pixCasal * valCasal)}</div>
                         </div>
                         <div class="flex justify-between text-[10px] items-center">
                             <div class="text-zinc-500 font-bold"><span class="text-white">${pixSolteiro}</span> Solteiros</div>
-                            <div class="font-bold text-zinc-300">${formataBRL(receitaSolteiro)}</div>
+                            <div class="font-bold text-zinc-300">${formataBRL(pixSolteiro * valSolteiro)}</div>
                         </div>
                     </div>
-
                     <div class="flex justify-between border-t border-white/5 pt-4">
                         <div class="text-center">
                             <p class="text-[7px] text-zinc-500 uppercase font-black">Lista Porta</p>
@@ -290,9 +280,9 @@
                 </div>`;
             }).join('');
             
-            // Mantém a lógica do Ranking Intacta
             const stats = {};
             dadosReservas.forEach(r => {
+                if (r.metodo === 'pix_antecipado' && r.pago !== true) return;
                 const p = (r.promoter || 'DIRETO').toUpperCase();
                 if(!stats[p]) stats[p] = { res: 0, chk: 0 };
                 stats[p].res++; if(r.entrou) stats[p].chk++;
