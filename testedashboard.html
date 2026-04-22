@@ -16,10 +16,13 @@
         .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
-        .event-bubble { flex: 0 0 auto; width: 320px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
+        .event-bubble { flex: 0 0 auto; width: 340px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
         input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; }
         .mini-capa { width: 100%; height: 80px; object-fit: cover; border-bottom: 1px solid #1a1a1c; opacity: 0.6; }
+        
+        /* Estilo para os Checkboxes de Camarote */
+        .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #a855f7; cursor: pointer; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -44,7 +47,7 @@
 
         <section id="aba-relatorios" class="space-y-8">
             <div class="glass-card p-8">
-                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance por Evento</h2>
+                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance e Camarotes</h2>
                 <div id="container-bolhas" class="scroll-x"></div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -67,7 +70,7 @@
 
         <section id="aba-festas" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento</h2>
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento & Camarotes</h2>
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <input type="hidden" id="edit_evento_id">
                     <input type="text" id="nome_festa" placeholder="NOME DO EVENTO" class="p-4 rounded-2xl font-bold md:col-span-3" required>
@@ -83,15 +86,21 @@
                         <input type="text" id="desc_solteiro" placeholder="SOLTEIRO ANIVERSÁRIO R$" class="p-4 rounded-2xl font-bold text-purple-400 border-purple-900/30">
                     </div>
 
-                    <div class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-green-500/5 p-4 rounded-3xl border border-green-500/10">
-                        <div class="md:col-span-2 text-[10px] font-black text-green-500 uppercase tracking-widest ml-2">Valores para Pix Antecipado (Automático)</div>
+                    <div class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-green-500/5 p-4 rounded-3xl border border-green-500/10 mb-4">
+                        <div class="md:col-span-2 text-[10px] font-black text-green-500 uppercase tracking-widest ml-2">Valores Pix Antecipado (Pista)</div>
                         <input type="text" id="ant_casal" placeholder="VALOR CASAL R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30">
                         <input type="text" id="ant_solteiro" placeholder="VALOR SOLTEIRO R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30">
                     </div>
 
+                    <div class="md:col-span-4 bg-purple-900/10 p-6 rounded-[2rem] border border-purple-500/20 mb-4">
+                        <div class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-4 ml-2">💎 Configuração de Camarotes (Selecione para Ativar)</div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="grid-camarotes-inputs">
+                            </div>
+                    </div>
+
                     <input type="url" id="url_banner" placeholder="URL DA CAPA (IMAGEM)" class="md:col-span-4 p-4 rounded-2xl font-bold">
                     
-                    <button type="submit" id="btnSalvarEvento" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento</button>
+                    <button type="submit" id="btnSalvarEvento" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
                 </form>
             </div>
             <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
@@ -173,6 +182,20 @@
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = [];
         let modoTesteAtivo = false;
 
+        // INJETA OS 8 INPUTS DE CAMAROTE NA TELA DE CONFIGURAÇÃO DE EVENTO
+        const gridCamarotes = document.getElementById('grid-camarotes-inputs');
+        for(let i=1; i<=8; i++) {
+            gridCamarotes.innerHTML += `
+                <div class="bg-black/30 p-3 rounded-2xl border border-white/5 flex flex-col items-center">
+                    <label class="flex items-center gap-2 mb-2 w-full cursor-pointer justify-center">
+                        <input type="checkbox" id="cam${i}_ativo" class="check-camarote">
+                        <span class="text-[10px] font-black uppercase text-zinc-400">Cam 0${i}</span>
+                    </label>
+                    <input type="text" id="v_cam${i}" placeholder="R$ 0" class="w-full p-2 rounded-xl text-center text-xs font-bold bg-[#0c0c0e] border border-zinc-800 text-purple-400 focus:border-purple-500 outline-none">
+                </div>
+            `;
+        }
+
         window.trocarAba = (id, btn, type) => { 
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
             document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active', 'active-danger')); 
@@ -180,7 +203,6 @@
             if (type === 'danger') btn.classList.add('active-danger'); else btn.classList.add('active'); 
         };
 
-        // LISTENERS
         onSnapshot(doc(db, "configuracoes", "sistema"), snap => {
             const btn = document.getElementById('btnModoTeste');
             modoTesteAtivo = snap.exists() ? snap.data().modo_teste === true : false;
@@ -203,14 +225,6 @@
             document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Promoter</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
         });
 
-        onSnapshot(collection(db, "configuracoes"), snap => {
-            const cont = document.getElementById('lista-portaria');
-            if(cont) cont.innerHTML = snap.docs.map(d => {
-                const l = d.data(); if (d.id === 'sistema') return ''; 
-                return `<div class="glass-card p-6 border-l-4 border-l-green-500 flex justify-between items-center mb-2"><div><p class="text-xs font-black uppercase text-white">${l.login || d.id}</p></div><button onclick="removerItem('configuracoes', '${d.id}')" class="text-red-500 font-black">✕</button></div>`;
-            }).join('');
-        });
-
         onSnapshot(collection(db, "links_aniversario"), snap => {
             dadosAniv = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderizarAniversarios();
@@ -225,23 +239,31 @@
             
             container.innerHTML = ativos.map(ev => {
                 const todasReservas = dadosReservas.filter(r => r.evento === ev.nome);
+                const validas = todasReservas.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
                 
-                // 👇 FILTRO: Ignora Pix Pendentes
-                const reservasValidas = todasReservas.filter(r => r.metodo === 'portaria' || (r.metodo === 'pix_antecipado' && r.pago === true));
-                
-                const pixPagos = reservasValidas.filter(r => r.metodo === 'pix_antecipado');
-                const pixCasal = pixPagos.filter(r => r.tipo_entrada === 'CASAL').length;
-                const pixSolteiro = pixPagos.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
-                
-                const listaPorta = reservasValidas.filter(r => r.metodo === 'portaria').length;
-                const chk = reservasValidas.filter(r => r.entrou).length;
+                // Relatório Camarote (Ignora pendentes para cálculo financeiro)
+                const camesPagos = validas.filter(r => r.tipo_entrada && r.tipo_entrada.includes('CAMAROTE'));
+                const receitaCam = camesPagos.reduce((total, r) => {
+                    const preco = Number(String(r.valor_pago || '0').replace('R$', '').replace(',', '.').trim());
+                    return total + preco;
+                }, 0);
 
-                const parseMoeda = (val) => Number(String(val || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
-                const valCasal = parseMoeda(ev.ant_casal || ev.valor_casal);
-                const valSolteiro = parseMoeda(ev.ant_solteiro || ev.valor_solteiro);
-                
-                const receitaTotal = (pixCasal * valCasal) + (pixSolteiro * valSolteiro);
                 const formataBRL = (v) => v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+
+                // Gera as 8 luzinhas do Camarote
+                let luzesCamarotes = '';
+                for(let n=1; n<=8; n++) {
+                    const isAtivoParaEvento = ev[`cam${n}_ativo`] === true;
+                    const vendido = camesPagos.some(r => r.tipo_entrada === `CAMAROTE ${n}`);
+                    
+                    if (!isAtivoParaEvento) {
+                        luzesCamarotes += `<div class="h-1.5 rounded-full bg-black flex items-center justify-center text-[5px] text-zinc-700">x</div>`; // Desativado
+                    } else if (vendido) {
+                        luzesCamarotes += `<div class="h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_#a855f7]"></div>`; // Vendido
+                    } else {
+                        luzesCamarotes += `<div class="h-1.5 rounded-full bg-zinc-700"></div>`; // Livre e ativo
+                    }
+                }
 
                 return `
                 <div class="event-bubble p-6 flex flex-col justify-between">
@@ -249,37 +271,35 @@
                         <p class="text-[9px] font-black text-yellow-500 uppercase mb-1 italic">${ev.data.split('-').reverse().join('/')}</p>
                         <h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4>
                     </div>
-                    <div class="bg-blue-900/20 border border-blue-500/20 p-4 rounded-2xl mb-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest">⚡ Receita Pix</span>
-                            <span class="text-sm font-black text-blue-400">${formataBRL(receitaTotal)}</span>
+                    
+                    <div class="bg-purple-900/20 border border-purple-500/30 p-4 rounded-2xl mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-[9px] font-black text-purple-400 uppercase tracking-widest">💎 Camarotes</span>
+                            <span class="text-sm font-black text-purple-300">${formataBRL(receitaCam)}</span>
                         </div>
-                        <div class="flex justify-between text-[10px] items-center mb-1.5">
-                            <div class="text-zinc-500 font-bold"><span class="text-white">${pixCasal}</span> Casais</div>
-                            <div class="font-bold text-zinc-300">${formataBRL(pixCasal * valCasal)}</div>
-                        </div>
-                        <div class="flex justify-between text-[10px] items-center">
-                            <div class="text-zinc-500 font-bold"><span class="text-white">${pixSolteiro}</span> Solteiros</div>
-                            <div class="font-bold text-zinc-300">${formataBRL(pixSolteiro * valSolteiro)}</div>
+                        <div class="grid grid-cols-8 gap-1 mt-2">
+                            ${luzesCamarotes}
                         </div>
                     </div>
+
                     <div class="flex justify-between border-t border-white/5 pt-4">
                         <div class="text-center">
-                            <p class="text-[7px] text-zinc-500 uppercase font-black">Lista Porta</p>
-                            <p class="text-lg font-black text-white">${listaPorta}</p>
+                            <p class="text-[7px] text-zinc-500 uppercase font-black">Portaria</p>
+                            <p class="text-lg font-black text-white">${validas.filter(r => r.metodo === 'portaria').length}</p>
                         </div>
                         <div class="text-center">
-                            <p class="text-[7px] text-zinc-500 uppercase font-black">Pix Pagos</p>
-                            <p class="text-lg font-black text-blue-500">${pixPagos.length}</p>
+                            <p class="text-[7px] text-zinc-500 uppercase font-black">Pix Pista</p>
+                            <p class="text-lg font-black text-blue-500">${validas.filter(r => r.metodo === 'pix_antecipado' && !r.tipo_entrada.includes('CAMAROTE')).length}</p>
                         </div>
                         <div class="text-center">
                             <p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins</p>
-                            <p class="text-lg font-black text-green-500">${chk}</p>
+                            <p class="text-lg font-black text-green-500">${validas.filter(r => r.entrou).length}</p>
                         </div>
                     </div>
                 </div>`;
             }).join('');
             
+            // Mantém Ranking
             const stats = {};
             dadosReservas.forEach(r => {
                 if (r.metodo === 'pix_antecipado' && r.pago !== true) return;
@@ -343,6 +363,13 @@
             document.getElementById('ant_casal').value = ev.ant_casal || "";
             document.getElementById('ant_solteiro').value = ev.ant_solteiro || "";
             document.getElementById('url_banner').value = ev.imagem || "";
+            
+            // Carrega os dados dos 8 camarotes
+            for(let i=1; i<=8; i++) {
+                document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false;
+                document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || "";
+            }
+
             document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
         };
 
@@ -364,13 +391,25 @@
                     imagem: document.getElementById('url_banner').value, 
                     ativo: true 
                 };
+
+                // Puxa os dados dos 8 camarotes
+                for(let i=1; i<=8; i++) {
+                    d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked;
+                    d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value;
+                }
+
                 if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
                 e.target.reset(); document.getElementById('edit_evento_id').value = "";
-                alert("Evento salvo!");
-            } catch(e) { alert("Erro ao salvar!"); }
-            finally { btn.innerText = "Salvar Evento"; btn.disabled = false; }
+                
+                // Reseta os checkboxes
+                for(let i=1; i<=8; i++) document.getElementById(`cam${i}_ativo`).checked = false;
+
+                alert("Evento salvo com sucesso!");
+            } catch(err) { alert("Erro ao salvar!"); console.error(err); }
+            finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
         });
 
+        // (Funções de deletar, etc. mantidas intactas)
         window.editarPromoter = async (id) => {
             const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`); if (!op) return;
             let up = {};
@@ -378,26 +417,21 @@
             if (op === '4') { const ns = prompt("Nova senha:"); if(ns) up.senha = ns.trim(); }
             if (Object.keys(up).length > 0) await updateDoc(doc(db, "promoters", id), up);
         };
-
         document.getElementById('formPromoter').addEventListener('submit', async e => {
             e.preventDefault(); const n = document.getElementById('nome_promoter').value.trim(); const t = document.getElementById('tipo_promoter').value;
             await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true }); e.target.reset();
         });
-
         document.getElementById('formPortaria').addEventListener('submit', async e => {
             e.preventDefault(); const n = document.getElementById('login_portaria').value.trim().toLowerCase();
             await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true }); e.target.reset();
         });
-
         window.toggleModoTeste = async () => { await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true }); };
         window.removerItem = async (c, i) => { if(confirm("Apagar?")) await deleteDoc(doc(db, c, i)); };
-        
         window.limparBaseDeDados = async () => {
             if (!confirm("Limpar clientes?")) return;
             const q = await getDocs(collection(db, "lista_eventos"));
             const batch = writeBatch(db); q.forEach(d => batch.delete(d.ref)); await batch.commit(); alert("Limpo!");
         };
-
         window.zerarSistemaCompleto = async () => {
             if (!confirm("ZERAR TUDO?")) return;
             for (const col of ["lista_eventos", "eventos", "links_aniversario"]) {
@@ -406,7 +440,6 @@
             }
             location.reload();
         };
-
         window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado!"); };
     </script>
 </body>
