@@ -123,23 +123,28 @@
                     let temCamaroteAtivo = false;
                     for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`]) temCamaroteAtivo = true; }
 
-                    let btnCamaroteHTML = '';
+                    let botoesAcao = '';
                     if (temCamaroteAtivo) {
-                        btnCamaroteHTML = `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 mt-3 rounded-2xl text-[11px] italic font-black transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">💎 MAPA DE CAMAROTES VIP</button>`;
+                        botoesAcao = `
+                            <div class="grid grid-cols-2 gap-3 mt-4">
+                                <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">⚡ PIX PISTA</button>
+                                <button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">💎 CAMAROTE</button>
+                            </div>
+                        `;
+                    } else {
+                        botoesAcao = `
+                            <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-5 mt-4 rounded-2xl text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO (PISTA)</button>
+                        `;
                     }
 
-                    // 👇 NOVO LAYOUT HARMÔNICO EM GRID 👇
                     return `
                     <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
                         ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black uppercase tracking-tighter italic text-xl">E-CLUB</div>`}
                         <div class="p-8">
                             <h3 class="text-2xl font-black uppercase italic mb-6 text-white tracking-tighter text-center">${ev.nome}</h3>
                             <div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">📝 NOME PISTA</button>
-                                    <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">⚡ PIX PISTA</button>
-                                </div>
-                                ${btnCamaroteHTML}
+                                <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95">📝 NOME NA LISTA</button>
+                                ${botoesAcao}
                             </div>
                         </div>
                     </div>`;
@@ -307,7 +312,7 @@
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${numCamaroteSelecionado}`,
                     promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado',
-                    valor_pago: eventoAtivo[`v_cam${numCamaroteSelecionado}`] // Salva o valor pago exato
+                    valor_pago: eventoAtivo[`v_cam${numCamaroteSelecionado}`]
                 });
 
                 const valorLimpo = String(eventoAtivo[`v_cam${numCamaroteSelecionado}`]).replace('R$', '').replace(/\s/g, '').replace(',', '.');
