@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-CLUB | Master Portaria</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
+        .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
+        .client-card { background: #0a0a0a; border: 1px solid #1a1a1a; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .client-card.entrou { opacity: 0.2 !important; filter: grayscale(1); pointer-events: none; }
+        input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
+        input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
+        @keyframes pulse-alert { 0% { background-color: rgba(234, 179, 8, 0.1); } 50% { background-color: rgba(234, 179, 8, 0.3); } 100% { background-color: rgba(234, 179, 8, 0.1); } }
+        .alert-teste { animation: pulse-alert 2s infinite; border: 1px solid #eab308; color: #eab308; text-align: center; font-weight: 900; font-style: italic; padding: 10px; margin-bottom: 15px; border-radius: 10px; text-transform: uppercase; font-size: 11px; letter-spacing: 2px;}
+    </style>
+</head>
+<body class="flex h-screen">
+
+    <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
+        <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
+            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
+            <div class="space-y-4">
+                <input type="text" id="inputNomeUsuario" placeholder="LOGIN OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
+                <div id="areaSenha" class="hidden">
+                    <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
+                </div>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ENTRAR NO SISTEMA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="interfacePrincipal" class="hidden flex w-full h-full">
+        <aside class="w-80 h-full flex flex-col p-6 bg-black/50 border-r border-zinc-900">
+            <div class="mb-10 text-center text-white">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
+                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter leading-none">E-CLUB</h2>
+                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg italic tracking-widest">---</p>
+            </div>
+            <div class="flex-grow overflow-y-auto">
+                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em] border-b border-zinc-900 pb-2">Monitor de Eventos</h3>
+                <div id="lista-eventos-sidebar" class="space-y-3"></div>
+            </div>
+            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
+        </aside>
+
+        <main class="flex-grow flex flex-col">
+            <header class="p-8 border-b border-zinc-900 bg-black/20 relative">
+                <div class="max-w-5xl mx-auto flex gap-8 items-center relative">
+                    <div class="relative flex-grow">
+                        <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
+                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR CLIENTE NO EVENTO ONLINE..." class="w-full p-6 pl-16 rounded-[2rem] text-sm font-bold uppercase text-white shadow-2xl">
+                    </div>
+                    <div class="text-right border-l border-zinc-800 pl-8 min-w-[140px]">
+                        <p id="total-checkins" class="text-5xl font-black italic leading-none text-green-500">0</p>
+                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2 italic">Check-ins Turno</p>
+                    </div>
+                </div>
+            </header>
+
+            <section class="flex-grow p-8 overflow-y-auto bg-[#030303] relative">
+                <div id="alertaModoTeste" class="alert-teste hidden max-w-5xl mx-auto">
+                    ⚠️ MODO DE TESTE ATIVO - TRAVAS DE HORÁRIO DESATIVADAS
+                </div>
+
+                <div id="painelRegras" class="max-w-5xl mx-auto mb-10">
+                    <div class="glass p-8 rounded-[2.5rem] border-l-4 border-l-yellow-500 bg-yellow-500/5 shadow-2xl">
+                        <h3 class="text-yellow-500 font-black uppercase italic text-sm mb-4 tracking-widest">● Regras Operacionais e Horários</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-black/40 p-5 rounded-2xl border border-white/5">
+                                <p class="text-[8px] text-zinc-500 font-black uppercase mb-2">Turno de Trabalho</p>
+                                <p class="text-xs font-bold text-white">Início: <span class="text-green-500">21:00h</span></p>
+                                <p class="text-xs font-bold text-white">Término: <span class="text-red-500">05:00h</span></p>
+                            </div>
+                            <div class="bg-black/40 p-5 rounded-2xl border border-white/5">
+                                <p class="text-[8px] text-zinc-500 font-black uppercase mb-2">Segurança de Dados</p>
+                                <p class="text-[10px] text-zinc-300 leading-tight">O contador de check-ins e a busca são resetados automaticamente às <span class="text-white font-black italic">05:01h</span>.</p>
+                            </div>
+                            <div class="bg-black/40 p-5 rounded-2xl border border-white/5">
+                                <p class="text-[8px] text-zinc-500 font-black uppercase mb-2">Busca de Clientes</p>
+                                <p class="text-[10px] text-zinc-300 leading-tight">A liberação de clientes é permitida apenas para eventos com status <span class="text-green-500 font-black italic text-[9px]">ONLINE NOW</span>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="container-resultados" class="max-w-5xl mx-auto"></div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        
+        let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
+        let isModoTeste = false;
+
+        const getStatusTurno = (dataEvento) => {
+            if (isModoTeste) return "ONLINE"; 
+            const agora = new Date();
+            const hora = agora.getHours();
+            const hoje = agora.toLocaleDateString('en-CA'); 
+            const ontemObj = new Date(agora); 
+            ontemObj.setDate(ontemObj.getDate() - 1);
+            const ontemISO = ontemObj.toLocaleDateString('en-CA');
+
+            if (hora >= 21 && dataEvento === hoje) return "ONLINE";
+            if (hora < 5 && dataEvento === ontemISO) return "ONLINE";
+            if (dataEvento > hoje || (dataEvento === hoje && hora < 21)) return "RESTRITO";
+            return "ENCERRADO"; 
+        };
+
+        window.verificarOuLogar = async () => {
+            const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
+            const s = document.getElementById('senhaUsuario').value.trim();
+            const btn = document.getElementById('btnAcao');
+
+            if (stepLogin === 0) {
+                btn.innerText = "VERIFICANDO...";
+                const docSnap = await getDoc(doc(db, "configuracoes", n));
+                if (docSnap.exists()) {
+                    usuarioData = docSnap.data();
+                    stepLogin = 1;
+                    document.getElementById('areaSenha').classList.remove('hidden');
+                    document.getElementById('inputNomeUsuario').readOnly = true;
+                    btn.innerText = "AUTENTICAR";
+                } else {
+                    btn.innerText = "ENTRAR NO SISTEMA";
+                    alert("Operador não encontrado.");
+                }
+            } else {
+                btn.innerText = "AUTENTICANDO...";
+                if (usuarioData.senha === s) {
+                    operadorLogado = n;
+                    document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
+                    document.getElementById('telaLogin').classList.add('hidden');
+                    document.getElementById('interfacePrincipal').classList.remove('hidden');
+                    iniciarEscutas();
+                } else { 
+                    alert("Senha incorreta"); 
+                    btn.innerText = "AUTENTICAR";
+                }
+            }
+        };
+
+        function iniciarEscutas() {
+            onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
+                const alerta = document.getElementById('alertaModoTeste');
+                if (snap.exists() && snap.data().modo_teste === true) {
+                    isModoTeste = true;
+                    alerta.classList.remove('hidden');
+                } else {
+                    isModoTeste = false;
+                    alerta.classList.add('hidden');
+                }
+                if (bancoEventos.length > 0) {
+                    renderizarSidebar();
+                    processarPesquisa();
+                }
+            });
+
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
+                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
+                
+                onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
+                    bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
+                    
+                    const totalTurno = bancoClientes.filter(c => {
+                        if (!c.entrou || !c.data_entrada) return false;
+                        const dataEntrada = new Date(c.data_entrada);
+                        const hojeCheck = new Date();
+                        const limite = new Date();
+                        if (hojeCheck.getHours() < 5) {
+                            limite.setDate(limite.getDate() - 1);
+                            limite.setHours(21, 0, 0);
+                        } else {
+                            limite.setHours(21, 0, 0);
+                        }
+                        if (isModoTeste) return true;
+                        return dataEntrada >= limite;
+                    }).length;
+
+                    document.getElementById('total-checkins').innerText = totalTurno;
+                    renderizarSidebar();
+                    processarPesquisa();
+                });
+            });
+        }
+
+        function renderizarSidebar() {
+            const cont = document.getElementById('lista-eventos-sidebar');
+            cont.innerHTML = '';
+            const eventosFiltrados = bancoEventos.filter(ev => getStatusTurno(ev.data) !== "ENCERRADO");
+            const temEventoOnline = eventosFiltrados.some(ev => getStatusTurno(ev.data) === "ONLINE");
+            const painelRegras = document.getElementById('painelRegras');
+            
+            if (temEventoOnline) { painelRegras.classList.add('hidden'); } 
+            else { painelRegras.classList.remove('hidden'); }
+
+            eventosFiltrados.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+                const status = getStatusTurno(ev.data);
+                const total = bancoClientes.filter(c => c.evento === ev.nome).length;
+                cont.innerHTML += `
+                    <div class="p-4 rounded-2xl glass border-l-4 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2 shadow-lg">
+                        <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
+                        <div class="flex justify-between items-end mt-2">
+                            <span class="text-[8px] font-bold ${status === 'ONLINE' ? 'animate-online' : 'text-zinc-600'} italic uppercase tracking-widest leading-none">
+                                ${status === 'ONLINE' ? '● ONLINE NOW' : '🔒 RESTRITO'}
+                            </span>
+                            <span class="text-lg font-black text-yellow-500 leading-none">${total}</span>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        window.processarPesquisa = () => {
+            const busca = document.getElementById('input-busca').value.trim().toUpperCase();
+            const cont = document.getElementById('container-resultados');
+            
+            if (busca.length < 2) { cont.innerHTML = ''; return; }
+            
+            const filtrados = bancoClientes.filter(c => {
+                const evRelacionado = bancoEventos.find(e => e.nome === c.evento);
+                if (!evRelacionado || getStatusTurno(evRelacionado.data) !== "ONLINE") return false;
+                const nomeMatch = c.nome && c.nome.toUpperCase().includes(busca);
+                const telMatch = (c.tel || c.telefone) && (c.tel || c.telefone).includes(busca);
+                return nomeMatch || telMatch;
+            });
+
+            if (filtrados.length === 0) {
+                cont.innerHTML = `<div class="py-40 text-center font-black uppercase text-zinc-800 italic tracking-widest">Nenhum cliente ativo encontrado</div>`;
+                return;
+            }
+            
+            cont.innerHTML = '';
+            filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
+                const ev = bancoEventos.find(e => e.nome === c.evento) || {};
+                let valorExibicao = '---';
+                let badgeDestaque = '';
+                let corDestaqueNome = 'text-white';
+                
+                if (c.tipo_entrada === "ANIVERSARIANTE") {
+                    valorExibicao = "FREE";
+                    corDestaqueNome = 'text-green-400';
+                    badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-[0.2em]">👑 DONO(A) DA FESTA</span></div>`;
+                } else {
+                    const isCasal = c.tipo_entrada === "CASAL";
+                    const vCalc = (c.aniversariante && c.aniversariante !== "") ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isCasal ? ev.valor_casal : ev.valor_solteiro);
+                    const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
+                    valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
+                    if (c.aniversariante) {
+                        badgeDestaque = `<div class="flex items-center gap-3 border-l border-zinc-800 pl-6"><span class="text-[8px] text-purple-400 font-black uppercase tracking-[0.2em]">CONVIDADO DE:</span><span class="text-xs font-black italic text-white leading-none">${c.aniversariante}</span></div>`;
+                    }
+                }
+
+                let labelStatusHTML = '';
+                if (c.tipo_entrada === "CASAL") {
+                    labelStatusHTML = `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👫 CASAL</span>`;
+                } else if (c.tipo_entrada === "SOLTEIRO") {
+                    labelStatusHTML = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em]">👤 SOLTEIRO</span>`;
+                }
+                if (c.pago === true) {
+                    labelStatusHTML += `<span class="ml-2 bg-blue-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] animate-pulse">⚡ PIX PAGO</span>`;
+                }
+
+                const div = document.createElement('div');
+                div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${c.entrou ? 'entrou' : ''}`;
+                div.innerHTML = `
+                    <div class="flex flex-col gap-4 text-white">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-4">
+                                <h3 class="text-2xl font-black uppercase italic ${corDestaqueNome} leading-none">${c.nome}</h3>
+                                <p class="text-lg font-bold text-zinc-400 font-mono italic leading-none">${c.tel || c.telefone || ''}</p>
+                            </div>
+                            <div>
+                                ${c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-6 py-3 rounded-xl border border-green-500/20">CONFIRMADO</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.4)]">LIBERAR AGORA</button>`}
+                            </div>
+                        </div>
+                        <div class="h-[1px] bg-zinc-900/50 w-full"></div>
+                        <div class="flex flex-wrap items-center gap-6">
+                            <div class="flex items-center gap-3">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-blue-400">
+                                    ${c.promoter || 'DIRETO'}
+                                </span>
+                                <span class="text-zinc-700">|</span>
+                                ${labelStatusHTML}
+                            </div>
+                            <div class="flex items-center gap-3 border-l border-zinc-800 pl-6">
+                                <span class="text-[8px] text-zinc-600 font-black uppercase tracking-[0.2em]">VALOR:</span>
+                                <span class="text-2xl font-black italic ${c.tipo_entrada === "ANIVERSARIANTE" ? 'text-green-500' : 'text-yellow-500'} leading-none">${valorExibicao}</span>
+                            </div>
+                            ${badgeDestaque}
+                        </div>
+                    </div>`;
+                cont.appendChild(div);
+            });
+        };
+
+        window.confirmarCheckin = async (id) => {
+            await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
+        };
+    </script>
+</body>
+</html>
