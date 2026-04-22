@@ -58,7 +58,7 @@
     </div>
 
     <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 text-white overflow-y-auto">
-        <div class="w-full max-w-sm bg-[#0d0d14] border border-purple-500/30 p-6 md:p-8 rounded-[2.5rem] shadow-2xl relative my-auto">
+        <div class="w-full max-w-sm bg-[#0d0d14] border border-purple-500/30 p-6 md:p-8 rounded-[2.5rem] shadow-2xl relative my-auto mt-10 mb-10">
             <h2 class="text-purple-400 font-black uppercase italic mb-1 tracking-tighter text-xl text-center">💎 CAMAROTES VIP</h2>
             <p class="text-zinc-500 text-[9px] font-bold uppercase mb-4 tracking-widest italic text-center">Escolha o seu espaço no mapa</p>
             
@@ -78,7 +78,7 @@
             </div>
 
             <div id="form-camarote" class="space-y-3 hidden">
-                <div class="bg-purple-900/20 p-4 rounded-2xl border border-purple-500/30 text-center mb-4">
+                <div class="bg-purple-900/20 p-4 rounded-2xl border border-purple-500/30 text-center mb-4 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
                     <p class="text-[10px] text-purple-300 font-black uppercase tracking-widest" id="cam-selecionado-nome">CAMAROTE X</p>
                     <p class="text-[9px] text-zinc-400 font-bold uppercase mt-1" id="cam-selecionado-obs">Benefícios</p>
                     <p class="text-xl text-white font-black mt-2" id="cam-selecionado-valor">R$ 0,00</p>
@@ -102,7 +102,8 @@
         const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
         let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
-        let unsubscribeCamarotes = null; let numCamaroteSelecionado = null;
+        let unsubscribeCamarotes = null; let numCamaroteSelecionado = null; 
+        let processoDePagamentoAberto = false; // Trava para não dar o erro de "Oops" falso
 
         const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
 
@@ -123,7 +124,6 @@
                     let temCamaroteAtivo = false;
                     for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`]) temCamaroteAtivo = true; }
 
-                    // 👇 LAYOUT HARMÔNICO AQUI 👇
                     let botoesAcao = `
                         <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95 mb-3">📝 NOME NA LISTA (PORTA)</button>
                         <div class="grid grid-cols-2 gap-3 mb-3">
@@ -146,6 +146,9 @@
             } catch (err) { console.error(err); }
         }
 
+        // ==========================================
+        // FLUXO: PISTA (Mantido)
+        // ==========================================
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id); eFluxoPix = isPix; tipoAtivo = null; 
             const titulo = document.getElementById('modal-titulo');
@@ -214,6 +217,8 @@
         window.iniciarFluxoCamarote = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
             numCamaroteSelecionado = null;
+            processoDePagamentoAberto = false; // Reseta a trava
+            
             document.getElementById('form-camarote').classList.add('hidden');
             document.getElementById('modalCamarote').classList.remove('hidden');
 
@@ -245,11 +250,11 @@
                         if(temPendente) { status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; }
                     }
 
-                    // Se alguém roubou a vaga ENQUANTO eu estava digitando, me avisa
-                    if (numCamaroteSelecionado === i && status !== 'livre') {
+                    // 👇 A MÁGICA DO ALERTA: Só avisa se VOCÊ não estiver processando o pagamento 👇
+                    if (numCamaroteSelecionado === i && status !== 'livre' && processoDePagamentoAberto === false) {
                         numCamaroteSelecionado = null;
                         document.getElementById('form-camarote').classList.add('hidden');
-                        alert(`Oops! O Camarote 0${i} acabou de ser reservado por outra pessoa. Escolha outro!`);
+                        alert(`Oops! Alguém acabou de reservar o Camarote 0${i} agora mesmo. Escolha outro!`);
                     }
 
                     const isSelecionado = (numCamaroteSelecionado === i) ? 'cam-selecionado' : '';
@@ -258,7 +263,8 @@
                         <div onclick="selecionarCamarote(${i}, '${status}')" class="border p-3 rounded-2xl flex flex-col items-center justify-center transition-all ${classCor} ${isSelecionado}">
                             <span class="text-[10px] font-black uppercase text-zinc-300 mb-1">Cam 0${i}</span>
                             <span class="text-xs font-black text-white">${formatarMoeda(preco)}</span>
-                            <span class="text-[8px] font-bold text-zinc-400 uppercase mt-1 text-center leading-tight truncate w-full">${icone} ${status}</span>
+                            <span class="text-[8px] font-bold text-purple-300 uppercase mt-1 mb-1 text-center truncate w-full">${obs}</span>
+                            <span class="text-[8px] font-bold text-zinc-400 uppercase mt-auto text-center leading-tight truncate w-full">${icone} ${status}</span>
                         </div>
                     `;
                 }
@@ -297,21 +303,32 @@
             const originalText = btn.innerText; 
             btn.innerText = "GARANTINDO... ⚡"; 
             btn.disabled = true;
+            
+            // Ativa a trava para o site não gritar "Oops" durante o seu pagamento
+            processoDePagamentoAberto = true; 
 
             try {
-                // Checa se alguém não roubou no milissegundo final
+                // FAXINA DE CAMAROTE: Se passou de 5 minutos, ele esmaga a reserva velha na hora.
                 const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome), where("tipo_entrada", "==", `CAMAROTE ${numCamaroteSelecionado}`)));
                 let alguemRoubou = false;
+                
                 checkFinal.forEach(docSnap => {
                     const ex = docSnap.data();
-                    if (ex.pago === true) alguemRoubou = true;
-                    if (ex.pago === false && ((new Date() - new Date(ex.data_reserva)) / 60000) < 5) alguemRoubou = true;
+                    if (ex.pago === true) {
+                        alguemRoubou = true;
+                    } else if (ex.pago === false) {
+                        if (((new Date() - new Date(ex.data_reserva)) / 60000) < 5) {
+                            alguemRoubou = true;
+                        } else {
+                            // EXCLUI FANTASMA VELHO NA HORA
+                            deleteDoc(docSnap.ref); 
+                        }
+                    }
                 });
+
                 if (alguemRoubou) throw new Error("Alguém acabou de garantir este Camarote segundos antes. Escolha outro!");
 
-                // 👇 AQUI ESTÁ A CORREÇÃO MÁGICA: Limpamos a variável ANTES de salvar no banco
                 const camaroteGarantido = numCamaroteSelecionado;
-                numCamaroteSelecionado = null; 
 
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${camaroteGarantido}`,
@@ -321,6 +338,7 @@
 
                 const valorLimpo = String(eventoAtivo[`v_cam${camaroteGarantido}`]).replace('R$', '').replace(/\s/g, '').replace(',', '.');
                 const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorLimpo, titulo: `CAMAROTE 0${camaroteGarantido} - ${eventoAtivo.nome}`, reservaId: docRef.id }) });
+                
                 if (!resp.ok) throw new Error("Erro na Função Pix.");
                 const data = await resp.json();
                 
@@ -333,6 +351,7 @@
                 }
             } catch (e) { 
                 alert("🔴 " + e.message); 
+                processoDePagamentoAberto = false; // Destrava se der erro
             } finally { 
                 btn.disabled = false; btn.innerText = originalText; 
             }
@@ -341,8 +360,10 @@
         window.fecharModalCamarote = () => { 
             if(unsubscribeCamarotes) unsubscribeCamarotes(); 
             numCamaroteSelecionado = null;
+            processoDePagamentoAberto = false;
             document.getElementById('modalCamarote').classList.add('hidden'); 
         };
+        
         window.mask = (i) => {
             let v = i.value.replace(/\D/g, "").substring(0, 11);
             if (v.length > 0) v = "(" + v;
@@ -350,6 +371,7 @@
             if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10);
             i.value = v;
         };
+        
         carregarPagina();
     </script>
 </body>
