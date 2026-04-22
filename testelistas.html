@@ -65,7 +65,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // A URL COM O "P" MAIÚSCULO PARA BATER COM O SEU GOOGLE CLOUD
         const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
         let eventosCache = []; let eventoAtivo = null; let tipoAtivo = 'CASAL'; let eFluxoPix = false;
@@ -131,7 +130,6 @@
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
             try {
-                // Tenta salvar no Banco de Dados
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
                     promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false,
@@ -142,7 +140,6 @@
                     const valorRaw = tipoAtivo === 'CASAL' ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro);
                     const valorLimpo = String(valorRaw).replace('R$', '').replace(/\s/g, '').replace(',', '.');
 
-                    // Tenta chamar a função do Pix
                     const resp = await fetch(URL_FUNCAO, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -156,7 +153,16 @@
 
                     const data = await resp.json();
                     if (data.url) { 
-                        window.location.href = data.url; 
+                        // 1. Abre o Mercado Pago numa aba separada
+                        window.open(data.url, '_blank'); 
+                        
+                        // 2. Avisa o cliente para olhar a outra aba
+                        alert("✅ Link gerado! A página de pagamento abriu em uma nova aba. Finalize o Pix por lá!");
+                        
+                        // 3. Fecha a telinha preta e volta o botão ao normal
+                        fecharModal();
+                        btn.disabled = false; 
+                        btn.innerText = originalText;
                     } else { 
                         throw new Error("A função não gerou o link de pagamento."); 
                     }
