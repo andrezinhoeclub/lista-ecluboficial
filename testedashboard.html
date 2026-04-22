@@ -16,7 +16,8 @@
         .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
-        .event-bubble { flex: 0 0 auto; width: 280px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
+        /* 👇 Bolha aumentada de 280px para 320px para caber os relatórios financeiros */
+        .event-bubble { flex: 0 0 auto; width: 320px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
         input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; }
         .mini-capa { width: 100%; height: 80px; object-fit: cover; border-bottom: 1px solid #1a1a1c; opacity: 0.6; }
@@ -216,17 +217,80 @@
             renderizarAniversarios();
         });
 
+        // 👇 A MÁGICA DOS RELATÓRIOS DO PIX ACONTECE AQUI 👇
         function renderizarRelatorios() {
             const container = document.getElementById('container-bolhas');
             if(!container) return;
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
             const ativos = dadosEventos.filter(e => e.ativo && e.data >= hojeLocal).sort((a,b) => a.data.localeCompare(b.data));
+            
             container.innerHTML = ativos.map(ev => {
-                const res = dadosReservas.filter(r => r.evento === ev.nome).length;
-                const chk = dadosReservas.filter(r => r.evento === ev.nome && r.entrou).length;
-                return `<div class="event-bubble p-6"><p class="text-[9px] font-black text-yellow-500 uppercase mb-1 italic">${ev.data.split('-').reverse().join('/')}</p><h4 class="text-sm font-black uppercase text-white mb-6 h-10 overflow-hidden leading-tight">${ev.nome}</h4><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Reservas</p><p class="text-lg font-black text-white">${res}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Entrou</p><p class="text-lg font-black text-green-500">${chk}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Conv.</p><p class="text-lg font-black text-blue-500">${res > 0 ? Math.round((chk/res)*100) : 0}%</p></div></div></div>`;
+                // Separa todas as reservas deste evento
+                const todasReservas = dadosReservas.filter(r => r.evento === ev.nome);
+                
+                // 1. Lógica do Pix (Apenas quem pagou)
+                const pixPagos = todasReservas.filter(r => r.metodo === 'pix_antecipado' && r.pago === true);
+                const pixCasal = pixPagos.filter(r => r.tipo_entrada === 'CASAL').length;
+                const pixSolteiro = pixPagos.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
+                
+                // 2. Lógica da Portaria (Quem só colocou o nome e vai pagar lá)
+                const listaPorta = todasReservas.length - pixPagos.length;
+                
+                // 3. Lógica de Check-in (Quem entrou de fato, independente de como pagou)
+                const chk = todasReservas.filter(r => r.entrou).length;
+
+                // 4. Lógica Financeira (Calcula os valores em R$)
+                const parseMoeda = (val) => Number(String(val || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                const valCasal = parseMoeda(ev.ant_casal || ev.valor_casal);
+                const valSolteiro = parseMoeda(ev.ant_solteiro || ev.valor_solteiro);
+                
+                const receitaCasal = pixCasal * valCasal;
+                const receitaSolteiro = pixSolteiro * valSolteiro;
+                const receitaTotal = receitaCasal + receitaSolteiro;
+                
+                const formataBRL = (v) => v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+
+                return `
+                <div class="event-bubble p-6 flex flex-col justify-between">
+                    <div>
+                        <p class="text-[9px] font-black text-yellow-500 uppercase mb-1 italic">${ev.data.split('-').reverse().join('/')}</p>
+                        <h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4>
+                    </div>
+                    
+                    <div class="bg-blue-900/20 border border-blue-500/20 p-4 rounded-2xl mb-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest">⚡ Receita Pix</span>
+                            <span class="text-sm font-black text-blue-400">${formataBRL(receitaTotal)}</span>
+                        </div>
+                        <div class="flex justify-between text-[10px] items-center mb-1.5">
+                            <div class="text-zinc-500 font-bold"><span class="text-white">${pixCasal}</span> Casais</div>
+                            <div class="font-bold text-zinc-300">${formataBRL(receitaCasal)}</div>
+                        </div>
+                        <div class="flex justify-between text-[10px] items-center">
+                            <div class="text-zinc-500 font-bold"><span class="text-white">${pixSolteiro}</span> Solteiros</div>
+                            <div class="font-bold text-zinc-300">${formataBRL(receitaSolteiro)}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between border-t border-white/5 pt-4">
+                        <div class="text-center">
+                            <p class="text-[7px] text-zinc-500 uppercase font-black">Lista Porta</p>
+                            <p class="text-lg font-black text-white">${listaPorta}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[7px] text-zinc-500 uppercase font-black">Pix Pagos</p>
+                            <p class="text-lg font-black text-blue-500">${pixPagos.length}</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins</p>
+                            <p class="text-lg font-black text-green-500">${chk}</p>
+                        </div>
+                    </div>
+                </div>`;
             }).join('');
+            
+            // Mantém a lógica do Ranking Intacta
             const stats = {};
             dadosReservas.forEach(r => {
                 const p = (r.promoter || 'DIRETO').toUpperCase();
