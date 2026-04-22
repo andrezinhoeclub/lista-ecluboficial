@@ -53,7 +53,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Configuração do Projeto SEM NÚMEROS
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
             authDomain: "teste-de-reserva.firebaseapp.com",
@@ -66,10 +65,11 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // URL da Função no Projeto SEM NÚMEROS (Confirmado na sua foto)
-        const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
+        // URL AJUSTADA PARA MINÚSCULAS CONFORME SUA FOTO NO CONSOLE
+        const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarpagamento';
 
         let eventosCache = []; let eventoAtivo = null; let tipoAtivo = 'CASAL'; let eFluxoPix = false;
+
         const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
 
         async function carregarPagina() {
@@ -114,10 +114,13 @@
 
         window.selecionarTipo = (tipo) => {
             tipoAtivo = tipo;
-            const bCasal = document.getElementById('btn-casal'); const bSolteiro = document.getElementById('btn-solteiro');
-            bCasal.classList.remove('active', 'btn-sel-pix'); bSolteiro.classList.remove('active', 'btn-sel-pix');
+            const bCasal = document.getElementById('btn-casal');
+            const bSolteiro = document.getElementById('btn-solteiro');
+            bCasal.classList.remove('active', 'btn-sel-pix');
+            bSolteiro.classList.remove('active', 'btn-sel-pix');
             const btnAlvo = tipo === 'CASAL' ? bCasal : bSolteiro;
-            btnAlvo.classList.add('active'); if (eFluxoPix) btnAlvo.classList.add('btn-sel-pix');
+            btnAlvo.classList.add('active');
+            if (eFluxoPix) btnAlvo.classList.add('btn-sel-pix');
             const btnFinal = document.getElementById('btn-final-acao');
             btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
             btnFinal.className = eFluxoPix ? "w-full btn-pix-main py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl" : "w-full btn-lista py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl";
@@ -130,26 +133,35 @@
             const btn = document.getElementById('btn-final-acao');
             const originalText = btn.innerText;
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
+
             try {
+                // ETAPA 1: Salva no Banco de Dados
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
                     promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false,
                     metodo: eFluxoPix ? 'pix_antecipado' : 'portaria'
-                });
+                }).catch(err => { throw new Error("Erro no Banco de Dados: Verifique se as Regras do Firestore foram publicadas."); });
+
                 if (eFluxoPix) {
                     const valorRaw = tipoAtivo === 'CASAL' ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro);
                     const valorLimpo = String(valorRaw).replace('R$', '').replace(/\s/g, '').replace(',', '.');
-                    const resp = await fetch(URL_FUNCAO, {
+
+                    // ETAPA 2: Chama o Pix
+                    const response = await fetch(URL_FUNCAO, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ valor: valorLimpo, titulo: `E-CLUB: ${eventoAtivo.nome}`, reservaId: docRef.id })
-                    });
-                    const data = await resp.json();
-                    if (data.url) { window.location.href = data.url; } else { throw new Error("Link não gerado"); }
-                } else { alert("Confirmado na lista! ✨"); location.reload(); }
+                    }).catch(err => { throw new Error("Erro na Função Pix: Verifique se a URL está correta e a função está pública."); });
+
+                    const data = await response.json();
+                    if (data.url) { window.location.href = data.url; } else { throw new Error("A função não gerou o link de pagamento."); }
+                } else {
+                    alert("Confirmado na lista! ✨"); 
+                    location.reload();
+                }
             } catch (e) { 
                 console.error(e);
-                alert("Erro ao processar! Verifique se os eventos estão cadastrados no projeto correto."); 
+                alert("🔴 ALERTA: " + e.message); 
                 btn.disabled = false; btn.innerText = originalText; 
             }
         };
