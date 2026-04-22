@@ -50,8 +50,9 @@
     </div>
 
     <script type="module">
+        // Adicionamos o "deleteDoc" aqui na importação!
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -100,7 +101,7 @@
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
             eFluxoPix = isPix;
-            tipoAtivo = null; // Zera a seleção ao abrir
+            tipoAtivo = null; 
             
             const titulo = document.getElementById('modal-titulo');
             titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : "🔥 NOME NA LISTA";
@@ -109,16 +110,13 @@
             document.getElementById('v-modal-casal').innerText = formatarMoeda(isPix ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal);
             document.getElementById('v-modal-solteiro').innerText = formatarMoeda(isPix ? (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro);
             
-            // Tira o "brilho" dos botões
             document.getElementById('btn-casal').classList.remove('active', 'btn-sel-pix');
             document.getElementById('btn-solteiro').classList.remove('active', 'btn-sel-pix');
             
-            // Pega os campos e o botão final
             const iNome = document.getElementById('nome-cliente');
             const iTel = document.getElementById('tel-cliente');
             const btnFinal = document.getElementById('btn-final-acao');
             
-            // Zera, bloqueia e apaga os campos
             iNome.value = '';
             iTel.value = '';
             iNome.disabled = true;
@@ -126,7 +124,6 @@
             iNome.classList.add('opacity-30', 'cursor-not-allowed');
             iTel.classList.add('opacity-30', 'cursor-not-allowed');
             
-            // Configura e bloqueia o botão final
             btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
             btnFinal.className = (eFluxoPix ? "w-full btn-pix-main" : "w-full btn-lista") + " py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl opacity-30 cursor-not-allowed transition-all";
             btnFinal.disabled = true;
@@ -145,7 +142,6 @@
             btnAlvo.classList.add('active'); 
             if (eFluxoPix) btnAlvo.classList.add('btn-sel-pix');
             
-            // Libera e acende os campos
             const iNome = document.getElementById('nome-cliente');
             const iTel = document.getElementById('tel-cliente');
             const btnFinal = document.getElementById('btn-final-acao');
@@ -155,7 +151,6 @@
             iNome.classList.remove('opacity-30', 'cursor-not-allowed');
             iTel.classList.remove('opacity-30', 'cursor-not-allowed');
             
-            // Libera o botão final
             btnFinal.disabled = false;
             btnFinal.className = (eFluxoPix ? "w-full btn-pix-main" : "w-full btn-lista") + " py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95";
         };
@@ -172,7 +167,7 @@
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
             try {
-                // Trava de Segurança Contra Duplicidade
+                // 👇 FAXINA DIRETO NO SITE 👇
                 const qDuplicidade = query(
                     collection(db, "lista_eventos"), 
                     where("tel", "==", t), 
@@ -181,17 +176,32 @@
                 const snapDuplicidade = await getDocs(qDuplicidade);
 
                 if (!snapDuplicidade.empty) {
-                    const existente = snapDuplicidade.docs[0].data();
+                    const existenteDoc = snapDuplicidade.docs[0];
+                    const existente = existenteDoc.data();
+                    
                     if (existente.pago === true) {
                         throw new Error("Você já possui uma entrada confirmada (PAGA) para este evento!");
                     }
+                    
                     if (existente.metodo === 'pix_antecipado') {
-                        throw new Error("Você já tem um Pix gerado para este evento. Se não pagou, aguarde 5 minutos para o sistema liberar seu número novamente.");
-                    }
-                    if (existente.metodo === 'portaria') {
+                        // Calcula o tempo do Pix antigo
+                        const agora = new Date();
+                        const tempoReserva = new Date(existente.data_reserva);
+                        const diffMinutos = (agora - tempoReserva) / (1000 * 60);
+
+                        if (diffMinutos < 5) {
+                            // Menos de 5 min: Bloqueia e mostra o tempo restante exato
+                            const tempoRestante = Math.ceil(5 - diffMinutos);
+                            throw new Error(`🔴 Você já tem um Pix gerado! Aguarde ${tempoRestante} minuto(s) para o sistema liberar seu número novamente.`);
+                        } else {
+                            // Mais de 5 min: O site deleta a reserva fantasma e libera a passagem!
+                            await deleteDoc(existenteDoc.ref);
+                        }
+                    } else if (existente.metodo === 'portaria') {
                         throw new Error("Seu nome já está na lista para este evento!");
                     }
                 }
+                // 👆 FIM DA FAXINA 👆
 
                 // Salva no banco
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
@@ -200,7 +210,7 @@
                     metodo: eFluxoPix ? 'pix_antecipado' : 'portaria'
                 });
 
-                // Se for Pix, chama a função
+                // Se for Pix, chama a função do Mercado Pago
                 if (eFluxoPix) {
                     const valorRaw = tipoAtivo === 'CASAL' ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro);
                     const valorLimpo = String(valorRaw).replace('R$', '').replace(/\s/g, '').replace(',', '.');
@@ -231,7 +241,7 @@
                 }
             } catch (e) { 
                 console.error(e);
-                alert("🔴 " + e.message); 
+                alert(e.message); // Mostra o alerta limpo pro usuário
                 btn.disabled = false; btn.innerText = originalText; 
             }
         };
