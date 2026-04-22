@@ -20,7 +20,6 @@
         input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; }
         .mini-capa { width: 100%; height: 80px; object-fit: cover; border-bottom: 1px solid #1a1a1c; opacity: 0.6; }
-        
         .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #a855f7; cursor: pointer; }
     </style>
 </head>
@@ -97,7 +96,10 @@
                             </div>
                     </div>
 
-                    <input type="url" id="url_banner" placeholder="URL DA CAPA (IMAGEM)" class="md:col-span-4 p-4 rounded-2xl font-bold">
+                    <div class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                        <input type="url" id="url_banner" placeholder="URL DA CAPA (IMAGEM DO EVENTO)" class="p-4 rounded-2xl font-bold border border-zinc-800">
+                        <input type="url" id="url_mapa" placeholder="URL DO MAPA DOS CAMAROTES" class="p-4 rounded-2xl font-bold text-purple-400 border border-purple-900/30 bg-purple-900/5">
+                    </div>
                     
                     <button type="submit" id="btnSalvarEvento" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
                 </form>
@@ -181,7 +183,6 @@
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = [];
         let modoTesteAtivo = false;
 
-        // INJETA OS 8 INPUTS DE CAMAROTE NA TELA DE CONFIGURAÇÃO DE EVENTO (AGORA COM OBSERVAÇÃO)
         const gridCamarotes = document.getElementById('grid-camarotes-inputs');
         for(let i=1; i<=8; i++) {
             gridCamarotes.innerHTML += `
@@ -359,9 +360,12 @@
             document.getElementById('desc_solteiro').value = ev.desc_solteiro || "";
             document.getElementById('ant_casal').value = ev.ant_casal || "";
             document.getElementById('ant_solteiro').value = ev.ant_solteiro || "";
-            document.getElementById('url_banner').value = ev.imagem || "";
             
-            // Carrega os dados dos 8 camarotes (Ativo + Preço + Observação)
+            // Carrega os Links
+            document.getElementById('url_banner').value = ev.imagem || "";
+            document.getElementById('url_mapa').value = ev.url_mapa || "";
+            
+            // Carrega os dados dos 8 camarotes
             for(let i=1; i<=8; i++) {
                 document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false;
                 document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || "";
@@ -387,10 +391,10 @@
                     ant_casal: document.getElementById('ant_casal').value,
                     ant_solteiro: document.getElementById('ant_solteiro').value,
                     imagem: document.getElementById('url_banner').value, 
+                    url_mapa: document.getElementById('url_mapa').value, 
                     ativo: true 
                 };
 
-                // Puxa os dados dos 8 camarotes (Ativo + Preço + Observação)
                 for(let i=1; i<=8; i++) {
                     d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked;
                     d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value;
@@ -399,7 +403,6 @@
 
                 if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
                 
-                // Reseta tudo
                 e.target.reset(); document.getElementById('edit_evento_id').value = "";
                 for(let i=1; i<=8; i++) {
                     document.getElementById(`cam${i}_ativo`).checked = false;
