@@ -49,7 +49,6 @@
 
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative">
-            
             <h2 id="modal-titulo" class="font-black uppercase italic mb-1 tracking-tighter text-xl text-center">🔥 NOME NA LISTA</h2>
             <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic text-center">Preencha os dados abaixo</p>
 
@@ -67,7 +66,6 @@
             <div class="space-y-3">
                 <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
                 <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
-                
                 <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95">Confirmar Presença</button>
             </div>
 
@@ -79,12 +77,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // CONFIGURAÇÃO COM O ID CORRETO DO TEU PROJETO
+        // CONFIGURAÇÃO AJUSTADA PARA O PROJETO SEM NÚMEROS
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
-            authDomain: "teste-de-reserva-494019.firebaseapp.com",
-            projectId: "teste-de-reserva-494019",
-            storageBucket: "teste-de-reserva-494019.firebasestorage.app",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.appspot.com",
             messagingSenderId: "163395694876",
             appId: "1:163395694876:web:8b1116a0483af951548ad9"
         };
@@ -92,8 +90,8 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // URL DA FUNÇÃO COM O ID CORRETO
-        const URL_FUNCAO = 'https://us-central1-teste-de-reserva-494019.cloudfunctions.net/gerarPagamento';
+        // URL DA FUNÇÃO AJUSTADA
+        const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
         let eventosCache = []; let eventoAtivo = null; let tipoAtivo = 'CASAL'; let eFluxoPix = false;
 
@@ -171,7 +169,6 @@
             btn.innerText = "PROCESSANDO..."; btn.disabled = true;
 
             try {
-                // Salva a reserva no Firestore
                 const docRef = await addDoc(collection(db, "lista_eventos"), {
                     nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo,
                     promoter: "site_direto", data_reserva: new Date().toISOString(), entrou: false, pago: false,
@@ -204,7 +201,7 @@
                 }
             } catch (e) { 
                 console.error(e);
-                alert("Erro ao processar! Certifique-se de que a Função está pública no Cloud Run."); 
+                alert("Erro ao processar! Verifique se a função está no projeto correto."); 
                 btn.disabled = false; btn.innerText = originalText; 
             }
         };
