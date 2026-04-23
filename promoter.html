@@ -67,17 +67,21 @@
     <div id="modalAniv" class="fixed inset-0 bg-black/95 z-[10000] hidden flex items-center justify-center p-6 text-white">
         <div class="glass max-w-sm w-full p-8 rounded-[2.5rem] border-purple-500/30 border text-center">
             <h2 class="text-xl font-black text-purple-400 uppercase italic mb-6">NOVA LISTA VIP</h2>
-            <select id="selEvento" onchange="carregarCamarotesAniv()" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white text-xs font-bold uppercase mb-3 outline-none"></select>
             
-            <div id="areaCamaroteAniv" class="hidden w-full mb-3">
-                <select id="selCamaroteAniv" class="w-full bg-blue-900/20 border border-blue-500/30 text-blue-400 p-4 rounded-xl font-bold uppercase text-[10px] outline-none">
-                    <option value="">+ ADD CAMAROTE CORTESIA (OPCIONAL)</option>
+            <select id="selEvento" onchange="carregarCamarotesAniv()" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white text-xs font-bold uppercase mb-3 outline-none"></select>
+            <input type="text" id="nomeAniv" placeholder="NOME DO ANIVERSARIANTE / VIP" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white font-black uppercase text-xs mb-3 outline-none">
+            <input type="tel" id="telAniv" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white font-bold text-xs mb-4 outline-none">
+            
+            <div id="areaCamaroteAniv" class="hidden w-full mb-6 border-t border-white/10 pt-4 text-left">
+                <label class="flex items-center gap-2 cursor-pointer mb-3 select-none">
+                    <input type="checkbox" id="checkAddCamarote" onchange="toggleCamaroteSelect()" class="w-4 h-4 accent-purple-500 cursor-pointer">
+                    <span class="text-[9px] font-black text-zinc-400 uppercase tracking-widest">Adicionar Camarote Cortesia?</span>
+                </label>
+                <select id="selCamaroteAniv" class="hidden w-full bg-[#0a0a0f] border border-blue-500/30 text-blue-400 p-4 rounded-xl font-bold uppercase text-[10px] outline-none">
+                    <option value="">SELECIONE O CAMAROTE</option>
                 </select>
             </div>
 
-            <input type="text" id="nomeAniv" placeholder="NOME DO ANIVERSARIANTE / VIP" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white font-black uppercase text-xs mb-3 outline-none">
-            <input type="tel" id="telAniv" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full bg-black border border-zinc-800 p-4 rounded-xl text-white font-bold text-xs mb-6 outline-none">
-            
             <button onclick="criarLinkAniv()" id="btnGerarVip" class="w-full purple-gradient font-black py-4 rounded-xl uppercase text-xs shadow-xl active:scale-95 transition-all">GERAR LINK E GARANTIR VIP ✨</button>
             <button onclick="fecharModalAniv()" class="w-full text-zinc-600 font-black py-3 uppercase text-[9px] mt-2">FECHAR</button>
         </div>
@@ -385,31 +389,50 @@
             }
         };
 
-        // --- NOVA LÓGICA DE VIP + CAMAROTE CORTESIA ---
+        // --- NOVA LÓGICA DE VIP + CAMAROTE CORTESIA (OPCIONAL) ---
         window.abrirModalAniv = () => { 
             const sel = document.getElementById('selEvento'); 
             if (eventos.length === 0) return alert("Nenhum evento ativo!"); 
             sel.innerHTML = '<option value="">SELECIONE O EVENTO</option>' + eventos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join(''); 
             
+            // Reseta tudo ao abrir
             document.getElementById('areaCamaroteAniv').classList.add('hidden');
+            document.getElementById('selCamaroteAniv').classList.add('hidden');
+            document.getElementById('checkAddCamarote').checked = false;
             document.getElementById('selCamaroteAniv').value = '';
             
             document.getElementById('modalAniv').classList.remove('hidden'); 
         };
 
+        window.toggleCamaroteSelect = () => {
+            const isChecked = document.getElementById('checkAddCamarote').checked;
+            const sel = document.getElementById('selCamaroteAniv');
+            if (isChecked) {
+                sel.classList.remove('hidden');
+            } else {
+                sel.classList.add('hidden');
+                sel.value = ""; 
+            }
+        };
+
         window.carregarCamarotesAniv = () => {
             const nomeEv = document.getElementById('selEvento').value;
             const selCam = document.getElementById('selCamaroteAniv');
+            const areaCam = document.getElementById('areaCamaroteAniv');
+            const checkCam = document.getElementById('checkAddCamarote');
             
             if (!nomeEv) {
-                document.getElementById('areaCamaroteAniv').classList.add('hidden');
+                areaCam.classList.add('hidden');
+                checkCam.checked = false;
+                selCam.classList.add('hidden');
+                selCam.value = "";
                 return;
             }
             
             const ev = eventos.find(e => e.nome === nomeEv);
             const resEvento = reservas.filter(r => r.evento === nomeEv);
 
-            let options = '<option value="">+ ADD CAMAROTE CORTESIA (OPCIONAL)</option>';
+            let options = '<option value="">SELECIONE O CAMAROTE</option>';
             let hasLivre = false;
 
             for(let i=1; i<=8; i++) {
@@ -427,28 +450,41 @@
             selCam.innerHTML = options;
             
             if (hasLivre) {
-                document.getElementById('areaCamaroteAniv').classList.remove('hidden');
+                areaCam.classList.remove('hidden');
             } else {
-                document.getElementById('areaCamaroteAniv').classList.add('hidden');
+                areaCam.classList.add('hidden');
+                checkCam.checked = false;
+                selCam.classList.add('hidden');
+                selCam.value = "";
             }
         };
 
-        window.fecharModalAniv = () => document.getElementById('modalAniv').classList.add('hidden');
+        window.fecharModalAniv = () => {
+            document.getElementById('modalAniv').classList.add('hidden');
+            document.getElementById('areaCamaroteAniv').classList.add('hidden');
+            document.getElementById('selCamaroteAniv').classList.add('hidden');
+            document.getElementById('checkAddCamarote').checked = false;
+            document.getElementById('selEvento').value = ""; 
+            document.getElementById('nomeAniv').value = ""; 
+            document.getElementById('telAniv').value = ""; 
+            document.getElementById('selCamaroteAniv').value = "";
+        };
         
         window.criarLinkAniv = async () => { 
             const f = document.getElementById('selEvento').value; 
             const n = document.getElementById('nomeAniv').value.trim().toUpperCase(); 
             const t = document.getElementById('telAniv').value.trim(); 
-            const camSelecionado = document.getElementById('selCamaroteAniv').value;
+            const querCamarote = document.getElementById('checkAddCamarote').checked;
+            const camSelecionado = querCamarote ? document.getElementById('selCamaroteAniv').value : "";
             const btn = document.getElementById('btnGerarVip'); 
             
             if (!f) return alert("Selecione o evento!");
             if (!n || t.length < 14) return alert("Digite o nome e telefone!"); 
+            if (querCamarote && !camSelecionado) return alert("Você marcou a opção de camarote, mas não selecionou nenhum na lista!");
             
             btn.innerText = "GERANDO..."; btn.disabled = true; 
             
             try { 
-                // Trava dupla pra não dar camarote se alguém comprou nos últimos segundos
                 if (camSelecionado) {
                     const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", f), where("tipo_entrada", "==", `CAMAROTE ${camSelecionado}`)));
                     let ocupado = false;
@@ -460,20 +496,16 @@
                     if (ocupado) throw new Error("Ops! O Camarote selecionado acabou de ser reservado. Tente outro.");
                 }
 
-                // 1. Cria o link da festa
                 await addDoc(collection(db, "links_aniversario"), { promoter: logado, aniversariante: n, festa: f, criado: new Date().toISOString() }); 
-                
-                // 2. Garante a entrada VIP padrão do aniversariante
                 await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, evento: f, tipo_entrada: "VIP_DONO", promoter: logado, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'portaria', aniversariante: n }); 
                 
-                // 3. Adiciona o Camarote Cortesia se foi selecionado
                 if (camSelecionado) {
                     await addDoc(collection(db, "lista_eventos"), {
-                        nome: n + " (ANIV)", // Identificação para a portaria
+                        nome: n + " (ANIV)",
                         tel: t,
                         evento: f,
                         tipo_entrada: `CAMAROTE ${camSelecionado}`,
-                        pagamento_porta: "ISENTO", // Avisa a portaria que não cobra na porta
+                        pagamento_porta: "ISENTO", 
                         promoter: logado,
                         cortesia: true,
                         data_reserva: new Date().toISOString(),
@@ -485,12 +517,6 @@
                 }
 
                 fecharModalAniv(); 
-                document.getElementById('selEvento').value = ""; 
-                document.getElementById('nomeAniv').value = ""; 
-                document.getElementById('telAniv').value = ""; 
-                document.getElementById('selCamaroteAniv').value = "";
-                document.getElementById('areaCamaroteAniv').classList.add('hidden');
-                
                 alert(camSelecionado ? "Lista VIP e Camarote Cortesia criados com sucesso!" : "Lista VIP criada com sucesso!"); 
             } catch (e) { 
                 alert("Erro: " + e.message); 
@@ -499,7 +525,6 @@
             } 
         };
 
-        // DEMAIS FUNÇÕES
         window.abrirLinkGeral = () => { window.open(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`, '_blank'); };
         window.copiarLinkGeral = () => { navigator.clipboard.writeText(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`).then(() => alert("Copiado!")); };
         window.copiarLinkAniv = (id, n) => { const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?id=${id}`; navigator.clipboard.writeText(`*Convite VIP: Lista de ${n}* 🍾\n\nGaranta seu nome na lista pelo link abaixo:\n${link}`).then(() => alert("Copiado!")); };
