@@ -57,8 +57,8 @@
         </footer>
     </div>
 
-    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
-        <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative">
+    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
+        <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
             <h2 id="modal-titulo" class="font-black uppercase italic mb-1 tracking-tighter text-xl text-center">🔥 NOME NA LISTA</h2>
             <p id="modal-subtitulo" class="text-zinc-500 text-[9px] font-bold uppercase mb-6 tracking-widest italic text-center">Selecione uma opção abaixo</p>
             <div class="grid grid-cols-2 gap-3 mb-6">
@@ -73,7 +73,13 @@
             </div>
             <div class="space-y-3">
                 <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
-                <input type="tel" id="tel-cliente" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                <input type="tel" id="tel-cliente" oninput="maskTel(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                
+                <div id="campos-pix" class="hidden space-y-3">
+                    <input type="email" id="email-cliente" placeholder="SEU E-MAIL" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white lowercase">
+                    <input type="tel" id="cpf-cliente" oninput="maskCPF(this)" placeholder="SEU CPF" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                </div>
+
                 <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all">Confirmar Presença</button>
             </div>
             <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic">Voltar</button>
@@ -103,10 +109,40 @@
                     <p class="text-xl text-white font-black mt-2" id="cam-selecionado-valor">R$ 0,00</p>
                 </div>
                 <input type="text" id="nome-camarote" placeholder="NOME DO TITULAR" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
-                <input type="tel" id="tel-camarote" oninput="mask(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                <input type="tel" id="tel-camarote" oninput="maskTel(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                
+                <input type="email" id="email-camarote" placeholder="SEU E-MAIL" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white lowercase">
+                <input type="tel" id="cpf-camarote" oninput="maskCPF(this)" placeholder="SEU CPF" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+
                 <button onclick="processarPixCamarote()" id="btn-final-camarote" class="w-full btn-camarote py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all active:scale-95">Garantir Camarote ⚡</button>
             </div>
             <button onclick="fecharModalCamarote()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic text-center">Voltar para Eventos</button>
+        </div>
+    </div>
+
+    <div id="modalQrCode" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 text-white">
+        <div class="w-full max-w-sm bg-[#0d0d14] border border-[#00f5d4]/30 p-8 rounded-[2.5rem] shadow-[0_0_30px_rgba(0,245,212,0.1)] text-center relative">
+            <div class="w-16 h-16 bg-[#00f5d4]/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-[#00f5d4]/20">
+                <span class="text-3xl">⚡</span>
+            </div>
+            <h2 class="text-[#00f5d4] font-black uppercase italic mb-1 tracking-tighter text-2xl">PIX GERADO</h2>
+            <p class="text-zinc-400 text-[10px] font-bold uppercase mb-6 tracking-widest italic">Escaneie ou copie a chave abaixo</p>
+            
+            <div class="bg-white p-4 rounded-3xl mx-auto inline-block mb-6 shadow-xl">
+                <img id="img-qrcode" src="" class="w-48 h-48 object-contain">
+            </div>
+
+            <div class="w-full relative mb-6">
+                <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mb-2">Chave Copia e Cola:</p>
+                <div class="flex gap-2">
+                    <input type="text" id="chave-copia-cola" readonly class="w-full bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-zinc-400 text-[9px] font-mono outline-none">
+                    <button onclick="copiarChavePix()" class="bg-[#00f5d4] text-black px-4 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-transform shadow-lg hover:bg-[#00d1b2]">Copiar</button>
+                </div>
+            </div>
+
+            <p class="text-[9px] text-yellow-500 font-black uppercase italic mb-6">⏳ Aguardando pagamento... A página pode ser fechada, seu ingresso será confirmado na portaria.</p>
+
+            <button onclick="fecharModalQrCode()" class="w-full border border-zinc-800 text-zinc-400 py-4 rounded-2xl uppercase text-[10px] font-black hover:bg-zinc-900 transition-colors">Voltar aos Eventos</button>
         </div>
     </div>
 
@@ -117,6 +153,8 @@
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        
+        // A URL DEVE SER A MESMA QUE VOCÊ SEMPRE USOU
         const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -146,15 +184,8 @@
                         cabecalho.innerHTML = `🎂 ANIVERSÁRIO DE<br>${globalAniversariante}`;
                         cabecalho.classList.remove('hidden');
                     } else {
-                        // 👇 RESTAURADO: TRAVA DE LINK EXPIRADO AQUI 👇
-                        document.getElementById('listaEventos').innerHTML = `
-                            <div class="glass p-8 text-center rounded-[2rem] border border-red-500/20 mt-6 shadow-2xl">
-                                <span class="text-5xl block mb-4">⚠️</span>
-                                <h3 class="text-xl font-black uppercase italic text-red-500 mb-2 tracking-tighter">LINK EXPIRADO</h3>
-                                <p class="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-6">Esta lista VIP foi encerrada ou removida.</p>
-                                <button onclick="window.location.href=window.location.pathname" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all">Ver Eventos Oficiais</button>
-                            </div>`;
-                        return; // Para o código aqui e não carrega os botões de evento
+                        document.getElementById('listaEventos').innerHTML = `<div class="glass p-8 text-center rounded-[2rem] border border-red-500/20 mt-6 shadow-2xl"><span class="text-5xl block mb-4">⚠️</span><h3 class="text-xl font-black uppercase italic text-red-500 mb-2 tracking-tighter">LINK EXPIRADO</h3><p class="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-6">Esta lista VIP foi encerrada ou removida.</p><button onclick="window.location.href=window.location.pathname" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all">Ver Eventos Oficiais</button></div>`;
+                        return;
                     }
                 }
 
@@ -163,10 +194,7 @@
                 const hojeStr = agora.toLocaleDateString('en-CA'); 
                 
                 eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= hojeStr).sort((a, b) => a.data.localeCompare(b.data));
-                
-                if (eventoFixo) {
-                    eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
-                }
+                if (eventoFixo) eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
 
                 const container = document.getElementById('listaEventos');
                 if (eventosCache.length === 0) { container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic uppercase">Nenhum evento disponível</div>`; return; }
@@ -216,9 +244,11 @@
             if (isPix) {
                 const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
                 if (agora > limitePix) return alert("⚠️ As vendas antecipadas via PIX encerraram às 21:59h de hoje!");
+                document.getElementById('campos-pix').classList.remove('hidden'); // Mostra CPF e E-mail
             } else {
                 const limiteLista = new Date(ano, mes - 1, dia, 23, 59, 59);
                 if (agora > limiteLista) return alert("⚠️ A lista para este evento encerrou à meia-noite!");
+                document.getElementById('campos-pix').classList.add('hidden'); // Esconde CPF e E-mail
             }
 
             eFluxoPix = isPix; tipoAtivo = null; 
@@ -238,7 +268,10 @@
             document.getElementById('btn-casal').classList.remove('active', 'btn-sel-pix'); document.getElementById('btn-solteiro').classList.remove('active', 'btn-sel-pix');
             
             const iNome = document.getElementById('nome-cliente'); const iTel = document.getElementById('tel-cliente'); const btnFinal = document.getElementById('btn-final-acao');
-            iNome.value = ''; iTel.value = ''; iNome.disabled = true; iTel.disabled = true;
+            iNome.value = ''; iTel.value = ''; 
+            document.getElementById('email-cliente').value = ''; document.getElementById('cpf-cliente').value = '';
+            
+            iNome.disabled = true; iTel.disabled = true;
             iNome.classList.add('opacity-30', 'cursor-not-allowed'); iTel.classList.add('opacity-30', 'cursor-not-allowed');
             btnFinal.innerText = eFluxoPix ? "Pagar com PIX ⚡" : "Confirmar Presença ✨";
             btnFinal.className = (eFluxoPix ? "w-full btn-pix-main" : "w-full btn-lista") + " py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl opacity-30 cursor-not-allowed transition-all";
@@ -260,8 +293,18 @@
 
         window.processarFinalizacao = async () => {
             if (!tipoAtivo) return alert("Selecione se é Casal ou Solteiro!");
-            const n = document.getElementById('nome-cliente').value.trim().toUpperCase(); const t = document.getElementById('tel-cliente').value.trim();
+            const n = document.getElementById('nome-cliente').value.trim().toUpperCase(); 
+            const t = document.getElementById('tel-cliente').value.trim();
+            const em = document.getElementById('email-cliente').value.trim();
+            const cpf = document.getElementById('cpf-cliente').value.trim();
+
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
+            
+            if (eFluxoPix) {
+                if (!em || !em.includes('@')) return alert("Digite um e-mail válido!");
+                if (cpf.length < 14) return alert("Digite um CPF válido!");
+            }
+
             const btn = document.getElementById('btn-final-acao'); const originalText = btn.innerText; btn.innerText = "PROCESSANDO..."; btn.disabled = true;
             
             try {
@@ -291,23 +334,21 @@
                 }
 
                 const docRef = await addDoc(collection(db, "lista_eventos"), { 
-                    nome: n, 
-                    tel: t, 
-                    evento: eventoAtivo.nome, 
-                    tipo_entrada: tipoAtivo, 
-                    promoter: globalPromoter, 
-                    aniversariante: globalAniversariante, 
-                    data_reserva: new Date().toISOString(), 
-                    entrou: false, 
-                    pago: false, 
-                    metodo: eFluxoPix ? 'pix_antecipado' : 'portaria',
-                    valor_pago: valorParaSalvar
+                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo, promoter: globalPromoter, aniversariante: globalAniversariante, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: eFluxoPix ? 'pix_antecipado' : 'portaria', valor_pago: valorParaSalvar
                 });
 
                 if (eFluxoPix) {
                     const valorLimpo = String(valorParaSalvar).replace('R$', '').replace(/\s/g, '').replace(',', '.');
-                    const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorLimpo, titulo: `E-CLUB PISTA: ${eventoAtivo.nome}`, reservaId: docRef.id }) });
-                    const data = await resp.json(); if (data.url) { window.open(data.url, '_blank'); alert("Finalize o Pix na nova aba!"); fecharModal(); } else throw new Error("Erro ao gerar Pix.");
+                    const resp = await fetch(URL_FUNCAO, { 
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ valor: valorLimpo, titulo: `E-CLUB PISTA: ${eventoAtivo.nome}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) 
+                    });
+                    const data = await resp.json(); 
+                    
+                    if (data.sucesso) { 
+                        abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola);
+                        fecharModal(); 
+                    } else { throw new Error("Erro ao gerar Pix direto."); }
                 } else { alert("Confirmado na lista! ✨"); location.reload(); }
             } catch (e) { alert("🔴 " + e.message); } finally { btn.disabled = false; btn.innerText = originalText; }
         };
@@ -320,7 +361,6 @@
             const [ano, mes, dia] = eventoAtivo.data.split('-');
             const agora = new Date();
             const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
-            
             if (agora > limitePix) return alert("⚠️ As vendas de Camarote via PIX encerraram às 21:59h de hoje!");
 
             const imgMapa = document.getElementById('img-mapa-camarote');
@@ -343,19 +383,12 @@
                     const preco = eventoAtivo[`v_cam${i}`] || 'Consulte'; const obs = eventoAtivo[`obs_cam${i}`] || 'Espaço Exclusivo';
                     let status = 'livre'; let classCor = 'cam-livre'; let icone = '✅';
                     const resCam = reservas.filter(r => r.tipo_entrada === `CAMAROTE ${i}`);
-                    
-                    if (resCam.some(r => r.pago === true || r.cortesia === true)) { 
-                        status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; 
-                    } else {
+                    if (resCam.some(r => r.pago === true || r.cortesia === true)) { status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; } else {
                         const pendentes = resCam.filter(r => r.pago === false && !r.cortesia);
                         const temPendente = pendentes.some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 5);
                         if(temPendente) { status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; }
                     }
-                    
-                    if (numCamaroteSelecionado === i && status !== 'livre' && processoDePagamentoAberto === false) {
-                        numCamaroteSelecionado = null; document.getElementById('form-camarote').classList.add('hidden');
-                        alert(`Oops! Alguém reservou o Camarote 0${i}. Escolha outro!`);
-                    }
+                    if (numCamaroteSelecionado === i && status !== 'livre' && processoDePagamentoAberto === false) { numCamaroteSelecionado = null; document.getElementById('form-camarote').classList.add('hidden'); alert(`Oops! Alguém reservou o Camarote 0${i}. Escolha outro!`); }
                     const isSelecionado = (numCamaroteSelecionado === i) ? 'cam-selecionado' : '';
                     grid.innerHTML += `<div onclick="selecionarCamarote(${i}, '${status}')" class="border p-3 rounded-2xl flex flex-col items-center justify-center transition-all ${classCor} ${isSelecionado}"><span class="text-[10px] font-black uppercase text-zinc-300 mb-1">Cam 0${i}</span><span class="text-xs font-black text-white">${formatarMoeda(preco)}</span><span class="text-[8px] font-bold text-purple-300 uppercase mt-1 mb-1 text-center truncate w-full">${obs}</span><span class="text-[8px] font-bold text-zinc-400 uppercase mt-auto text-center leading-tight truncate w-full">${icone} ${status}</span></div>`;
                 }
@@ -366,7 +399,8 @@
             if (status !== 'livre') return; numCamaroteSelecionado = num;
             const eventTrigger = new Event('refreshGrid'); document.dispatchEvent(eventTrigger);
             document.getElementById('cam-selecionado-nome').innerText = `CAMAROTE 0${num}`; document.getElementById('cam-selecionado-obs').innerText = eventoAtivo[`obs_cam${num}`] || 'Espaço Exclusivo'; document.getElementById('cam-selecionado-valor').innerText = formatarMoeda(eventoAtivo[`v_cam${num}`]);
-            document.getElementById('nome-camarote').value = ''; document.getElementById('tel-camarote').value = ''; document.getElementById('form-camarote').classList.remove('hidden'); document.getElementById('form-camarote').scrollIntoView({ behavior: 'smooth', block: 'end' });
+            document.getElementById('nome-camarote').value = ''; document.getElementById('tel-camarote').value = ''; document.getElementById('email-camarote').value = ''; document.getElementById('cpf-camarote').value = '';
+            document.getElementById('form-camarote').classList.remove('hidden'); document.getElementById('form-camarote').scrollIntoView({ behavior: 'smooth', block: 'end' });
         };
         
         document.addEventListener('refreshGrid', () => {
@@ -376,8 +410,15 @@
         
         window.processarPixCamarote = async () => {
             if (!numCamaroteSelecionado) return alert("Selecione um camarote no mapa!");
-            const n = document.getElementById('nome-camarote').value.trim().toUpperCase(); const t = document.getElementById('tel-camarote').value.trim();
+            const n = document.getElementById('nome-camarote').value.trim().toUpperCase(); 
+            const t = document.getElementById('tel-camarote').value.trim();
+            const em = document.getElementById('email-camarote').value.trim();
+            const cpf = document.getElementById('cpf-camarote').value.trim();
+
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
+            if (!em || !em.includes('@')) return alert("Digite um e-mail válido!");
+            if (cpf.length < 14) return alert("Digite um CPF válido!");
+
             const btn = document.getElementById('btn-final-camarote'); const originalText = btn.innerText; btn.innerText = "GARANTINDO... ⚡"; btn.disabled = true; processoDePagamentoAberto = true; 
             try {
                 const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome), where("tipo_entrada", "==", `CAMAROTE ${numCamaroteSelecionado}`)));
@@ -385,10 +426,7 @@
                 checkFinal.forEach(docSnap => {
                     const ex = docSnap.data();
                     if (ex.pago === true || ex.cortesia === true) { alguemRoubou = true; } 
-                    else if (ex.pago === false && !ex.cortesia) {
-                        if (ex.data_reserva && ((new Date() - new Date(ex.data_reserva)) / 60000) < 5) { alguemRoubou = true; } 
-                        else { deleteDoc(docSnap.ref); }
-                    }
+                    else if (ex.pago === false && !ex.cortesia) { if (ex.data_reserva && ((new Date() - new Date(ex.data_reserva)) / 60000) < 5) { alguemRoubou = true; } else { deleteDoc(docSnap.ref); } }
                 });
                 
                 if (alguemRoubou) throw new Error("Alguém acabou de garantir este Camarote. Escolha outro!");
@@ -396,15 +434,43 @@
                 const camaroteGarantido = numCamaroteSelecionado; numCamaroteSelecionado = null; 
                 const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${camaroteGarantido}`, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: eventoAtivo[`v_cam${camaroteGarantido}`] });
                 const valorLimpo = String(eventoAtivo[`v_cam${camaroteGarantido}`]).replace('R$', '').replace(/\s/g, '').replace(',', '.');
-                const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorLimpo, titulo: `CAMAROTE 0${camaroteGarantido} - ${eventoAtivo.nome}`, reservaId: docRef.id }) });
-                if (!resp.ok) throw new Error("Erro na Função Pix.");
+                
+                const resp = await fetch(URL_FUNCAO, { 
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ valor: valorLimpo, titulo: `CAMAROTE 0${camaroteGarantido} - ${eventoAtivo.nome}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) 
+                });
+                
                 const data = await resp.json();
-                if (data.url) { window.open(data.url, '_blank'); alert("✅ Link VIP gerado! Finalize o Pix na aba que abriu."); fecharModalCamarote(); } else { throw new Error("Falha ao gerar link."); }
+                if (data.sucesso) { 
+                    abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola);
+                    fecharModalCamarote(); 
+                } else { throw new Error("Falha ao gerar link direto."); }
             } catch (e) { alert("🔴 " + e.message); processoDePagamentoAberto = false; } finally { btn.disabled = false; btn.innerText = originalText; }
         };
         
         window.fecharModalCamarote = () => { if(unsubscribeCamarotes) unsubscribeCamarotes(); numCamaroteSelecionado = null; processoDePagamentoAberto = false; document.getElementById('modalCamarote').classList.add('hidden'); };
-        window.mask = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
+        
+        // 👇 FUNÇÕES DO NOVO MODAL QR CODE E MÁSCARAS 👇
+        window.abrirTelaQR = (base64, copiaCola) => {
+            document.getElementById('img-qrcode').src = `data:image/jpeg;base64,${base64}`;
+            document.getElementById('chave-copia-cola').value = copiaCola;
+            document.getElementById('modalQrCode').classList.remove('hidden');
+        };
+
+        window.fecharModalQrCode = () => {
+            document.getElementById('modalQrCode').classList.add('hidden');
+            location.reload(); // Recarrega para limpar
+        };
+
+        window.copiarChavePix = () => {
+            const input = document.getElementById('chave-copia-cola');
+            input.select();
+            document.execCommand('copy');
+            alert('Chave PIX copiada! Abra o app do seu banco e cole.');
+        };
+
+        window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
+        window.maskCPF = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 3) v = v.substring(0, 3) + "." + v.substring(3); if (v.length > 7) v = v.substring(0, 7) + "." + v.substring(7); if (v.length > 11) v = v.substring(0, 11) + "-" + v.substring(11); i.value = v; };
         
         carregarPagina();
     </script>
