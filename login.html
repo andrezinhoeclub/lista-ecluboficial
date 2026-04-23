@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABRE A PORTA | Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #050505; color: #fff; }
+        .glass { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); }
+        input { background: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-md w-full glass p-10 rounded-[2.5rem] shadow-2xl border-t border-white/10">
+        <div class="text-center mb-10">
+            <h1 class="text-2xl font-black italic uppercase tracking-tighter text-blue-500">Abre a Porta</h1>
+            <p class="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Acesso ao Painel Administrativo</p>
+        </div>
+
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="text-[9px] font-black uppercase text-zinc-600 ml-4 mb-1 block">Usuário</label>
+                <input type="text" id="user" class="w-full p-4 rounded-2xl font-bold" placeholder="Digite seu usuário" required>
+            </div>
+            <div>
+                <label class="text-[9px] font-black uppercase text-zinc-600 ml-4 mb-1 block">Senha</label>
+                <input type="password" id="pass" class="w-full p-4 rounded-2xl font-bold" placeholder="••••••••" required>
+            </div>
+            
+            <button type="submit" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-2xl uppercase italic tracking-tighter transition-all mt-4 shadow-lg shadow-blue-900/20">
+                Entrar no Painel
+            </button>
+        </form>
+
+        <p id="msg" class="text-center mt-6 text-xs font-bold text-red-500 hidden"></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            const msg = document.getElementById('msg');
+            btn.innerText = "Verificando..."; btn.disabled = true;
+            msg.classList.add('hidden');
+
+            const usuarioInput = document.getElementById('user').value;
+            const senhaInput = document.getElementById('pass').value;
+
+            try {
+                // Busca no banco o cliente que tem esse usuário e essa senha
+                const q = query(collection(db, "clientes_revenda"), 
+                            where("usuario", "==", usuarioInput), 
+                            where("senha", "==", senhaInput));
+                
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    const dados = querySnapshot.docs[0].data();
+                    
+                    if (!dados.ativo) {
+                        msg.innerText = "Sua licença está suspensa. Fale com o administrador.";
+                        msg.classList.remove('hidden');
+                    } else {
+                        // Login Sucesso: Redireciona para o dashboard com o ID dele
+                        window.location.href = `dashboard.html?clube=${dados.slug}`;
+                    }
+                } else {
+                    msg.innerText = "Usuário ou senha incorretos.";
+                    msg.classList.remove('hidden');
+                }
+            } catch (err) {
+                msg.innerText = "Erro ao conectar ao servidor.";
+                msg.classList.remove('hidden');
+            } finally {
+                btn.innerText = "Entrar no Painel"; btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
