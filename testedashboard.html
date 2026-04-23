@@ -238,24 +238,25 @@
             const ativos = dadosEventos.filter(e => e.ativo && e.data >= hojeLocal).sort((a,b) => a.data.localeCompare(b.data));
             
             container.innerHTML = ativos.map(ev => {
-                const todasReservas = dadosReservas.filter(r => r.evento === ev.nome);
+                // 👇 BLINDAGEM: Ignora qualquer reserva mal formatada ou sem evento 👇
+                const todasReservas = dadosReservas.filter(r => (r.evento || '') === ev.nome);
                 
-                // 👇 A MÁGICA ESTÁ AQUI: "Se não for pix_antecipado, é Lista!"
                 const validas = todasReservas.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
                 
                 const parseMoeda = (val) => Number(String(val || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
                 const formataBRL = (v) => v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
 
-                const pixPista = validas.filter(r => r.metodo === 'pix_antecipado' && !r.tipo_entrada.includes('CAMAROTE'));
-                const pCasalQtd = pixPista.filter(r => r.tipo_entrada === 'CASAL').length;
-                const pSolteiroQtd = pixPista.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
+                // 👇 BLINDAGEM: Lê o tipo_entrada com segurança pra não travar o JS 👇
+                const pixPista = validas.filter(r => r.metodo === 'pix_antecipado' && !(r.tipo_entrada || '').toUpperCase().includes('CAMAROTE'));
+                const pCasalQtd = pixPista.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CASAL')).length;
+                const pSolteiroQtd = pixPista.length - pCasalQtd;
                 
                 const valPistaCasal = parseMoeda(ev.ant_casal || ev.valor_casal);
                 const valPistaSolteiro = parseMoeda(ev.ant_solteiro || ev.valor_solteiro);
                 const receitaPista = (pCasalQtd * valPistaCasal) + (pSolteiroQtd * valPistaSolteiro);
 
-                const camesGeral = todasReservas.filter(r => r.tipo_entrada && r.tipo_entrada.includes('CAMAROTE'));
-                const camesPagos = validas.filter(r => r.tipo_entrada && r.tipo_entrada.includes('CAMAROTE'));
+                const camesGeral = todasReservas.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE'));
+                const camesPagos = validas.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE'));
                 const receitaCam = camesPagos.reduce((total, r) => total + parseMoeda(r.valor_pago), 0);
 
                 const totalGeral = receitaPista + receitaCam;
@@ -267,7 +268,7 @@
                         luzesCamarotes += `<div class="h-2 rounded-full bg-zinc-800 flex items-center justify-center text-[5px] text-zinc-600 font-bold border border-white/5">x</div>`; 
                         continue;
                     }
-                    const resDesseCam = camesGeral.filter(r => r.tipo_entrada === `CAMAROTE ${n}`);
+                    const resDesseCam = camesGeral.filter(r => (r.tipo_entrada || '').toUpperCase() === `CAMAROTE ${n}`);
                     let statusCam = 'livre';
                     
                     if (resDesseCam.some(r => r.pago === true)) {
@@ -290,6 +291,11 @@
                         luzesCamarotes += `<div class="h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
                     }
                 }
+
+                // 👇 CONTADORES CORRIGIDOS DA ETIQUETA INFERIOR 👇
+                const qtdLista = validas.filter(r => r.metodo !== 'pix_antecipado').length;
+                const qtdPix = validas.filter(r => r.metodo === 'pix_antecipado').length;
+                const qtdCheckins = validas.filter(r => r.entrou).length;
 
                 return `
                 <div class="event-bubble p-6 flex flex-col justify-between">
@@ -331,15 +337,15 @@
                     <div class="flex justify-between border-t border-white/5 pt-4">
                         <div class="text-center">
                             <p class="text-[7px] text-zinc-500 uppercase font-black">Lista</p>
-                            <p class="text-lg font-black text-white">${validas.filter(r => r.metodo !== 'pix_antecipado').length}</p>
+                            <p class="text-lg font-black text-white">${qtdLista}</p>
                         </div>
                         <div class="text-center">
                             <p class="text-[7px] text-zinc-500 uppercase font-black">Pix</p>
-                            <p class="text-lg font-black text-blue-500">${pixPista.length + camesPagos.length}</p>
+                            <p class="text-lg font-black text-blue-500">${qtdPix}</p>
                         </div>
                         <div class="text-center">
                             <p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins</p>
-                            <p class="text-lg font-black text-green-500">${validas.filter(r => r.entrou).length}</p>
+                            <p class="text-lg font-black text-green-500">${qtdCheckins}</p>
                         </div>
                     </div>
                 </div>`;
