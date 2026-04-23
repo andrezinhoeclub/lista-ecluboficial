@@ -11,46 +11,71 @@
         .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2rem; }
         input { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #3b82f6 !important; }
+        .label-mini { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #71717a; margin-left: 0.5rem; letter-spacing: 0.05em; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div class="max-w-6xl mx-auto space-y-8">
+    <div class="max-w-7xl mx-auto space-y-8">
         
         <header class="flex flex-col items-center justify-center py-6 border-b border-white/5 mb-8">
             <h1 class="text-3xl font-black uppercase italic tracking-tighter text-blue-500">Abre a Porta <span class="text-white">Master</span></h1>
-            <p class="text-zinc-500 font-bold uppercase text-[10px] tracking-widest mt-1">Gestão de Revenda e Licenças</p>
+            <p class="text-zinc-500 font-bold uppercase text-[10px] tracking-widest mt-1">Gestão de Revenda e Contratos</p>
         </header>
 
-        <div class="glass-card p-8 border-l-4 border-l-blue-500">
-            <h2 class="text-blue-500 font-black uppercase italic text-xl mb-6">➕ Cadastrar Nova Casa</h2>
-            <form id="formNovoCliente" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-card p-8 border-l-4 border-l-blue-600">
+            <h2 class="text-white font-black uppercase italic text-xl mb-6">➕ Cadastrar Novo Cliente (SaaS)</h2>
+            <form id="formNovoCliente" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
                 <div class="flex flex-col gap-1">
-                    <label class="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-2">Nome da Casa</label>
+                    <label class="label-mini">Razão Social</label>
+                    <input type="text" id="razao_social" placeholder="Empresa LTDA" class="p-4 rounded-2xl font-bold" required>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="label-mini">Nome Fantasia</label>
                     <input type="text" id="nome_fantasia" placeholder="Ex: Erotic" class="p-4 rounded-2xl font-bold uppercase" required>
                 </div>
+
                 <div class="flex flex-col gap-1">
-                    <label class="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-2">ID do Link (slug)</label>
+                    <label class="label-mini">CNPJ</label>
+                    <input type="text" id="cnpj_cliente" placeholder="00.000.000/0001-00" class="p-4 rounded-2xl font-bold">
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="label-mini">E-mail de Contato</label>
+                    <input type="email" id="email_cliente" placeholder="contato@email.com" class="p-4 rounded-2xl font-bold" required>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="label-mini">ID do Link (slug)</label>
                     <input type="text" id="slug_cliente" placeholder="ex: erotic" class="p-4 rounded-2xl font-bold lowercase" required>
                 </div>
+
                 <div class="flex flex-col gap-1">
-                    <label class="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-2">Usuário de Login</label>
-                    <input type="text" id="user_cliente" placeholder="usuario" class="p-4 rounded-2xl font-bold" required>
+                    <label class="label-mini">Vencimento da Licença</label>
+                    <input type="date" id="data_vencimento" class="p-4 rounded-2xl font-bold" required>
                 </div>
+
                 <div class="flex flex-col gap-1">
-                    <label class="text-[9px] font-black uppercase text-zinc-500 tracking-widest ml-2">Senha de Acesso</label>
-                    <input type="text" id="pass_cliente" placeholder="senha" class="p-4 rounded-2xl font-bold" required>
+                    <label class="label-mini">Usuário de Acesso</label>
+                    <input type="text" id="user_cliente" placeholder="usuario123" class="p-4 rounded-2xl font-bold" required>
                 </div>
-                <div class="lg:col-span-4 mt-2">
-                    <button type="submit" id="btnSalvar" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl uppercase hover:bg-blue-500 transition-all shadow-lg">Cadastrar e Gerar Acesso</button>
+
+                <div class="flex flex-col gap-1">
+                    <label class="label-mini">Senha Provisória</label>
+                    <input type="text" id="pass_cliente" placeholder="mudar123" class="p-4 rounded-2xl font-bold" required>
+                </div>
+
+                <div class="lg:col-span-4 mt-4">
+                    <button type="submit" id="btnSalvar" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20">Ativar Licença e Gerar Acesso</button>
                 </div>
             </form>
         </div>
 
         <div class="glass-card p-8">
-            <h2 class="text-white font-black uppercase italic text-xl mb-6 tracking-tighter">📋 Suas Licenças Ativas</h2>
-            <div id="grid-clientes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                </div>
+            <h2 class="text-white font-black uppercase italic text-xl mb-6">📋 Clientes e Status Financeiro</h2>
+            <div id="grid-clientes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
 
     </div>
@@ -63,68 +88,68 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // MONITORAR CLIENTES
         onSnapshot(collection(db, "clientes_revenda"), (snap) => {
             const grid = document.getElementById('grid-clientes');
             const clientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             
-            if(clientes.length === 0) {
-                grid.innerHTML = `<p class="text-zinc-600 text-xs font-bold uppercase">Nenhuma casa cadastrada.</p>`;
-                return;
-            }
+            grid.innerHTML = clientes.map(c => {
+                const hoje = new Date();
+                const venc = new Date(c.vencimento);
+                const diasRestantes = Math.ceil((venc - hoje) / (1000 * 60 * 60 * 24));
+                const estaVencido = diasRestantes < 0;
 
-            grid.innerHTML = clientes.map(c => `
-                <div class="bg-[#0a0a0f] border border-white/5 p-6 rounded-3xl flex flex-col justify-between hover:border-blue-500/30 transition-all">
+                return `
+                <div class="bg-[#0a0a0f] border ${estaVencido ? 'border-red-500/30' : 'border-white/5'} p-6 rounded-3xl flex flex-col justify-between">
                     <div>
                         <div class="flex justify-between items-start mb-4">
-                            <h3 class="text-lg font-black uppercase text-white tracking-tighter">${c.nome_fantasia}</h3>
-                            <span class="${c.ativo ? 'text-green-400' : 'text-red-500'} text-[9px] font-black uppercase tracking-widest border border-current px-2 py-1 rounded">
-                                ${c.ativo ? '● Ativo' : '● Suspenso'}
+                            <h3 class="text-lg font-black uppercase text-white">${c.nome_fantasia}</h3>
+                            <span class="${estaVencido ? 'bg-red-500' : 'bg-green-600'} text-[8px] text-white font-black uppercase px-2 py-1 rounded">
+                                ${estaVencido ? 'Inadimplente' : 'Em dia'}
                             </span>
                         </div>
                         
-                        <div class="space-y-2 mb-6">
-                            <p class="text-[10px] text-zinc-500 font-bold uppercase italic">Link: <span class="text-blue-400">abreaporta.com.br/listas.html?clube=${c.slug}</span></p>
-                            <p class="text-[10px] text-zinc-500 font-bold uppercase italic">Login: <span class="text-white">${c.usuario}</span></p>
-                            <p class="text-[10px] text-zinc-500 font-bold uppercase italic">Senha: <span class="text-white">${c.senha}</span></p>
+                        <div class="space-y-2 text-[10px] font-bold uppercase italic text-zinc-500 mb-6">
+                            <p>Razão: <span class="text-white">${c.razao_social || '-'}</span></p>
+                            <p>CNPJ: <span class="text-white">${c.cnpj || '-'}</span></p>
+                            <p>E-mail: <span class="text-white">${c.email || '-'}</span></p>
+                            <p>Vence em: <span class="${estaVencido ? 'text-red-500' : 'text-blue-400'}">${venc.toLocaleDateString('pt-BR')} (${diasRestantes} dias)</span></p>
+                            <p class="mt-4 pt-2 border-t border-white/5">Login: <span class="text-white">${c.usuario}</span></p>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="alternarStatus('${c.id}', ${c.ativo})" class="bg-zinc-800 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700 transition-all">
-                            ${c.ativo ? 'Bloquear' : 'Ativar'}
+                        <button onclick="alternarStatus('${c.id}', ${c.ativo})" class="bg-zinc-800 text-white py-3 rounded-xl text-[9px] font-black uppercase">
+                            ${c.ativo ? 'Suspender' : 'Reativar'}
                         </button>
-                        <button onclick="excluirCliente('${c.id}')" class="bg-red-900/10 text-red-500 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">
-                            Excluir
-                        </button>
+                        <button onclick="excluirCliente('${c.id}')" class="bg-red-900/10 text-red-500 py-3 rounded-xl text-[9px] font-black uppercase">Excluir</button>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         });
 
-        // SALVAR NOVO CLIENTE
         document.getElementById('formNovoCliente').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSalvar');
-            btn.innerText = "Processando..."; btn.disabled = true;
+            btn.innerText = "Ativando..."; btn.disabled = true;
 
             const slug = document.getElementById('slug_cliente').value.toLowerCase().replace(/[^a-z0-9]/g, '');
 
             try {
                 await setDoc(doc(db, "clientes_revenda", slug), {
+                    razao_social: document.getElementById('razao_social').value,
                     nome_fantasia: document.getElementById('nome_fantasia').value.toUpperCase(),
+                    cnpj: document.getElementById('cnpj_cliente').value,
+                    email: document.getElementById('email_cliente').value,
                     slug: slug,
+                    vencimento: document.getElementById('data_vencimento').value,
                     usuario: document.getElementById('user_cliente').value,
                     senha: document.getElementById('pass_cliente').value,
                     ativo: true,
                     data_cadastro: new Date().toISOString()
                 });
                 e.target.reset();
-            } catch (err) {
-                alert("Erro ao cadastrar.");
-            } finally {
-                btn.innerText = "Cadastrar e Gerar Acesso"; btn.disabled = false;
-            }
+            } catch (err) { alert("Erro ao salvar."); }
+            finally { btn.innerText = "Ativar Licença e Gerar Acesso"; btn.disabled = false; }
         });
 
         window.alternarStatus = async (id, status) => {
@@ -132,9 +157,7 @@
         };
 
         window.excluirCliente = async (id) => {
-            if(confirm("ATENÇÃO: Isso apagará o acesso desta casa. Continuar?")) {
-                await deleteDoc(doc(db, "clientes_revenda", id));
-            }
+            if(confirm("Excluir definitivamente?")) await deleteDoc(doc(db, "clientes_revenda", id));
         };
     </script>
 </body>
