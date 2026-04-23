@@ -84,10 +84,12 @@
         <div class="w-full max-w-sm bg-[#0d0d14] border border-purple-500/30 p-6 md:p-8 rounded-[2.5rem] shadow-2xl relative my-auto mt-10 mb-10">
             <h2 class="text-purple-400 font-black uppercase italic mb-1 tracking-tighter text-xl text-center">💎 CAMAROTES VIP</h2>
             <p class="text-zinc-500 text-[9px] font-bold uppercase mb-4 tracking-widest italic text-center">Escolha o seu espaço no mapa</p>
-            <div class="w-full h-32 bg-zinc-900 rounded-2xl mb-4 border border-white/10 flex items-center justify-center overflow-hidden relative">
-                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" onerror="this.style.display='none'" class="h-20 opacity-30 object-contain">
-                <span class="text-zinc-500 font-black text-[10px] uppercase absolute tracking-widest">MAPA DO CLUBE</span>
+            
+            <div class="w-full h-48 bg-zinc-900 rounded-2xl mb-4 border border-white/10 flex items-center justify-center overflow-hidden relative">
+                <span class="text-zinc-500 font-black text-[10px] uppercase absolute tracking-widest z-0">MAPA DO CLUBE</span>
+                <img id="img-mapa-camarote" src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png?v=3" class="w-full h-full object-contain relative z-10" onerror="this.onerror=null; this.src='https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png'; this.className='h-20 opacity-30 object-contain relative z-10';">
             </div>
+
             <div class="flex justify-center gap-4 mb-6 text-[8px] font-black uppercase tracking-widest text-zinc-400">
                 <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-green-500"></div>Livre</div>
                 <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>Aguardando</div>
@@ -143,6 +145,16 @@
                         const cabecalho = document.getElementById('header-aniv');
                         cabecalho.innerHTML = `🎂 ANIVERSÁRIO DE<br>${globalAniversariante}`;
                         cabecalho.classList.remove('hidden');
+                    } else {
+                        // 👇 RESTAURADO: TRAVA DE LINK EXPIRADO AQUI 👇
+                        document.getElementById('listaEventos').innerHTML = `
+                            <div class="glass p-8 text-center rounded-[2rem] border border-red-500/20 mt-6 shadow-2xl">
+                                <span class="text-5xl block mb-4">⚠️</span>
+                                <h3 class="text-xl font-black uppercase italic text-red-500 mb-2 tracking-tighter">LINK EXPIRADO</h3>
+                                <p class="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-6">Esta lista VIP foi encerrada ou removida.</p>
+                                <button onclick="window.location.href=window.location.pathname" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all">Ver Eventos Oficiais</button>
+                            </div>`;
+                        return; // Para o código aqui e não carrega os botões de evento
                     }
                 }
 
@@ -163,13 +175,23 @@
                     let temCamaroteAtivo = false;
                     for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`]) temCamaroteAtivo = true; }
 
+                    let temPixAtivo = (ev.ant_casal && String(ev.ant_casal).trim() !== '') || (ev.ant_solteiro && String(ev.ant_solteiro).trim() !== '');
+
                     const txtBotaoLista = globalAniversariante ? "🎉 NOME NA LISTA VIP" : "📝 NOME NA LISTA";
+
+                    let btnPix = temPixAtivo 
+                        ? `<button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO</button>` 
+                        : `<div class="bg-zinc-900 border border-zinc-800 rounded-2xl py-4 flex items-center justify-center"><span class="text-[9px] text-zinc-600 font-bold uppercase italic">S/ Pix</span></div>`;
+
+                    let btnCamarote = temCamaroteAtivo 
+                        ? `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">💎 CAMAROTE</button>` 
+                        : `<div class="bg-zinc-900 border border-zinc-800 rounded-2xl py-4 flex items-center justify-center"><span class="text-[9px] text-zinc-600 font-bold uppercase italic">S/ Camarote</span></div>`;
 
                     let botoesAcao = `
                         <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs italic font-black transition-all active:scale-95 mb-3">${txtBotaoLista}</button>
                         <div class="grid grid-cols-2 gap-3 mb-3">
-                            <button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95">⚡ PIX ANTECIPADO</button>
-                            ${temCamaroteAtivo ? `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] sm:text-xs italic font-black transition-all active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">💎 CAMAROTE</button>` : `<div class="bg-zinc-900 border border-zinc-800 rounded-2xl py-4 flex items-center justify-center"><span class="text-[9px] text-zinc-600 font-bold uppercase italic">S/ Camarote</span></div>`}
+                            ${btnPix}
+                            ${btnCamarote}
                         </div>
                     `;
 
@@ -188,16 +210,13 @@
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id); 
             
-            // 👇 BLOQUEIO DE HORÁRIOS AQUI 👇
             const [ano, mes, dia] = eventoAtivo.data.split('-');
             const agora = new Date();
             
             if (isPix) {
-                // Limite PIX: 21:59:59 do dia do evento
                 const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
                 if (agora > limitePix) return alert("⚠️ As vendas antecipadas via PIX encerraram às 21:59h de hoje!");
             } else {
-                // Limite Lista: 23:59:59 do dia do evento (Meia-noite)
                 const limiteLista = new Date(ano, mes - 1, dia, 23, 59, 59);
                 if (agora > limiteLista) return alert("⚠️ A lista para este evento encerrou à meia-noite!");
             }
@@ -298,12 +317,17 @@
         window.iniciarFluxoCamarote = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id); 
             
-            // 👇 BLOQUEIO DE HORÁRIO DE CAMAROTE AQUI 👇
             const [ano, mes, dia] = eventoAtivo.data.split('-');
             const agora = new Date();
             const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
             
             if (agora > limitePix) return alert("⚠️ As vendas de Camarote via PIX encerraram às 21:59h de hoje!");
+
+            const imgMapa = document.getElementById('img-mapa-camarote');
+            imgMapa.className = "w-full h-full object-contain relative z-10";
+            let urlCorreta = 'https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png?v=3';
+            if (eventoAtivo.url_mapa && eventoAtivo.url_mapa.trim() !== '') urlCorreta = eventoAtivo.url_mapa.trim();
+            imgMapa.src = urlCorreta;
 
             numCamaroteSelecionado = null; processoDePagamentoAberto = false;
             document.getElementById('form-camarote').classList.add('hidden'); document.getElementById('modalCamarote').classList.remove('hidden');
