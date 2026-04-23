@@ -265,59 +265,65 @@
                 const isDonoDaFesta = c.tipo_entrada === "VIP_DONO"; 
                 const isConvidadoAniv = c.aniversariante && c.aniversariante.trim() !== "";
                 
-                // Normaliza para ter certeza na checagem do banco
-                const tipoNormalizado = (c.tipo_entrada || '').toUpperCase().trim();
-                const isCasal = tipoNormalizado === "CASAL";
-                const isSolteiro = tipoNormalizado === "SOLTEIRO";
+                // 👇 AQUI A MÁGICA: Busca inteligente que ignora espaços em branco ou erros de digitação 👇
+                const tipoNormalizado = (c.tipo_entrada || '').toUpperCase();
+                const isCasal = tipoNormalizado.includes("CASAL");
+                const isSolteiro = tipoNormalizado.includes("SOLTEIRO");
 
                 let tagPromoter = `<span class="text-[9px] font-black uppercase tracking-widest text-zinc-400 bg-zinc-900 px-3 py-1.5 rounded-md border border-white/5 shadow-sm">${c.promoter || 'DIRETO'}</span>`;
                 let tagTipo = '';
                 let tagExtra = '';
                 let tagPagamento = '';
 
-                // 👇 1. IDENTIFICAÇÃO LIMPA E VALORES CORRETOS 👇
+                // IDENTIFICAÇÃO E VALORES
                 if (isDonoDaFesta) {
                     valorExibicao = "FREE";
                     corDestaqueNome = 'text-green-400';
+                    tagTipo = `<span class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">VIP</span>`;
                     tagExtra = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">👑 DONO(A) DA FESTA</span>`;
                 } else if (isCamarote) {
                     valorExibicao = c.valor_pago ? "R$ " + c.valor_pago : "PAGO";
                     tagTipo = `<span class="bg-cyan-400 text-black px-4 py-1.5 rounded-md text-[11px] font-black uppercase tracking-[0.1em] shadow-[0_0_15px_rgba(34,211,238,0.5)]">💎 ${c.tipo_entrada}</span>`;
                 } else {
-                    // Trata Casal e Solteiro
+                    // É Convidado Pista ou Aniversário
                     if (isCasal) {
                         tagTipo = `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">👫 CASAL</span>`;
                     } else if (isSolteiro) {
                         tagTipo = `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">👤 SOLTEIRO</span>`;
-                    } else if (tipoNormalizado !== "ANIVERSARIANTE") {
-                        // Se for um tipo estranho que não seja ANIVERSARIANTE, mostra (ex: CORTESIA)
+                    } else if (!tipoNormalizado.includes("ANIVERSARIANTE")) {
                         tagTipo = `<span class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">${tipoNormalizado || 'PISTA'}</span>`;
                     }
 
-                    // Se for Convidado de Aniversário
+                    // Se for convidado de lista VIP/Aniv, busca valor especial e bota a tag Fúcsia
                     if (isConvidadoAniv) {
                         tagExtra = `<span class="bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">🎉 CONVIDADO DE: ${c.aniversariante}</span>`;
+                        
+                        // 👇 MATEMÁTICA DO DESCONTO DE LISTA BLINDADA 👇
                         let vCalc = isCasal ? ev.desc_casal : ev.desc_solteiro;
                         const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
                         valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
+                    
                     } else {
-                        // Pista Normal
+                        // Se for Pista normal / Direto
                         let vCalc = "";
-                        if (c.metodo === "pix_antecipado") vCalc = c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro);
-                        else vCalc = isCasal ? ev.valor_casal : ev.valor_solteiro;
+                        if (c.metodo === "pix_antecipado") {
+                            vCalc = c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro);
+                        } else {
+                            vCalc = isCasal ? ev.valor_casal : ev.valor_solteiro;
+                        }
                         const prefixo = (vCalc && String(vCalc).trim().toLowerCase().startsWith('r$')) ? "" : "R$ ";
                         valorExibicao = vCalc ? prefixo + vCalc : "PORTARIA";
                     }
                 }
 
-                // 👇 2. PAGAMENTO 👇
+                // TAG DE PAGAMENTO
                 if (c.metodo === 'pix_antecipado' && c.pago === true) {
                     tagPagamento = `<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">✅ PIX PAGO</span>`;
                 } else if (c.metodo !== 'pix_antecipado' && !isDonoDaFesta) {
                     tagPagamento = `<span class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-[0.1em]">PAGA NA PORTA</span>`;
                 }
 
-                // 👇 3. BOTÃO DE AÇÃO 👇
+                // BOTÃO DE AÇÃO
                 let btnAcaoHTML = '';
                 if (c.entrou) {
                     btnAcaoHTML = '<span class="text-green-500 font-black italic uppercase text-sm tracking-widest bg-green-500/10 px-6 py-3 rounded-xl border border-green-500/20">CONFIRMADO</span>';
@@ -327,7 +333,7 @@
                     btnAcaoHTML = `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(234,179,8,0.4)]">LIBERAR AGORA</button>`;
                 }
 
-                // 👇 4. RENDERIZAÇÃO DA LINHA DO TEMPO PERFEITA 👇
+                // RENDERIZAÇÃO DA LINHA DO TEMPO LIMPA
                 const div = document.createElement('div');
                 div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${c.entrou ? 'entrou' : ''}`;
                 div.innerHTML = `
