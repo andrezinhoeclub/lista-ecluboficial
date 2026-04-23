@@ -95,9 +95,8 @@
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="grid-camarotes-inputs"></div>
                     </div>
 
-                    <div class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                        <input type="url" id="url_banner" placeholder="URL DA CAPA (IMAGEM DO EVENTO)" class="p-4 rounded-2xl font-bold border border-zinc-800">
-                        <input type="url" id="url_mapa" placeholder="URL DO MAPA DOS CAMAROTES" class="p-4 rounded-2xl font-bold text-cyan-400 border border-cyan-900/30 bg-cyan-900/5">
+                    <div class="md:col-span-4 mb-2">
+                        <input type="url" id="url_banner" placeholder="URL DA CAPA (IMAGEM DO EVENTO)" class="w-full p-4 rounded-2xl font-bold border border-zinc-800">
                     </div>
                     
                     <button type="submit" id="btnSalvarEvento" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
@@ -378,7 +377,6 @@
                 </div>`;
             }).join('');
             
-            // 👇 BLINDAGEM DO PÓDIO 👇
             try {
                 const stats = {};
                 dadosReservas.forEach(r => {
@@ -397,12 +395,10 @@
             } catch(e) { console.error("Erro no pódio", e); }
         }
 
-        // 👇 A NOVA FUNÇÃO DE GERENCIAR/CANCELAR CAMAROTES 👇
         function renderizarCamarotesVendidos() {
             const tb = document.getElementById('tabela-camarotes-body');
             if(!tb) return;
             
-            // Pega todo mundo que reservou camarote e está com status Garantido (Pago ou Cortesia)
             const camsReservados = dadosReservas.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE') && (r.pago === true || r.cortesia === true));
             
             camsReservados.sort((a,b) => a.evento.localeCompare(b.evento));
@@ -505,7 +501,6 @@
             document.getElementById('ant_casal').value = ev.ant_casal || "";
             document.getElementById('ant_solteiro').value = ev.ant_solteiro || "";
             document.getElementById('url_banner').value = ev.imagem || "";
-            document.getElementById('url_mapa').value = ev.url_mapa || "";
             for(let i=1; i<=8; i++) {
                 document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false;
                 document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || "";
@@ -530,7 +525,6 @@
                     ant_casal: document.getElementById('ant_casal').value,
                     ant_solteiro: document.getElementById('ant_solteiro').value,
                     imagem: document.getElementById('url_banner').value, 
-                    url_mapa: document.getElementById('url_mapa').value, 
                     ativo: true 
                 };
                 for(let i=1; i<=8; i++) {
@@ -623,7 +617,6 @@
                         const d = docSnap.data();
                         if (d.data_reserva) {
                             const min = (new Date() - new Date(d.data_reserva)) / 60000;
-                            // Se não for cortesia e passou de 5 min, apaga
                             if (min >= 5 && d.cortesia !== true) { batch.delete(docSnap.ref); apagou = true; }
                         }
                     });
