@@ -41,24 +41,21 @@
                     <span class="text-2xl group-hover:scale-110 transition-transform">💬</span>
                     <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-green-400">WhatsApp</span>
                 </a>
-                
                 <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-fuchsia-500/10 border border-transparent hover:border-fuchsia-500/30 transition-all group">
                     <span class="text-2xl group-hover:scale-110 transition-transform">📸</span>
                     <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-fuchsia-400">Instagram</span>
                 </a>
-                
                 <a href="https://www.google.com/maps/search/?api=1&query=Rua+Anibal+Goulart+Maia+Filho+81" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 transition-all group">
                     <span class="text-2xl group-hover:scale-110 transition-transform">📍</span>
                     <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-blue-400 text-center leading-tight">Como<br>Chegar</span>
                 </a>
             </div>
-
             <div class="text-center opacity-30 hover:opacity-100 transition-opacity duration-500">
                 <p class="text-[8px] font-black uppercase tracking-widest text-zinc-500">⚡ SISTEMA DESENVOLVIDO POR</p>
                 <a href="https://api.whatsapp.com/send?phone=5541995906901" target="_blank" class="text-[9px] font-black uppercase tracking-widest text-yellow-500 hover:text-yellow-400 mt-1 block">ANDREZINHO E-CLUB | WHATSAPP</a>
             </div>
         </footer>
-        </div>
+    </div>
 
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative">
@@ -189,7 +186,23 @@
         }
 
         window.iniciarFluxo = (id, isPix) => {
-            eventoAtivo = eventosCache.find(e => e.id === id); eFluxoPix = isPix; tipoAtivo = null; 
+            eventoAtivo = eventosCache.find(e => e.id === id); 
+            
+            // 👇 BLOQUEIO DE HORÁRIOS AQUI 👇
+            const [ano, mes, dia] = eventoAtivo.data.split('-');
+            const agora = new Date();
+            
+            if (isPix) {
+                // Limite PIX: 21:59:59 do dia do evento
+                const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
+                if (agora > limitePix) return alert("⚠️ As vendas antecipadas via PIX encerraram às 21:59h de hoje!");
+            } else {
+                // Limite Lista: 23:59:59 do dia do evento (Meia-noite)
+                const limiteLista = new Date(ano, mes - 1, dia, 23, 59, 59);
+                if (agora > limiteLista) return alert("⚠️ A lista para este evento encerrou à meia-noite!");
+            }
+
+            eFluxoPix = isPix; tipoAtivo = null; 
             const titulo = document.getElementById('modal-titulo');
             
             titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
@@ -283,12 +296,22 @@
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
 
         window.iniciarFluxoCamarote = (id) => {
-            eventoAtivo = eventosCache.find(e => e.id === id); numCamaroteSelecionado = null; processoDePagamentoAberto = false;
+            eventoAtivo = eventosCache.find(e => e.id === id); 
+            
+            // 👇 BLOQUEIO DE HORÁRIO DE CAMAROTE AQUI 👇
+            const [ano, mes, dia] = eventoAtivo.data.split('-');
+            const agora = new Date();
+            const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
+            
+            if (agora > limitePix) return alert("⚠️ As vendas de Camarote via PIX encerraram às 21:59h de hoje!");
+
+            numCamaroteSelecionado = null; processoDePagamentoAberto = false;
             document.getElementById('form-camarote').classList.add('hidden'); document.getElementById('modalCamarote').classList.remove('hidden');
             const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
             if(unsubscribeCamarotes) unsubscribeCamarotes(); 
             unsubscribeCamarotes = onSnapshot(q, (snap) => { const reservas = snap.docs.map(d => ({id: d.id, ...d.data()})); renderizarMapaCamarotes(reservas); });
         };
+        
         function renderizarMapaCamarotes(reservas) {
             const grid = document.getElementById('grid-camarotes-venda'); grid.innerHTML = '';
             for(let i=1; i<=8; i++) {
@@ -296,11 +319,15 @@
                     const preco = eventoAtivo[`v_cam${i}`] || 'Consulte'; const obs = eventoAtivo[`obs_cam${i}`] || 'Espaço Exclusivo';
                     let status = 'livre'; let classCor = 'cam-livre'; let icone = '✅';
                     const resCam = reservas.filter(r => r.tipo_entrada === `CAMAROTE ${i}`);
-                    if (resCam.some(r => r.pago === true)) { status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; } else {
-                        const pendentes = resCam.filter(r => r.pago === false);
-                        const temPendente = pendentes.some(r => ((new Date() - new Date(r.data_reserva)) / 60000) < 5);
+                    
+                    if (resCam.some(r => r.pago === true || r.cortesia === true)) { 
+                        status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; 
+                    } else {
+                        const pendentes = resCam.filter(r => r.pago === false && !r.cortesia);
+                        const temPendente = pendentes.some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 5);
                         if(temPendente) { status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; }
                     }
+                    
                     if (numCamaroteSelecionado === i && status !== 'livre' && processoDePagamentoAberto === false) {
                         numCamaroteSelecionado = null; document.getElementById('form-camarote').classList.add('hidden');
                         alert(`Oops! Alguém reservou o Camarote 0${i}. Escolha outro!`);
@@ -310,16 +337,19 @@
                 }
             }
         }
+        
         window.selecionarCamarote = (num, status) => {
             if (status !== 'livre') return; numCamaroteSelecionado = num;
             const eventTrigger = new Event('refreshGrid'); document.dispatchEvent(eventTrigger);
             document.getElementById('cam-selecionado-nome').innerText = `CAMAROTE 0${num}`; document.getElementById('cam-selecionado-obs').innerText = eventoAtivo[`obs_cam${num}`] || 'Espaço Exclusivo'; document.getElementById('cam-selecionado-valor').innerText = formatarMoeda(eventoAtivo[`v_cam${num}`]);
             document.getElementById('nome-camarote').value = ''; document.getElementById('tel-camarote').value = ''; document.getElementById('form-camarote').classList.remove('hidden'); document.getElementById('form-camarote').scrollIntoView({ behavior: 'smooth', block: 'end' });
         };
+        
         document.addEventListener('refreshGrid', () => {
             const boxes = document.getElementById('grid-camarotes-venda').children;
             for(let i=0; i<boxes.length; i++) { if (boxes[i].innerText.includes(`CAM 0${numCamaroteSelecionado}`)) { boxes[i].classList.add('cam-selecionado'); } else { boxes[i].classList.remove('cam-selecionado'); } }
         });
+        
         window.processarPixCamarote = async () => {
             if (!numCamaroteSelecionado) return alert("Selecione um camarote no mapa!");
             const n = document.getElementById('nome-camarote').value.trim().toUpperCase(); const t = document.getElementById('tel-camarote').value.trim();
@@ -330,11 +360,15 @@
                 let alguemRoubou = false;
                 checkFinal.forEach(docSnap => {
                     const ex = docSnap.data();
-                    if (ex.pago === true) { alguemRoubou = true; } else if (ex.pago === false) {
-                        if (((new Date() - new Date(ex.data_reserva)) / 60000) < 5) { alguemRoubou = true; } else { deleteDoc(docSnap.ref); }
+                    if (ex.pago === true || ex.cortesia === true) { alguemRoubou = true; } 
+                    else if (ex.pago === false && !ex.cortesia) {
+                        if (ex.data_reserva && ((new Date() - new Date(ex.data_reserva)) / 60000) < 5) { alguemRoubou = true; } 
+                        else { deleteDoc(docSnap.ref); }
                     }
                 });
+                
                 if (alguemRoubou) throw new Error("Alguém acabou de garantir este Camarote. Escolha outro!");
+                
                 const camaroteGarantido = numCamaroteSelecionado; numCamaroteSelecionado = null; 
                 const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${camaroteGarantido}`, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: eventoAtivo[`v_cam${camaroteGarantido}`] });
                 const valorLimpo = String(eventoAtivo[`v_cam${camaroteGarantido}`]).replace('R$', '').replace(/\s/g, '').replace(',', '.');
@@ -344,6 +378,7 @@
                 if (data.url) { window.open(data.url, '_blank'); alert("✅ Link VIP gerado! Finalize o Pix na aba que abriu."); fecharModalCamarote(); } else { throw new Error("Falha ao gerar link."); }
             } catch (e) { alert("🔴 " + e.message); processoDePagamentoAberto = false; } finally { btn.disabled = false; btn.innerText = originalText; }
         };
+        
         window.fecharModalCamarote = () => { if(unsubscribeCamarotes) unsubscribeCamarotes(); numCamaroteSelecionado = null; processoDePagamentoAberto = false; document.getElementById('modalCamarote').classList.add('hidden'); };
         window.mask = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
         
