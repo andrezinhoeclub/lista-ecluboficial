@@ -26,13 +26,16 @@
             <h2 id="titulo-form" class="text-white font-black uppercase italic text-xl mb-6">➕ Configurar Nova Casa</h2>
             <form id="formNovoCliente" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <input type="hidden" id="edit_id">
-                
-                <div class="flex flex-col gap-1"><label class="label-mini">Razão Social</label><input type="text" id="razao_social" class="p-4 rounded-2xl font-bold" required></div>
+                <input type="hidden" id="logo_url_atual"> <div class="flex flex-col gap-1"><label class="label-mini">Razão Social</label><input type="text" id="razao_social" class="p-4 rounded-2xl font-bold" required></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">Nome Fantasia</label><input type="text" id="nome_fantasia" class="p-4 rounded-2xl font-bold uppercase" required></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">CNPJ</label><input type="text" id="cnpj_cliente" class="p-4 rounded-2xl font-bold"></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">E-mail</label><input type="email" id="email_cliente" class="p-4 rounded-2xl font-bold" required></div>
 
-                <div class="flex flex-col gap-1"><label class="label-mini text-blue-400">Link da Logo (URL)</label><input type="url" id="logo_url" placeholder="https://..." class="p-4 rounded-2xl font-bold"></div>
+                <div class="flex flex-col gap-1">
+                    <label class="label-mini text-blue-400">Logo da Casa (Upload)</label>
+                    <input type="file" id="logo_upload" accept="image/*" class="file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer p-1 rounded-2xl font-bold text-xs">
+                </div>
+                
                 <div class="flex flex-col gap-1"><label class="label-mini text-blue-400">Cor Principal (HEX)</label><input type="text" id="cor_primaria" placeholder="#FF0000" class="p-4 rounded-2xl font-bold"></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">Vencimento</label><input type="date" id="data_vencimento" class="p-4 rounded-2xl font-bold" required></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">Slug (ID do Link)</label><input type="text" id="slug_cliente" class="p-4 rounded-2xl font-bold lowercase" required></div>
@@ -47,16 +50,18 @@
             </form>
         </div>
 
-        <div id="grid-clientes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        <div id="grid-clientes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, setDoc, doc, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js"; // IMPORTA O STORAGE
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app); // INICIA A NUVEM DE FOTOS
 
         onSnapshot(collection(db, "clientes_revenda"), (snap) => {
             const grid = document.getElementById('grid-clientes');
@@ -66,7 +71,7 @@
                 <div class="bg-[#0a0a0f] border border-white/5 p-6 rounded-3xl relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-1 h-full" style="background: ${c.cor_primaria || '#3b82f6'}"></div>
                     <div class="flex items-center gap-4 mb-4">
-                        <img src="${c.logo_url || 'https://via.placeholder.com/50'}" class="h-10 w-10 rounded-lg object-contain bg-zinc-900">
+                        <img src="${c.logo_url || 'https://via.placeholder.com/50'}" class="h-10 w-10 rounded-lg object-contain bg-zinc-900 border border-white/10">
                         <h3 class="text-lg font-black uppercase text-white">${c.nome_fantasia}</h3>
                     </div>
                     <div class="space-y-1 mb-6 text-[10px] font-bold uppercase italic text-zinc-500">
@@ -74,8 +79,8 @@
                         <p>Acesso: <span class="text-white">${c.usuario} / ${c.senha}</span></p>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="editarCliente('${d.id}')" class="bg-zinc-800 text-white py-3 rounded-xl text-[9px] font-black uppercase">Editar</button>
-                        <button onclick="excluirCliente('${d.id}')" class="bg-red-900/10 text-red-500 py-3 rounded-xl text-[9px] font-black uppercase">Excluir</button>
+                        <button onclick="editarCliente('${d.id}')" class="bg-zinc-800 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700">Editar</button>
+                        <button onclick="excluirCliente('${d.id}')" class="bg-red-900/10 text-red-500 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-red-900/20">Excluir</button>
                     </div>
                 </div>`;
             }).join('');
@@ -83,40 +88,69 @@
 
         document.getElementById('formNovoCliente').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const btn = document.getElementById('btnSalvar');
+            btn.innerText = "Processando..."; btn.disabled = true;
+
             const slug = document.getElementById('slug_cliente').value.toLowerCase().replace(/[^a-z0-9]/g, '');
-            await setDoc(doc(db, "clientes_revenda", slug), {
-                razao_social: document.getElementById('razao_social').value,
-                nome_fantasia: document.getElementById('nome_fantasia').value.toUpperCase(),
-                cnpj: document.getElementById('cnpj_cliente').value,
-                email: document.getElementById('email_cliente').value,
-                logo_url: document.getElementById('logo_url').value,
-                cor_primaria: document.getElementById('cor_primaria').value,
-                slug: slug,
-                vencimento: document.getElementById('data_vencimento').value,
-                usuario: document.getElementById('user_cliente').value,
-                senha: document.getElementById('pass_cliente').value,
-                ativo: true
-            });
-            resetForm();
+            const arquivoFoto = document.getElementById('logo_upload').files[0];
+            let urlFinalLogo = document.getElementById('logo_url_atual').value; // Mantém a antiga se não houver nova
+
+            try {
+                // SE O USUÁRIO ESCOLHEU UMA FOTO NOVA, FAZ O UPLOAD PRIMEIRO
+                if (arquivoFoto) {
+                    btn.innerText = "Subindo imagem...";
+                    const storageRef = ref(storage, `logos/${slug}_${Date.now()}_${arquivoFoto.name}`);
+                    await uploadBytes(storageRef, arquivoFoto);
+                    urlFinalLogo = await getDownloadURL(storageRef); // Pega o link gerado pela nuvem
+                }
+
+                btn.innerText = "Salvando cliente...";
+                await setDoc(doc(db, "clientes_revenda", slug), {
+                    razao_social: document.getElementById('razao_social').value,
+                    nome_fantasia: document.getElementById('nome_fantasia').value.toUpperCase(),
+                    cnpj: document.getElementById('cnpj_cliente').value,
+                    email: document.getElementById('email_cliente').value,
+                    logo_url: urlFinalLogo, // Salva o link da nuvem
+                    cor_primaria: document.getElementById('cor_primaria').value || '#3b82f6',
+                    slug: slug,
+                    vencimento: document.getElementById('data_vencimento').value,
+                    usuario: document.getElementById('user_cliente').value,
+                    senha: document.getElementById('pass_cliente').value,
+                    ativo: true
+                });
+                resetForm();
+                alert("Salvo com sucesso!");
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao salvar! Verifique se o Storage está liberado no Firebase.");
+            } finally {
+                btn.innerText = "Salvar Configurações"; btn.disabled = false;
+            }
         });
 
         window.editarCliente = async (id) => {
             const snap = await getDoc(doc(db, "clientes_revenda", id));
             const c = snap.data();
-            document.getElementById('razao_social').value = c.razao_social;
-            document.getElementById('nome_fantasia').value = c.nome_fantasia;
-            document.getElementById('logo_url').value = c.logo_url || '';
+            document.getElementById('edit_id').value = id;
+            document.getElementById('razao_social').value = c.razao_social || '';
+            document.getElementById('nome_fantasia').value = c.nome_fantasia || '';
+            document.getElementById('cnpj_cliente').value = c.cnpj || '';
+            document.getElementById('email_cliente').value = c.email || '';
             document.getElementById('cor_primaria').value = c.cor_primaria || '';
             document.getElementById('slug_cliente').value = c.slug;
             document.getElementById('data_vencimento').value = c.vencimento;
             document.getElementById('user_cliente').value = c.usuario;
             document.getElementById('pass_cliente').value = c.senha;
+            document.getElementById('logo_url_atual').value = c.logo_url || ''; // Guarda a logo atual na memória
+            
             document.getElementById('titulo-form').innerText = "📝 Editando: " + c.nome_fantasia;
             document.getElementById('btnCancelarEdit').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         window.resetForm = () => {
             document.getElementById('formNovoCliente').reset();
+            document.getElementById('logo_url_atual').value = '';
             document.getElementById('titulo-form').innerText = "➕ Configurar Nova Casa";
             document.getElementById('btnCancelarEdit').classList.add('hidden');
         };
