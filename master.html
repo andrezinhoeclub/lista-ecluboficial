@@ -12,6 +12,8 @@
         input { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #3b82f6 !important; }
         .label-mini { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #71717a; margin-left: 0.5rem; letter-spacing: 0.05em; }
+        .btn-copy { background: #1e1e26; border: 1px solid #3b82f6; color: #3b82f6; font-size: 8px; font-weight: 900; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; }
+        .btn-copy:active { background: #3b82f6; color: #fff; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -26,17 +28,19 @@
             <h2 id="titulo-form" class="text-white font-black uppercase italic text-xl mb-6">➕ Configurar Nova Casa</h2>
             <form id="formNovoCliente" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <input type="hidden" id="edit_id">
-                <input type="hidden" id="logo_url_atual"> <div class="flex flex-col gap-1"><label class="label-mini">Razão Social</label><input type="text" id="razao_social" class="p-4 rounded-2xl font-bold" required></div>
+                <input type="hidden" id="logo_url_atual">
+                
+                <div class="flex flex-col gap-1"><label class="label-mini">Razão Social</label><input type="text" id="razao_social" class="p-4 rounded-2xl font-bold" required></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">Nome Fantasia</label><input type="text" id="nome_fantasia" class="p-4 rounded-2xl font-bold uppercase" required></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">CNPJ</label><input type="text" id="cnpj_cliente" class="p-4 rounded-2xl font-bold"></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">E-mail</label><input type="email" id="email_cliente" class="p-4 rounded-2xl font-bold" required></div>
 
                 <div class="flex flex-col gap-1">
-                    <label class="label-mini text-blue-400">Logo da Casa (Upload)</label>
+                    <label class="label-mini text-blue-400">Logótipo (Upload)</label>
                     <input type="file" id="logo_upload" accept="image/*" class="file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer p-1 rounded-2xl font-bold text-xs">
                 </div>
                 
-                <div class="flex flex-col gap-1"><label class="label-mini text-blue-400">Cor Principal (HEX)</label><input type="text" id="cor_primaria" placeholder="#FF0000" class="p-4 rounded-2xl font-bold"></div>
+                <div class="flex flex-col gap-1"><label class="label-mini text-blue-400">Cor Principal (HEX)</label><input type="text" id="cor_primaria" placeholder="#3b82f6" class="p-4 rounded-2xl font-bold"></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">Vencimento</label><input type="date" id="data_vencimento" class="p-4 rounded-2xl font-bold" required></div>
                 <div class="flex flex-col gap-1"><label class="label-mini">Slug (ID do Link)</label><input type="text" id="slug_cliente" class="p-4 rounded-2xl font-bold lowercase" required></div>
 
@@ -44,47 +48,89 @@
                 <div class="flex flex-col gap-1"><label class="label-mini">Senha</label><input type="text" id="pass_cliente" class="p-4 rounded-2xl font-bold" required></div>
 
                 <div class="lg:col-span-4 mt-4 flex gap-2">
-                    <button type="submit" id="btnSalvar" class="flex-1 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase hover:bg-blue-500 transition-all">Salvar Configurações</button>
+                    <button type="submit" id="btnSalvar" class="flex-1 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20">Ativar Licença e Salvar</button>
                     <button type="button" id="btnCancelarEdit" class="hidden bg-zinc-800 text-white font-black px-8 rounded-2xl uppercase text-xs" onclick="resetForm()">Cancelar</button>
                 </div>
             </form>
         </div>
 
-        <div id="grid-clientes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8"></div>
+        <div class="glass-card p-8">
+            <h2 class="text-white font-black uppercase italic text-xl mb-6">📋 Suas Licenças Ativas</h2>
+            <div id="grid-clientes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, setDoc, doc, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js"; // IMPORTA O STORAGE
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", 
+            authDomain: "teste-de-reserva.firebaseapp.com", 
+            projectId: "teste-de-reserva", 
+            storageBucket: "teste-de-reserva.firebasestorage.app", 
+            messagingSenderId: "163395694876", 
+            appId: "1:163395694876:web:8b1116a0483af951548ad9" 
+        };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app); // INICIA A NUVEM DE FOTOS
+        const storage = getStorage(app);
+
+        const base_url = "www.abreaporta.com.br";
 
         onSnapshot(collection(db, "clientes_revenda"), (snap) => {
             const grid = document.getElementById('grid-clientes');
             grid.innerHTML = snap.docs.map(d => {
                 const c = d.data();
+                const hoje = new Date();
+                const venc = new Date(c.vencimento);
+                const estaVencido = (venc - hoje) < 0;
+                const link_lista = `${base_url}/listas.html?clube=${c.slug}`;
+                const link_login = `${base_url}/login.html?clube=${c.slug}`;
+
                 return `
-                <div class="bg-[#0a0a0f] border border-white/5 p-6 rounded-3xl relative overflow-hidden">
+                <div class="bg-[#0a0a0f] border ${estaVencido ? 'border-red-500/30' : 'border-white/5'} p-6 rounded-3xl relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-1 h-full" style="background: ${c.cor_primaria || '#3b82f6'}"></div>
-                    <div class="flex items-center gap-4 mb-4">
-                        <img src="${c.logo_url || 'https://via.placeholder.com/50'}" class="h-10 w-10 rounded-lg object-contain bg-zinc-900 border border-white/10">
-                        <h3 class="text-lg font-black uppercase text-white">${c.nome_fantasia}</h3>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <img src="${c.logo_url || 'https://via.placeholder.com/50'}" class="h-10 w-10 rounded-lg object-contain bg-zinc-900 border border-white/10">
+                            <h3 class="text-md font-black uppercase text-white">${c.nome_fantasia}</h3>
+                        </div>
+                        <button onclick="editarCliente('${d.id}')" class="text-blue-500 text-[10px] font-black uppercase">Editar ✏️</button>
                     </div>
-                    <div class="space-y-1 mb-6 text-[10px] font-bold uppercase italic text-zinc-500">
-                        <p>Link Login: <span class="text-blue-500">.../login.html?clube=${c.slug}</span></p>
+
+                    <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-2 mb-4">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="truncate text-[8px] text-white/50 uppercase font-bold italic">Link Lista</span>
+                            <button onclick="copyText('${link_lista}')" class="btn-copy">Copiar</button>
+                        </div>
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="truncate text-[8px] text-white/50 uppercase font-bold italic">Link Login</span>
+                            <button onclick="copyText('${link_login}')" class="btn-copy">Copiar</button>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-1 mb-6 text-[9px] font-bold uppercase italic text-zinc-500">
                         <p>Acesso: <span class="text-white">${c.usuario} / ${c.senha}</span></p>
+                        <p>Vencimento: <span class="${estaVencido ? 'text-red-500' : 'text-blue-400'}">${venc.toLocaleDateString('pt-BR')}</span></p>
                     </div>
+
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="editarCliente('${d.id}')" class="bg-zinc-800 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700">Editar</button>
-                        <button onclick="excluirCliente('${d.id}')" class="bg-red-900/10 text-red-500 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-red-900/20">Excluir</button>
+                        <button onclick="alternarStatus('${d.id}', ${c.ativo})" class="bg-zinc-800 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700 transition-all">
+                            ${c.ativo ? 'Bloquear' : 'Ativar'}
+                        </button>
+                        <button onclick="excluirCliente('${d.id}')" class="bg-red-900/10 text-red-500 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-red-900/20 transition-all">Excluir</button>
                     </div>
                 </div>`;
             }).join('');
         });
+
+        window.copyText = (text) => {
+            navigator.clipboard.writeText(text);
+            alert("Link copiado!");
+        };
 
         document.getElementById('formNovoCliente').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -93,24 +139,22 @@
 
             const slug = document.getElementById('slug_cliente').value.toLowerCase().replace(/[^a-z0-9]/g, '');
             const arquivoFoto = document.getElementById('logo_upload').files[0];
-            let urlFinalLogo = document.getElementById('logo_url_atual').value; // Mantém a antiga se não houver nova
+            let urlFinalLogo = document.getElementById('logo_url_atual').value;
 
             try {
-                // SE O USUÁRIO ESCOLHEU UMA FOTO NOVA, FAZ O UPLOAD PRIMEIRO
                 if (arquivoFoto) {
                     btn.innerText = "Subindo imagem...";
-                    const storageRef = ref(storage, `logos/${slug}_${Date.now()}_${arquivoFoto.name}`);
+                    const storageRef = ref(storage, `logos/${slug}_${Date.now()}`);
                     await uploadBytes(storageRef, arquivoFoto);
-                    urlFinalLogo = await getDownloadURL(storageRef); // Pega o link gerado pela nuvem
+                    urlFinalLogo = await getDownloadURL(storageRef);
                 }
 
-                btn.innerText = "Salvando cliente...";
                 await setDoc(doc(db, "clientes_revenda", slug), {
                     razao_social: document.getElementById('razao_social').value,
                     nome_fantasia: document.getElementById('nome_fantasia').value.toUpperCase(),
                     cnpj: document.getElementById('cnpj_cliente').value,
                     email: document.getElementById('email_cliente').value,
-                    logo_url: urlFinalLogo, // Salva o link da nuvem
+                    logo_url: urlFinalLogo,
                     cor_primaria: document.getElementById('cor_primaria').value || '#3b82f6',
                     slug: slug,
                     vencimento: document.getElementById('data_vencimento').value,
@@ -119,43 +163,49 @@
                     ativo: true
                 });
                 resetForm();
-                alert("Salvo com sucesso!");
+                alert("Dados salvos com sucesso!");
             } catch (err) {
-                console.error(err);
-                alert("Erro ao salvar! Verifique se o Storage está liberado no Firebase.");
+                alert("Erro ao salvar! Verifique as regras do Storage no Firebase.");
             } finally {
-                btn.innerText = "Salvar Configurações"; btn.disabled = false;
+                btn.innerText = "Ativar Licença e Salvar"; btn.disabled = false;
             }
         });
 
         window.editarCliente = async (id) => {
             const snap = await getDoc(doc(db, "clientes_revenda", id));
-            const c = snap.data();
-            document.getElementById('edit_id').value = id;
-            document.getElementById('razao_social').value = c.razao_social || '';
-            document.getElementById('nome_fantasia').value = c.nome_fantasia || '';
-            document.getElementById('cnpj_cliente').value = c.cnpj || '';
-            document.getElementById('email_cliente').value = c.email || '';
-            document.getElementById('cor_primaria').value = c.cor_primaria || '';
-            document.getElementById('slug_cliente').value = c.slug;
-            document.getElementById('data_vencimento').value = c.vencimento;
-            document.getElementById('user_cliente').value = c.usuario;
-            document.getElementById('pass_cliente').value = c.senha;
-            document.getElementById('logo_url_atual').value = c.logo_url || ''; // Guarda a logo atual na memória
-            
-            document.getElementById('titulo-form').innerText = "📝 Editando: " + c.nome_fantasia;
-            document.getElementById('btnCancelarEdit').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if(snap.exists()){
+                const c = snap.data();
+                document.getElementById('razao_social').value = c.razao_social;
+                document.getElementById('nome_fantasia').value = c.nome_fantasia;
+                document.getElementById('cnpj_cliente').value = c.cnpj || '';
+                document.getElementById('email_cliente').value = c.email;
+                document.getElementById('cor_primaria').value = c.cor_primaria;
+                document.getElementById('slug_cliente').value = c.slug;
+                document.getElementById('slug_cliente').readOnly = true;
+                document.getElementById('data_vencimento').value = c.vencimento;
+                document.getElementById('user_cliente').value = c.usuario;
+                document.getElementById('pass_cliente').value = c.senha;
+                document.getElementById('logo_url_atual').value = c.logo_url || '';
+                document.getElementById('titulo-form').innerText = "📝 Editando: " + c.nome_fantasia;
+                document.getElementById('btnCancelarEdit').classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
         };
 
         window.resetForm = () => {
             document.getElementById('formNovoCliente').reset();
-            document.getElementById('logo_url_atual').value = '';
+            document.getElementById('slug_cliente').readOnly = false;
             document.getElementById('titulo-form').innerText = "➕ Configurar Nova Casa";
             document.getElementById('btnCancelarEdit').classList.add('hidden');
         };
 
-        window.excluirCliente = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "clientes_revenda", id)); };
+        window.alternarStatus = async (id, status) => {
+            await setDoc(doc(db, "clientes_revenda", id), { ativo: !status }, { merge: true });
+        };
+
+        window.excluirCliente = async (id) => {
+            if(confirm("Deseja excluir definitivamente este cliente?")) await deleteDoc(doc(db, "clientes_revenda", id));
+        };
     </script>
 </body>
 </html>
