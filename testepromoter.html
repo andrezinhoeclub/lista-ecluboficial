@@ -83,6 +83,8 @@
             </select>
             
             <div id="area-mapa-cortesia" class="hidden">
+                <img id="img-mapa-cortesia" src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.jpg" class="w-full h-32 object-cover mb-4 rounded-xl opacity-80 border border-white/10">
+
                 <div class="grid grid-cols-2 gap-2 mb-6" id="grid-camarotes-cortesia"></div>
                 
                 <div id="form-cortesia" class="hidden space-y-3 border-t border-white/10 pt-4">
@@ -102,7 +104,6 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        // 👇 CORRIGIDO: Adicionado getDocs aqui 👇
         import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
@@ -116,10 +117,12 @@
             const u = document.getElementById('usuario').value.trim().toLowerCase();
             const s = document.getElementById('senha').value.trim();
             const btn = document.getElementById('btnAcao');
+            const inputSenha = document.getElementById('senha');
             if (!logado) {
                 const snap = await getDoc(doc(db, "promoters", u));
                 if (snap.exists()) {
                     logado = u; dadosPromoter = snap.data();
+                    if (!dadosPromoter.senha) { inputSenha.placeholder = "CADASTRE SUA SENHA"; inputSenha.style.border = "1px solid #a855f7"; }
                     document.getElementById('campo-senha').classList.remove('hidden'); document.getElementById('usuario').readOnly = true;
                     btn.innerText = "ENTRAR NO PAINEL";
                 } else { alert("Usuário não encontrado"); }
@@ -225,6 +228,11 @@
             document.getElementById('area-mapa-cortesia').classList.remove('hidden');
             const grid = document.getElementById('grid-camarotes-cortesia');
             grid.innerHTML = '';
+            
+            // 👇 PUXANDO A IMAGEM OFICIAL DO GITHUB 👇
+            const imgCortesia = document.getElementById('img-mapa-cortesia');
+            if (imgCortesia) imgCortesia.src = ev.url_mapa || 'https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.jpg';
+
             for(let i=1; i<=8; i++) {
                 if(ev[`cam${i}_ativo`]) {
                     const resCam = resEvento.filter(r => r.tipo_entrada === `CAMAROTE ${i}`);
@@ -249,7 +257,6 @@
             
             const btn = document.getElementById('btnSalvarCortesia'); btn.innerText = "SALVANDO..."; btn.disabled = true;
             try {
-                // 👇 AQUI NÃO VAI MAIS DAR ERRO 👇
                 const check = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", f), where("tipo_entrada", "==", `CAMAROTE ${camCortesiaSelecionado}`)));
                 let ocupado = false; check.forEach(d => { if(d.data().pago || d.data().cortesia) ocupado = true; });
                 if(ocupado) throw new Error("Ocupado!");
@@ -264,7 +271,7 @@
         window.abrirModalAniv = () => { const s = document.getElementById('selEvento'); s.innerHTML = eventos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join(''); document.getElementById('modalAniv').classList.remove('hidden'); };
         window.fecharModalAniv = () => document.getElementById('modalAniv').classList.add('hidden');
         window.mask = (i) => { let v = i.value.replace(/\D/g, "").substring(0,11); if(v.length>0) v="("+v; if(v.length>3) v=v.substring(0,3)+") "+v.substring(3); if(v.length>10) v=v.substring(0,10)+"-"+v.substring(10); i.value=v; };
-        window.criarLinkAniv = async () => { const f=document.getElementById('selEvento').value; const n=document.getElementById('nomeAniv').value.trim().toUpperCase(); const t=document.getElementById('telAniv').value.trim(); if(!n || t.length<14) return alert("Preencha!"); try { await addDoc(collection(db,"links_aniversario"), {promoter:logado, aniversariante:n, festa:f, criado:new Date().toISOString()}); await addDoc(collection(db,"lista_eventos"), {nome:n, tel:t, evento:f, tipo_entrada:"VIP_DONO", promoter:logado, data_reserva:new Date().toISOString(), entrou:false, pago:false, metodo:'portaria', aniversariante:n}); alert("Lista Criada!"); fecharModalAniv(); } catch(e){alert("Erro!");} };
+        window.criarLinkAniv = async () => { const f=document.getElementById('selEvento').value; const n=document.getElementById('nomeAniv').value.trim().toUpperCase(); const t=document.getElementById('telAniv').value.trim(); if(!n || t.length<14) return alert("Preencha!"); try { await addDoc(collection(db,"links_aniversario"), {promoter:logado, aniversariante:n, festa:f, criado:new Date().toISOString()}); await addDoc(collection(db,"lista_eventos"), {nome:n, tel:t, evento:f, tipo_entrada:"VIP_DONO", promoter:logado, data_reserva:new Date().toISOString(), entrou:false, pago:false, metodo:'portaria', aniversariante:n}); alert("Lista Criada!"); fecharModalAniv(); } catch(e){alert("Erro!");} finally { document.getElementById('btnGerarVip').innerText = "GERAR LINK E GARANTIR VIP ✨"; document.getElementById('btnGerarVip').disabled = false; } };
     </script>
 </body>
 </html>
