@@ -60,11 +60,17 @@
                 
                 <div class="glass-card p-8 border-t-4 border-t-blue-600 flex flex-col">
                     <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Exportar Dados</h2>
-                    <div class="flex gap-2 mb-4">
-                        <button onclick="gerarRelatorioGerencial()" class="flex-1 bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-black py-3 rounded-xl uppercase hover:bg-blue-600 hover:text-white transition-all shadow-[0_0_10px_rgba(37,99,235,0.2)]">Resumo Gerencial</button>
-                        <button onclick="gerarListaCheckins()" class="flex-1 bg-zinc-800 text-zinc-400 border border-zinc-700 text-[9px] font-black py-3 rounded-xl uppercase hover:bg-zinc-700 transition-all">Lista de Nomes</button>
+                    <select id="filtro-promoter-excel" class="w-full bg-[#0a0a0f] border border-zinc-800 p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white outline-none"></select>
+                    
+                    <div class="flex flex-col gap-2 mb-4">
+                        <button onclick="gerarRelatorioGerencial()" class="w-full bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[9px] font-black py-3 rounded-xl uppercase hover:bg-blue-600 hover:text-white transition-all shadow-[0_0_10px_rgba(37,99,235,0.2)]">Resumo Gerencial</button>
+                        <div class="flex gap-2">
+                            <button onclick="gerarListaCheckins()" class="flex-1 bg-zinc-800 text-zinc-400 border border-zinc-700 text-[8px] font-black py-3 rounded-xl uppercase hover:bg-zinc-700 transition-all">Geral (Tudo)</button>
+                            <button onclick="gerarApenasCheckins()" class="flex-1 bg-green-600/20 text-green-400 border border-green-500/30 text-[8px] font-black py-3 rounded-xl uppercase hover:bg-green-600 hover:text-white transition-all">Check-ins (Nome/Tel)</button>
+                        </div>
                     </div>
-                    <textarea id="output-excel" readonly class="w-full h-48 rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800" placeholder="Clique em um dos botões acima para gerar o relatório..."></textarea>
+                    
+                    <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800" placeholder="Selecione o promoter e clique em um dos botões acima..."></textarea>
                     <button onclick="copiarOutput()" class="w-full bg-blue-600 text-[11px] text-white font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)]">📋 Copiar Relatório</button>
                 </div>
             </div>
@@ -247,6 +253,7 @@
 
         onSnapshot(collection(db, "promoters"), snap => { 
             dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
+            document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Por Promoter (Todos)</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
             renderizarEquipe();
         });
 
@@ -356,10 +363,10 @@
             document.getElementById('lista-ranking-checkins').innerHTML = rankChk.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 mb-2"><div><span class="mr-2">${medals[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.chk}</p></div>`).join('');
         }
 
-        // --- RELATÓRIO GERENCIAL CORRIGIDO (SEM DATAS EXTRAS) ---
+        // FUNÇÃO: RELATÓRIO GERENCIAL
         window.gerarRelatorioGerencial = () => {
             const textoArea = document.getElementById('output-excel');
-            if (dadosReservas.length === 0) { textoArea.value = "Sem reservas."; return; }
+            if (dadosReservas.length === 0) { textoArea.value = "Sem reservas no sistema."; return; }
 
             const validas = dadosReservas.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
             const hojeLocal = new Date().toLocaleDateString('en-CA');
@@ -429,16 +436,43 @@
             textoArea.value = txt.trim();
         };
 
+        // FUNÇÃO: LISTA GERAL
         window.gerarListaCheckins = () => {
+            const filtro = document.getElementById('filtro-promoter-excel').value;
             const textoArea = document.getElementById('output-excel');
+            
+            let fRes = dadosReservas;
+            if (filtro) fRes = fRes.filter(r => (r.promoter || '').toUpperCase() === filtro);
+            
             let texto = "DATA\tEVENTO\tCLIENTE\tTELEFONE\tPROMOTER\tSTATUS\n";
-            dadosReservas.forEach(r => { const dt = r.data_reserva ? new Date(r.data_reserva).toLocaleDateString('pt-BR') : '---'; const status = r.entrou ? "CHECK-IN" : "PENDENTE"; texto += `${dt}\t${r.evento}\t${r.nome}\t${r.tel}\t${r.promoter}\t${status}\n`; });
+            fRes.forEach(r => { const dt = r.data_reserva ? new Date(r.data_reserva).toLocaleDateString('pt-BR') : '---'; const status = r.entrou ? "CHECK-IN" : "PENDENTE"; texto += `${dt}\t${r.evento}\t${r.nome}\t${r.tel}\t${r.promoter}\t${status}\n`; });
+            textoArea.value = texto;
+        };
+
+        // NOVA FUNÇÃO: APENAS QUEM DEU CHECK-IN (NOME/TEL)
+        window.gerarApenasCheckins = () => {
+            const filtro = document.getElementById('filtro-promoter-excel').value;
+            const textoArea = document.getElementById('output-excel');
+            
+            // Pega APENAS quem entrou
+            let fRes = dadosReservas.filter(r => r.entrou === true);
+            
+            if (filtro) fRes = fRes.filter(r => (r.promoter || '').toUpperCase() === filtro);
+            
+            if (fRes.length === 0) {
+                textoArea.value = "Nenhum check-in encontrado para este filtro.";
+                return;
+            }
+
+            let texto = "NOME\tTELEFONE\n";
+            fRes.forEach(r => { 
+                texto += `${r.nome}\t${r.tel || '---'}\n`; 
+            });
             textoArea.value = texto;
         };
 
         window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado com sucesso!"); };
 
-        // RESTANTE MANTIDO INTACTO
         window.removerItem = async (colecao, id) => { 
             if(!confirm("TEM CERTEZA? Isso vai apagar o item e TODOS os dados ligados a ele!")) return;
             try {
@@ -475,7 +509,7 @@
             document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
         };
 
-        window.renderizarGridConfig = () => {
+        window.renderGridConfig = () => {
             const grid = document.getElementById('grid-eventos-config'); if(!grid) return;
             grid.innerHTML = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).map(ev => `
                 <div class="glass-card overflow-hidden border border-white/5 p-5">
@@ -486,14 +520,14 @@
                 </div>`).join('');
         };
 
-        function renderizarEquipe() {
+        function renderEquipe() {
             const lp = document.getElementById('lista-promoters');
             if (lp) lp.innerHTML = dadosPromoters.map(p => `<div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 border-l-yellow-500"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p></div><div class="flex gap-4"><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button></div></div></div>`).join('');
             const lpPort = document.getElementById('lista-portaria');
             if(lpPort) lpPort.innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 border-l-green-500"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p></div><div class="flex gap-4"><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button></div></div></div>`).join('');
         }
 
-        function renderizarCamarotesVendidos() {
+        function renderCamarotesVendidos() {
             const tb = document.getElementById('tabela-camarotes-body'); if(!tb) return;
             const camsReservados = dadosReservas.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE') && (r.pago === true || r.cortesia === true));
             camsReservados.sort((a,b) => a.evento.localeCompare(b.evento));
@@ -506,7 +540,7 @@
 
         window.liberarCamarote = async (id) => { if(confirm("Liberar o camarote para venda novamente?")) { try { await deleteDoc(doc(db, "lista_eventos", id)); alert("✅ Camarote liberado!"); } catch(e) { alert("Erro ao liberar."); } } };
 
-        function renderizarAniversarios() {
+        function renderAniversarios() {
             const tb = document.getElementById('tabela-aniversarios-body'); if(!tb) return;
             tb.innerHTML = dadosAniv.map(link => {
                 const festaLimpa = (link.festa || '').trim().toLowerCase(); const anivLimpo = (link.aniversariante || '').trim().toLowerCase();
