@@ -129,7 +129,7 @@
                 <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
         </section>
-
+        
         <section id="aba-aniversarios" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-cyan-500">
                 <h2 class="text-cyan-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Listas de Aniversariantes</h2>
@@ -179,7 +179,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = [];
+        let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
         let modoTesteAtivo = false;
 
         const gridCamarotes = document.getElementById('grid-camarotes-inputs');
@@ -203,10 +203,15 @@
             if (type === 'danger') btn.classList.add('active-danger'); else btn.classList.add('active'); 
         };
 
-        onSnapshot(doc(db, "configuracoes", "sistema"), snap => {
-            const btn = document.getElementById('btnModoTeste');
-            modoTesteAtivo = snap.exists() ? snap.data().modo_teste === true : false;
-            if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
+        onSnapshot(collection(db, "configuracoes"), snap => {
+            const sys = snap.docs.find(d => d.id === "sistema");
+            if (sys) {
+                modoTesteAtivo = sys.data().modo_teste === true;
+                const btn = document.getElementById('btnModoTeste');
+                if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
+            }
+            dadosOperadores = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.id !== "sistema");
+            renderizarEquipe();
         });
 
         onSnapshot(collection(db, "lista_eventos"), snap => { 
@@ -235,7 +240,9 @@
             if(!container) return;
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const ativos = dadosEventos.filter(e => e.ativo && e.data >= hojeLocal).sort((a,b) => a.data.localeCompare(b.data));
+            
+            // 👇 ORDENAÇÃO CRONOLÓGICA NA DASHBOARD 👇
+            const ativos = dadosEventos.filter(e => e.ativo && e.data >= hojeLocal).sort((a,b) => new Date(a.data) - new Date(b.data));
             
             container.innerHTML = ativos.map(ev => {
                 
@@ -365,7 +372,8 @@
         function renderizarGridConfig() {
             const grid = document.getElementById('grid-eventos-config');
             if(!grid) return;
-            const ordenada = [...dadosEventos].sort((a,b) => b.data.localeCompare(a.data));
+            // 👇 ORDENAÇÃO CRONOLÓGICA TAMBÉM NA ABA EVENTOS 👇
+            const ordenada = [...dadosEventos].sort((a,b) => new Date(a.data) - new Date(b.data));
             grid.innerHTML = ordenada.map(ev => `
                 <div class="glass-card overflow-hidden border border-white/5 p-5">
                     <img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4">
@@ -381,20 +389,31 @@
                 </div>`).join('');
         }
 
+        // 👇 FUNÇÕES DA EQUIPE RESTAURADAS 👇
         function renderizarEquipe() {
-            document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => {
-                let tl = 'LISTA PADRÃO'; let cb = 'border-l-yellow-500';
-                if (p.tipo === 'aniversario') tl = 'LISTA ANIVERSÁRIO';
-                if (p.tipo === 'visualizar') { tl = 'VISUALIZAÇÃO'; cb = 'border-l-blue-500'; }
-                return `<div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 ${cb}"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tl}</p></div><div class="flex gap-4"><button onclick="editarPromoter('${p.id}', '${p.tipo}')" class="text-blue-400 text-[10px] font-black uppercase">Editar</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button></div></div></div>`;
-            }).join('');
+            const lp = document.getElementById('lista-promoters');
+            if (lp) {
+                lp.innerHTML = dadosPromoters.map(p => {
+                    let tl = 'LISTA PADRÃO'; let cb = 'border-l-yellow-500';
+                    if (p.tipo === 'aniversario') tl = 'LISTA ANIVERSÁRIO';
+                    if (p.tipo === 'visualizar') { tl = 'VISUALIZAÇÃO'; cb = 'border-l-blue-500'; }
+                    return `<div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 ${cb}"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tl}</p></div><div class="flex gap-4"><button onclick="editarPromoter('${p.id}', '${p.tipo}')" class="text-blue-400 text-[10px] font-black uppercase">Editar</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button></div></div></div>`;
+                }).join('');
+            }
+
+            const lport = document.getElementById('lista-portaria');
+            if (lport) {
+                lport.innerHTML = dadosOperadores.map(op => {
+                    return `<div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 border-l-green-500"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p></div><div class="flex gap-4"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[10px] font-black uppercase">Editar</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button></div></div></div>`;
+                }).join('');
+            }
         }
 
+        // 👇 FUNÇÃO DOS ANIVERSÁRIOS RESTAURADA 👇
         function renderizarAniversarios() {
             const tb = document.getElementById('tabela-aniversarios-body');
             if(!tb) return;
             tb.innerHTML = dadosAniv.map(link => {
-                // 👇 BLINDAGEM MESTRA: Busca inteligente do evento do Aniversariante 👇
                 const festaLimpa = (link.festa || '').trim().toLowerCase();
                 const anivLimpo = (link.aniversariante || '').trim().toLowerCase();
                 
@@ -474,6 +493,11 @@
             if (op === '4') { const ns = prompt("Nova senha:"); if(ns) up.senha = ns.trim(); }
             if (Object.keys(up).length > 0) await updateDoc(doc(db, "promoters", id), up);
         };
+        
+        window.editarOperador = async (id) => {
+            const ns = prompt("Nova senha do operador:"); 
+            if(ns) await updateDoc(doc(db, "configuracoes", id), {senha: ns.trim()});
+        };
 
         document.getElementById('formPromoter').addEventListener('submit', async e => {
             e.preventDefault(); const n = document.getElementById('nome_promoter').value.trim(); const t = document.getElementById('tipo_promoter').value;
@@ -502,6 +526,24 @@
                 const batch = writeBatch(db); q.forEach(d => batch.delete(d.ref)); await batch.commit();
             }
             location.reload();
+        };
+
+        window.gerarListaCheckins = () => {
+            const filtro = document.getElementById('filtro-promoter-excel').value;
+            const textoArea = document.getElementById('output-excel');
+            
+            let fRes = dadosReservas;
+            if (filtro) {
+                fRes = fRes.filter(r => (r.promoter || '').toUpperCase() === filtro);
+            }
+            
+            let texto = "DATA\tEVENTO\tCLIENTE\tTELEFONE\tPROMOTER\tSTATUS\n";
+            fRes.forEach(r => {
+                const dt = r.data_reserva ? new Date(r.data_reserva).toLocaleDateString('pt-BR') : '---';
+                const status = r.entrou ? "CHECK-IN" : "PENDENTE";
+                texto += `${dt}\t${r.evento}\t${r.nome}\t${r.tel}\t${r.promoter}\t${status}\n`;
+            });
+            textoArea.value = texto;
         };
 
         window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado!"); };
