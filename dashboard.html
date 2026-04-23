@@ -207,16 +207,7 @@
 
         const gridCamarotes = document.getElementById('grid-camarotes-inputs');
         for(let i=1; i<=8; i++) {
-            gridCamarotes.innerHTML += `
-                <div class="bg-black/30 p-3 rounded-2xl border border-white/5 flex flex-col items-center gap-2">
-                    <label class="flex items-center gap-2 w-full cursor-pointer justify-center">
-                        <input type="checkbox" id="cam${i}_ativo" class="check-camarote">
-                        <span class="text-[10px] font-black uppercase text-zinc-400">Cam 0${i}</span>
-                    </label>
-                    <input type="text" id="v_cam${i}" placeholder="Valor (R$)" class="w-full p-2 rounded-xl text-center text-xs font-bold bg-[#0c0c0e] border border-zinc-800 text-cyan-400 outline-none">
-                    <input type="text" id="obs_cam${i}" placeholder="Benefícios" class="w-full p-2 rounded-xl text-center text-[9px] font-bold bg-[#0c0c0e] border border-zinc-800 text-zinc-400 outline-none">
-                </div>
-            `;
+            gridCamarotes.innerHTML += `<div class="bg-black/30 p-3 rounded-2xl border border-white/5 flex flex-col items-center gap-2"><label class="flex items-center gap-2 w-full cursor-pointer justify-center"><input type="checkbox" id="cam${i}_ativo" class="check-camarote"><span class="text-[10px] font-black uppercase text-zinc-400">Cam 0${i}</span></label><input type="text" id="v_cam${i}" placeholder="Valor (R$)" class="w-full p-2 rounded-xl text-center text-xs font-bold bg-[#0c0c0e] border border-zinc-800 text-cyan-400 outline-none"><input type="text" id="obs_cam${i}" placeholder="Benefícios" class="w-full p-2 rounded-xl text-center text-[9px] font-bold bg-[#0c0c0e] border border-zinc-800 text-zinc-400 outline-none"></div>`;
         }
 
         window.trocarAba = (id, btn, type) => { 
@@ -270,16 +261,11 @@
                 const validas = todasRes.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
                 const parseMoeda = (val) => Number(String(val || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
                 const formataBRL = (v) => v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-
                 const pixPista = validas.filter(r => r.metodo === 'pix_antecipado' && !(r.tipo_entrada || '').toUpperCase().includes('CAMAROTE'));
                 const pCasalQtd = pixPista.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CASAL')).length;
                 const pSolteiroQtd = pixPista.length - pCasalQtd;
-                const valPistaCasal = parseMoeda(ev.ant_casal || ev.valor_casal);
-                const valPistaSolteiro = parseMoeda(ev.ant_solteiro || ev.valor_solteiro);
-                const receitaPista = (pCasalQtd * valPistaCasal) + (pSolteiroQtd * valPistaSolteiro);
-                const camesPagos = validas.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE') && r.pago === true && !r.cortesia);
-                const receitaCam = camesPagos.reduce((total, r) => total + parseMoeda(r.valor_pago), 0);
-                const totalGeral = receitaPista + receitaCam;
+                const receitaCam = validas.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE') && r.pago === true && !r.cortesia).reduce((total, r) => total + parseMoeda(r.valor_pago), 0);
+                const totalGeral = (pCasalQtd * parseMoeda(ev.ant_casal || ev.valor_casal)) + (pSolteiroQtd * parseMoeda(ev.ant_solteiro || ev.valor_solteiro)) + receitaCam;
 
                 let luzesCamarotes = '';
                 for(let n=1; n<=8; n++) {
@@ -297,30 +283,7 @@
                     else luzesCamarotes += `<div class="w-full h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
                 }
 
-                return `
-                <div class="event-bubble p-6 flex flex-col justify-between">
-                    <div>
-                        <div class="flex justify-between items-start mb-4">
-                            <p class="text-[9px] font-black text-yellow-500 uppercase italic mt-1">${ev.data.split('-').reverse().join('/')}</p>
-                            <div class="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg flex flex-col items-end">
-                                <span class="text-[7px] font-black text-green-500 uppercase tracking-widest">💰 Total Arrecadado</span>
-                                <span class="text-sm font-black text-white">${formataBRL(totalGeral)}</span>
-                            </div>
-                        </div>
-                        <h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4>
-                    </div>
-                    <div class="bg-cyan-900/10 border border-cyan-500/20 p-4 rounded-2xl mb-4">
-                        <div class="flex flex-col gap-2 text-[10px]">
-                            <div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCasalQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Pix</span></div>
-                            <div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSolteiroQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div>
-                        </div>
-                        <div class="grid grid-cols-8 gap-1.5 mt-4">${luzesCamarotes}</div>
-                    </div>
-                    <div class="flex justify-between border-t border-white/5 pt-4">
-                        <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista</p><p class="text-lg font-black text-white">${validas.length}</p></div>
-                        <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins</p><p class="text-lg font-black text-green-500">${validas.filter(r => r.entrou === true).length}</p></div>
-                    </div>
-                </div>`;
+                return `<div class="event-bubble p-6 flex flex-col justify-between"><div><div class="flex justify-between items-start mb-4"><p class="text-[9px] font-black text-yellow-500 uppercase italic mt-1">${ev.data.split('-').reverse().join('/')}</p><div class="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg flex flex-col items-end"><span class="text-[7px] font-black text-green-500 uppercase tracking-widest">💰 Total Arrecadado</span><span class="text-sm font-black text-white">${formataBRL(totalGeral)}</span></div></div><h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4></div><div class="bg-cyan-900/10 border border-cyan-500/20 p-4 rounded-2xl mb-4"><div class="flex flex-col gap-2 text-[10px]"><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCasalQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSolteiroQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div></div><div class="grid grid-cols-8 gap-1.5 mt-4">${luzesCamarotes}</div></div><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista</p><p class="text-lg font-black text-white">${validas.length}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins</p><p class="text-lg font-black text-green-500">${validas.filter(r => r.entrou === true).length}</p></div></div></div>`;
             }).join('');
             renderPodios();
         }
@@ -343,7 +306,7 @@
             const ativos = dadosEventos.filter(e => e.ativo && e.data >= hojeLocal).sort((a,b) => a.data.localeCompare(b.data));
             let cabecalho = "";
             if (ativos.length > 0) {
-                const meses = ["abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro", "janeiro", "fevereiro", "março"];
+                const meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
                 const dIni = new Date(ativos[0].data + "T12:00:00Z"); const dFim = new Date(ativos[ativos.length-1].data + "T12:00:00Z");
                 cabecalho = `**De ${String(dIni.getDate()).padStart(2, '0')} de ${meses[dIni.getMonth()]} a ${String(dFim.getDate()).padStart(2, '0')} de ${meses[dFim.getMonth()]} de ${dFim.getFullYear()}**\n\n`;
             }
@@ -390,7 +353,7 @@
         window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado com sucesso!"); };
 
         window.removerItem = async (colecao, id) => { 
-            if(!confirm("TEM CERTEZA? Isso vai apagar o item e TODOS os dados ligados a ele!")) return;
+            if(!confirm("TEM CERTEZA?")) return;
             try {
                 const batch = writeBatch(db); const docRef = doc(db, colecao, id); const docSnap = await getDoc(docRef);
                 if (!docSnap.exists()) return; const data = docSnap.data();
@@ -404,9 +367,33 @@
                     const qConv = query(collection(db, "lista_eventos"), where("aniversariante", "==", data.aniversariante), where("evento", "==", data.festa));
                     const snapConv = await getDocs(qConv); snapConv.forEach(d => batch.delete(d.ref));
                 }
-                batch.delete(docRef); await batch.commit(); alert("Exclusão concluída!");
+                batch.delete(docRef); await batch.commit();
             } catch (e) { alert("Erro ao excluir."); }
         };
+
+        // --- RESTAURAÇÃO DO FORMULÁRIO DE PROMOTERS ---
+        document.getElementById('formPromoter').addEventListener('submit', async e => {
+            e.preventDefault();
+            const n = document.getElementById('nome_promoter').value.trim();
+            const t = document.getElementById('tipo_promoter').value;
+            if(!n) return;
+            try {
+                await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true });
+                e.target.reset();
+                alert("Promoter adicionado!");
+            } catch(err) { alert("Erro ao adicionar promoter."); }
+        });
+
+        document.getElementById('formPortaria').addEventListener('submit', async e => {
+            e.preventDefault();
+            const n = document.getElementById('login_portaria').value.trim().toLowerCase();
+            if(!n) return;
+            try {
+                await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true });
+                e.target.reset();
+                alert("Operador adicionado!");
+            } catch(err) { alert("Erro ao adicionar operador."); }
+        });
 
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
@@ -454,7 +441,7 @@
             }).join('');
         }
 
-        window.liberarCamarote = async (id) => { if(confirm("Liberar o camarote para venda novamente?")) { try { await deleteDoc(doc(db, "lista_eventos", id)); alert("✅ Camarote liberado!"); } catch(e) { alert("Erro ao liberar."); } } };
+        window.liberarCamarote = async (id) => { if(confirm("Liberar o camarote?")) { try { await deleteDoc(doc(db, "lista_eventos", id)); alert("OK!"); } catch(e) { alert("Erro."); } } };
 
         function renderAniversarios() {
             const tb = document.getElementById('tabela-aniversarios-body'); if(!tb) return;
