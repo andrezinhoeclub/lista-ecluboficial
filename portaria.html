@@ -194,16 +194,24 @@
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase()) || {};
                 const tipoNorm = (c.tipo_entrada || '').toUpperCase().trim();
+                const pagPorta = (c.pagamento_porta || '').toUpperCase(); 
                 const isCasal = tipoNorm === "CASAL" || /\s+E\s+/i.test(c.nome);
                 
-                // LÓGICA ATUALIZADA: Lê a tag is_dono que vem do novo Promoter
-                const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true;
+                const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
+                const isCortesia = c.cortesia === true;
                 const isAniv = c.aniversariante && c.aniversariante.trim() !== "";
 
                 let valorFinal = "PORTARIA";
-                if (isDono) valorFinal = "FREE";
-                else if (tipoNorm.includes("CAMAROTE")) valorFinal = "R$ " + (c.valor_pago || "---");
-                else {
+                if (isDono) {
+                    valorFinal = "FREE";
+                } else if (tipoNorm.includes("CAMAROTE")) {
+                    if (isCortesia && pagPorta && pagPorta !== "ISENTO") {
+                        let val = pagPorta === "CASAL" ? ev.valor_casal : ev.valor_solteiro;
+                        valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
+                    } else {
+                        valorFinal = "R$ " + (c.valor_pago || "---");
+                    }
+                } else {
                     let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (c.metodo === "pix_antecipado" ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
                     valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
                 }
@@ -228,6 +236,7 @@
                         ${tipoNorm.includes("CAMAROTE") ? `
                             <span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>
                             ${c.metodo === 'pix_antecipado' ? `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
+                            ${isCortesia && pagPorta && pagPorta !== 'ISENTO' ? `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">${pagPorta === 'CASAL' ? '👫 CASAL (ENTRADA)' : '👤 SOLTEIRO (ENTRADA)'}</span>` : ''}
                         ` : ''}
                         
                         ${!isDono && !tipoNorm.includes("CAMAROTE") ? `
