@@ -84,10 +84,11 @@
         <div class="w-full max-w-sm bg-[#0d0d14] border border-purple-500/30 p-6 md:p-8 rounded-[2.5rem] shadow-2xl relative my-auto mt-10 mb-10">
             <h2 class="text-purple-400 font-black uppercase italic mb-1 tracking-tighter text-xl text-center">💎 CAMAROTES VIP</h2>
             <p class="text-zinc-500 text-[9px] font-bold uppercase mb-4 tracking-widest italic text-center">Escolha o seu espaço no mapa</p>
+            
             <div class="w-full h-32 bg-zinc-900 rounded-2xl mb-4 border border-white/10 flex items-center justify-center overflow-hidden relative">
-                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" onerror="this.style.display='none'" class="h-20 opacity-30 object-contain">
-                <span class="text-zinc-500 font-black text-[10px] uppercase absolute tracking-widest">MAPA DO CLUBE</span>
+                <img id="img-mapa-camarote" src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.jpg" class="w-full h-full object-cover opacity-80">
             </div>
+
             <div class="flex justify-center gap-4 mb-6 text-[8px] font-black uppercase tracking-widest text-zinc-400">
                 <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-green-500"></div>Livre</div>
                 <div class="flex items-center gap-1"><div class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>Aguardando</div>
@@ -188,16 +189,13 @@
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id); 
             
-            // 👇 BLOQUEIO DE HORÁRIOS AQUI 👇
             const [ano, mes, dia] = eventoAtivo.data.split('-');
             const agora = new Date();
             
             if (isPix) {
-                // Limite PIX: 21:59:59 do dia do evento
                 const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
                 if (agora > limitePix) return alert("⚠️ As vendas antecipadas via PIX encerraram às 21:59h de hoje!");
             } else {
-                // Limite Lista: 23:59:59 do dia do evento (Meia-noite)
                 const limiteLista = new Date(ano, mes - 1, dia, 23, 59, 59);
                 if (agora > limiteLista) return alert("⚠️ A lista para este evento encerrou à meia-noite!");
             }
@@ -298,12 +296,15 @@
         window.iniciarFluxoCamarote = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id); 
             
-            // 👇 BLOQUEIO DE HORÁRIO DE CAMAROTE AQUI 👇
             const [ano, mes, dia] = eventoAtivo.data.split('-');
             const agora = new Date();
             const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
             
             if (agora > limitePix) return alert("⚠️ As vendas de Camarote via PIX encerraram às 21:59h de hoje!");
+
+            // 👇 PUXANDO A IMAGEM OFICIAL DE CAMAROTES DO GITHUB 👇
+            const imgMapa = document.getElementById('img-mapa-camarote');
+            imgMapa.src = eventoAtivo.url_mapa || 'https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.jpg';
 
             numCamaroteSelecionado = null; processoDePagamentoAberto = false;
             document.getElementById('form-camarote').classList.add('hidden'); document.getElementById('modalCamarote').classList.remove('hidden');
