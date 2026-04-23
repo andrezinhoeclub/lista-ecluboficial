@@ -20,6 +20,7 @@
         input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; }
         .mini-capa { width: 100%; height: 80px; object-fit: cover; border-bottom: 1px solid #1a1a1c; opacity: 0.6; }
+        .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #22d3ee; cursor: pointer; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -79,32 +80,26 @@
                     <input type="hidden" id="edit_evento_id">
                     <input type="text" id="nome_festa" placeholder="NOME DO EVENTO" class="p-4 rounded-2xl font-bold md:col-span-3" required>
                     <input type="date" id="data_festa" class="p-4 rounded-2xl font-bold uppercase text-xs" required>
-                    
                     <div class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <input type="text" id="valor_casal" placeholder="CASAL PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800">
                         <input type="text" id="valor_solteiro" placeholder="SOLTEIRO PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800">
                     </div>
-
                     <div class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input type="text" id="desc_casal" placeholder="CASAL ANIVERSÁRIO R$" class="p-4 rounded-2xl font-bold text-cyan-400 border-cyan-900/30">
                         <input type="text" id="desc_solteiro" placeholder="SOLTEIRO ANIVERSÁRIO R$" class="p-4 rounded-2xl font-bold text-cyan-400 border-cyan-900/30">
                     </div>
-
                     <div class="md:col-span-4 grid grid-cols-1 md:grid-cols-2 gap-4 bg-green-500/5 p-4 rounded-3xl border border-green-500/10 mb-4">
                         <div class="md:col-span-2 text-[10px] font-black text-green-500 uppercase tracking-widest ml-2">Valores Pix Antecipado (Pista)</div>
                         <input type="text" id="ant_casal" placeholder="VALOR CASAL R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30">
                         <input type="text" id="ant_solteiro" placeholder="VALOR SOLTEIRO R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30">
                     </div>
-
                     <div class="md:col-span-4 bg-cyan-900/10 p-6 rounded-[2rem] border border-cyan-500/20 mb-4">
                         <div class="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4 ml-2">💎 Configuração de Camarotes (Selecione para Ativar)</div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="grid-camarotes-inputs"></div>
                     </div>
-
                     <div class="md:col-span-4 mb-2">
                         <input type="url" id="url_banner" placeholder="URL DA CAPA (IMAGEM DO EVENTO)" class="w-full p-4 rounded-2xl font-bold border border-zinc-800">
                     </div>
-                    
                     <button type="submit" id="btnSalvarEvento" class="md:col-span-4 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
                 </form>
             </div>
@@ -153,7 +148,6 @@
                     </table>
                 </div>
             </div>
-            
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
                 <h2 class="text-blue-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Gestão de Camarotes (Ativos/Ocupados)</h2>
                 <div class="overflow-x-auto">
@@ -254,7 +248,6 @@
             if(!container) return;
             const hojeLocal = new Date().toLocaleDateString('en-CA');
             const ativos = dadosEventos.filter(e => e.ativo && e.data >= hojeLocal).sort((a,b) => new Date(a.data) - new Date(b.data));
-            
             container.innerHTML = ativos.map(ev => {
                 const evNomeLimpo = (ev.nome || '').trim().toLowerCase();
                 const todasRes = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo);
@@ -266,7 +259,6 @@
                 const pSolteiroQtd = pixPista.length - pCasalQtd;
                 const receitaCam = validas.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE') && r.pago === true && !r.cortesia).reduce((total, r) => total + parseMoeda(r.valor_pago), 0);
                 const totalGeral = (pCasalQtd * parseMoeda(ev.ant_casal || ev.valor_casal)) + (pSolteiroQtd * parseMoeda(ev.ant_solteiro || ev.valor_solteiro)) + receitaCam;
-
                 let luzesCamarotes = '';
                 for(let n=1; n<=8; n++) {
                     const ativo = ev[`cam${n}_ativo`] === true;
@@ -276,13 +268,11 @@
                     if (resDesseCam.some(r => r.cortesia === true)) statusCam = 'cortesia';
                     else if (resDesseCam.some(r => r.pago === true)) statusCam = 'vendido';
                     else if (resDesseCam.filter(r => r.pago === false && !r.cortesia).some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 5)) statusCam = 'aguardando';
-
                     if (statusCam === 'cortesia') luzesCamarotes += `<div class="w-full h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div>`; 
                     else if (statusCam === 'vendido') luzesCamarotes += `<div class="w-full h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></div>`; 
                     else if (statusCam === 'aguardando') luzesCamarotes += `<div class="w-full h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_#eab308] animate-pulse"></div>`; 
                     else luzesCamarotes += `<div class="w-full h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
                 }
-
                 return `<div class="event-bubble p-6 flex flex-col justify-between"><div><div class="flex justify-between items-start mb-4"><p class="text-[9px] font-black text-yellow-500 uppercase italic mt-1">${ev.data.split('-').reverse().join('/')}</p><div class="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg flex flex-col items-end"><span class="text-[7px] font-black text-green-500 uppercase tracking-widest">💰 Total Arrecadado</span><span class="text-sm font-black text-white">${formataBRL(totalGeral)}</span></div></div><h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4></div><div class="bg-cyan-900/10 border border-cyan-500/20 p-4 rounded-2xl mb-4"><div class="flex flex-col gap-2 text-[10px]"><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCasalQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSolteiroQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div></div><div class="grid grid-cols-8 gap-1.5 mt-4">${luzesCamarotes}</div></div><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista</p><p class="text-lg font-black text-white">${validas.length}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins</p><p class="text-lg font-black text-green-500">${validas.filter(r => r.entrou === true).length}</p></div></div></div>`;
             }).join('');
             renderPodios();
@@ -353,7 +343,7 @@
         window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado com sucesso!"); };
 
         window.removerItem = async (colecao, id) => { 
-            if(!confirm("TEM CERTEZA?")) return;
+            if(!confirm("TEM CERTEZA? Isso vai apagar permanentemente o item e os dados ligados a ele.")) return;
             try {
                 const batch = writeBatch(db); const docRef = doc(db, colecao, id); const docSnap = await getDoc(docRef);
                 if (!docSnap.exists()) return; const data = docSnap.data();
@@ -367,33 +357,42 @@
                     const qConv = query(collection(db, "lista_eventos"), where("aniversariante", "==", data.aniversariante), where("evento", "==", data.festa));
                     const snapConv = await getDocs(qConv); snapConv.forEach(d => batch.delete(d.ref));
                 }
-                batch.delete(docRef); await batch.commit();
+                batch.delete(docRef); await batch.commit(); alert("Excluido!");
             } catch (e) { alert("Erro ao excluir."); }
         };
 
-        // --- RESTAURAÇÃO DO FORMULÁRIO DE PROMOTERS ---
+        // --- FUNÇÕES DE EQUIPE (RESTAURADAS) ---
         document.getElementById('formPromoter').addEventListener('submit', async e => {
-            e.preventDefault();
-            const n = document.getElementById('nome_promoter').value.trim();
-            const t = document.getElementById('tipo_promoter').value;
-            if(!n) return;
-            try {
-                await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true });
-                e.target.reset();
-                alert("Promoter adicionado!");
-            } catch(err) { alert("Erro ao adicionar promoter."); }
+            e.preventDefault(); const n = document.getElementById('nome_promoter').value.trim(); const t = document.getElementById('tipo_promoter').value;
+            if(!n) return; try { await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true }); e.target.reset(); alert("OK!"); } catch(err) { alert("Erro."); }
         });
 
         document.getElementById('formPortaria').addEventListener('submit', async e => {
-            e.preventDefault();
-            const n = document.getElementById('login_portaria').value.trim().toLowerCase();
-            if(!n) return;
-            try {
-                await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true });
-                e.target.reset();
-                alert("Operador adicionado!");
-            } catch(err) { alert("Erro ao adicionar operador."); }
+            e.preventDefault(); const n = document.getElementById('login_portaria').value.trim().toLowerCase();
+            if(!n) return; try { await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true }); e.target.reset(); alert("OK!"); } catch(err) { alert("Erro."); }
         });
+
+        window.editarPromoter = async (id) => {
+            const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`); if (!op) return;
+            let up = {}; if (op === '1') up.tipo = 'padrao'; if (op === '2') up.tipo = 'aniversario'; if (op === '3') up.tipo = 'visualizar';
+            if (op === '4') { const ns = prompt("Nova senha:"); if(ns) up.senha = ns.trim(); }
+            if (Object.keys(up).length > 0) await updateDoc(doc(db, "promoters", id), up);
+        };
+
+        window.editarOperador = async (id) => {
+            const ns = prompt("Nova senha do operador:"); 
+            if(ns) await updateDoc(doc(db, "configuracoes", id), {senha: ns.trim()});
+        };
+
+        function renderEquipe() {
+            const lp = document.getElementById('lista-promoters');
+            if (lp) lp.innerHTML = dadosPromoters.map(p => {
+                let tl = 'PADRÃO'; if(p.tipo==='aniversario') tl='ANIVERSÁRIO'; if(p.tipo==='visualizar') tl='VISUALIZAÇÃO';
+                return `<div class="glass-card p-6 border-l-4 border-l-yellow-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${tl}</p></div><div class="flex gap-3"><button onclick="editarPromoter('${p.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`;
+            }).join('');
+            const lpPort = document.getElementById('lista-portaria');
+            if(lpPort) lpPort.innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
+        }
 
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
@@ -402,8 +401,8 @@
                 const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, ant_casal: document.getElementById('ant_casal').value, ant_solteiro: document.getElementById('ant_solteiro').value, imagem: document.getElementById('url_banner').value, ativo: true };
                 for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
                 if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
-                e.target.reset(); document.getElementById('edit_evento_id').value = ""; alert("Evento salvo!");
-            } catch(err) { alert("Erro ao salvar!"); } finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
+                e.target.reset(); document.getElementById('edit_evento_id').value = ""; alert("OK!");
+            } catch(err) { alert("Erro."); } finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
         });
 
         window.prepararEdicaoEvento = (id) => {
@@ -415,20 +414,8 @@
         window.renderGridConfig = () => {
             const grid = document.getElementById('grid-eventos-config'); if(!grid) return;
             grid.innerHTML = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).map(ev => `
-                <div class="glass-card overflow-hidden border border-white/5 p-5">
-                    <img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4">
-                    <div class="flex justify-between mb-2"><p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p><span class="${ev.ativo ? 'text-green-500' : 'text-red-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span></div>
-                    <h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4>
-                    <div class="flex justify-between"><button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase">Editar</button><button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase">Excluir Tudo</button></div>
-                </div>`).join('');
+                <div class="glass-card overflow-hidden border border-white/5 p-5"><img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4"><div class="flex justify-between mb-2"><p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')}</p><span class="${ev.ativo ? 'text-green-500' : 'text-red-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span></div><h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4><div class="flex justify-between"><button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase">Editar</button><button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase">Excluir Tudo</button></div></div>`).join('');
         };
-
-        function renderEquipe() {
-            const lp = document.getElementById('lista-promoters');
-            if (lp) lp.innerHTML = dadosPromoters.map(p => `<div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 border-l-yellow-500"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p></div><div class="flex gap-4"><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button></div></div></div>`).join('');
-            const lpPort = document.getElementById('lista-portaria');
-            if(lpPort) lpPort.innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 flex flex-col gap-2 mb-2 border-l-4 border-l-green-500"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p></div><div class="flex gap-4"><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[10px] font-black uppercase">✕</button></div></div></div>`).join('');
-        }
 
         function renderCamarotesVendidos() {
             const tb = document.getElementById('tabela-camarotes-body'); if(!tb) return;
