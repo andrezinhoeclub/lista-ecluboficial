@@ -14,11 +14,11 @@
         .client-card { 
             background: #0d0d0f; 
             border: 1px solid #1a1a1c; 
-            border-left: 4px solid #eab308;
+            border-left: 6px solid #eab308;
             transition: all 0.2s ease;
         }
         .client-card:hover { background: #121214; border-color: #333; }
-        .client-card.entrou { opacity: 0.15 !important; filter: grayscale(1); pointer-events: none; }
+        .client-card.entrou { opacity: 0.1 !important; filter: grayscale(1); pointer-events: none; }
         
         input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
@@ -31,9 +31,9 @@
         
         .btn-liberar {
             background: #eab308;
-            box-shadow: 0 4px 15px rgba(234, 179, 8, 0.15);
+            box-shadow: 0 4px 20px rgba(234, 179, 8, 0.3);
         }
-        .btn-liberar:hover { background: #fbbf24; transform: translateY(-1px); }
+        .btn-liberar:hover { background: #fbbf24; transform: scale(1.05); }
     </style>
 </head>
 <body class="flex h-screen">
@@ -56,11 +56,11 @@
         <aside class="w-72 h-full flex flex-col p-6 bg-black/40 border-r border-zinc-900">
             <div class="mb-10 text-center">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter leading-none">E-CLUB</h2>
+                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
                 <p id="operadorAtivo" class="text-[8px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg tracking-widest italic">---</p>
             </div>
             <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[8px] font-black uppercase mb-4 tracking-widest border-b border-zinc-900 pb-2">Eventos Ativos</h3>
+                <h3 class="text-zinc-600 text-[8px] font-black uppercase mb-4 tracking-widest border-b border-zinc-900 pb-2">Eventos Hoje</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
             <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
@@ -68,7 +68,7 @@
 
         <main class="flex-grow flex flex-col">
             <header class="p-8 border-b border-zinc-900 bg-black/20">
-                <div class="max-w-6xl mx-auto flex gap-8 items-center">
+                <div class="max-w-[1400px] mx-auto flex gap-8 items-center">
                     <div class="relative flex-grow">
                         <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
                         <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR NOME, TELEFONE OU CPF..." class="w-full p-6 pl-16 rounded-2xl text-sm font-bold uppercase text-white shadow-2xl">
@@ -80,11 +80,11 @@
                 </div>
             </header>
 
-            <section class="flex-grow p-8 overflow-y-auto bg-[#030303]">
+            <section class="flex-grow p-6 overflow-y-auto bg-[#030303]">
                 <div id="alertaModoTeste" class="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-center font-black py-3 rounded-xl text-[10px] uppercase mb-6 hidden">
-                    ⚠️ MODO DE TESTE ATIVO - BUSCA LIBERADA PARA TODOS OS EVENTOS
+                    ⚠️ MODO DE TESTE ATIVO
                 </div>
-                <div id="container-resultados" class="max-w-6xl mx-auto space-y-4"></div>
+                <div id="container-resultados" class="max-w-[1400px] mx-auto space-y-4"></div>
             </section>
         </main>
     </div>
@@ -143,21 +143,14 @@
                 bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
-                    
-                    // Contador de Check-ins (Shift 21h - 05h)
                     const totalTurno = bancoClientes.filter(c => {
                         if (!c.entrou || !c.data_entrada) return false;
-                        const dataEntrada = new Date(c.data_entrada);
-                        const hojeCheck = new Date();
-                        const limite = new Date();
+                        const dataEntrada = new Date(c.data_entrada); const hojeCheck = new Date(); const limite = new Date();
                         if (hojeCheck.getHours() < 5) limite.setDate(limite.getDate() - 1);
-                        limite.setHours(21, 0, 0);
-                        return isModoTeste ? true : dataEntrada >= limite;
+                        limite.setHours(21, 0, 0); return isModoTeste ? true : dataEntrada >= limite;
                     }).length;
-
                     document.getElementById('total-checkins').innerText = totalTurno;
-                    renderizarSidebar(); 
-                    processarPesquisa();
+                    renderizarSidebar(); processarPesquisa();
                 });
             });
         }
@@ -185,22 +178,14 @@
             
             const filtrados = bancoClientes.filter(c => {
                 const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
-                
-                // Se não estiver em modo teste, só mostra se o evento estiver ONLINE
-                if (!isModoTeste) {
-                    if (!evRel || getStatusTurno(evRel.data) !== "ONLINE") return false;
-                }
-                
+                if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 const n = String(c.nome ?? '').toUpperCase().includes(busca);
                 const t = String(c.tel ?? '').includes(busca) || String(c.telefone ?? '').includes(busca);
                 const cpf = String(c.cpf ?? '').replace(/\D/g, '').includes(busca.replace(/\D/g, ''));
                 return n || t || cpf;
             });
 
-            if (filtrados.length === 0) {
-                cont.innerHTML = `<div class="py-40 text-center font-black uppercase text-zinc-800 italic tracking-widest">Nenhum cliente encontrado</div>`;
-                return;
-            }
+            if (filtrados.length === 0) { cont.innerHTML = `<div class="py-40 text-center font-black uppercase text-zinc-800 italic tracking-widest">Nenhum cliente encontrado</div>`; return; }
 
             cont.innerHTML = '';
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
@@ -219,31 +204,41 @@
                 }
 
                 cont.innerHTML += `
-                <div class="client-card p-6 rounded-3xl flex items-center justify-between ${c.entrou ? 'entrou' : ''}">
-                    <div class="flex flex-col gap-1 max-w-[40%]">
-                        <h3 class="text-xl font-black uppercase italic tracking-tighter text-white truncate">${c.nome}</h3>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-bold text-zinc-500 font-mono">${c.tel || c.telefone || ''}</span>
-                            <span class="bg-zinc-900 border border-white/5 text-[8px] px-2 py-0.5 rounded-full font-black text-zinc-400 uppercase tracking-widest">${c.promoter || 'DIRETO'}</span>
+                <div class="client-card p-6 rounded-[2rem] flex items-center justify-between ${c.entrou ? 'entrou' : ''}">
+                    
+                    <div class="flex flex-col items-center text-center min-w-[320px] max-w-[320px]">
+                        <div class="flex items-center gap-3 justify-center mb-1">
+                            <h3 class="text-2xl font-black uppercase italic tracking-tighter text-white truncate">${c.nome}</h3>
+                            <span class="bg-zinc-900 border border-white/5 text-[9px] px-2 py-1 rounded-md font-black text-zinc-400 uppercase tracking-widest">${c.promoter || 'DIRETO'}</span>
                         </div>
+                        <p class="text-2xl font-black text-zinc-400 font-mono italic leading-none tracking-tighter">${c.tel || c.telefone || ''}</p>
                     </div>
-                    <div class="flex flex-wrap gap-2 justify-center flex-grow px-4">
-                        ${isDono ? '<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase">👑 DONO</span>' : ''}
-                        ${tipoNormalizado.includes("CAMAROTE") ? `<span class="bg-cyan-400 text-black px-3 py-1.5 rounded-xl text-[9px] font-black uppercase shadow-[0_0_10px_rgba(34,211,238,0.3)]">💎 ${c.tipo_entrada}</span>` : ''}
-                        ${!isDono && !tipoNormalizado.includes("CAMAROTE") ? `<span class="px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 text-[9px] font-black uppercase">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>` : ''}
-                        ${isConvidadoAniv ? `<span class="bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/30 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase">🎉 ANIV: ${c.aniversariante}</span>` : ''}
-                        ${c.metodo === 'pix_antecipado' && c.pago ? '<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase">✅ PIX PAGO</span>' : (c.metodo === 'pix_antecipado' ? '' : '<span class="bg-zinc-800 text-zinc-400 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase">PORTARIA</span>')}
+
+                    <div class="flex flex-col gap-2 min-w-[200px] items-start px-8 border-l border-white/5">
+                        ${isDono ? '<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase">👑 DONO DA FESTA</span>' : ''}
+                        ${tipoNormalizado.includes("CAMAROTE") ? `<span class="bg-cyan-400 text-black px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-[0_0_10px_rgba(34,211,238,0.3)]">💎 ${tipoNormalizado}</span>` : ''}
+                        ${!isDono && !tipoNormalizado.includes("CAMAROTE") ? `<span class="px-3 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[10px] font-black uppercase">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>` : ''}
+                        ${isConvidadoAniv ? `<span class="bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/30 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase italic">🎉 ANIV: ${c.aniversariante}</span>` : ''}
                     </div>
-                    <div class="flex items-center gap-6 min-w-[240px] justify-end">
-                        <div class="text-right">
-                            <p class="text-[7px] text-zinc-500 font-black uppercase tracking-[0.2em] mb-1">Total Pagar</p>
-                            <p class="text-2xl font-black italic ${isDono ? 'text-green-500' : 'text-white'} leading-none">${valorFinal}</p>
-                        </div>
+
+                    <div class="flex flex-col min-w-[250px] justify-center px-8 border-l border-white/5">
+                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-[0.2em] mb-1">Total a Pagar</p>
+                        <p class="text-2xl font-black italic ${isDono ? 'text-green-500' : 'text-white'} leading-tight">${valorFinal}</p>
+                    </div>
+
+                    <div class="flex flex-col items-center justify-center min-w-[150px] px-8 border-l border-white/5">
+                         <p class="text-[8px] text-zinc-500 font-black uppercase tracking-[0.2em] mb-1">Pagamento</p>
+                         <h4 class="text-2xl font-black italic ${(c.metodo === 'pix_antecipado' && c.pago) ? 'text-green-500' : 'text-zinc-500'}">
+                            ${(c.metodo === 'pix_antecipado' && c.pago) ? 'PIX PAGO' : 'PORTARIA'}
+                         </h4>
+                    </div>
+
+                    <div class="flex items-center justify-end min-w-[220px] pl-8">
                         ${c.entrou ? 
-                            '<span class="text-green-500 font-black uppercase text-[10px] tracking-widest bg-green-500/10 px-6 py-4 rounded-2xl border border-green-500/20">CONFIRMADO</span>' : 
+                            '<span class="text-green-500 font-black uppercase text-[11px] tracking-widest bg-green-500/10 px-8 py-4 rounded-2xl border border-green-500/20">CONFIRMADO</span>' : 
                             (c.metodo === 'pix_antecipado' && !c.pago ? 
-                                '<span class="text-red-500 font-black uppercase text-[10px] tracking-widest bg-red-500/10 px-6 py-4 rounded-2xl border border-red-500/20 animate-pulse">PIX PENDENTE</span>' : 
-                                `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar text-black px-8 py-4 rounded-2xl font-black uppercase italic text-xs transition-all active:scale-95">LIBERAR</button>`)
+                                '<span class="text-red-500 font-black uppercase text-[11px] tracking-widest bg-red-500/10 px-8 py-4 rounded-2xl border border-red-500/20 animate-pulse">PIX PENDENTE</span>' : 
+                                `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm transition-all active:scale-95">LIBERAR</button>`)
                         }
                     </div>
                 </div>`;
