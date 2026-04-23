@@ -143,7 +143,6 @@
         function renderPerformance() {
             const container = document.getElementById('listaPerformance');
             
-            // Verifica o tipo de usuário
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const escondeGeral = (st === 'padrao' || st === 'aniversario');
             const isVisualizador = (st === 'visualizar');
@@ -160,10 +159,13 @@
                     let luzesCamarotes = '';
                     for(let n=1; n<=8; n++) {
                         const ativo = ev[`cam${n}_ativo`] === true;
+                        
+                        // Se for INATIVO, mostra um X apagado
                         if (!ativo) {
-                            luzesCamarotes += `<div class="w-full h-2 rounded-full bg-zinc-800 flex items-center justify-center text-[5px] text-zinc-600 font-bold border border-white/5">x</div>`; 
+                            luzesCamarotes += `<div class="w-full py-1 rounded bg-zinc-900/50 flex items-center justify-center text-[7px] text-zinc-600 font-bold border border-white/5">x</div>`; 
                             continue;
                         }
+
                         const resDesseCam = camesGeral.filter(r => (r.tipo_entrada || '').toUpperCase() === `CAMAROTE ${n}`);
                         let statusCam = 'livre';
                         
@@ -179,12 +181,13 @@
                             if(temPendente) statusCam = 'aguardando';
                         }
 
+                        // Se for ATIVO, mostra o nome (C1, C2...)
                         if (statusCam === 'vendido') {
-                            luzesCamarotes += `<div class="w-full h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></div>`; 
+                            luzesCamarotes += `<div class="w-full py-1 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]">C${n}</div>`; 
                         } else if (statusCam === 'aguardando') {
-                            luzesCamarotes += `<div class="w-full h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_#eab308] animate-pulse"></div>`; 
+                            luzesCamarotes += `<div class="w-full py-1 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308] animate-pulse">C${n}</div>`; 
                         } else {
-                            luzesCamarotes += `<div class="w-full h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
+                            luzesCamarotes += `<div class="w-full py-1 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">C${n}</div>`; 
                         }
                     }
 
@@ -201,10 +204,10 @@
                             </div>
                         </div>
                         <div class="border-t border-white/5 pt-4">
-                            <div class="flex justify-center items-center mb-2">
+                            <div class="flex justify-between items-center mb-3 px-1">
                                 <span class="text-[8px] font-black text-cyan-400 uppercase tracking-widest">💎 Status Camarotes</span>
                             </div>
-                            <div class="grid grid-cols-8 gap-2 px-2">
+                            <div class="grid grid-cols-8 gap-2">
                                 ${luzesCamarotes}
                             </div>
                         </div>
