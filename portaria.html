@@ -11,7 +11,6 @@
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
         
-        /* Card Estilo Tabela - Clean e Funcional */
         .client-card { 
             background: #0d0d0f; 
             border: 1px solid #1a1a1c; 
@@ -30,11 +29,7 @@
         @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
         
-        .btn-liberar {
-            background: #eab308;
-            color: #000;
-            transition: all 0.2s;
-        }
+        .btn-liberar { background: #eab308; color: #000; transition: all 0.2s; }
         .btn-liberar:hover { background: #fbbf24; transform: translateY(-1px); }
     </style>
 </head>
@@ -93,7 +88,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
@@ -200,7 +195,9 @@
                 const ev = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase()) || {};
                 const tipoNorm = (c.tipo_entrada || '').toUpperCase().trim();
                 const isCasal = tipoNorm === "CASAL" || /\s+E\s+/i.test(c.nome);
-                const isDono = tipoNorm === "VIP_DONO";
+                
+                // LÓGICA ATUALIZADA: Lê a tag is_dono que vem do novo Promoter
+                const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true;
                 const isAniv = c.aniversariante && c.aniversariante.trim() !== "";
 
                 let valorFinal = "PORTARIA";
@@ -222,6 +219,7 @@
                         <div class="flex items-center gap-2 mb-1">
                             <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
                             <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
+                            <button onclick="excluirReserva('${c.id}', '${c.nome}')" class="text-zinc-700 hover:text-red-500 transition-colors ml-1 text-xs" title="Excluir Cliente">🗑️</button>
                         </div>
                         <p class="text-sm font-mono text-zinc-500">${c.tel || c.telefone || '---'}</p>
                     </div>
@@ -266,6 +264,12 @@
 
         window.confirmarCheckin = async (id) => {
             await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
+        };
+
+        window.excluirReserva = async (id, nome) => {
+            if(confirm(`ATENÇÃO: Tem certeza que deseja excluir permanentemente a reserva de ${nome}?`)) {
+                try { await deleteDoc(doc(db, "lista_eventos", id)); } catch(e) { alert("Erro ao excluir: " + e.message); }
+            }
         };
     </script>
 </body>
