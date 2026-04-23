@@ -172,29 +172,25 @@
             });
         }
 
-        // --- A MÁGICA DA PESQUISA MÚLTIPLA ESTÁ AQUI ---
+        // PESQUISA MÚLTIPLA
         window.processarPesquisa = () => {
             const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
             
             if (buscaInput.length < 2) { cont.innerHTML = ''; return; }
             
-            // Divide o que foi digitado em várias palavras (ex: "AND 6901" vira ["AND", "6901"])
             const termosBusca = buscaInput.split(/\s+/);
             
             const filtrados = bancoClientes.filter(c => {
                 const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 
-                // Cria uma "super string" combinando os dados do cliente para a busca ser universal
                 const nomeString = String(c.nome ?? '').toUpperCase();
                 const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
-                const telNumeros = telString.replace(/\D/g, ''); // Telefone apenas com os números
-                const cpfNumeros = String(c.cpf ?? '').replace(/\D/g, ''); // CPF apenas números
+                const telNumeros = telString.replace(/\D/g, ''); 
+                const cpfNumeros = String(c.cpf ?? '').replace(/\D/g, ''); 
                 
                 const todosOsDadosDoCliente = `${nomeString} ${telString} ${telNumeros} ${cpfNumeros}`;
-                
-                // Verifica se TODOS os termos digitados estão na super string do cliente
                 return termosBusca.every(termo => todosOsDadosDoCliente.includes(termo));
             });
 
@@ -231,9 +227,17 @@
                         <p class="text-sm font-mono text-zinc-500">${c.tel || c.telefone || '---'}</p>
                     </div>
 
-                    <div class="flex flex-col gap-1 w-[130px]">
-                        ${tipoNorm.includes("CAMAROTE") ? `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>` : ''}
-                        ${!isDono && !tipoNorm.includes("CAMAROTE") ? `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>` : ''}
+                    <div class="flex flex-col gap-1 w-[140px]">
+                        ${tipoNorm.includes("CAMAROTE") ? `
+                            <span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>
+                            <span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>
+                        ` : ''}
+                        
+                        ${!isDono && !tipoNorm.includes("CAMAROTE") ? `
+                            <span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>
+                            <span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>
+                        ` : ''}
+
                         ${isAniv ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>` : ''}
                         ${isDono ? `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>` : ''}
                     </div>
