@@ -32,8 +32,33 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
             <h2 id="header-aniv" class="text-fuchsia-400 font-black uppercase italic mt-4 text-xl tracking-widest hidden text-center leading-tight"></h2>
         </header>
+        
         <div id="listaEventos" class="space-y-10"></div>
-    </div>
+
+        <footer class="mt-12 mb-8 flex flex-col items-center gap-8">
+            <div class="flex gap-3 w-full">
+                <a href="https://api.whatsapp.com/send?phone=554195040506" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-green-500/10 border border-transparent hover:border-green-500/30 transition-all group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">💬</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-green-400">WhatsApp</span>
+                </a>
+                
+                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-fuchsia-500/10 border border-transparent hover:border-fuchsia-500/30 transition-all group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">📸</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-fuchsia-400">Instagram</span>
+                </a>
+                
+                <a href="https://www.google.com/maps/search/?api=1&query=Rua+Anibal+Goulart+Maia+Filho+81" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 transition-all group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">📍</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-blue-400 text-center leading-tight">Como<br>Chegar</span>
+                </a>
+            </div>
+
+            <div class="text-center opacity-30 hover:opacity-100 transition-opacity duration-500">
+                <p class="text-[8px] font-black uppercase tracking-widest text-zinc-500">⚡ SISTEMA DESENVOLVIDO POR</p>
+                <a href="https://api.whatsapp.com/send?phone=5541995906901" target="_blank" class="text-[9px] font-black uppercase tracking-widest text-yellow-500 hover:text-yellow-400 mt-1 block">ANDREZINHO E-CLUB | WHATSAPP</a>
+            </div>
+        </footer>
+        </div>
 
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative">
@@ -95,7 +120,6 @@
         const db = getFirestore(app);
         const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
 
-        // 👇 A INTELIGÊNCIA QUE LÊ O LINK 👇
         const urlParams = new URLSearchParams(window.location.search);
         const anivId = urlParams.get('id'); 
         const refPromoter = urlParams.get('ref');
@@ -111,7 +135,6 @@
 
         async function carregarPagina() {
             try {
-                // 👇 VERIFICA SE É LINK VIP DE ANIVERSÁRIO 👇
                 if (anivId) {
                     const anivSnap = await getDoc(doc(db, "links_aniversario", anivId));
                     if (anivSnap.exists()) {
@@ -132,7 +155,6 @@
                 
                 eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= hojeStr).sort((a, b) => a.data.localeCompare(b.data));
                 
-                // Se for link de aniversário, oculta as outras festas
                 if (eventoFixo) {
                     eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
                 }
@@ -144,7 +166,6 @@
                     let temCamaroteAtivo = false;
                     for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`]) temCamaroteAtivo = true; }
 
-                    // Se é aniversário, muda o botão pra chamar mais atenção
                     const txtBotaoLista = globalAniversariante ? "🎉 NOME NA LISTA VIP" : "📝 NOME NA LISTA";
 
                     let botoesAcao = `
@@ -174,7 +195,6 @@
             titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
             titulo.className = isPix ? "text-[#00f5d4] font-black uppercase italic mb-1 tracking-tighter text-xl text-center" : (globalAniversariante ? "text-fuchsia-400 font-black uppercase italic mb-1 tracking-tighter text-xl text-center" : "text-yellow-500 font-black uppercase italic mb-1 tracking-tighter text-xl text-center");
             
-            // 👇 SE FOR LISTA VIP, PUXA OS VALORES DE ANIVERSÁRIO! 👇
             const usaDescontoVIP = (!isPix && globalAniversariante);
             
             const precoCasalMostrado = usaDescontoVIP ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : (isPix ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal);
@@ -195,7 +215,7 @@
         };
 
         window.selecionarTipo = (tipo) => {
-            tipoAtivo = tipo; // CASAL ou SOLTEIRO salvo perfeitamente
+            tipoAtivo = tipo; 
             const bCasal = document.getElementById('btn-casal'); const bSolteiro = document.getElementById('btn-solteiro');
             bCasal.classList.remove('active', 'btn-sel-pix'); bSolteiro.classList.remove('active', 'btn-sel-pix');
             const btnAlvo = tipo === 'CASAL' ? bCasal : bSolteiro;
@@ -229,25 +249,22 @@
                 }
                 if (deveBloquear) throw new Error(msgErro);
 
-                // Define o valor a ser salvo no banco
                 const usaDescontoVIP = (!eFluxoPix && globalAniversariante);
                 let valorParaSalvar = null;
 
                 if (eFluxoPix) {
                     valorParaSalvar = tipoAtivo === 'CASAL' ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro);
                 } else if (usaDescontoVIP) {
-                    // Salva o valor de desconto para a portaria nunca se perder!
                     valorParaSalvar = tipoAtivo === 'CASAL' ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro);
                 }
 
-                // 👇 SALVANDO COM INTELIGÊNCIA: CASAL/SOLTEIRO e O NOME DO PROMOTER/ANIVERSARIANTE 👇
                 const docRef = await addDoc(collection(db, "lista_eventos"), { 
                     nome: n, 
                     tel: t, 
                     evento: eventoAtivo.nome, 
-                    tipo_entrada: tipoAtivo, // Garante que a Portaria leia CASAL ou SOLTEIRO
+                    tipo_entrada: tipoAtivo, 
                     promoter: globalPromoter, 
-                    aniversariante: globalAniversariante, // Informa à portaria quem convidou
+                    aniversariante: globalAniversariante, 
                     data_reserva: new Date().toISOString(), 
                     entrou: false, 
                     pago: false, 
