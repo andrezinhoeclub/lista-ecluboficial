@@ -88,7 +88,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
@@ -227,7 +227,6 @@
                         <div class="flex items-center gap-2 mb-1">
                             <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
                             <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
-                            <button onclick="excluirReserva('${c.id}', '${c.nome}')" class="text-zinc-700 hover:text-red-500 transition-colors ml-1 text-xs" title="Excluir Cliente">🗑️</button>
                         </div>
                         <p class="text-sm font-mono text-zinc-500">${c.tel || c.telefone || '---'}</p>
                     </div>
@@ -273,12 +272,6 @@
 
         window.confirmarCheckin = async (id) => {
             await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
-        };
-
-        window.excluirReserva = async (id, nome) => {
-            if(confirm(`ATENÇÃO: Tem certeza que deseja excluir permanentemente a reserva de ${nome}?`)) {
-                try { await deleteDoc(doc(db, "lista_eventos", id)); } catch(e) { alert("Erro ao excluir: " + e.message); }
-            }
         };
     </script>
 </body>
