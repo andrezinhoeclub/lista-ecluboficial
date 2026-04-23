@@ -137,10 +137,37 @@
 
         function renderPerformance() {
             const container = document.getElementById('listaPerformance');
+            
+            // Verifica se a pessoa é do tipo padrão/aniversario para ocultar o geral
+            const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const escondeGeral = (st === 'padrao' || st === 'aniversario');
+
             container.innerHTML = eventos.map(ev => {
                 const minhas = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase().trim() === logado).length;
                 const geral = reservas.filter(r => r.evento === ev.nome).length;
-                return `<div class="card-performance p-5 flex justify-between items-center"><div class="text-left"><h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[8px] text-zinc-500 font-bold mt-1">${ev.data.split('-').reverse().join('/')}</p></div><div class="flex gap-6 text-right"><div><p class="text-2xl font-black text-sky-400 leading-none">${minhas}</p><p class="text-[6px] text-sky-500 font-black mt-1 uppercase">Minhas</p></div><div class="border-l border-white/5 pl-6"><p class="text-2xl font-black text-white/20 leading-none">${geral}</p><p class="text-[6px] text-white/10 font-black mt-1 uppercase">Geral</p></div></div></div>`;
+                
+                // 👇 MAGICA DO OCULTAMENTO DE GERAL 👇
+                const blocoGeralHTML = escondeGeral ? '' : `
+                    <div class="border-l border-white/5 pl-6">
+                        <p class="text-2xl font-black text-white/20 leading-none">${geral}</p>
+                        <p class="text-[6px] text-white/10 font-black mt-1 uppercase">Geral</p>
+                    </div>
+                `;
+
+                return `
+                <div class="card-performance p-5 flex justify-between items-center">
+                    <div class="text-left">
+                        <h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4>
+                        <p class="text-[8px] text-zinc-500 font-bold mt-1">${ev.data.split('-').reverse().join('/')}</p>
+                    </div>
+                    <div class="flex gap-6 text-right">
+                        <div>
+                            <p class="text-2xl font-black text-sky-400 leading-none">${minhas}</p>
+                            <p class="text-[6px] text-sky-500 font-black mt-1 uppercase">Minhas</p>
+                        </div>
+                        ${blocoGeralHTML}
+                    </div>
+                </div>`;
             }).join('');
         }
 
@@ -183,7 +210,6 @@
                     criado: new Date().toISOString()
                 });
 
-                // 👇 AGORA ELE SALVA COMO VIP_DONO PARA NÃO BATER COM OS CONVIDADOS 👇
                 await addDoc(collection(db, "lista_eventos"), {
                     nome: n,
                     tel: t,
