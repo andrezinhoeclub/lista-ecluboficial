@@ -11,27 +11,31 @@
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
         
-        /* Card Harmonizado */
+        /* Card Estilo Tabela - Clean e Funcional */
         .client-card { 
             background: #0d0d0f; 
             border: 1px solid #1a1a1c; 
-            border-left: 6px solid #eab308;
-            min-height: 130px; /* Aumentado para acomodar as fontes 2xl */
-            transition: all 0.3s ease;
+            border-left: 4px solid #eab308;
+            transition: all 0.2s ease;
         }
-        .client-card:hover { background: #121214; border-color: #eab308; }
-        .client-card.entrou { opacity: 0.1 !important; filter: grayscale(1); pointer-events: none; }
+        .client-card:hover { background: #16161a; border-color: #333; }
+        .client-card.entrou { opacity: 0.3 !important; filter: grayscale(1); pointer-events: none; }
         
         input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
         
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        
+        @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
         
         .btn-liberar {
             background: #eab308;
-            box-shadow: 0 0 20px rgba(234, 179, 8, 0.2);
+            color: #000;
+            transition: all 0.2s;
         }
+        .btn-liberar:hover { background: #fbbf24; transform: translateY(-1px); }
     </style>
 </head>
 <body class="flex h-screen">
@@ -61,28 +65,28 @@
                 <h3 class="text-zinc-600 text-[8px] font-black uppercase mb-4 tracking-widest border-b border-zinc-900 pb-2">Status Eventos</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Logout</button>
+            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
         </aside>
 
         <main class="flex-grow flex flex-col">
-            <header class="p-8 border-b border-zinc-900 bg-black/20">
-                <div class="max-w-[1500px] mx-auto flex gap-8 items-center">
+            <header class="p-6 border-b border-zinc-900 bg-black/20">
+                <div class="max-w-[1400px] mx-auto flex gap-6 items-center">
                     <div class="relative flex-grow">
                         <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
-                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR NOME, TELEFONE OU CPF..." class="w-full p-6 pl-16 rounded-2xl text-sm font-bold uppercase text-white shadow-2xl">
+                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR NOME, TELEFONE OU CPF..." class="w-full p-5 pl-16 rounded-2xl text-sm font-bold uppercase text-white shadow-lg">
                     </div>
-                    <div class="text-right border-l border-zinc-800 pl-8 min-w-[140px]">
-                        <p id="total-checkins" class="text-5xl font-black italic text-green-500">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-1 italic">Check-ins</p>
+                    <div class="text-right border-l border-zinc-800 pl-6 min-w-[120px]">
+                        <p id="total-checkins" class="text-4xl font-black italic text-green-500 leading-none">0</p>
+                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-1">Check-ins</p>
                     </div>
                 </div>
             </header>
 
             <section class="flex-grow p-6 overflow-y-auto bg-[#030303]">
                 <div id="alertaModoTeste" class="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-center font-black py-2 rounded-xl text-[10px] uppercase mb-6 hidden">
-                    ⚠️ MODO DE TESTE ATIVO
+                    ⚠️ MODO DE TESTE ATIVO - BUSCA LIBERADA PARA TODOS OS EVENTOS
                 </div>
-                <div id="container-resultados" class="max-w-[1500px] mx-auto space-y-4"></div>
+                <div id="container-resultados" class="max-w-[1400px] mx-auto space-y-3"></div>
             </section>
         </main>
     </div>
@@ -119,7 +123,7 @@
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
                     btn.innerText = "AUTENTICAR";
-                } else { btn.innerText = "ENTRAR NO SISTEMA"; alert("Operador não encontrado."); }
+                } else { btn.innerText = "ENTRAR"; alert("Operador não encontrado."); }
             } else {
                 if (usuarioData.senha === s) {
                     operadorLogado = n;
@@ -157,7 +161,14 @@
             bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
                 const total = bancoClientes.filter(c => c.evento === ev.nome && (c.metodo !== 'pix_antecipado' || c.pago === true)).length;
-                cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2 shadow-lg"><h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4><div class="flex justify-between items-end mt-2"><span class="text-[8px] font-bold ${status === 'ONLINE' ? 'animate-online' : 'text-zinc-600'} italic uppercase tracking-widest">${status === 'ONLINE' ? '● ONLINE' : '🔒 RESTRITO'}</span><span class="text-lg font-black text-yellow-500">${total}</span></div></div>`;
+                cont.innerHTML += `
+                    <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
+                        <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-[7px] font-bold ${status === 'ONLINE' ? 'text-green-500 animate-online' : 'text-zinc-600'} uppercase">${status === 'ONLINE' ? '● ONLINE' : '🔒 RESTRITO'}</span>
+                            <span class="text-sm font-black text-yellow-500">${total}</span>
+                        </div>
+                    </div>`;
             });
         }
 
@@ -165,6 +176,7 @@
             const busca = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
             if (busca.length < 2) { cont.innerHTML = ''; return; }
+            
             const filtrados = bancoClientes.filter(c => {
                 const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
@@ -173,7 +185,9 @@
                 const cpf = String(c.cpf ?? '').replace(/\D/g, '').includes(busca.replace(/\D/g, ''));
                 return n || t || cpf;
             });
-            if (filtrados.length === 0) { cont.innerHTML = `<div class="py-40 text-center font-black uppercase text-zinc-800 italic">Nenhum cliente ativo encontrado</div>`; return; }
+
+            if (filtrados.length === 0) { cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>`; return; }
+
             cont.innerHTML = '';
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase()) || {};
@@ -181,7 +195,7 @@
                 const isCasal = tipoNorm === "CASAL" || /\s+E\s+/i.test(c.nome);
                 const isDono = tipoNorm === "VIP_DONO";
                 const isAniv = c.aniversariante && c.aniversariante.trim() !== "";
-                
+
                 let valorFinal = "PORTARIA";
                 if (isDono) valorFinal = "FREE";
                 else if (tipoNorm.includes("CAMAROTE")) valorFinal = "R$ " + (c.valor_pago || "---");
@@ -190,46 +204,50 @@
                     valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
                 }
 
-                const cardHTML = `
-                <div class="client-card p-6 rounded-[2.5rem] flex items-center justify-between ${c.entrou ? 'entrou' : ''}">
+                // LÓGICA DE STATUS E CORES
+                const pagoPix = c.metodo === 'pix_antecipado' && c.pago === true;
+                const textoPagamento = pagoPix ? 'PIX PAGO' : 'PORTARIA';
+                const corPagamento = pagoPix ? 'text-green-500' : 'text-zinc-500';
+
+                // CARD ESTILO TABELA (SaaS)
+                cont.innerHTML += `
+                <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
                     
-                    <div class="flex flex-col min-w-[380px]">
-                        <div class="flex items-center gap-3 mb-2">
-                            <h3 class="text-2xl font-black uppercase italic tracking-tighter text-white truncate leading-none">${c.nome}</h3>
-                            <span class="bg-zinc-800 text-[9px] px-2 py-1 rounded border border-white/5 font-black text-zinc-500 uppercase">${c.promoter || 'DIRETO'}</span>
+                    <div class="flex-1 min-w-[250px] max-w-[400px]">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
+                            <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
                         </div>
-                        <p class="text-2xl font-black text-zinc-400 font-mono italic tracking-tighter leading-none">${c.tel || c.telefone || ''}</p>
+                        <p class="text-sm font-mono text-zinc-500">${c.tel || c.telefone || '---'}</p>
                     </div>
 
-                    <div class="flex flex-col gap-1.5 min-w-[180px] border-l border-white/5 pl-8">
-                        ${tipoNorm.includes("CAMAROTE") ? `<span class="bg-cyan-400 text-black px-3 py-1 rounded text-[9px] font-black uppercase text-center shadow-[0_0_10px_rgba(34,211,238,0.3)]">💎 ${tipoNorm}</span>` : ''}
-                        <span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-3 py-1 rounded text-[10px] font-black uppercase text-center">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>
-                        ${isAniv ? `<span class="bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20 px-3 py-1 rounded text-[8px] font-black uppercase text-center">🎉 ANIV: ${c.aniversariante}</span>` : ''}
+                    <div class="flex flex-col gap-1 w-[130px]">
+                        ${tipoNorm.includes("CAMAROTE") ? `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>` : ''}
+                        ${!isDono && !tipoNorm.includes("CAMAROTE") ? `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>` : ''}
+                        ${isAniv ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>` : ''}
+                        ${isDono ? `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>` : ''}
                     </div>
 
-                    <div class="flex flex-grow justify-center gap-12 border-l border-white/5 mx-8">
-                        <div class="text-center">
-                            <p class="text-[7px] text-zinc-600 font-black uppercase tracking-widest mb-1">Pagamento</p>
-                            <h4 class="text-2xl font-black italic ${(c.metodo === 'pix_antecipado' && c.pago) ? 'text-green-500' : 'text-zinc-500'}">
-                                ${(c.metodo === 'pix_antecipado' && c.pago) ? 'PIX PAGO' : 'PORTARIA'}
-                            </h4>
+                    <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px]">
+                        <div class="w-[100px]">
+                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
+                            <p class="text-xs font-black ${corPagamento}">${textoPagamento}</p>
                         </div>
-                        <div class="text-right max-w-[300px]">
-                            <p class="text-[7px] text-zinc-600 font-black uppercase tracking-widest mb-1">Total a Pagar</p>
-                            <p class="text-2xl font-black italic ${isDono ? 'text-green-500' : 'text-white'} leading-tight uppercase">${valorFinal}</p>
+                        <div class="flex-1 pr-4">
+                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Info / Total</p>
+                            <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase line-clamp-2" title="${valorFinal}">${valorFinal}</p>
                         </div>
                     </div>
 
-                    <div class="min-w-[180px] flex justify-end">
+                    <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4">
                         ${c.entrou ? 
-                            '<span class="text-green-500 font-black uppercase text-[12px] tracking-widest">✓ CONFIRMADO</span>' : 
+                            '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : 
                             (c.metodo === 'pix_antecipado' && !c.pago ? 
-                                '<span class="text-red-500 font-black uppercase text-[12px] animate-pulse">PIX PENDENTE</span>' : 
-                                `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar text-black px-10 py-5 rounded-2xl font-black uppercase italic text-xs active:scale-95 transition-all">LIBERAR</button>`)
+                                '<span class="text-red-500 font-black uppercase text-[10px] animate-pulse text-right">PIX<br>PENDENTE</span>' : 
+                                `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`)
                         }
                     </div>
                 </div>`;
-                cont.innerHTML += cardHTML;
             });
         };
 
