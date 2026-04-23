@@ -109,7 +109,12 @@
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
 
-            if (st === "visualizar") document.getElementById('navAcoes').style.display = 'none';
+            // Se for Visualizador, arranca os botões de ação e margens do rodapé
+            if (st === "visualizar") {
+                document.getElementById('navAcoes').style.display = 'none';
+                document.getElementById('painel').classList.remove('pb-44');
+                document.getElementById('painel').classList.add('pb-10');
+            }
             
             if (st === "aniversario") {
                 document.getElementById('secaoAniversario').classList.remove('hidden'); 
@@ -131,43 +136,104 @@
             const cont = document.getElementById('listaAniversarios'); if(!cont) return;
             cont.innerHTML = linksAniv.map(l => {
                 const count = reservas.filter(r => (r.evento || '').toLowerCase().trim() === (l.festa || '').toLowerCase().trim() && (r.aniversariante || '').toLowerCase().trim() === (l.aniversariante || '').toLowerCase().trim()).length;
-                return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
+                return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
             }).join('');
         }
 
         function renderPerformance() {
             const container = document.getElementById('listaPerformance');
             
-            // Verifica se a pessoa é do tipo padrão/aniversario para ocultar o geral
+            // Verifica o tipo de usuário
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const escondeGeral = (st === 'padrao' || st === 'aniversario');
+            const isVisualizador = (st === 'visualizar');
 
             container.innerHTML = eventos.map(ev => {
-                const minhas = reservas.filter(r => r.evento === ev.nome && (r.promoter || '').toLowerCase().trim() === logado).length;
-                const geral = reservas.filter(r => r.evento === ev.nome).length;
+                const evNomeLimpo = (ev.nome || '').trim().toLowerCase();
+                const minhas = reservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo && (r.promoter || '').toLowerCase().trim() === logado).length;
+                const camesGeral = reservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo && (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE'));
+                const geral = reservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo).length;
                 
-                // 👇 MAGICA DO OCULTAMENTO DE GERAL 👇
-                const blocoGeralHTML = escondeGeral ? '' : `
-                    <div class="border-l border-white/5 pl-6">
-                        <p class="text-2xl font-black text-white/20 leading-none">${geral}</p>
-                        <p class="text-[6px] text-white/10 font-black mt-1 uppercase">Geral</p>
-                    </div>
-                `;
+                // 👇 SE FOR VISUALIZADOR, DESENHA O CARD DE MINI-DASHBOARD COM CAMAROTES 👇
+                if (isVisualizador) {
+                    
+                    let luzesCamarotes = '';
+                    for(let n=1; n<=8; n++) {
+                        const ativo = ev[`cam${n}_ativo`] === true;
+                        if (!ativo) {
+                            luzesCamarotes += `<div class="w-full h-2 rounded-full bg-zinc-800 flex items-center justify-center text-[5px] text-zinc-600 font-bold border border-white/5">x</div>`; 
+                            continue;
+                        }
+                        const resDesseCam = camesGeral.filter(r => (r.tipo_entrada || '').toUpperCase() === `CAMAROTE ${n}`);
+                        let statusCam = 'livre';
+                        
+                        if (resDesseCam.some(r => r.pago === true)) {
+                            statusCam = 'vendido';
+                        } else {
+                            const pendentes = resDesseCam.filter(r => r.pago === false);
+                            const temPendente = pendentes.some(r => {
+                                if(!r.data_reserva) return false;
+                                const min = (new Date() - new Date(r.data_reserva)) / 60000;
+                                return min >= 0 && min < 5;
+                            });
+                            if(temPendente) statusCam = 'aguardando';
+                        }
 
-                return `
-                <div class="card-performance p-5 flex justify-between items-center">
-                    <div class="text-left">
-                        <h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4>
-                        <p class="text-[8px] text-zinc-500 font-bold mt-1">${ev.data.split('-').reverse().join('/')}</p>
-                    </div>
-                    <div class="flex gap-6 text-right">
-                        <div>
-                            <p class="text-2xl font-black text-sky-400 leading-none">${minhas}</p>
-                            <p class="text-[6px] text-sky-500 font-black mt-1 uppercase">Minhas</p>
+                        if (statusCam === 'vendido') {
+                            luzesCamarotes += `<div class="w-full h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></div>`; 
+                        } else if (statusCam === 'aguardando') {
+                            luzesCamarotes += `<div class="w-full h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_#eab308] animate-pulse"></div>`; 
+                        } else {
+                            luzesCamarotes += `<div class="w-full h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
+                        }
+                    }
+
+                    return `
+                    <div class="card-performance p-5 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="text-left">
+                                <h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4>
+                                <p class="text-[8px] text-zinc-500 font-bold mt-1">${ev.data.split('-').reverse().join('/')}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-2xl font-black text-white leading-none">${geral}</p>
+                                <p class="text-[6px] text-zinc-400 font-black mt-1 uppercase tracking-widest">Total Reservas</p>
+                            </div>
                         </div>
-                        ${blocoGeralHTML}
-                    </div>
-                </div>`;
+                        <div class="border-t border-white/5 pt-4">
+                            <div class="flex justify-center items-center mb-2">
+                                <span class="text-[8px] font-black text-cyan-400 uppercase tracking-widest">💎 Status Camarotes</span>
+                            </div>
+                            <div class="grid grid-cols-8 gap-2 px-2">
+                                ${luzesCamarotes}
+                            </div>
+                        </div>
+                    </div>`;
+                } 
+                // 👇 SE FOR PROMOTER NORMAL, MOSTRA VISÃO SIMPLES DE VENDAS 👇
+                else {
+                    const blocoGeralHTML = escondeGeral ? '' : `
+                        <div class="border-l border-white/5 pl-6">
+                            <p class="text-2xl font-black text-white/20 leading-none">${geral}</p>
+                            <p class="text-[6px] text-white/10 font-black mt-1 uppercase tracking-widest">Geral</p>
+                        </div>
+                    `;
+
+                    return `
+                    <div class="card-performance p-5 flex justify-between items-center">
+                        <div class="text-left">
+                            <h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4>
+                            <p class="text-[8px] text-zinc-500 font-bold mt-1">${ev.data.split('-').reverse().join('/')}</p>
+                        </div>
+                        <div class="flex gap-6 text-right">
+                            <div>
+                                <p class="text-2xl font-black text-sky-400 leading-none">${minhas}</p>
+                                <p class="text-[6px] text-sky-500 font-black mt-1 uppercase tracking-widest">Minhas</p>
+                            </div>
+                            ${blocoGeralHTML}
+                        </div>
+                    </div>`;
+                }
             }).join('');
         }
 
