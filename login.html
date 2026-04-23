@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ABRE A PORTA | Login</title>
+    <title>ACESSO ADMINISTRATIVO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -14,19 +14,21 @@
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
-    <div class="max-w-md w-full glass p-10 rounded-[2.5rem] shadow-2xl border-t border-white/10">
-        <div class="text-center mb-10">
-            <h1 class="text-2xl font-black italic uppercase tracking-tighter text-blue-500">Abre a Porta</h1>
-            <p class="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Acesso ao Painel Administrativo</p>
+    <div class="max-w-md w-full glass p-10 rounded-[2.5rem] shadow-2xl border-t border-white/10 text-center">
+        
+        <div class="mb-10 flex flex-col items-center">
+            <img id="logo-cliente" src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mb-4 object-contain">
+            <h1 id="nome-painel" class="text-xl font-black italic uppercase tracking-tighter text-blue-500">Abre a Porta</h1>
+            <p class="text-zinc-500 text-[10px] font-black uppercase tracking-widest mt-1">Painel Administrativo</p>
         </div>
 
-        <form id="loginForm" class="space-y-4">
+        <form id="loginForm" class="space-y-4 text-left">
             <div>
-                <label class="text-[9px] font-black uppercase text-zinc-600 ml-4 mb-1 block">Usuário</label>
+                <label class="text-[9px] font-black uppercase text-zinc-600 ml-4 mb-1 block italic">Usuário de Acesso</label>
                 <input type="text" id="user" class="w-full p-4 rounded-2xl font-bold" placeholder="Digite seu usuário" required>
             </div>
             <div>
-                <label class="text-[9px] font-black uppercase text-zinc-600 ml-4 mb-1 block">Senha</label>
+                <label class="text-[9px] font-black uppercase text-zinc-600 ml-4 mb-1 block italic">Senha</label>
                 <input type="password" id="pass" class="w-full p-4 rounded-2xl font-bold" placeholder="••••••••" required>
             </div>
             
@@ -40,38 +42,49 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        const params = new URLSearchParams(window.location.search);
+        const slugUrl = params.get('clube');
+
+        // BUSCA LOGO PERSONALIZADA SE TIVER SLUG NA URL
+        async function carregarIdentidade() {
+            if (slugUrl) {
+                const docRef = doc(db, "clientes_revenda", slugUrl);
+                const snap = await getDoc(docRef);
+                if (snap.exists()) {
+                    const dados = snap.data();
+                    if (dados.logo_url) document.getElementById('logo-cliente').src = dados.logo_url;
+                    document.getElementById('nome-painel').innerText = dados.nome_fantasia;
+                }
+            }
+        }
+
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnLogin');
             const msg = document.getElementById('msg');
-            btn.innerText = "Verificando..."; btn.disabled = true;
+            btn.innerText = "Validando..."; btn.disabled = true;
             msg.classList.add('hidden');
 
-            const usuarioInput = document.getElementById('user').value;
-            const senhaInput = document.getElementById('pass').value;
+            const userIn = document.getElementById('user').value;
+            const passIn = document.getElementById('pass').value;
 
             try {
-                // Busca no banco o cliente que tem esse usuário e essa senha
-                const q = query(collection(db, "clientes_revenda"), 
-                            where("usuario", "==", usuarioInput), 
-                            where("senha", "==", senhaInput));
-                
-                const querySnapshot = await getDocs(q);
+                const q = query(collection(db, "clientes_revenda"), where("usuario", "==", userIn), where("senha", "==", passIn));
+                const snap = await getDocs(q);
 
-                if (!querySnapshot.empty) {
-                    const dados = querySnapshot.docs[0].data();
-                    
+                if (!snap.empty) {
+                    const dados = snap.docs[0].data();
                     if (!dados.ativo) {
-                        msg.innerText = "Sua licença está suspensa. Fale com o administrador.";
+                        msg.innerText = "Acesso suspenso. Verifique sua fatura.";
                         msg.classList.remove('hidden');
                     } else {
-                        // Login Sucesso: Redireciona para o dashboard com o ID dele
+                        // Redireciona para o Dashboard do cliente específico
                         window.location.href = `dashboard.html?clube=${dados.slug}`;
                     }
                 } else {
@@ -79,12 +92,14 @@
                     msg.classList.remove('hidden');
                 }
             } catch (err) {
-                msg.innerText = "Erro ao conectar ao servidor.";
+                msg.innerText = "Erro na conexão.";
                 msg.classList.remove('hidden');
             } finally {
                 btn.innerText = "Entrar no Painel"; btn.disabled = false;
             }
         });
+
+        carregarIdentidade();
     </script>
 </body>
 </html>
