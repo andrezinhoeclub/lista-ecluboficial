@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -24,9 +25,11 @@
         </header>
 
         <div class="glass-card p-8 border-l-4 border-l-blue-600">
-            <h2 class="text-white font-black uppercase italic text-xl mb-6">➕ Cadastrar Novo Cliente (SaaS)</h2>
+            <h2 id="titulo-form" class="text-white font-black uppercase italic text-xl mb-6">➕ Cadastrar Novo Cliente (SaaS)</h2>
             <form id="formNovoCliente" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 
+                <input type="hidden" id="edit_id">
+
                 <div class="flex flex-col gap-1">
                     <label class="label-mini">Razão Social</label>
                     <input type="text" id="razao_social" placeholder="Empresa LTDA" class="p-4 rounded-2xl font-bold" required>
@@ -67,8 +70,9 @@
                     <input type="text" id="pass_cliente" placeholder="mudar123" class="p-4 rounded-2xl font-bold" required>
                 </div>
 
-                <div class="lg:col-span-4 mt-4">
-                    <button type="submit" id="btnSalvar" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20">Ativar Licença e Gerar Acesso</button>
+                <div class="lg:col-span-4 mt-4 flex gap-2">
+                    <button type="submit" id="btnSalvar" class="flex-1 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase hover:bg-blue-500 transition-all shadow-xl shadow-blue-900/20">Ativar Licença e Gerar Acesso</button>
+                    <button type="button" id="btnCancelarEdit" class="hidden bg-zinc-800 text-white font-black px-8 rounded-2xl uppercase text-xs" onclick="resetForm()">Cancelar</button>
                 </div>
             </form>
         </div>
@@ -82,7 +86,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, setDoc, doc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, setDoc, doc, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
@@ -103,16 +107,14 @@
                     <div>
                         <div class="flex justify-between items-start mb-4">
                             <h3 class="text-lg font-black uppercase text-white">${c.nome_fantasia}</h3>
-                            <span class="${estaVencido ? 'bg-red-500' : 'bg-green-600'} text-[8px] text-white font-black uppercase px-2 py-1 rounded">
-                                ${estaVencido ? 'Inadimplente' : 'Em dia'}
-                            </span>
+                            <button onclick="editarCliente('${c.id}')" class="text-blue-500 hover:text-blue-400 text-[10px] font-black uppercase">Editar ✏️</button>
                         </div>
                         
                         <div class="space-y-2 text-[10px] font-bold uppercase italic text-zinc-500 mb-6">
                             <p>Razão: <span class="text-white">${c.razao_social || '-'}</span></p>
                             <p>CNPJ: <span class="text-white">${c.cnpj || '-'}</span></p>
                             <p>E-mail: <span class="text-white">${c.email || '-'}</span></p>
-                            <p>Vence em: <span class="${estaVencido ? 'text-red-500' : 'text-blue-400'}">${venc.toLocaleDateString('pt-BR')} (${diasRestantes} dias)</span></p>
+                            <p>Vence em: <span class="${estaVencido ? 'text-red-500' : 'text-blue-400'}">${venc.toLocaleDateString('pt-BR')}</span></p>
                             <p class="mt-4 pt-2 border-t border-white/5">Login: <span class="text-white">${c.usuario}</span></p>
                         </div>
                     </div>
@@ -130,7 +132,7 @@
         document.getElementById('formNovoCliente').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSalvar');
-            btn.innerText = "Ativando..."; btn.disabled = true;
+            btn.innerText = "Salvando..."; btn.disabled = true;
 
             const slug = document.getElementById('slug_cliente').value.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -147,10 +149,42 @@
                     ativo: true,
                     data_cadastro: new Date().toISOString()
                 });
-                e.target.reset();
+                resetForm();
+                alert("Dados atualizados com sucesso!");
             } catch (err) { alert("Erro ao salvar."); }
-            finally { btn.innerText = "Ativar Licença e Gerar Acesso"; btn.disabled = false; }
+            finally { btn.disabled = false; }
         });
+
+        window.editarCliente = async (id) => {
+            const docRef = doc(db, "clientes_revenda", id);
+            const snap = await getDoc(docRef);
+            if(snap.exists()) {
+                const c = snap.data();
+                document.getElementById('edit_id').value = id;
+                document.getElementById('razao_social').value = c.razao_social || '';
+                document.getElementById('nome_fantasia').value = c.nome_fantasia || '';
+                document.getElementById('cnpj_cliente').value = c.cnpj || '';
+                document.getElementById('email_cliente').value = c.email || '';
+                document.getElementById('slug_cliente').value = c.slug || '';
+                document.getElementById('slug_cliente').readOnly = true; // Não permite mudar o ID do link na edição
+                document.getElementById('data_vencimento').value = c.vencimento || '';
+                document.getElementById('user_cliente').value = c.usuario || '';
+                document.getElementById('pass_cliente').value = c.senha || '';
+                
+                document.getElementById('titulo-form').innerText = "📝 Editando: " + c.nome_fantasia;
+                document.getElementById('btnSalvar').innerText = "Salvar Alterações";
+                document.getElementById('btnCancelarEdit').classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+
+        window.resetForm = () => {
+            document.getElementById('formNovoCliente').reset();
+            document.getElementById('slug_cliente').readOnly = false;
+            document.getElementById('titulo-form').innerText = "➕ Cadastrar Novo Cliente (SaaS)";
+            document.getElementById('btnSalvar').innerText = "Ativar Licença e Gerar Acesso";
+            document.getElementById('btnCancelarEdit').classList.add('hidden');
+        };
 
         window.alternarStatus = async (id, status) => {
             await setDoc(doc(db, "clientes_revenda", id), { ativo: !status }, { merge: true });
