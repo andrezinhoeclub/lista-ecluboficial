@@ -186,7 +186,23 @@
         }
 
         window.iniciarFluxo = (id, isPix) => {
-            eventoAtivo = eventosCache.find(e => e.id === id); eFluxoPix = isPix; tipoAtivo = null; 
+            eventoAtivo = eventosCache.find(e => e.id === id); 
+            
+            // 👇 BLOQUEIO DE HORÁRIOS AQUI 👇
+            const [ano, mes, dia] = eventoAtivo.data.split('-');
+            const agora = new Date();
+            
+            if (isPix) {
+                // Limite PIX: 21:59:59 do dia do evento
+                const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
+                if (agora > limitePix) return alert("⚠️ As vendas antecipadas via PIX encerraram às 21:59h de hoje!");
+            } else {
+                // Limite Lista: 23:59:59 do dia do evento (Meia-noite)
+                const limiteLista = new Date(ano, mes - 1, dia, 23, 59, 59);
+                if (agora > limiteLista) return alert("⚠️ A lista para este evento encerrou à meia-noite!");
+            }
+
+            eFluxoPix = isPix; tipoAtivo = null; 
             const titulo = document.getElementById('modal-titulo');
             
             titulo.innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
@@ -280,7 +296,16 @@
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
 
         window.iniciarFluxoCamarote = (id) => {
-            eventoAtivo = eventosCache.find(e => e.id === id); numCamaroteSelecionado = null; processoDePagamentoAberto = false;
+            eventoAtivo = eventosCache.find(e => e.id === id); 
+            
+            // 👇 BLOQUEIO DE HORÁRIO DE CAMAROTE AQUI 👇
+            const [ano, mes, dia] = eventoAtivo.data.split('-');
+            const agora = new Date();
+            const limitePix = new Date(ano, mes - 1, dia, 21, 59, 59);
+            
+            if (agora > limitePix) return alert("⚠️ As vendas de Camarote via PIX encerraram às 21:59h de hoje!");
+
+            numCamaroteSelecionado = null; processoDePagamentoAberto = false;
             document.getElementById('form-camarote').classList.add('hidden'); document.getElementById('modalCamarote').classList.remove('hidden');
             const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
             if(unsubscribeCamarotes) unsubscribeCamarotes(); 
@@ -295,7 +320,6 @@
                     let status = 'livre'; let classCor = 'cam-livre'; let icone = '✅';
                     const resCam = reservas.filter(r => r.tipo_entrada === `CAMAROTE ${i}`);
                     
-                    // 👇 SITE DE CLIENTE AGORA TRAVA CORTESIAS COMO "VENDIDO" 👇
                     if (resCam.some(r => r.pago === true || r.cortesia === true)) { 
                         status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; 
                     } else {
@@ -332,7 +356,6 @@
             if (!n || t.length < 14) return alert("Preencha Nome e Telefone!");
             const btn = document.getElementById('btn-final-camarote'); const originalText = btn.innerText; btn.innerText = "GARANTINDO... ⚡"; btn.disabled = true; processoDePagamentoAberto = true; 
             try {
-                // 👇 GARANTIA CONTRA VENDAS DUPLAS E CORTESIAS SIMULTÂNEAS 👇
                 const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome), where("tipo_entrada", "==", `CAMAROTE ${numCamaroteSelecionado}`)));
                 let alguemRoubou = false;
                 checkFinal.forEach(docSnap => {
