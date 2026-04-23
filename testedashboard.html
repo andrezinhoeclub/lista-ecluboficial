@@ -179,10 +179,10 @@
             
             container.innerHTML = ativos.map(ev => {
                 
-                // 👇 A BLINDAGEM DA DASHBOARD (Ignora espaços vazios e formata tudo pra bater certo) 👇
-                const evNomeLimpo = (ev.nome || '').trim().toLowerCase();
-                const todasReservas = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo);
+                // 👇 BLINDAGEM MESTRA: Lógica de Filtro exata igual a da Portaria (sem usar toLowerCase) 👇
+                const todasReservas = dadosReservas.filter(r => r.evento === ev.nome);
                 
+                // Pega Pix Pagos + Todo resto que é Lista
                 const validas = todasReservas.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
                 
                 const parseMoeda = (val) => Number(String(val || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
@@ -233,9 +233,10 @@
                     }
                 }
 
+                // 👇 CONTADORES DE ETIQUETA INFERIOR 👇
                 const qtdLista = validas.filter(r => r.metodo !== 'pix_antecipado').length;
                 const qtdPix = validas.filter(r => r.metodo === 'pix_antecipado').length;
-                const qtdCheckins = validas.filter(r => r.entrou).length;
+                const qtdCheckins = validas.filter(r => r.entrou === true).length;
 
                 return `
                 <div class="event-bubble p-6 flex flex-col justify-between">
