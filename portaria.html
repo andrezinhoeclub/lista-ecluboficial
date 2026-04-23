@@ -11,7 +11,7 @@
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
         
-        /* Card Estilo Tabela - Clean, Funcional e Expansível */
+        /* Card Estilo Tabela - Clean e Funcional */
         .client-card { 
             background: #0d0d0f; 
             border: 1px solid #1a1a1c; 
@@ -172,18 +172,30 @@
             });
         }
 
+        // --- A MÁGICA DA PESQUISA MÚLTIPLA ESTÁ AQUI ---
         window.processarPesquisa = () => {
-            const busca = document.getElementById('input-busca').value.trim().toUpperCase();
+            const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
-            if (busca.length < 2) { cont.innerHTML = ''; return; }
+            
+            if (buscaInput.length < 2) { cont.innerHTML = ''; return; }
+            
+            // Divide o que foi digitado em várias palavras (ex: "AND 6901" vira ["AND", "6901"])
+            const termosBusca = buscaInput.split(/\s+/);
             
             const filtrados = bancoClientes.filter(c => {
                 const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
-                const n = String(c.nome ?? '').toUpperCase().includes(busca);
-                const t = String(c.tel ?? '').includes(busca) || String(c.telefone ?? '').includes(busca);
-                const cpf = String(c.cpf ?? '').replace(/\D/g, '').includes(busca.replace(/\D/g, ''));
-                return n || t || cpf;
+                
+                // Cria uma "super string" combinando os dados do cliente para a busca ser universal
+                const nomeString = String(c.nome ?? '').toUpperCase();
+                const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
+                const telNumeros = telString.replace(/\D/g, ''); // Telefone apenas com os números
+                const cpfNumeros = String(c.cpf ?? '').replace(/\D/g, ''); // CPF apenas números
+                
+                const todosOsDadosDoCliente = `${nomeString} ${telString} ${telNumeros} ${cpfNumeros}`;
+                
+                // Verifica se TODOS os termos digitados estão na super string do cliente
+                return termosBusca.every(termo => todosOsDadosDoCliente.includes(termo));
             });
 
             if (filtrados.length === 0) { cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>`; return; }
@@ -233,7 +245,7 @@
                         </div>
                         <div class="flex-1 pr-4">
                             <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Info / Total</p>
-                            <p class="text-xs font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-snug uppercase break-words whitespace-normal">${valorFinal}</p>
+                            <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase break-words whitespace-normal">${valorFinal}</p>
                         </div>
                     </div>
 
