@@ -85,7 +85,7 @@
             <div id="area-mapa-cortesia" class="hidden">
                 <div class="w-full h-48 bg-zinc-900 rounded-xl mb-4 border border-white/10 flex items-center justify-center overflow-hidden relative">
                     <span class="text-zinc-500 font-black text-[10px] uppercase absolute tracking-widest z-0">MAPA DO CLUBE</span>
-                    <img id="img-mapa-cortesia" src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png?v=2" class="w-full h-full object-contain relative z-10" onerror="this.onerror=null; this.src='https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png'; this.className='h-20 opacity-30 object-contain relative z-10';">
+                    <img id="img-mapa-cortesia" src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png?v=3" class="w-full h-full object-contain relative z-10" onerror="this.onerror=null; this.src='https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png'; this.className='h-20 opacity-30 object-contain relative z-10';">
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 mb-6" id="grid-camarotes-cortesia"></div>
@@ -160,15 +160,28 @@
             }
 
             onSnapshot(collection(db, "lista_eventos"), (snap) => { reservas = snap.docs.map(d => d.data()); renderPerformance(); if (st === "aniversario") renderAniversarios(); });
+            
+            // 👇 Eventos é filtrado para mostrar apenas Hoje e Futuro 👇
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => { 
                 eventos = snap.docs.map(d => d.data()).filter(ev => ev.data >= hojeLocal).sort((a,b) => new Date(a.data) - new Date(b.data)); 
                 renderPerformance(); 
+                if (st === "aniversario") renderAniversarios(); // Força atualizar as listas quando os eventos carregam
             });
         }
 
+        // 👇 A MÁGICA DE OCULTAR LISTAS ANTIGAS ESTÁ AQUI 👇
         function renderAniversarios() {
             const cont = document.getElementById('listaAniversarios'); if(!cont) return;
-            cont.innerHTML = linksAniv.map(l => {
+            
+            // Só exibe as listas se o evento (festa) dela estiver dentro do array 'eventos' (que só tem festas válidas de hoje pra frente)
+            const listasAtivas = linksAniv.filter(l => eventos.some(ev => (ev.nome || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase()));
+
+            if (listasAtivas.length === 0) {
+                cont.innerHTML = '<p class="text-[10px] text-zinc-600 font-bold uppercase tracking-widest italic mt-2 opacity-50 text-center">Nenhuma lista VIP ativa no momento.</p>';
+                return;
+            }
+
+            cont.innerHTML = listasAtivas.map(l => {
                 const count = reservas.filter(r => (r.evento || '').toLowerCase().trim() === (l.festa || '').toLowerCase().trim() && (r.aniversariante || '').toLowerCase().trim() === (l.aniversariante || '').toLowerCase().trim()).length;
                 return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
             }).join('');
@@ -232,10 +245,11 @@
             const grid = document.getElementById('grid-camarotes-cortesia');
             grid.innerHTML = '';
             
+            // 👇 PUXANDO A IMAGEM .PNG E TAMANHO AJUSTADO 👇
             const imgCortesia = document.getElementById('img-mapa-cortesia');
             if (imgCortesia) {
                 imgCortesia.className = "w-full h-full object-contain relative z-10";
-                let urlC = 'https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png?v=2';
+                let urlC = 'https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png?v=3';
                 if (ev.url_mapa && ev.url_mapa.trim() !== '') urlC = ev.url_mapa.trim();
                 imgCortesia.src = urlC;
             }
