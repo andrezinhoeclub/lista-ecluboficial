@@ -3,163 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ABRE A PORTA | Painel do Cliente</title>
+    <title>ABRE A PORTA | Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e4e4e7; }
-        .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 1.5rem; }
-        input, select { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; }
+        .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2rem; }
+        input { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #3b82f6 !important; }
-        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .label-mini { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #71717a; margin-left: 0.5rem; letter-spacing: 0.05em; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div id="loading" class="fixed inset-0 bg-black flex items-center justify-center z-50">
-        <p class="animate-pulse font-black italic uppercase text-blue-500">Carregando Painel...</p>
-    </div>
-
-    <div id="main-content" class="max-w-6xl mx-auto hidden space-y-8">
-        
-        <header class="flex flex-col md:flex-row justify-between items-center bg-zinc-900/50 p-6 rounded-3xl border border-white/5">
-            <div class="flex items-center gap-4">
-                <img id="client-logo" src="" class="h-12 w-12 rounded-full object-cover border-2 border-blue-500">
-                <div>
-                    <h1 id="client-name" class="text-xl font-black uppercase italic leading-none">NOME DO CLUBE</h1>
-                    <p class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Painel Administrativo</p>
-                </div>
-            </div>
-            <div class="mt-4 md:mt-0 flex gap-2">
-                <button onclick="location.reload()" class="bg-zinc-800 p-3 rounded-xl hover:bg-zinc-700 transition-all">🔄</button>
-                <a id="btn-ver-lista" target="_blank" class="bg-blue-600 text-white font-black px-6 py-3 rounded-xl uppercase text-xs hover:bg-blue-500 transition-all">Ver Minha Lista</a>
-            </div>
+    <div class="max-w-7xl mx-auto space-y-8">
+        <header class="flex flex-col items-center justify-center py-6 border-b border-white/5 mb-8 text-center">
+            <h1 class="text-3xl font-black uppercase italic tracking-tighter text-blue-500">Abre a Porta <span class="text-white">Master</span></h1>
+            <p class="text-zinc-500 font-bold uppercase text-[10px] tracking-widest mt-1">Gestão de Revenda e Identidade Visual</p>
         </header>
 
-        <div class="flex gap-8 border-b border-white/5 px-2">
-            <button class="pb-4 font-black uppercase italic text-xs tracking-widest tab-active">Gerenciar Eventos</button>
-            <button class="pb-4 font-black uppercase italic text-xs tracking-widest text-zinc-600">Ver Reservas</button>
+        <div class="glass-card p-8 border-l-4 border-l-blue-600">
+            <h2 id="titulo-form" class="text-white font-black uppercase italic text-xl mb-6">➕ Configurar Nova Casa</h2>
+            <form id="formNovoCliente" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <input type="hidden" id="edit_id">
+                <input type="hidden" id="logo_url_atual"> <div class="flex flex-col gap-1"><label class="label-mini">Razão Social</label><input type="text" id="razao_social" class="p-4 rounded-2xl font-bold" required></div>
+                <div class="flex flex-col gap-1"><label class="label-mini">Nome Fantasia</label><input type="text" id="nome_fantasia" class="p-4 rounded-2xl font-bold uppercase" required></div>
+                <div class="flex flex-col gap-1"><label class="label-mini">CNPJ</label><input type="text" id="cnpj_cliente" class="p-4 rounded-2xl font-bold"></div>
+                <div class="flex flex-col gap-1"><label class="label-mini">E-mail</label><input type="email" id="email_cliente" class="p-4 rounded-2xl font-bold" required></div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="label-mini text-blue-400">Logo da Casa (Upload)</label>
+                    <input type="file" id="logo_upload" accept="image/*" class="file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer p-1 rounded-2xl font-bold text-xs">
+                </div>
+                
+                <div class="flex flex-col gap-1"><label class="label-mini text-blue-400">Cor Principal (HEX)</label><input type="text" id="cor_primaria" placeholder="#FF0000" class="p-4 rounded-2xl font-bold"></div>
+                <div class="flex flex-col gap-1"><label class="label-mini">Vencimento</label><input type="date" id="data_vencimento" class="p-4 rounded-2xl font-bold" required></div>
+                <div class="flex flex-col gap-1"><label class="label-mini">Slug (ID do Link)</label><input type="text" id="slug_cliente" class="p-4 rounded-2xl font-bold lowercase" required></div>
+
+                <div class="flex flex-col gap-1"><label class="label-mini">Usuário</label><input type="text" id="user_cliente" class="p-4 rounded-2xl font-bold" required></div>
+                <div class="flex flex-col gap-1"><label class="label-mini">Senha</label><input type="text" id="pass_cliente" class="p-4 rounded-2xl font-bold" required></div>
+
+                <div class="lg:col-span-4 mt-4 flex gap-2">
+                    <button type="submit" id="btnSalvar" class="flex-1 bg-blue-600 text-white font-black py-5 rounded-2xl uppercase hover:bg-blue-500 transition-all">Salvar Configurações</button>
+                    <button type="button" id="btnCancelarEdit" class="hidden bg-zinc-800 text-white font-black px-8 rounded-2xl uppercase text-xs" onclick="resetForm()">Cancelar</button>
+                </div>
+            </form>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <div class="glass-card p-6 h-fit">
-                <h2 class="text-white font-black uppercase italic mb-6">➕ Novo Evento</h2>
-                <form id="formEvento" class="space-y-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-black uppercase text-zinc-500 ml-2">Título da Festa</label>
-                        <input type="text" id="nome_evento" placeholder="EX: NOITE DA NOSTALGIA" class="p-4 rounded-xl font-bold uppercase" required>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-black uppercase text-zinc-500 ml-2">Link da Imagem (Banner)</label>
-                        <input type="url" id="img_evento" placeholder="https://..." class="p-4 rounded-xl text-xs" required>
-                    </div>
-                    <button type="submit" id="btnSalvar" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl uppercase text-sm mt-2 hover:bg-blue-500 shadow-lg shadow-blue-900/20">Publicar Evento</button>
-                </form>
-            </div>
-
-            <div class="lg:col-span-2 space-y-4">
-                <h2 class="text-white font-black uppercase italic">📅 Seus Eventos Publicados</h2>
-                <div id="grid-eventos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    </div>
-            </div>
-
-        </div>
+        <div id="grid-clientes" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, query, where, onSnapshot, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, setDoc, doc, onSnapshot, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js"; // IMPORTA O STORAGE
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app); // INICIA A NUVEM DE FOTOS
 
-        const params = new URLSearchParams(window.location.search);
-        const clubeId = params.get('clube');
+        onSnapshot(collection(db, "clientes_revenda"), (snap) => {
+            const grid = document.getElementById('grid-clientes');
+            grid.innerHTML = snap.docs.map(d => {
+                const c = d.data();
+                return `
+                <div class="bg-[#0a0a0f] border border-white/5 p-6 rounded-3xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-1 h-full" style="background: ${c.cor_primaria || '#3b82f6'}"></div>
+                    <div class="flex items-center gap-4 mb-4">
+                        <img src="${c.logo_url || 'https://via.placeholder.com/50'}" class="h-10 w-10 rounded-lg object-contain bg-zinc-900 border border-white/10">
+                        <h3 class="text-lg font-black uppercase text-white">${c.nome_fantasia}</h3>
+                    </div>
+                    <div class="space-y-1 mb-6 text-[10px] font-bold uppercase italic text-zinc-500">
+                        <p>Link Login: <span class="text-blue-500">.../login.html?clube=${c.slug}</span></p>
+                        <p>Acesso: <span class="text-white">${c.usuario} / ${c.senha}</span></p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="editarCliente('${d.id}')" class="bg-zinc-800 text-white py-3 rounded-xl text-[9px] font-black uppercase hover:bg-zinc-700">Editar</button>
+                        <button onclick="excluirCliente('${d.id}')" class="bg-red-900/10 text-red-500 py-3 rounded-xl text-[9px] font-black uppercase hover:bg-red-900/20">Excluir</button>
+                    </div>
+                </div>`;
+            }).join('');
+        });
 
-        async function iniciarPainel() {
-            if (!clubeId) {
-                alert("Erro: ID do cliente não fornecido.");
-                return;
-            }
-
-            const docRef = doc(db, "clientes_revenda", clubeId);
-            const snap = await getDoc(docRef);
-
-            if (snap.exists() && snap.data().ativo) {
-                const dados = snap.data();
-                document.getElementById('client-name').innerText = dados.nome_fantasia;
-                document.getElementById('client-logo').src = dados.logo_url || 'https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png';
-                document.getElementById('btn-ver-lista').href = `listas.html?clube=${clubeId}`;
-                
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('main-content').classList.remove('hidden');
-                
-                carregarEventos();
-            } else {
-                document.body.innerHTML = "<div class='p-20 text-center font-black uppercase'>Acesso Negado ou Licença Expirada.</div>";
-            }
-        }
-
-        function carregarEventos() {
-            const q = query(collection(db, "eventos"), where("clube_id", "==", clubeId));
-            onSnapshot(q, (snap) => {
-                const grid = document.getElementById('grid-eventos');
-                if(snap.empty) {
-                    grid.innerHTML = "<p class='text-zinc-600 text-xs font-bold uppercase'>Nenhum evento cadastrado.</p>";
-                    return;
-                }
-
-                grid.innerHTML = snap.docs.map(d => {
-                    const ev = d.data();
-                    return `
-                    <div class="glass-card overflow-hidden flex flex-col">
-                        <img src="${ev.imagem}" class="h-32 w-full object-cover opacity-50">
-                        <div class="p-5 flex flex-col justify-between flex-grow">
-                            <h3 class="font-black uppercase italic text-sm mb-4">${ev.nome}</h3>
-                            <div class="flex gap-2">
-                                <button onclick="toggleEvento('${d.id}', ${ev.ativo})" class="flex-1 py-2 rounded-lg text-[9px] font-black uppercase border ${ev.ativo ? 'border-green-500/50 text-green-500' : 'border-red-500/50 text-red-500'}">
-                                    ${ev.ativo ? 'Ativo' : 'Pausado'}
-                                </button>
-                                <button onclick="excluirEvento('${d.id}')" class="bg-zinc-800 p-2 rounded-lg text-[9px] font-black uppercase">Excluir</button>
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('');
-            });
-        }
-
-        document.getElementById('formEvento').addEventListener('submit', async (e) => {
+        document.getElementById('formNovoCliente').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSalvar');
-            btn.disabled = true; btn.innerText = "Publicando...";
+            btn.innerText = "Processando..."; btn.disabled = true;
+
+            const slug = document.getElementById('slug_cliente').value.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const arquivoFoto = document.getElementById('logo_upload').files[0];
+            let urlFinalLogo = document.getElementById('logo_url_atual').value; // Mantém a antiga se não houver nova
 
             try {
-                await addDoc(collection(db, "eventos"), {
-                    clube_id: clubeId,
-                    nome: document.getElementById('nome_evento').value.toUpperCase(),
-                    imagem: document.getElementById('img_evento').value,
-                    ativo: true,
-                    data_criacao: new Date().toISOString()
+                // SE O USUÁRIO ESCOLHEU UMA FOTO NOVA, FAZ O UPLOAD PRIMEIRO
+                if (arquivoFoto) {
+                    btn.innerText = "Subindo imagem...";
+                    const storageRef = ref(storage, `logos/${slug}_${Date.now()}_${arquivoFoto.name}`);
+                    await uploadBytes(storageRef, arquivoFoto);
+                    urlFinalLogo = await getDownloadURL(storageRef); // Pega o link gerado pela nuvem
+                }
+
+                btn.innerText = "Salvando cliente...";
+                await setDoc(doc(db, "clientes_revenda", slug), {
+                    razao_social: document.getElementById('razao_social').value,
+                    nome_fantasia: document.getElementById('nome_fantasia').value.toUpperCase(),
+                    cnpj: document.getElementById('cnpj_cliente').value,
+                    email: document.getElementById('email_cliente').value,
+                    logo_url: urlFinalLogo, // Salva o link da nuvem
+                    cor_primaria: document.getElementById('cor_primaria').value || '#3b82f6',
+                    slug: slug,
+                    vencimento: document.getElementById('data_vencimento').value,
+                    usuario: document.getElementById('user_cliente').value,
+                    senha: document.getElementById('pass_cliente').value,
+                    ativo: true
                 });
-                e.target.reset();
+                resetForm();
+                alert("Salvo com sucesso!");
             } catch (err) {
-                alert("Erro ao salvar.");
+                console.error(err);
+                alert("Erro ao salvar! Verifique se o Storage está liberado no Firebase.");
             } finally {
-                btn.disabled = false; btn.innerText = "Publicar Evento";
+                btn.innerText = "Salvar Configurações"; btn.disabled = false;
             }
         });
 
-        window.toggleEvento = async (id, status) => {
-            await updateDoc(doc(db, "eventos", id), { ativo: !status });
+        window.editarCliente = async (id) => {
+            const snap = await getDoc(doc(db, "clientes_revenda", id));
+            const c = snap.data();
+            document.getElementById('edit_id').value = id;
+            document.getElementById('razao_social').value = c.razao_social || '';
+            document.getElementById('nome_fantasia').value = c.nome_fantasia || '';
+            document.getElementById('cnpj_cliente').value = c.cnpj || '';
+            document.getElementById('email_cliente').value = c.email || '';
+            document.getElementById('cor_primaria').value = c.cor_primaria || '';
+            document.getElementById('slug_cliente').value = c.slug;
+            document.getElementById('data_vencimento').value = c.vencimento;
+            document.getElementById('user_cliente').value = c.usuario;
+            document.getElementById('pass_cliente').value = c.senha;
+            document.getElementById('logo_url_atual').value = c.logo_url || ''; // Guarda a logo atual na memória
+            
+            document.getElementById('titulo-form').innerText = "📝 Editando: " + c.nome_fantasia;
+            document.getElementById('btnCancelarEdit').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
-        window.excluirEvento = async (id) => {
-            if(confirm("Deseja apagar este evento?")) await deleteDoc(doc(db, "eventos", id));
+        window.resetForm = () => {
+            document.getElementById('formNovoCliente').reset();
+            document.getElementById('logo_url_atual').value = '';
+            document.getElementById('titulo-form').innerText = "➕ Configurar Nova Casa";
+            document.getElementById('btnCancelarEdit').classList.add('hidden');
         };
 
-        iniciarPainel();
+        window.excluirCliente = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "clientes_revenda", id)); };
     </script>
 </body>
 </html>
