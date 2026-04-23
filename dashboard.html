@@ -190,7 +190,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
@@ -319,7 +319,7 @@
                     }
                 }
 
-                // CORREÇÃO AQUI: Lista agora é o TOTAL de confirmados (incluindo PIX Pagos)
+                // O qtdLista conta todos os confirmados do evento (Portaria + PIX)
                 const qtdLista = validas.length; 
                 const qtdPix = validas.filter(r => r.metodo === 'pix_antecipado').length;
                 const qtdCheckins = validas.filter(r => r.entrou === true).length;
@@ -569,7 +569,43 @@
         });
 
         window.toggleModoTeste = async () => { await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true }); };
-        window.removerItem = async (c, i) => { if(confirm("Apagar?")) await deleteDoc(doc(db, c, i)); };
+        
+        // --- FUNÇÃO DE EXCLUSÃO MELHORADA (CASCATA) ---
+        window.removerItem = async (colecao, id) => { 
+            if(!confirm("Tem certeza que deseja apagar este item?")) return;
+            
+            try {
+                // Se for uma lista de aniversário, apaga também todos os convidados atrelados a ela
+                if (colecao === 'links_aniversario') {
+                    const docSnap = await getDoc(doc(db, colecao, id));
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        
+                        // Busca todas as reservas que tenham o nome desse aniversariante
+                        const qConvidados = query(collection(db, "lista_eventos"), where("aniversariante", "==", data.aniversariante));
+                        const snapConvidados = await getDocs(qConvidados);
+                        
+                        const batch = writeBatch(db);
+                        // Adiciona os convidados na fila de exclusão
+                        snapConvidados.forEach(d => batch.delete(d.ref));
+                        // Adiciona a própria lista na fila de exclusão
+                        batch.delete(doc(db, colecao, id));
+                        
+                        // Executa tudo de uma vez
+                        await batch.commit();
+                        alert("Lista de aniversário e todos os convidados foram apagados!");
+                        return; // Finaliza a função aqui
+                    }
+                }
+                
+                // Se for qualquer outra coisa (evento, promoter, etc), apaga normalmente
+                await deleteDoc(doc(db, colecao, id)); 
+                
+            } catch (e) {
+                console.error("Erro ao apagar:", e);
+                alert("Erro ao excluir o item.");
+            }
+        };
         
         window.limparBaseDeDados = async () => {
             if (!confirm("Limpar clientes?")) return;
