@@ -12,8 +12,6 @@
         input { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #3b82f6 !important; }
         .label-mini { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #71717a; margin-left: 0.5rem; letter-spacing: 0.05em; }
-        .btn-copy { background: #1e1e26; border: 1px solid #3b82f6; color: #3b82f6; font-size: 8px; font-weight: 900; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; }
-        .btn-copy:active { background: #3b82f6; color: #fff; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -78,8 +76,6 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        const base_url = "www.abreaporta.com.br";
-
         onSnapshot(collection(db, "clientes_revenda"), (snap) => {
             const grid = document.getElementById('grid-clientes');
             grid.innerHTML = snap.docs.map(d => {
@@ -87,29 +83,16 @@
                 const hoje = new Date();
                 const venc = new Date(c.vencimento);
                 const estaVencido = (venc - hoje) < 0;
-                const link_lista = `${base_url}/listas.html?clube=${c.slug}`;
-                const link_login = `${base_url}/login.html?clube=${c.slug}`;
 
                 return `
                 <div class="bg-[#0a0a0f] border ${estaVencido ? 'border-red-500/30' : 'border-white/5'} p-6 rounded-3xl relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-1 h-full" style="background: ${c.cor_primaria || '#3b82f6'}"></div>
-                    <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center gap-3">
                             <img src="${c.logo_url || 'https://via.placeholder.com/50'}" class="h-10 w-10 rounded-lg object-contain bg-zinc-900 border border-white/10">
                             <h3 class="text-md font-black uppercase text-white">${c.nome_fantasia}</h3>
                         </div>
-                        <button onclick="editarCliente('${d.id}')" class="text-blue-500 text-[10px] font-black uppercase">Editar ✏️</button>
-                    </div>
-
-                    <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-2 mb-4">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="truncate text-[8px] text-white/50 uppercase font-bold italic">Link Lista</span>
-                            <button onclick="copyText('${link_lista}')" class="btn-copy">Copiar</button>
-                        </div>
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="truncate text-[8px] text-white/50 uppercase font-bold italic">Link Login</span>
-                            <button onclick="copyText('${link_login}')" class="btn-copy">Copiar</button>
-                        </div>
+                        <button onclick="editarCliente('${d.id}')" class="text-blue-500 text-[10px] font-black uppercase hover:text-blue-400">Editar ✏️</button>
                     </div>
                     
                     <div class="space-y-1 mb-6 text-[9px] font-bold uppercase italic text-zinc-500">
@@ -126,11 +109,6 @@
                 </div>`;
             }).join('');
         });
-
-        window.copyText = (text) => {
-            navigator.clipboard.writeText(text);
-            alert("Link copiado!");
-        };
 
         document.getElementById('formNovoCliente').addEventListener('submit', async (e) => {
             e.preventDefault();
