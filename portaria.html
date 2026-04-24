@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="page-title">PORTARIA | Master</title>
+    <title>E-CLUB | Master Portaria</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap');
@@ -37,7 +37,7 @@
 
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
-            <img id="logo-login" src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8 object-contain">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
             <div class="space-y-4">
                 <input type="text" id="inputNomeUsuario" placeholder="LOGIN OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
@@ -52,8 +52,8 @@
     <div id="interfacePrincipal" class="hidden flex w-full h-full">
         <aside class="w-72 h-full flex flex-col p-6 bg-black/40 border-r border-zinc-900">
             <div class="mb-10 text-center">
-                <img id="logo-sidebar" src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2 object-contain">
-                <h2 id="nome-sidebar" class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">CARREGANDO...</h2>
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
+                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
                 <p id="operadorAtivo" class="text-[8px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg tracking-widest italic">---</p>
             </div>
             <div class="flex-grow overflow-y-auto">
@@ -94,17 +94,185 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        // Puxa o Clube do Link (O "Endereço")
-        const params = new URLSearchParams(window.location.search);
-        const clubeId = params.get('clube');
-
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false;
 
-        // Troca Logos e Textos Dinamicamente
-        if (clubeId) {
-            getDoc(doc(db, "clientes_revenda", clubeId)).then(snap => {
-                if (snap.exists() && snap.data().ativo) {
-                    const dados = snap.data();
-                    if(dados.logo_url) {
-                        document.getElementById('logo-login').src = dados.logo_url;
+        const getStatusTurno = (dataEvento) => {
+            if (isModoTeste) return "ONLINE"; 
+            const agora = new Date(); const hora = agora.getHours(); const hoje = agora.toLocaleDateString('en-CA'); 
+            const ontemObj = new Date(agora); ontemObj.setDate(ontemObj.getDate() - 1); const ontemISO = ontemObj.toLocaleDateString('en-CA');
+            if (hora >= 21 && dataEvento === hoje) return "ONLINE";
+            if (hora < 5 && dataEvento === ontemISO) return "ONLINE";
+            return "RESTRITO";
+        };
+
+        window.verificarOuLogar = async () => {
+            const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
+            const s = document.getElementById('senhaUsuario').value.trim();
+            const btn = document.getElementById('btnAcao');
+            if (stepLogin === 0) {
+                btn.innerText = "VERIFICANDO...";
+                const docSnap = await getDoc(doc(db, "configuracoes", n));
+                if (docSnap.exists()) {
+                    usuarioData = docSnap.data(); stepLogin = 1;
+                    document.getElementById('areaSenha').classList.remove('hidden');
+                    document.getElementById('inputNomeUsuario').readOnly = true;
+                    btn.innerText = "AUTENTICAR";
+                } else { btn.innerText = "ENTRAR"; alert("Operador não encontrado."); }
+            } else {
+                if (usuarioData.senha === s) {
+                    operadorLogado = n;
+                    document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
+                    document.getElementById('telaLogin').classList.add('hidden');
+                    document.getElementById('interfacePrincipal').classList.remove('hidden');
+                    iniciarEscutas();
+                } else { alert("Senha incorreta"); }
+            }
+        };
+
+        function iniciarEscutas() {
+            onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
+                isModoTeste = snap.exists() && snap.data().modo_teste === true;
+                document.getElementById('alertaModoTeste').classList.toggle('hidden', !isModoTeste);
+                if (bancoEventos.length > 0) { renderizarSidebar(); processarPesquisa(); }
+            });
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
+                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
+                onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
+                    bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
+                    const totalTurno = bancoClientes.filter(c => {
+                        if (!c.entrou || !c.data_entrada) return false;
+                        const limite = new Date(); if (new Date().getHours() < 5) limite.setDate(limite.getDate() - 1);
+                        limite.setHours(21, 0, 0); return isModoTeste ? true : new Date(c.data_entrada) >= limite;
+                    }).length;
+                    document.getElementById('total-checkins').innerText = totalTurno;
+                    renderizarSidebar(); processarPesquisa();
+                });
+            });
+        }
+
+        function renderizarSidebar() {
+            const cont = document.getElementById('lista-eventos-sidebar'); cont.innerHTML = '';
+            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+                const status = getStatusTurno(ev.data);
+                const total = bancoClientes.filter(c => c.evento === ev.nome && (c.metodo !== 'pix_antecipado' || c.pago === true)).length;
+                cont.innerHTML += `
+                    <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
+                        <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-[7px] font-bold ${status === 'ONLINE' ? 'text-green-500 animate-online' : 'text-zinc-600'} uppercase">${status === 'ONLINE' ? '● ONLINE' : '🔒 RESTRITO'}</span>
+                            <span class="text-sm font-black text-yellow-500">${total}</span>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        window.processarPesquisa = () => {
+            const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
+            const cont = document.getElementById('container-resultados');
+            
+            if (buscaInput.length < 2) { cont.innerHTML = ''; return; }
+            
+            const termosBusca = buscaInput.split(/\s+/);
+            
+            const filtrados = bancoClientes.filter(c => {
+                const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
+                if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
+                
+                const nomeString = String(c.nome ?? '').toUpperCase();
+                const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
+                const telNumeros = telString.replace(/\D/g, ''); 
+                const cpfNumeros = String(c.cpf ?? '').replace(/\D/g, ''); 
+                
+                const todosOsDadosDoCliente = `${nomeString} ${telString} ${telNumeros} ${cpfNumeros}`;
+                return termosBusca.every(termo => todosOsDadosDoCliente.includes(termo));
+            });
+
+            if (filtrados.length === 0) { cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>`; return; }
+
+            cont.innerHTML = '';
+            filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
+                const ev = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase()) || {};
+                const tipoNorm = (c.tipo_entrada || '').toUpperCase().trim();
+                const pagPorta = (c.pagamento_porta || '').toUpperCase(); 
+                const isCasal = tipoNorm === "CASAL" || /\s+E\s+/i.test(c.nome);
+                
+                const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
+                const isCortesia = c.cortesia === true;
+                const isAniv = c.aniversariante && c.aniversariante.trim() !== "";
+
+                let valorFinal = "PORTARIA";
+                if (isDono) {
+                    valorFinal = "FREE";
+                } else if (tipoNorm.includes("CAMAROTE")) {
+                    if (isCortesia && pagPorta && pagPorta !== "ISENTO") {
+                        let val = pagPorta === "CASAL" ? ev.valor_casal : ev.valor_solteiro;
+                        valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
+                    } else {
+                        valorFinal = "R$ " + (c.valor_pago || "---");
+                    }
+                } else {
+                    let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (c.metodo === "pix_antecipado" ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
+                    valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
+                }
+
+                const pagoPix = c.metodo === 'pix_antecipado' && c.pago === true;
+                const textoPagamento = pagoPix ? 'PIX PAGO' : 'PORTARIA';
+                const corPagamento = pagoPix ? 'text-green-500' : 'text-zinc-500';
+
+                cont.innerHTML += `
+                <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
+                    
+                    <div class="flex-1 min-w-[250px] max-w-[400px]">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
+                            <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
+                        </div>
+                        <p class="text-sm font-mono text-zinc-500">${c.tel || c.telefone || '---'}</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1 w-[140px]">
+                        ${tipoNorm.includes("CAMAROTE") ? `
+                            <span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>
+                            ${c.metodo === 'pix_antecipado' ? `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
+                            ${isCortesia && pagPorta && pagPorta !== 'ISENTO' ? `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">${pagPorta === 'CASAL' ? '👫 CASAL (ENTRADA)' : '👤 SOLTEIRO (ENTRADA)'}</span>` : ''}
+                        ` : ''}
+                        
+                        ${!isDono && !tipoNorm.includes("CAMAROTE") ? `
+                            <span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>
+                            ${c.metodo === 'pix_antecipado' ? `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>` : ''}
+                        ` : ''}
+
+                        ${isAniv ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>` : ''}
+                        ${isDono ? `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>` : ''}
+                    </div>
+
+                    <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px]">
+                        <div class="w-[100px]">
+                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
+                            <p class="text-xs font-black ${corPagamento}">${textoPagamento}</p>
+                        </div>
+                        <div class="flex-1 pr-4">
+                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Info / Total</p>
+                            <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase break-words whitespace-normal">${valorFinal}</p>
+                        </div>
+                    </div>
+
+                    <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4">
+                        ${c.entrou ? 
+                            '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : 
+                            (c.metodo === 'pix_antecipado' && !c.pago ? 
+                                '<span class="text-red-500 font-black uppercase text-[10px] animate-pulse text-right">PIX<br>PENDENTE</span>' : 
+                                `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`)
+                        }
+                    </div>
+                </div>`;
+            });
+        };
+
+        window.confirmarCheckin = async (id) => {
+            await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
+        };
+    </script>
+</body>
+</html>
