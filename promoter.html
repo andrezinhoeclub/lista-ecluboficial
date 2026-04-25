@@ -132,18 +132,26 @@
         // FUNÇÃO DE AVISO MODERNA (TOAST)
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
-            const bgClass = isSucesso ? 'bg-green-600' : 'bg-blue-600'; // Alterei para azul os avisos informativos
-            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(37,99,235,0.5)]';
+            let bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            let shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            let icon = isSucesso ? '✅' : '⚠️';
+            let textClass = 'text-white';
             
-            // Lógica para ícones: ✅ Sucesso | 🚨 Bloqueio | 👋 Boas vindas | 💎 Camarote | ⚠️ Erro padrão
-            let icon = '⚠️';
-            if(isSucesso) icon = '✅';
-            if(msg.includes('ACESSO')) icon = '👋';
-            if(msg.includes('PROIBIDA')) icon = '🚨';
-            if(msg.includes('CAMAROTE')) icon = '💎';
-            if(msg.includes('AGUARDANDO')) icon = '⏳';
+            if(msg.includes('ACESSO')) { icon = '👋'; bgClass = 'bg-blue-600'; shadowClass = 'shadow-[0_0_20px_rgba(37,99,235,0.5)]'; }
+            if(msg.includes('PROIBIDA')) { icon = '🚨'; }
             
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${msg.includes('Erro') || msg.includes('incorreta') ? 'bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.5)]' : bgClass + ' ' + shadowClass}`;
+            // Layout escuro exclusivo para leitura de Camarotes
+            if(msg.includes('CAMAROTE 0')) {
+                bgClass = 'bg-[#121214] border border-zinc-700'; // Fundo preto/cinza escuro
+                shadowClass = 'shadow-[0_0_30px_rgba(0,0,0,0.9)]'; // Sombra forte para destacar
+                textClass = 'text-cyan-400'; // Texto azul claro neon (ótimo no escuro)
+                
+                // Extrai o emoji (💎, 🎁, ⏳) que enviamos no clique
+                icon = msg.split(' ')[0]; 
+                msg = msg.substring(2).trim(); // Limpa o emoji da mensagem principal
+            }
+            
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] ${textClass} font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
             
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
@@ -302,7 +310,8 @@
                         let nomeCliente = "";
                         
                         if (resDesseCam.length > 0) {
-                            nomeCliente = resDesseCam[0].nome.replace(/'/g, "\\'"); // Captura o nome do dono da reserva
+                            // Captura o nome e garante que não quebre o código se tiver aspas no nome do cliente
+                            nomeCliente = resDesseCam[0].nome.replace(/'/g, "\\'"); 
                         }
                         
                         if (resDesseCam.some(r => r.cortesia === true)) statusCam = 'cortesia';
@@ -314,13 +323,13 @@
 
                         let clickEvt = "";
                         if (statusCam === 'cortesia') {
-                            clickEvt = `onclick="mostrarAviso('🎁 CAMAROTE 0${n} - CORTESIA PARA: ${nomeCliente}', true)" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]"`;
+                            clickEvt = `onclick="mostrarAviso('🎁 CAMAROTE 0${n} - ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]"`;
                             luzesCamarotes += `<div ${clickEvt}>C${n}</div>`; 
                         } else if (statusCam === 'vendido') {
-                            clickEvt = `onclick="mostrarAviso('💎 CAMAROTE 0${n} - VENDIDO PARA: ${nomeCliente}', true)" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]"`;
+                            clickEvt = `onclick="mostrarAviso('💎 CAMAROTE 0${n} - ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]"`;
                             luzesCamarotes += `<div ${clickEvt}>C${n}</div>`; 
                         } else if (statusCam === 'aguardando') {
-                            clickEvt = `onclick="mostrarAviso('⏳ CAMAROTE 0${n} - AGUARDANDO PIX DE: ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308]"`;
+                            clickEvt = `onclick="mostrarAviso('⏳ CAMAROTE 0${n} - AGUARDANDO: ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308]"`;
                             luzesCamarotes += `<div ${clickEvt}>C${n}</div>`; 
                         } else {
                             luzesCamarotes += `<div class="w-full py-1.5 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">C${n}</div>`; 
