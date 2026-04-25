@@ -204,7 +204,11 @@
             const container = document.getElementById('listaPerformance');
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const isVisualizador = (st === 'visualizar');
-            const escondeGeral = (st === 'padrao' || st === 'aniversario'); // Trava reativada para esconder o geral dos promoters padrão e de aniversário
+            
+            // CORREÇÃO DA REGRA DE NEGÓCIO
+            // 'padrao': oculta o geral. 
+            // 'aniversario' e 'visualizar': veem o geral.
+            const escondeGeral = (st === 'padrao'); 
 
             let htmlLegenda = '';
             if (isVisualizador) {
@@ -283,7 +287,7 @@
         window.abrirModalCortesia = () => {
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); // Só permite dar cortesia pra eventos futuros
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); 
             
             const sel = document.getElementById('selEventoCortesia');
             if (eventosAtivos.length === 0) return alert("Nenhum evento futuro ativo!");
@@ -349,7 +353,7 @@
         window.abrirModalAniv = () => { 
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); // Só permite criar lista VIP pra eventos futuros
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); 
 
             const sel = document.getElementById('selEvento'); 
             if (eventosAtivos.length === 0) return alert("Nenhum evento futuro ativo!"); 
