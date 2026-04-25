@@ -24,7 +24,12 @@
         input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; padding: 5px; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-8 relative">
+
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
+        <span id="toast-icon" class="text-lg">⚠️</span>
+        <span id="toast-msg">Mensagem de erro</span>
+    </div>
 
     <div class="max-w-7xl mx-auto">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
@@ -202,6 +207,29 @@
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
         let modoTesteAtivo = false;
 
+        // FUNÇÃO DE AVISO MODERNA (TOAST)
+        window.mostrarAviso = (msg, isSucesso = false) => {
+            const toast = document.getElementById('toast-aviso');
+            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            const icon = isSucesso ? '✅' : '⚠️';
+            
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
+            
+            setTimeout(() => {
+                toast.classList.remove('-translate-y-32', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-32', 'opacity-0');
+            }, 4000);
+        };
+
         const gridCamarotes = document.getElementById('grid-camarotes-inputs');
         for(let i=1; i<=8; i++) {
             gridCamarotes.innerHTML += `<div class="bg-black/30 p-3 rounded-2xl border border-white/5 flex flex-col items-center gap-2"><label class="flex items-center gap-2 w-full cursor-pointer justify-center"><input type="checkbox" id="cam${i}_ativo" class="check-camarote"><span class="text-[10px] font-black uppercase text-zinc-400">Cam 0${i}</span></label><input type="text" id="v_cam${i}" placeholder="Valor (R$)" class="w-full p-2 rounded-xl text-center text-xs font-bold bg-[#0c0c0e] border border-zinc-800 text-cyan-400 outline-none"><input type="text" id="obs_cam${i}" placeholder="Benefícios" class="w-full p-2 rounded-xl text-center text-[9px] font-bold bg-[#0c0c0e] border border-zinc-800 text-zinc-400 outline-none"></div>`;
@@ -358,28 +386,52 @@
             textoArea.value = texto;
         };
 
-        window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); alert("Copiado com sucesso!"); };
+        window.copiarOutput = () => { 
+            document.getElementById('output-excel').select(); 
+            document.execCommand('copy'); 
+            mostrarAviso("Relatório copiado com sucesso!", true); 
+        };
 
         document.getElementById('formPromoter').addEventListener('submit', async e => {
             e.preventDefault(); const n = document.getElementById('nome_promoter').value.trim(); const t = document.getElementById('tipo_promoter').value;
-            if(!n) return; try { await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true }); e.target.reset(); alert("OK!"); } catch(err) { alert("Erro."); }
+            if(!n) return; 
+            try { 
+                await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true }); 
+                e.target.reset(); 
+                mostrarAviso("Promoter cadastrado com sucesso!", true); 
+            } catch(err) { 
+                mostrarAviso("Erro ao cadastrar promoter."); 
+            }
         });
 
         document.getElementById('formPortaria').addEventListener('submit', async e => {
             e.preventDefault(); const n = document.getElementById('login_portaria').value.trim().toLowerCase();
-            if(!n) return; try { await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true }); e.target.reset(); alert("OK!"); } catch(err) { alert("Erro."); }
+            if(!n) return; 
+            try { 
+                await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true }); 
+                e.target.reset(); 
+                mostrarAviso("Operador cadastrado com sucesso!", true); 
+            } catch(err) { 
+                mostrarAviso("Erro ao cadastrar operador."); 
+            }
         });
 
         window.editarPromoter = async (id) => {
             const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`); if (!op) return;
             let up = {}; if (op === '1') up.tipo = 'padrao'; if (op === '2') up.tipo = 'aniversario'; if (op === '3') up.tipo = 'visualizar';
             if (op === '4') { const ns = prompt("Nova senha:"); if(ns) up.senha = ns.trim(); }
-            if (Object.keys(up).length > 0) await updateDoc(doc(db, "promoters", id), up);
+            if (Object.keys(up).length > 0) {
+                await updateDoc(doc(db, "promoters", id), up);
+                mostrarAviso("Promoter atualizado!", true);
+            }
         };
 
         window.editarOperador = async (id) => {
             const ns = prompt("Nova senha do operador:"); 
-            if(ns) await updateDoc(doc(db, "configuracoes", id), {senha: ns.trim()});
+            if(ns) {
+                await updateDoc(doc(db, "configuracoes", id), {senha: ns.trim()});
+                mostrarAviso("Senha do operador atualizada!", true);
+            }
         };
 
         function renderEquipe() {
@@ -414,8 +466,13 @@
                 };
                 for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
                 if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
-                e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; alert("OK!");
-            } catch(err) { alert("Erro ao salvar."); } finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
+                e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; 
+                mostrarAviso("Evento salvo com sucesso!", true);
+            } catch(err) { 
+                mostrarAviso("Erro ao salvar evento."); 
+            } finally { 
+                btn.innerText = "Salvar Evento Completo"; btn.disabled = false; 
+            }
         });
 
         window.prepararEdicaoEvento = (id) => {
@@ -441,8 +498,11 @@
                 if (!docSnap.exists()) return; const data = docSnap.data(); 
                 if (colecao === 'eventos') { const qRes = query(collection(db, "lista_eventos"), where("evento", "==", data.nome)); const snapRes = await getDocs(qRes); snapRes.forEach(d => batch.delete(d.ref)); const qAniv = query(collection(db, "links_aniversario"), where("festa", "==", data.nome)); const snapAniv = await getDocs(qAniv); snapAniv.forEach(d => batch.delete(d.ref)); } 
                 if (colecao === 'links_aniversario') { const qConv = query(collection(db, "lista_eventos"), where("aniversariante", "==", data.aniversariante), where("evento", "==", data.festa)); const snapConv = await getDocs(qConv); snapConv.forEach(d => batch.delete(d.ref)); } 
-                batch.delete(docRef); await batch.commit(); alert("Excluido!"); 
-            } catch (e) { alert("Erro ao excluir."); } 
+                batch.delete(docRef); await batch.commit(); 
+                mostrarAviso("Item excluído com sucesso!", true); 
+            } catch (e) { 
+                mostrarAviso("Erro ao excluir o item."); 
+            } 
         };
 
         function renderCamarotesVendidos() {
@@ -456,7 +516,16 @@
             }).join('');
         }
 
-        window.liberarCamarote = async (id) => { if(confirm("Liberar o camarote?")) { try { await deleteDoc(doc(db, "lista_eventos", id)); alert("OK!"); } catch(e) { alert("Erro."); } } };
+        window.liberarCamarote = async (id) => { 
+            if(confirm("Liberar o camarote?")) { 
+                try { 
+                    await deleteDoc(doc(db, "lista_eventos", id)); 
+                    mostrarAviso("Camarote liberado com sucesso!", true); 
+                } catch(e) { 
+                    mostrarAviso("Erro ao liberar o camarote."); 
+                } 
+            } 
+        };
 
         function renderAniversarios() {
             const tb = document.getElementById('tabela-aniversarios-body'); if(!tb) return;
@@ -469,8 +538,16 @@
         }
 
         window.toggleModoTeste = async () => { await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true }); };
-        window.limparBaseDeDados = async () => { if (confirm("Limpar clientes?")) { const q = await getDocs(collection(db, "lista_eventos")); const b = writeBatch(db); q.forEach(d => b.delete(d.ref)); await b.commit(); alert("Limpo!"); } };
-        window.zerarSistemaCompleto = async () => { if (confirm("ZERAR TUDO?")) { for (const col of ["lista_eventos", "eventos", "links_aniversario"]) { const q = await getDocs(collection(db, col)); const b = writeBatch(db); q.forEach(d => b.delete(d.ref)); await b.commit(); } location.reload(); } };
+        window.limparBaseDeDados = async () => { 
+            if (confirm("Limpar todos os clientes?")) { 
+                const q = await getDocs(collection(db, "lista_eventos")); 
+                const b = writeBatch(db); 
+                q.forEach(d => b.delete(d.ref)); 
+                await b.commit(); 
+                mostrarAviso("Base de clientes limpa com sucesso!", true); 
+            } 
+        };
+        window.zerarSistemaCompleto = async () => { if (confirm("⚠️ TEM CERTEZA QUE DESEJA ZERAR TUDO? ⚠️")) { for (const col of ["lista_eventos", "eventos", "links_aniversario"]) { const q = await getDocs(collection(db, col)); const b = writeBatch(db); q.forEach(d => b.delete(d.ref)); await b.commit(); } location.reload(); } };
     </script>
 </body>
 </html>
