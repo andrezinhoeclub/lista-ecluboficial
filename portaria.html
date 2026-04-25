@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB | Master Portaria</title>
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap');
@@ -33,18 +34,23 @@
         .btn-liberar:hover { background: #fbbf24; transform: translateY(-1px); }
     </style>
 </head>
-<body class="flex h-screen">
+<body class="flex h-screen relative">
+
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
+        <span id="toast-icon" class="text-lg">⚠️</span>
+        <span id="toast-msg">Mensagem de erro</span>
+    </div>
 
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
             <div class="space-y-4">
-                <input type="text" id="inputNomeUsuario" placeholder="LOGIN OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
+                <input type="text" id="inputNomeUsuario" placeholder="LOGIN OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs outline-none focus:border-yellow-500 transition-all">
                 <div id="areaSenha" class="hidden">
-                    <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50">
+                    <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50 outline-none focus:border-yellow-500 transition-all">
                 </div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4">ENTRAR</button>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ENTRAR</button>
             </div>
         </div>
     </div>
@@ -56,11 +62,21 @@
                 <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
                 <p id="operadorAtivo" class="text-[8px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg tracking-widest italic">---</p>
             </div>
+            
             <div class="flex-grow overflow-y-auto">
                 <h3 class="text-zinc-600 text-[8px] font-black uppercase mb-4 tracking-widest border-b border-zinc-900 pb-2">Status Eventos</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
+            
+            <div class="mt-6 flex flex-col gap-4 border-t border-zinc-900 pt-6">
+                <button onclick="location.reload()" class="text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors w-full text-center">Sair do Sistema</button>
+                
+                <div class="text-center opacity-30 hover:opacity-100 transition-all pt-4">
+                    <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-500 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
+                    </a>
+                </div>
+            </div>
         </aside>
 
         <main class="flex-grow flex flex-col">
@@ -97,6 +113,29 @@
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false;
 
+        // FUNÇÃO DE AVISO MODERNA (TOAST)
+        window.mostrarAviso = (msg, isSucesso = false) => {
+            const toast = document.getElementById('toast-aviso');
+            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : '⚠️');
+            
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
+            
+            setTimeout(() => {
+                toast.classList.remove('-translate-y-32', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-32', 'opacity-0');
+            }, 4000);
+        };
+
         const getStatusTurno = (dataEvento) => {
             if (isModoTeste) return "ONLINE"; 
             const agora = new Date(); const hora = agora.getHours(); const hoje = agora.toLocaleDateString('en-CA'); 
@@ -110,23 +149,53 @@
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
             const btn = document.getElementById('btnAcao');
+            const inputSenha = document.getElementById('senhaUsuario');
+
             if (stepLogin === 0) {
+                if(!n) return mostrarAviso("Digite o nome do operador!");
+                
                 btn.innerText = "VERIFICANDO...";
                 const docSnap = await getDoc(doc(db, "configuracoes", n));
+                
                 if (docSnap.exists()) {
                     usuarioData = docSnap.data(); stepLogin = 1;
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
-                    btn.innerText = "AUTENTICAR";
-                } else { btn.innerText = "ENTRAR"; alert("Operador não encontrado."); }
+                    
+                    if (!usuarioData.senha) {
+                        mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
+                        inputSenha.placeholder = "CRIE UMA SENHA";
+                        inputSenha.style.borderColor = "#a855f7";
+                        btn.innerText = "SALVAR SENHA E ENTRAR";
+                    } else {
+                        btn.innerText = "AUTENTICAR";
+                    }
+                } else { 
+                    btn.innerText = "ENTRAR"; 
+                    mostrarAviso("Operador não encontrado."); 
+                }
             } else {
+                if(!s) return mostrarAviso("Digite a sua senha!");
+
+                if (!usuarioData.senha) {
+                    if (s.length < 3) return mostrarAviso("A senha deve ter no mínimo 3 caracteres.");
+                    
+                    btn.innerText = "SALVANDO...";
+                    await updateDoc(doc(db, "configuracoes", n), { senha: s });
+                    usuarioData.senha = s;
+                    mostrarAviso("Senha cadastrada com sucesso!", true);
+                }
+
                 if (usuarioData.senha === s) {
                     operadorLogado = n;
                     document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
                     document.getElementById('telaLogin').classList.add('hidden');
                     document.getElementById('interfacePrincipal').classList.remove('hidden');
                     iniciarEscutas();
-                } else { alert("Senha incorreta"); }
+                } else { 
+                    mostrarAviso("Senha incorreta"); 
+                    btn.innerText = "AUTENTICAR";
+                }
             }
         };
 
@@ -240,7 +309,8 @@
                         
                         ${!isDono && !tipoNorm.includes("CAMAROTE") ? `
                             <span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>
-                            ${c.metodo === 'pix_antecipado' ? `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>` : ''}
+                            ${c.metodo === 'pix_antecipado' && tipoNorm !== 'CASAL CONSUMAÇÃO' ? `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>` : ''}
+                            ${c.metodo === 'pix_antecipado' && tipoNorm === 'CASAL CONSUMAÇÃO' ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
                         ` : ''}
 
                         ${isAniv ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>` : ''}
@@ -271,7 +341,12 @@
         };
 
         window.confirmarCheckin = async (id) => {
-            await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
+            try {
+                await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
+                mostrarAviso("Check-in confirmado!", true);
+            } catch(e) {
+                mostrarAviso("Erro ao confirmar check-in.");
+            }
         };
     </script>
 </body>
