@@ -28,6 +28,11 @@
 </head>
 <body class="p-4 md:p-8 flex flex-col min-h-screen">
 
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
+        <span id="toast-icon" class="text-lg">⚠️</span>
+        <span id="toast-msg">Mensagem de erro</span>
+    </div>
+
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass-card rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
@@ -93,7 +98,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDocs, query, where, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, getDocs, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -108,6 +113,29 @@
         const db = getFirestore(app);
         const colRef = collection(db, "cadastro_solteiras");
         let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
+
+        // Função do POP-UP (Toast)
+        window.mostrarAviso = (msg, isSucesso = false) => {
+            const toast = document.getElementById('toast-aviso');
+            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            const icon = isSucesso ? '✅' : (msg.includes('PROIBIDA') ? '🚨' : '⚠️');
+            
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
+            
+            setTimeout(() => {
+                toast.classList.remove('-translate-y-32', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-32', 'opacity-0');
+            }, 4000);
+        };
 
         function checkAniversarioSemana(dataNasc) {
             if (!dataNasc) return false;
@@ -133,7 +161,10 @@
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
                     btn.innerText = "ENTRAR";
-                } else { alert("Não autorizado."); btn.innerText = "ACESSAR"; }
+                } else { 
+                    mostrarAviso("Operador não autorizado."); 
+                    btn.innerText = "ACESSAR SISTEMA"; 
+                }
             } else {
                 if (usuarioData.senha === s) {
                     operadorLogado = n;
@@ -142,7 +173,9 @@
                     document.getElementById('conteudo-sistema').classList.remove('hidden');
                     document.getElementById('rodape-desenvolvedor').classList.remove('hidden');
                     iniciarEscutas();
-                } else { alert("Senha incorreta."); }
+                } else { 
+                    mostrarAviso("Senha incorreta."); 
+                }
             }
         };
 
@@ -157,8 +190,10 @@
         window.dispararCheckin = async (id) => {
             try {
                 await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
-                alert("Liberada com sucesso!");
-            } catch (e) { alert("Erro ao liberar!"); }
+                mostrarAviso("Liberada com sucesso!", true);
+            } catch (e) { 
+                mostrarAviso("Erro ao liberar a cliente!"); 
+            }
         };
 
         window.bloquearDesbloquear = async (id, acaoBloquear) => {
@@ -167,12 +202,16 @@
                     const motivo = prompt("Qual o motivo do bloqueio?");
                     if (!motivo) return;
                     await updateDoc(doc(db, "cadastro_solteiras", id), { bloqueada: true, motivo_bloqueio: motivo.toUpperCase() });
+                    mostrarAviso("Cliente bloqueada com sucesso!", true);
                 } else {
                     if (confirm("Tem certeza que deseja DESBLOQUEAR a entrada dessa cliente?")) {
                         await updateDoc(doc(db, "cadastro_solteiras", id), { bloqueada: false, motivo_bloqueio: "" });
+                        mostrarAviso("Cliente desbloqueada!", true);
                     }
                 }
-            } catch (e) { alert("Erro ao executar ação!"); }
+            } catch (e) { 
+                mostrarAviso("Erro ao executar ação de bloqueio!"); 
+            }
         };
 
         window.prepararEdicao = (id) => {
@@ -283,7 +322,7 @@
             const jaExiste = clientesCache.find(c => c.cpf.replace(/\D/g, "") === valor || c.tel.replace(/\D/g, "") === valor);
             if (jaExiste && document.getElementById('editId').value !== jaExiste.id) {
                 if(jaExiste.bloqueada) {
-                    alert(`🚨 ATENÇÃO: Cliente PROIBIDA.\nMotivo: ${jaExiste.motivo_bloqueio}\nConsulte a gerência.`);
+                    mostrarAviso(`🚨 PROIBIDA! Motivo: ${jaExiste.motivo_bloqueio}`);
                     window.limparFormulario();
                     return;
                 }
@@ -305,11 +344,21 @@
             btn.innerText = "SALVANDO...";
             try {
                 const dados = { nome: document.getElementById('nome').value.toUpperCase(), tel: document.getElementById('tel').value, cpf: document.getElementById('cpf').value, nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() };
-                if (idEx) await updateDoc(doc(db, "cadastro_solteiras", idEx), dados);
-                else await addDoc(colRef, { ...dados, bloqueada: false });
-                alert("Concluído!"); window.limparFormulario();
-            } catch (e) { alert("Erro!"); }
-            finally { btn.disabled = false; btn.innerText = idEx ? "ATUALIZAR DADOS" : "Confirmar e Liberar"; }
+                if (idEx) {
+                    await updateDoc(doc(db, "cadastro_solteiras", idEx), dados);
+                    mostrarAviso("Dados atualizados com sucesso!", true);
+                } else {
+                    await addDoc(colRef, { ...dados, bloqueada: false });
+                    mostrarAviso("Cadastro salvo e liberado!", true);
+                }
+                window.limparFormulario();
+            } catch (e) { 
+                mostrarAviso("Erro ao salvar os dados!"); 
+            }
+            finally { 
+                btn.disabled = false; 
+                btn.innerText = idEx ? "ATUALIZAR DADOS" : "Confirmar e Liberar"; 
+            }
         });
 
         window.filtrarClientes = () => {
