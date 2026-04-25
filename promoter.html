@@ -24,9 +24,9 @@
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter">PROMOTER <span class="text-sky-400">ACCESS</span></h1>
-            <input type="text" id="usuario" placeholder="USUÁRIO" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white outline-none">
+            <input type="text" id="usuario" placeholder="USUÁRIO" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white">
             <div id="campo-senha" class="hidden">
-                <input type="password" id="senha" placeholder="SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white outline-none">
+                <input type="password" id="senha" placeholder="SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white">
             </div>
             <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient font-black py-4 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">CONTINUAR</button>
         </div>
@@ -148,8 +148,6 @@
 
         function iniciarSistema() {
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-            const hojeLocal = f.split('/').reverse().join('-');
 
             if (st === "visualizar") {
                 document.getElementById('navAcoes').style.display = 'none';
@@ -166,16 +164,33 @@
                 });
             }
 
-            onSnapshot(collection(db, "lista_eventos"), (snap) => { reservas = snap.docs.map(d => d.data()); renderPerformance(); if (st === "aniversario") renderAniversarios(); });
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => { 
-                eventos = snap.docs.map(d => d.data()).filter(ev => ev.data >= hojeLocal).sort((a,b) => new Date(a.data) - new Date(b.data)); 
+            onSnapshot(collection(db, "lista_eventos"), (snap) => { 
+                reservas = snap.docs.map(d => d.data()); 
                 renderPerformance(); 
+                if (st === "aniversario") renderAniversarios(); 
+            });
+            
+            // REMOVIDO O FILTRO DE DATA - AGORA MOSTRA TODOS OS EVENTOS ATIVOS ATÉ O ADMIN EXCLUIR
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => { 
+                eventos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data)); 
+                renderPerformance(); 
+                if (st === "aniversario") renderAniversarios(); 
             });
         }
 
         function renderAniversarios() {
             const cont = document.getElementById('listaAniversarios'); if(!cont) return;
-            cont.innerHTML = linksAniv.map(l => {
+            const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+            const hojeLocal = f.split('/').reverse().join('-');
+
+            // Oculta apenas as listas de aniversários de eventos passados
+            const linksAtivos = linksAniv.filter(l => {
+                const ev = eventos.find(e => (e.nome || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase());
+                if (!ev) return false;
+                return ev.data >= hojeLocal;
+            });
+
+            cont.innerHTML = linksAtivos.map(l => {
                 const count = reservas.filter(r => (r.evento || '').toLowerCase().trim() === (l.festa || '').toLowerCase().trim() && (r.aniversariante || '').toLowerCase().trim() === (l.aniversariante || '').toLowerCase().trim()).length;
                 return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
             }).join('');
@@ -184,7 +199,6 @@
         function renderPerformance() {
             const container = document.getElementById('listaPerformance');
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            const escondeGeral = (st === 'padrao' || st === 'aniversario');
             const isVisualizador = (st === 'visualizar');
 
             container.innerHTML = eventos.map(ev => {
@@ -193,8 +207,7 @@
                 const camesGeral = reservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo && (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE'));
                 const geral = reservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo).length;
                 
-                // MÁGICA DO HORÁRIO AQUI
-                const dataFormatada = `${ev.data.split('-').reverse().join('/')} ${ev.hora ? 'às ' + ev.hora : ''}`;
+                const dataHoraFormatada = `${ev.data.split('-').reverse().join('/')} ${ev.hora ? 'às ' + ev.hora : ''}`;
                 
                 if (isVisualizador) {
                     let luzesCamarotes = '';
@@ -221,7 +234,7 @@
                     return `
                     <div class="card-performance p-5 flex flex-col">
                         <div class="flex justify-between items-center mb-4">
-                            <div class="text-left"><h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[8px] text-zinc-500 font-bold mt-1">${dataFormatada}</p></div>
+                            <div class="text-left"><h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[8px] text-zinc-500 font-bold mt-1">${dataHoraFormatada}</p></div>
                             <div class="text-right"><p class="text-2xl font-black text-white leading-none">${geral}</p><p class="text-[6px] text-zinc-400 font-black mt-1 uppercase tracking-widest">Total Reservas</p></div>
                         </div>
                         <div class="border-t border-white/5 pt-4">
@@ -231,10 +244,12 @@
                     </div>`;
                 } 
                 else {
-                    const blocoGeralHTML = escondeGeral ? '' : `<div class="border-l border-white/5 pl-6"><p class="text-2xl font-black text-white/20 leading-none">${geral}</p><p class="text-[6px] text-white/10 font-black mt-1 uppercase tracking-widest">Geral</p></div>`;
+                    // BLOCO GERAL SEMPRE VISÍVEL
+                    const blocoGeralHTML = `<div class="border-l border-white/5 pl-6"><p class="text-2xl font-black text-white/20 leading-none">${geral}</p><p class="text-[6px] text-white/10 font-black mt-1 uppercase tracking-widest">Geral</p></div>`;
+                    
                     return `
                     <div class="card-performance p-5 flex justify-between items-center">
-                        <div class="text-left"><h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[8px] text-zinc-500 font-bold mt-1">${dataFormatada}</p></div>
+                        <div class="text-left"><h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[8px] text-zinc-500 font-bold mt-1">${dataHoraFormatada}</p></div>
                         <div class="flex gap-6 text-right">
                             <div><p class="text-2xl font-black text-sky-400 leading-none">${minhas}</p><p class="text-[6px] text-sky-500 font-black mt-1 uppercase tracking-widest">Minhas</p></div>
                             ${blocoGeralHTML}
@@ -244,11 +259,14 @@
             }).join('');
         }
 
-        // LÓGICA CORTESIA CAMAROTES
         window.abrirModalCortesia = () => {
+            const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+            const hojeLocal = f.split('/').reverse().join('-');
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); // Só permite dar cortesia pra eventos futuros
+            
             const sel = document.getElementById('selEventoCortesia');
-            if (eventos.length === 0) return alert("Nenhum evento ativo!");
-            sel.innerHTML = '<option value="">SELECIONE O EVENTO</option>' + eventos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join('');
+            if (eventosAtivos.length === 0) return alert("Nenhum evento futuro ativo!");
+            sel.innerHTML = '<option value="">SELECIONE O EVENTO</option>' + eventosAtivos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join('');
             document.getElementById('modalCortesia').classList.remove('hidden');
         };
 
@@ -307,11 +325,14 @@
             } catch (e) { alert("🔴 Erro: " + e.message); } finally { btn.innerText = originalText; btn.disabled = false; }
         };
 
-        // NOVA LÓGICA DE VIP
         window.abrirModalAniv = () => { 
+            const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+            const hojeLocal = f.split('/').reverse().join('-');
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); // Só permite criar lista VIP pra eventos futuros
+
             const sel = document.getElementById('selEvento'); 
-            if (eventos.length === 0) return alert("Nenhum evento ativo!"); 
-            sel.innerHTML = '<option value="">SELECIONE O EVENTO</option>' + eventos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join(''); 
+            if (eventosAtivos.length === 0) return alert("Nenhum evento futuro ativo!"); 
+            sel.innerHTML = '<option value="">SELECIONE O EVENTO</option>' + eventosAtivos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join(''); 
             
             document.getElementById('areaCamaroteAniv').classList.add('hidden');
             document.getElementById('selCamaroteAniv').classList.add('hidden');
@@ -409,7 +430,6 @@
             } 
         };
 
-        // DEMAIS FUNÇÕES
         window.abrirLinkGeral = () => { window.open(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`, '_blank'); };
         window.copiarLinkGeral = () => { navigator.clipboard.writeText(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`).then(() => alert("Copiado!")); };
         window.copiarLinkAniv = (id, n) => { const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?id=${id}`; navigator.clipboard.writeText(`*Convite VIP: Lista de ${n}* 🍾\n\nGaranta seu nome na lista pelo link abaixo:\n${link}`).then(() => alert("Copiado!")); };
