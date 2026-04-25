@@ -121,7 +121,7 @@
                 <input type="text" id="chave-copia-cola" readonly class="w-full bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-zinc-400 text-[9px] font-mono outline-none">
                 <button onclick="copiarChavePix()" class="bg-[#00f5d4] text-black px-4 rounded-xl font-black text-[10px]">Copiar</button>
             </div>
-            <p class="text-[9px] text-yellow-500 font-black uppercase italic mb-6 animate-pulse">⏳ Aguardando pagamento...</p>
+            <p class="text-[9px] text-yellow-500 font-black uppercase italic mb-6">⏳ Aguardando pagamento...</p>
             <button onclick="fecharModalQrCode()" class="w-full border border-zinc-800 text-zinc-400 py-4 rounded-2xl uppercase text-[10px] font-black">Voltar</button>
         </div>
         <div id="box-sucesso" class="hidden w-full max-w-sm bg-[#0d0d14] border border-green-500/50 p-10 rounded-[2.5rem] text-center success-anim">
@@ -247,7 +247,6 @@
             const tituloSolteiro = document.getElementById('titulo-btn-solteiro');
 
             if (isPix) {
-                // Layout com 3 botões (Sem consumo e 100% consumo)
                 tituloCasal.innerHTML = '👫 CASAL<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>';
                 tituloCasalCons.innerHTML = '🍹 CASAL<br><span class="text-[6.5px] font-bold tracking-widest mt-0.5 block text-fuchsia-300">100% Consumo</span>';
                 tituloSolteiro.innerHTML = '👤 SOLTEIRO<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>';
@@ -257,7 +256,6 @@
                 gridBotoes.classList.remove('grid-cols-2');
                 gridBotoes.classList.add('grid-cols-3');
             } else {
-                // Layout com 2 botões normais para listas normais
                 tituloCasal.innerHTML = '👫 CASAL';
                 tituloSolteiro.innerHTML = '👤 SOLTEIRO';
 
@@ -281,11 +279,18 @@
         window.processarFinalizacao = async () => {
             const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
             const t = document.getElementById('tel-cliente').value.trim();
+            const em = document.getElementById('email-cliente').value.trim();
             const cpf = document.getElementById('cpf-cliente').value.trim();
             
-            if (!n || t.length < 14 || !tipoAtivo) return alert("Preencha o seu nome, celular e selecione o TIPO de ingresso!");
+            // VALIDAÇÕES MAIS RÍGIDAS
+            if (!tipoAtivo) return alert("Selecione o TIPO de ingresso!");
+            if (!n || t.length < 14) return alert("Preencha seu nome e seu celular completo para prosseguir!");
+            if (eFluxoPix && (!em || cpf.length < 14)) return alert("Pagamento PIX: Preencha seu E-mail e informe seu CPF completo (11 dígitos)!");
             
-            const btn = document.getElementById('btn-final-acao'); btn.disabled = true; btn.innerText = "PROCESSANDO...";
+            const btn = document.getElementById('btn-final-acao'); 
+            btn.disabled = true; 
+            btn.innerText = "PROCESSANDO...";
+            
             try {
                 const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
                 if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
@@ -298,11 +303,22 @@
                 const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: tipoAtivo, promoter: globalPromoter, aniversariante: globalAniversariante, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: eFluxoPix ? 'pix_antecipado' : 'portaria', valor_pago: valorRef || "" });
                 
                 if (eFluxoPix) {
-                    const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: String(valorRef).replace('R$', '').replace(',', '.').trim(), titulo: `PISTA: ${eventoAtivo.nome}`, reservaId: docRef.id, nome: n, email: document.getElementById('email-cliente').value, cpf: cpf }) });
+                    const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: String(valorRef).replace('R$', '').replace(',', '.').trim(), titulo: `PISTA: ${eventoAtivo.nome}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
                     const data = await resp.json();
-                    if (data.sucesso) abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id);
-                } else { alert("Confirmado na lista! ✨"); location.reload(); }
-            } catch (e) { alert("⚠️ " + e.message); btn.innerText = "Confirmar Presença"; btn.disabled = false; }
+                    
+                    if (data.sucesso) {
+                        abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id);
+                    } else {
+                        alert("⚠️ Erro no PIX: " + (data.mensagem || "Revise seus dados ou CPF."));
+                        btn.disabled = false; btn.innerText = "Confirmar Presença";
+                    }
+                } else { 
+                    alert("Confirmado na lista! ✨"); location.reload(); 
+                }
+            } catch (e) { 
+                alert("⚠️ Erro: " + e.message); 
+                btn.disabled = false; btn.innerText = "Confirmar Presença"; 
+            }
         };
 
         window.iniciarFluxoCamarote = (id) => {
@@ -342,16 +358,34 @@
             const t = document.getElementById('tel-camarote').value.trim();
             const em = document.getElementById('email-camarote').value.trim();
             const cpf = document.getElementById('cpf-camarote').value.trim();
-            if(!n || t.length < 14 || !em || cpf.length < 14) return alert("Preencha todos os campos!");
-            const btn = document.getElementById('btn-final-camarote'); btn.disabled = true; btn.innerText = "VALIDANDO...";
+            
+            // VALIDAÇÕES MAIS RÍGIDAS
+            if (!n || t.length < 14) return alert("Preencha seu nome e celular corretamente!");
+            if (!em || cpf.length < 14) return alert("Preencha seu E-mail e CPF completo para gerar o PIX!");
+
+            const btn = document.getElementById('btn-final-camarote'); 
+            btn.disabled = true; 
+            btn.innerText = "VALIDANDO...";
+            
             try {
                 const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
                 if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
+                
                 const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${numCamaroteSelecionado}`, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: eventoAtivo[`v_cam${numCamaroteSelecionado}`] });
+                
                 const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: String(eventoAtivo[`v_cam${numCamaroteSelecionado}`]).replace('R$', '').replace(',', '.').trim(), titulo: `CAMAROTE 0${numCamaroteSelecionado}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
                 const data = await resp.json();
-                if (data.sucesso) abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id);
-            } catch (e) { alert("⚠️ " + e.message); btn.disabled = false; btn.innerText = "Garantir Camarote"; }
+                
+                if (data.sucesso) {
+                    abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id);
+                } else {
+                    alert("⚠️ Erro no PIX: " + (data.mensagem || "Revise seus dados ou CPF."));
+                    btn.disabled = false; btn.innerText = "Garantir Camarote ⚡";
+                }
+            } catch (e) { 
+                alert("⚠️ Erro: " + e.message); 
+                btn.disabled = false; btn.innerText = "Garantir Camarote ⚡"; 
+            }
         };
 
         window.abrirTelaQR = (base64, copiaCola, reservaId) => {
