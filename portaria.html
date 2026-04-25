@@ -210,11 +210,14 @@
                 bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
+                    
+                    // CORREÇÃO DO CONTADOR: Apenas conta check-ins REAIS recentes (últimas 12 horas), ignorando lixo do modo teste
                     const totalTurno = bancoClientes.filter(c => {
                         if (!c.entrou || !c.data_entrada) return false;
-                        const limite = new Date(); if (new Date().getHours() < 5) limite.setDate(limite.getDate() - 1);
-                        limite.setHours(21, 0, 0); return isModoTeste ? true : new Date(c.data_entrada) >= limite;
+                        const diffHoras = (new Date() - new Date(c.data_entrada)) / (1000 * 60 * 60);
+                        return diffHoras <= 12; 
                     }).length;
+                    
                     document.getElementById('total-checkins').innerText = totalTurno;
                     renderizarSidebar(); processarPesquisa();
                 });
@@ -225,6 +228,7 @@
             const cont = document.getElementById('lista-eventos-sidebar'); cont.innerHTML = '';
             bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
+                // Já exclui nativamente quem é PIX e não pagou da contagem
                 const total = bancoClientes.filter(c => c.evento === ev.nome && (c.metodo !== 'pix_antecipado' || c.pago === true)).length;
                 cont.innerHTML += `
                     <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
@@ -249,11 +253,9 @@
                 const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 
-                // NOVA REGRA: Esconde PIX pendentes com mais de 30 minutos da Portaria para não poluir a tela
-                if (c.metodo === 'pix_antecipado' && !c.pago && c.data_reserva) {
-                    const mins = (new Date() - new Date(c.data_reserva)) / 60000;
-                    if (mins > 30) return false; 
-                }
+                // CORREÇÃO PIX PENDENTE: Esconde completamente da portaria se não pagou. 
+                // O porteiro nunca deve ver reservas de PIX pendentes.
+                if (c.metodo === 'pix_antecipado' && c.pago !== true) return false;
                 
                 const nomeString = String(c.nome ?? '').toUpperCase();
                 const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
@@ -277,7 +279,6 @@
                 const isCortesia = c.cortesia === true;
                 const isAniv = c.aniversariante && c.aniversariante.trim() !== "";
                 const isPix = c.metodo === 'pix_antecipado';
-                const pagoPix = isPix && c.pago === true;
 
                 let valorFinal = "PORTARIA";
                 if (isDono) {
@@ -294,23 +295,9 @@
                     valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
                 }
 
-                // LÓGICA DE UI CORRIGIDA E CLARA PARA PIX
-                let textoPagamento = 'PORTARIA';
-                let corPagamento = 'text-zinc-500';
-                
-                if (isPix) {
-                    textoPagamento = pagoPix ? 'PIX PAGO' : 'PIX NÃO PAGO';
-                    corPagamento = pagoPix ? 'text-green-500' : 'text-red-500 font-black animate-pulse';
-                }
-
-                let botaoAcao = '';
-                if (c.entrou) {
-                    botaoAcao = '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>';
-                } else if (isPix && !c.pago) {
-                    botaoAcao = '<span class="text-red-500 font-black uppercase text-[10px] text-right leading-tight">AGUARDANDO<br>PAGAMENTO</span>';
-                } else {
-                    botaoAcao = `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`;
-                }
+                // Todos os que chegam aqui de PIX já estão pagos (filtrados lá em cima)
+                const textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA';
+                const corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -352,7 +339,10 @@
                     </div>
 
                     <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4">
-                        ${botaoAcao}
+                        ${c.entrou ? 
+                            '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : 
+                            `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
+                        }
                     </div>
                 </div>`;
             });
