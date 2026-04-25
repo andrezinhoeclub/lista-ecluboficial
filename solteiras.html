@@ -119,7 +119,7 @@
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
             const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
-            const icon = isSucesso ? '✅' : (msg.includes('PROIBIDA') ? '🚨' : '⚠️');
+            const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : (msg.includes('PROIBIDA') ? '🚨' : '⚠️'));
             
             toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
             
@@ -153,19 +153,41 @@
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
             const btn = document.getElementById('btnAcao');
+            const inputSenha = document.getElementById('senhaUsuario');
+
             if (stepLogin === 0) {
+                if(!n) return mostrarAviso("Digite o seu usuário!");
                 btn.innerText = "VERIFICANDO...";
                 const docSnap = await getDoc(doc(db, "configuracoes", n));
+                
                 if (docSnap.exists()) {
                     usuarioData = docSnap.data(); stepLogin = 1;
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
-                    btn.innerText = "ENTRAR";
+                    
+                    if (!usuarioData.senha) {
+                        mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
+                        inputSenha.placeholder = "CRIE UMA SENHA";
+                        inputSenha.style.borderColor = "#a855f7";
+                        btn.innerText = "SALVAR SENHA E ENTRAR";
+                    } else {
+                        btn.innerText = "ENTRAR NO SISTEMA";
+                    }
                 } else { 
                     mostrarAviso("Operador não autorizado."); 
                     btn.innerText = "ACESSAR SISTEMA"; 
                 }
             } else {
+                if(!s) return mostrarAviso("Digite a sua senha!");
+                
+                if (!usuarioData.senha) {
+                    if (s.length < 3) return mostrarAviso("A senha deve ter no mínimo 3 caracteres.");
+                    btn.innerText = "SALVANDO...";
+                    await updateDoc(doc(db, "configuracoes", n), { senha: s });
+                    usuarioData.senha = s;
+                    mostrarAviso("Senha cadastrada com sucesso!", true);
+                }
+
                 if (usuarioData.senha === s) {
                     operadorLogado = n;
                     document.getElementById('labelOperador').innerText = "OPERADOR: " + n.toUpperCase();
@@ -175,6 +197,7 @@
                     iniciarEscutas();
                 } else { 
                     mostrarAviso("Senha incorreta."); 
+                    btn.innerText = "ENTRAR NO SISTEMA";
                 }
             }
         };
