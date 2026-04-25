@@ -167,8 +167,8 @@
                     
                     if (!usuarioData.senha) {
                         mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
-                        inputSenha.placeholder = "CRIE UMA SENHA";
-                        inputSenha.style.borderColor = "#a855f7";
+                        inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)";
+                        inputSenha.style.borderColor = "#eab308";
                         btn.innerText = "SALVAR SENHA E ENTRAR";
                     } else {
                         btn.innerText = "ENTRAR NO SISTEMA";
@@ -183,12 +183,16 @@
                 if (!usuarioData.senha) {
                     if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
                     btn.innerText = "SALVANDO...";
-                    await updateDoc(doc(db, "configuracoes", n), { senha: s });
+                    // SALVA A SENHA E O HORÁRIO DO 1º ACESSO
+                    await updateDoc(doc(db, "configuracoes", n), { senha: s, ultimo_login: new Date().toISOString() });
                     usuarioData.senha = s;
                     mostrarAviso("Senha cadastrada com sucesso!", true);
                 }
 
                 if (usuarioData.senha === s) {
+                    // REGISTRA O HORÁRIO DO LOGIN NORMAL!
+                    await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString() });
+                    
                     operadorLogado = n;
                     document.getElementById('labelOperador').innerText = "OPERADOR: " + n.toUpperCase();
                     document.getElementById('telaLogin').classList.add('hidden');
@@ -201,7 +205,6 @@
                 }
             }
         };
-
         function iniciarEscutas() {
             onSnapshot(colRef, (snap) => {
                 clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
