@@ -29,6 +29,12 @@
     </style>
 </head>
 <body class="p-4 flex flex-col items-center">
+
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
+        <span id="toast-icon" class="text-lg">⚠️</span>
+        <span id="toast-msg">Mensagem de erro</span>
+    </div>
+
     <div class="max-w-md w-full">
         <header class="flex flex-col items-center justify-center py-6">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
@@ -121,7 +127,7 @@
                 <input type="text" id="chave-copia-cola" readonly class="w-full bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-zinc-400 text-[9px] font-mono outline-none">
                 <button onclick="copiarChavePix()" class="bg-[#00f5d4] text-black px-4 rounded-xl font-black text-[10px]">Copiar</button>
             </div>
-            <p class="text-[9px] text-yellow-500 font-black uppercase italic mb-6">⏳ Aguardando pagamento...</p>
+            <p class="text-[9px] text-yellow-500 font-black uppercase italic mb-6 animate-pulse">⏳ Aguardando pagamento...</p>
             <button onclick="fecharModalQrCode()" class="w-full border border-zinc-800 text-zinc-400 py-4 rounded-2xl uppercase text-[10px] font-black">Voltar</button>
         </div>
         <div id="box-sucesso" class="hidden w-full max-w-sm bg-[#0d0d14] border border-green-500/50 p-10 rounded-[2.5rem] text-center success-anim">
@@ -147,6 +153,29 @@
         let unsubscribeCamarotes = null; let numCamaroteSelecionado = null; let unsubscribePagamento = null;
 
         const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
+
+        // FUNÇÃO DE AVISO MODERNA (TOAST)
+        window.mostrarAviso = (msg, isSucesso = false) => {
+            const toast = document.getElementById('toast-aviso');
+            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            const icon = isSucesso ? '✅' : '⚠️';
+            
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
+            
+            setTimeout(() => {
+                toast.classList.remove('-translate-y-32', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-32', 'opacity-0');
+            }, 4000);
+        };
 
         async function validarDuplicidade(telefone, nomeEvento) {
             const q = query(collection(db, "lista_eventos"), where("evento", "==", nomeEvento), where("tel", "==", telefone));
@@ -282,10 +311,15 @@
             const em = document.getElementById('email-cliente').value.trim();
             const cpf = document.getElementById('cpf-cliente').value.trim();
             
-            // VALIDAÇÕES MAIS RÍGIDAS
-            if (!tipoAtivo) return alert("Selecione o TIPO de ingresso!");
-            if (!n || t.length < 14) return alert("Preencha seu nome e seu celular completo para prosseguir!");
-            if (eFluxoPix && (!em || cpf.length < 14)) return alert("Pagamento PIX: Preencha seu E-mail e informe seu CPF completo (11 dígitos)!");
+            // VALIDAÇÕES ESPECÍFICAS
+            if (!tipoAtivo) return mostrarAviso("Selecione o tipo de ingresso!");
+            if (!n) return mostrarAviso("Faltou preencher o Nome Completo!");
+            if (t.length < 14) return mostrarAviso("O número do celular está incompleto!");
+            
+            if (eFluxoPix) {
+                if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
+                if (cpf.length < 14) return mostrarAviso("CPF incompleto (são 11 dígitos)!");
+            }
             
             const btn = document.getElementById('btn-final-acao'); 
             btn.disabled = true; 
@@ -309,14 +343,15 @@
                     if (data.sucesso) {
                         abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id);
                     } else {
-                        alert("⚠️ Erro no PIX: " + (data.mensagem || "Revise seus dados ou CPF."));
+                        mostrarAviso(data.mensagem || "Erro na chave Pix. Revise seus dados.");
                         btn.disabled = false; btn.innerText = "Confirmar Presença";
                     }
                 } else { 
-                    alert("Confirmado na lista! ✨"); location.reload(); 
+                    mostrarAviso("Confirmado na lista! ✨", true);
+                    setTimeout(() => { location.reload(); }, 2000);
                 }
             } catch (e) { 
-                alert("⚠️ Erro: " + e.message); 
+                mostrarAviso(e.message); 
                 btn.disabled = false; btn.innerText = "Confirmar Presença"; 
             }
         };
@@ -359,9 +394,11 @@
             const em = document.getElementById('email-camarote').value.trim();
             const cpf = document.getElementById('cpf-camarote').value.trim();
             
-            // VALIDAÇÕES MAIS RÍGIDAS
-            if (!n || t.length < 14) return alert("Preencha seu nome e celular corretamente!");
-            if (!em || cpf.length < 14) return alert("Preencha seu E-mail e CPF completo para gerar o PIX!");
+            // VALIDAÇÕES ESPECÍFICAS
+            if (!n) return mostrarAviso("Faltou preencher o Nome do titular!");
+            if (t.length < 14) return mostrarAviso("O número do celular está incompleto!");
+            if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
+            if (cpf.length < 14) return mostrarAviso("CPF incompleto (são 11 dígitos)!");
 
             const btn = document.getElementById('btn-final-camarote'); 
             btn.disabled = true; 
@@ -379,11 +416,11 @@
                 if (data.sucesso) {
                     abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id);
                 } else {
-                    alert("⚠️ Erro no PIX: " + (data.mensagem || "Revise seus dados ou CPF."));
+                    mostrarAviso(data.mensagem || "Erro na geração do PIX. Tente novamente.");
                     btn.disabled = false; btn.innerText = "Garantir Camarote ⚡";
                 }
             } catch (e) { 
-                alert("⚠️ Erro: " + e.message); 
+                mostrarAviso(e.message); 
                 btn.disabled = false; btn.innerText = "Garantir Camarote ⚡"; 
             }
         };
@@ -400,7 +437,7 @@
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
         window.fecharModalCamarote = () => { if(unsubscribeCamarotes) unsubscribeCamarotes(); document.getElementById('modalCamarote').classList.add('hidden'); };
         window.fecharModalQrCode = () => { location.reload(); };
-        window.copiarChavePix = () => { const c = document.getElementById('chave-copia-cola'); c.select(); document.execCommand('copy'); alert("Copiado!"); };
+        window.copiarChavePix = () => { const c = document.getElementById('chave-copia-cola'); c.select(); document.execCommand('copy'); mostrarAviso("Copiado com sucesso!", true); };
         window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
         window.maskCPF = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 3) v = v.substring(0, 3) + "." + v.substring(3); if (v.length > 7) v = v.substring(0, 7) + "." + v.substring(7); if (v.length > 11) v = v.substring(0, 11) + "-" + v.substring(11); i.value = v; };
 
