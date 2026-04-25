@@ -51,6 +51,12 @@
             <div id="listaPerformance" class="space-y-3"></div>
         </section>
 
+        <div class="mt-12 text-center opacity-40 hover:opacity-100 transition-all">
+            <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
+                <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-sky-400 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
+            </a>
+        </div>
+
         <footer id="navAcoes" class="fixed bottom-0 left-0 w-full p-4 bg-black/60 backdrop-blur-md border-t border-white/5 z-40">
             <div class="max-w-md mx-auto flex gap-2">
                 <button onclick="abrirLinkGeral()" class="flex-[2] gold-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">ABRIR MEU LINK</button>
@@ -198,6 +204,7 @@
             const container = document.getElementById('listaPerformance');
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const isVisualizador = (st === 'visualizar');
+            const escondeGeral = (st === 'padrao' || st === 'aniversario'); // Trava reativada para esconder o geral dos promoters padrão e de aniversário
 
             let htmlLegenda = '';
             if (isVisualizador) {
@@ -258,7 +265,7 @@
                     </div>`;
                 } 
                 else {
-                    const blocoGeralHTML = `<div class="border-l border-white/5 pl-6"><p class="text-2xl font-black text-white/20 leading-none">${geral}</p><p class="text-[6px] text-white/10 font-black mt-1 uppercase tracking-widest">Geral</p></div>`;
+                    const blocoGeralHTML = escondeGeral ? '' : `<div class="border-l border-white/5 pl-6"><p class="text-2xl font-black text-white/20 leading-none">${geral}</p><p class="text-[6px] text-white/10 font-black mt-1 uppercase tracking-widest">Geral</p></div>`;
                     return `
                     <div class="card-performance p-5 flex justify-between items-center">
                         <div class="text-left"><h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[8px] text-zinc-500 font-bold mt-1">${dataHoraFormatada}</p></div>
@@ -276,7 +283,7 @@
         window.abrirModalCortesia = () => {
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); 
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); // Só permite dar cortesia pra eventos futuros
             
             const sel = document.getElementById('selEventoCortesia');
             if (eventosAtivos.length === 0) return alert("Nenhum evento futuro ativo!");
@@ -342,7 +349,7 @@
         window.abrirModalAniv = () => { 
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); 
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); // Só permite criar lista VIP pra eventos futuros
 
             const sel = document.getElementById('selEvento'); 
             if (eventosAtivos.length === 0) return alert("Nenhum evento futuro ativo!"); 
