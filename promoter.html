@@ -20,7 +20,7 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
@@ -136,7 +136,7 @@
             const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
             const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : '⚠️');
             
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
             
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
@@ -170,7 +170,7 @@
                     
                     if (!dadosPromoter.senha) { 
                         mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
-                        inputSenha.placeholder = "CRIE UMA SENHA"; 
+                        inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)"; 
                         inputSenha.style.border = "1px solid #a855f7"; 
                         btn.innerText = "SALVAR SENHA E ENTRAR";
                     } else {
@@ -184,15 +184,17 @@
                 if (!s) return mostrarAviso("Digite a sua senha!");
 
                 if (!dadosPromoter.senha) {
-                    if (s.length < 3) return mostrarAviso("A senha deve ter no mínimo 3 caracteres.");
-                    
+                    if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
                     btn.innerText = "SALVANDO...";
-                    await updateDoc(doc(db, "promoters", logado), { senha: s });
+                    
+                    await updateDoc(doc(db, "promoters", logado), { senha: s, ultimo_login: new Date().toISOString() });
                     dadosPromoter.senha = s;
                     mostrarAviso("Senha cadastrada com sucesso!", true);
                 }
 
                 if (dadosPromoter.senha === s) {
+                    await updateDoc(doc(db, "promoters", logado), { ultimo_login: new Date().toISOString() });
+                    
                     document.getElementById('telaLogin').style.display = 'none'; 
                     document.getElementById('painel').classList.remove('hidden');
                     document.getElementById('nomeHeader').innerText = logado.toUpperCase();
@@ -332,7 +334,6 @@
             container.innerHTML = htmlLegenda + htmlEventos;
         }
 
-        // Funções de Modal (Camarotes, Cortesias) mantidas como originais...
         window.abrirModalCortesia = () => {
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
