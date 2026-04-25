@@ -175,6 +175,24 @@
             } catch (e) { alert("Erro ao executar ação!"); }
         };
 
+        window.prepararEdicao = (id) => {
+            const jaExiste = clientesCache.find(c => c.id === id);
+            if (!jaExiste) return;
+            
+            document.getElementById('editId').value = jaExiste.id; 
+            document.getElementById('nome').value = jaExiste.nome; 
+            document.getElementById('tel').value = jaExiste.tel; 
+            document.getElementById('cpf').value = jaExiste.cpf; 
+            document.getElementById('nascimento').value = jaExiste.nascimento || ''; 
+            document.getElementById('obs').value = jaExiste.obs || '';
+            
+            window.updateIdade(jaExiste.nascimento); 
+            document.getElementById('btnSalvar').innerText = "ATUALIZAR DADOS"; 
+            document.getElementById('btnCancelarEdicao').classList.remove('hidden');
+            
+            document.getElementById('tituloForm').scrollIntoView({ behavior: 'smooth' });
+        };
+
         function render(dados, isBusca = false) {
             const container = document.getElementById('listaSolteiras');
             const agora = new Date();
@@ -201,12 +219,30 @@
 
                 if (c.bloqueada) {
                     infoBloqueio = `<div class="mt-3 bg-red-900/40 p-3 rounded-xl border border-red-500/20"><span class="text-[8px] font-black uppercase text-red-400 block mb-1">🚨 PROIBIDA A ENTRADA. MOTIVO:</span><span class="text-xs font-bold text-white">${c.motivo_bloqueio || 'Sem motivo detalhado.'}</span></div>`;
-                    painelAcao = `<button onclick="bloquearDesbloquear('${c.id}', false)" class="bg-red-900/50 text-red-500 border border-red-500/30 px-6 py-4 rounded-2xl text-[10px] font-black uppercase transition-all">Desbloquear 🔓</button>`;
+                    painelAcao = `
+                    <div class="flex flex-col items-end gap-2">
+                        <button onclick="bloquearDesbloquear('${c.id}', false)" class="bg-red-900/50 text-red-500 border border-red-500/30 px-6 py-4 rounded-2xl text-[10px] font-black uppercase transition-all mb-1">Desbloquear 🔓</button>
+                        <button onclick="prepararEdicao('${c.id}')" class="text-blue-500 text-[8px] font-black uppercase hover:text-blue-400 transition-all">Editar ✏️</button>
+                    </div>`;
                 } else {
                     if (naCasa) {
-                        painelAcao = `<div class="flex flex-col items-end gap-2"><span class="text-green-500 text-2xl font-black">✓</span><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-[8px] font-black uppercase text-red-500 opacity-50 hover:opacity-100 transition-all">Bloquear 🚫</button></div>`;
+                        painelAcao = `
+                        <div class="flex flex-col items-end gap-2">
+                            <span class="text-green-500 text-2xl font-black">✓</span>
+                            <div class="flex gap-4 mt-1">
+                                <button onclick="prepararEdicao('${c.id}')" class="text-blue-500 text-[8px] font-black uppercase hover:text-blue-400 transition-all">Editar ✏️</button>
+                                <button onclick="bloquearDesbloquear('${c.id}', true)" class="text-[8px] font-black uppercase text-red-500 opacity-50 hover:opacity-100 transition-all">Bloquear 🚫</button>
+                            </div>
+                        </div>`;
                     } else {
-                        painelAcao = `<div class="flex flex-col gap-2"><button onclick="dispararCheckin('${c.id}')" class="bg-green-600 text-white px-10 py-4 rounded-2xl text-[10px] font-black uppercase hover:bg-green-500 transition-all shadow-[0_0_15px_rgba(22,163,74,0.3)]">Liberar Entrada</button><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-red-500 text-[8px] font-black uppercase mt-1 self-end opacity-50 hover:opacity-100 transition-all">Bloquear 🚫</button></div>`;
+                        painelAcao = `
+                        <div class="flex flex-col items-end gap-2">
+                            <button onclick="dispararCheckin('${c.id}')" class="bg-green-600 text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase hover:bg-green-500 transition-all shadow-[0_0_15px_rgba(22,163,74,0.3)] w-[120px]">Liberar</button>
+                            <div class="flex gap-4 mt-1 w-[120px] justify-center">
+                                <button onclick="prepararEdicao('${c.id}')" class="text-blue-500 text-[8px] font-black uppercase hover:text-blue-400 transition-all">Editar ✏️</button>
+                                <button onclick="bloquearDesbloquear('${c.id}', true)" class="text-red-500 text-[8px] font-black uppercase opacity-50 hover:opacity-100 transition-all">Bloquear 🚫</button>
+                            </div>
+                        </div>`;
                     }
                 }
 
@@ -256,8 +292,7 @@
                     window.limparFormulario(); 
                 }
                 else { 
-                    document.getElementById('editId').value = jaExiste.id; document.getElementById('nome').value = jaExiste.nome; document.getElementById('tel').value = jaExiste.tel; document.getElementById('cpf').value = jaExiste.cpf; document.getElementById('nascimento').value = jaExiste.nascimento || ''; document.getElementById('obs').value = jaExiste.obs || '';
-                    window.updateIdade(jaExiste.nascimento); document.getElementById('btnSalvar').innerText = "ATUALIZAR DADOS"; document.getElementById('btnCancelarEdicao').classList.remove('hidden');
+                    window.prepararEdicao(jaExiste.id);
                 }
             }
         };
@@ -274,7 +309,7 @@
                 else await addDoc(colRef, { ...dados, bloqueada: false });
                 alert("Concluído!"); window.limparFormulario();
             } catch (e) { alert("Erro!"); }
-            finally { btn.disabled = false; btn.innerText = "Confirmar e Liberar"; }
+            finally { btn.disabled = false; btn.innerText = idEx ? "ATUALIZAR DADOS" : "Confirmar e Liberar"; }
         });
 
         window.filtrarClientes = () => {
