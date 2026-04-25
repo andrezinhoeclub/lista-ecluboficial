@@ -152,7 +152,7 @@
             const inputSenha = document.getElementById('senhaUsuario');
 
             if (stepLogin === 0) {
-                if(!n) return mostrarAviso("Digite o nome do operador!");
+                if(!n) return mostrarAviso("Digite o login do operador!");
                 
                 btn.innerText = "VERIFICANDO...";
                 const docSnap = await getDoc(doc(db, "configuracoes", n));
@@ -164,8 +164,8 @@
                     
                     if (!usuarioData.senha) {
                         mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
-                        inputSenha.placeholder = "CRIE UMA SENHA";
-                        inputSenha.style.borderColor = "#a855f7";
+                        inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)";
+                        inputSenha.style.borderColor = "#eab308";
                         btn.innerText = "SALVAR SENHA E ENTRAR";
                     } else {
                         btn.innerText = "AUTENTICAR";
@@ -181,12 +181,16 @@
                     if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
                     
                     btn.innerText = "SALVANDO...";
-                    await updateDoc(doc(db, "configuracoes", n), { senha: s });
+                    // SALVA A SENHA E O HORÁRIO DO 1º ACESSO
+                    await updateDoc(doc(db, "configuracoes", n), { senha: s, ultimo_login: new Date().toISOString() });
                     usuarioData.senha = s;
                     mostrarAviso("Senha cadastrada com sucesso!", true);
                 }
 
                 if (usuarioData.senha === s) {
+                    // REGISTRA O HORÁRIO DO LOGIN NORMAL!
+                    await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString() });
+                    
                     operadorLogado = n;
                     document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
                     document.getElementById('telaLogin').classList.add('hidden');
@@ -198,7 +202,6 @@
                 }
             }
         };
-
         function iniciarEscutas() {
             onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
                 isModoTeste = snap.exists() && snap.data().modo_teste === true;
