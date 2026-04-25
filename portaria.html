@@ -36,7 +36,7 @@
 </head>
 <body class="flex h-screen relative">
 
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
@@ -113,14 +113,13 @@
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false;
 
-        // FUNÇÃO DE AVISO MODERNA (TOAST)
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
             const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
             const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : '⚠️');
             
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
             
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
@@ -181,14 +180,12 @@
                     if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
                     
                     btn.innerText = "SALVANDO...";
-                    // SALVA A SENHA E O HORÁRIO DO 1º ACESSO
                     await updateDoc(doc(db, "configuracoes", n), { senha: s, ultimo_login: new Date().toISOString() });
                     usuarioData.senha = s;
                     mostrarAviso("Senha cadastrada com sucesso!", true);
                 }
 
                 if (usuarioData.senha === s) {
-                    // REGISTRA O HORÁRIO DO LOGIN NORMAL!
                     await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString() });
                     
                     operadorLogado = n;
@@ -202,6 +199,7 @@
                 }
             }
         };
+
         function iniciarEscutas() {
             onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
                 isModoTeste = snap.exists() && snap.data().modo_teste === true;
@@ -251,6 +249,12 @@
                 const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 
+                // NOVA REGRA: Esconde PIX pendentes com mais de 30 minutos da Portaria para não poluir a tela
+                if (c.metodo === 'pix_antecipado' && !c.pago && c.data_reserva) {
+                    const mins = (new Date() - new Date(c.data_reserva)) / 60000;
+                    if (mins > 30) return false; 
+                }
+                
                 const nomeString = String(c.nome ?? '').toUpperCase();
                 const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
                 const telNumeros = telString.replace(/\D/g, ''); 
@@ -272,6 +276,8 @@
                 const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
                 const isCortesia = c.cortesia === true;
                 const isAniv = c.aniversariante && c.aniversariante.trim() !== "";
+                const isPix = c.metodo === 'pix_antecipado';
+                const pagoPix = isPix && c.pago === true;
 
                 let valorFinal = "PORTARIA";
                 if (isDono) {
@@ -284,13 +290,27 @@
                         valorFinal = "R$ " + (c.valor_pago || "---");
                     }
                 } else {
-                    let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (c.metodo === "pix_antecipado" ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
+                    let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isPix ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
                     valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
                 }
 
-                const pagoPix = c.metodo === 'pix_antecipado' && c.pago === true;
-                const textoPagamento = pagoPix ? 'PIX PAGO' : 'PORTARIA';
-                const corPagamento = pagoPix ? 'text-green-500' : 'text-zinc-500';
+                // LÓGICA DE UI CORRIGIDA E CLARA PARA PIX
+                let textoPagamento = 'PORTARIA';
+                let corPagamento = 'text-zinc-500';
+                
+                if (isPix) {
+                    textoPagamento = pagoPix ? 'PIX PAGO' : 'PIX NÃO PAGO';
+                    corPagamento = pagoPix ? 'text-green-500' : 'text-red-500 font-black animate-pulse';
+                }
+
+                let botaoAcao = '';
+                if (c.entrou) {
+                    botaoAcao = '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>';
+                } else if (isPix && !c.pago) {
+                    botaoAcao = '<span class="text-red-500 font-black uppercase text-[10px] text-right leading-tight">AGUARDANDO<br>PAGAMENTO</span>';
+                } else {
+                    botaoAcao = `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`;
+                }
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -306,14 +326,14 @@
                     <div class="flex flex-col gap-1 w-[140px]">
                         ${tipoNorm.includes("CAMAROTE") ? `
                             <span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>
-                            ${c.metodo === 'pix_antecipado' ? `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
+                            ${isPix ? `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
                             ${isCortesia && pagPorta && pagPorta !== 'ISENTO' ? `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">${pagPorta === 'CASAL' ? '👫 CASAL (ENTRADA)' : '👤 SOLTEIRO (ENTRADA)'}</span>` : ''}
                         ` : ''}
                         
                         ${!isDono && !tipoNorm.includes("CAMAROTE") ? `
                             <span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>
-                            ${c.metodo === 'pix_antecipado' && tipoNorm !== 'CASAL CONSUMAÇÃO' ? `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>` : ''}
-                            ${c.metodo === 'pix_antecipado' && tipoNorm === 'CASAL CONSUMAÇÃO' ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
+                            ${isPix && tipoNorm !== 'CASAL CONSUMAÇÃO' ? `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>` : ''}
+                            ${isPix && tipoNorm === 'CASAL CONSUMAÇÃO' ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
                         ` : ''}
 
                         ${isAniv ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>` : ''}
@@ -332,12 +352,7 @@
                     </div>
 
                     <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4">
-                        ${c.entrou ? 
-                            '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : 
-                            (c.metodo === 'pix_antecipado' && !c.pago ? 
-                                '<span class="text-red-500 font-black uppercase text-[10px] animate-pulse text-right">PIX<br>PENDENTE</span>' : 
-                                `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`)
-                        }
+                        ${botaoAcao}
                     </div>
                 </div>`;
             });
