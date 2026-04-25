@@ -199,7 +199,19 @@
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const isVisualizador = (st === 'visualizar');
 
-            container.innerHTML = eventos.map(ev => {
+            // --- LEGENDA (Aparece apenas para o "Visualizar") ---
+            let htmlLegenda = '';
+            if (isVisualizador) {
+                htmlLegenda = `
+                <div class="bg-zinc-900/50 p-4 rounded-2xl mb-6 flex flex-wrap justify-center gap-4 border border-white/5">
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-green-500 shadow-[0_0_8px_#22c55e]"></div><span class="text-[8px] font-black uppercase text-zinc-400 tracking-widest">Livre</span></div>
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-yellow-500 shadow-[0_0_8px_#eab308] animate-pulse"></div><span class="text-[8px] font-black uppercase text-zinc-400 tracking-widest">Pendente</span></div>
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-red-500 shadow-[0_0_8px_#ef4444]"></div><span class="text-[8px] font-black uppercase text-zinc-400 tracking-widest">Vendido</span></div>
+                    <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div><span class="text-[8px] font-black uppercase text-zinc-400 tracking-widest">Cortesia</span></div>
+                </div>`;
+            }
+
+            const htmlEventos = eventos.map(ev => {
                 const evNomeLimpo = (ev.nome || '').trim().toLowerCase();
                 
                 const reservasDoEvento = reservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo);
@@ -228,10 +240,10 @@
                             if(temPendente) statusCam = 'aguardando';
                         }
 
-                        if (statusCam === 'cortesia') luzesCamarotes += `<div class="w-full py-1 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]">C${n}</div>`; 
-                        else if (statusCam === 'vendido') luzesCamarotes += `<div class="w-full py-1 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]">C${n}</div>`; 
-                        else if (statusCam === 'aguardando') luzesCamarotes += `<div class="w-full py-1 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308] animate-pulse">C${n}</div>`; 
-                        else luzesCamarotes += `<div class="w-full py-1 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">C${n}</div>`; 
+                        if (statusCam === 'cortesia') luzesCamarotes += `<div class="w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]">C${n}</div>`; 
+                        else if (statusCam === 'vendido') luzesCamarotes += `<div class="w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]">C${n}</div>`; 
+                        else if (statusCam === 'aguardando') luzesCamarotes += `<div class="w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308] animate-pulse">C${n}</div>`; 
+                        else luzesCamarotes += `<div class="w-full py-1.5 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">C${n}</div>`; 
                     }
 
                     return `
@@ -258,12 +270,15 @@
                     </div>`;
                 }
             }).join('');
+
+            // Adiciona a legenda e depois a lista de eventos
+            container.innerHTML = htmlLegenda + htmlEventos;
         }
 
         window.abrirModalCortesia = () => {
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); 
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); // Só permite dar cortesia pra eventos futuros
             
             const sel = document.getElementById('selEventoCortesia');
             if (eventosAtivos.length === 0) return alert("Nenhum evento futuro ativo!");
@@ -329,7 +344,7 @@
         window.abrirModalAniv = () => { 
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); 
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); // Só permite criar lista VIP pra eventos futuros
 
             const sel = document.getElementById('selEvento'); 
             if (eventosAtivos.length === 0) return alert("Nenhum evento futuro ativo!"); 
