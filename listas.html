@@ -62,12 +62,12 @@
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
             <h2 id="modal-titulo" class="font-black uppercase italic mb-6 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
             
-            <div class="grid grid-cols-3 gap-2 mb-6">
+            <div id="grid-botoes-tipo" class="grid grid-cols-2 gap-2 mb-6">
                 <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-3 rounded-2xl flex flex-col items-center justify-center">
                     <span class="text-[9px] font-black uppercase opacity-60">👫 Casal Seco</span>
                     <span id="v-modal-casal" class="text-xs font-black">---</span>
                 </button>
-                <button onclick="selecionarTipo('CASAL CONSUMAÇÃO')" id="btn-casal-cons" class="btn-sel p-3 rounded-2xl flex flex-col items-center justify-center">
+                <button onclick="selecionarTipo('CASAL CONSUMAÇÃO')" id="btn-casal-cons" class="hidden btn-sel p-3 rounded-2xl flex-col items-center justify-center">
                     <span class="text-[9px] font-black uppercase text-fuchsia-400">🍹 Casal Consuma</span>
                     <span id="v-modal-casal-cons" class="text-xs font-black">---</span>
                 </button>
@@ -222,16 +222,40 @@
         }
 
         window.iniciarFluxo = (id, isPix) => {
-            eventoAtivo = eventosCache.find(e => e.id === id); eFluxoPix = isPix;
+            eventoAtivo = eventosCache.find(e => e.id === id); 
+            eFluxoPix = isPix;
+            
+            // Reseta a seleção anterior
+            tipoAtivo = null;
+            document.getElementById('btn-casal').classList.remove('active');
+            document.getElementById('btn-casal-cons').classList.remove('active');
+            document.getElementById('btn-solteiro').classList.remove('active');
+
             document.getElementById('modal-titulo').innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
             
             const pCasal = isPix ? (eventoAtivo.ant_casal || eventoAtivo.valor_casal) : (globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal);
-            const pCasalCons = isPix ? (eventoAtivo.ant_casal_cons || eventoAtivo.valor_casal_cons) : (globalAniversariante ? (eventoAtivo.desc_casal_cons || eventoAtivo.valor_casal_cons) : eventoAtivo.valor_casal_cons);
             const pSolt = isPix ? (eventoAtivo.ant_solteiro || eventoAtivo.valor_solteiro) : (globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro);
             
             document.getElementById('v-modal-casal').innerText = formatarMoeda(pCasal);
-            document.getElementById('v-modal-casal-cons').innerText = formatarMoeda(pCasalCons);
             document.getElementById('v-modal-solteiro').innerText = formatarMoeda(pSolt);
+            
+            // Lógica de exibição inteligente do botão Consuma
+            const gridBotoes = document.getElementById('grid-botoes-tipo');
+            const btnCasalCons = document.getElementById('btn-casal-cons');
+
+            if (isPix) {
+                const pCasalCons = eventoAtivo.ant_casal_cons || "";
+                document.getElementById('v-modal-casal-cons').innerText = formatarMoeda(pCasalCons);
+                btnCasalCons.classList.remove('hidden');
+                btnCasalCons.classList.add('flex');
+                gridBotoes.classList.remove('grid-cols-2');
+                gridBotoes.classList.add('grid-cols-3');
+            } else {
+                btnCasalCons.classList.add('hidden');
+                btnCasalCons.classList.remove('flex');
+                gridBotoes.classList.remove('grid-cols-3');
+                gridBotoes.classList.add('grid-cols-2');
+            }
             
             document.getElementById('campos-pix').className = isPix ? "space-y-3" : "hidden";
             document.getElementById('modalForm').classList.remove('hidden');
@@ -248,6 +272,7 @@
             const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
             const t = document.getElementById('tel-cliente').value.trim();
             const cpf = document.getElementById('cpf-cliente').value.trim();
+            
             if (!n || t.length < 14 || !tipoAtivo) return alert("Preencha o seu nome, celular e selecione o TIPO de ingresso!");
             
             const btn = document.getElementById('btn-final-acao'); btn.disabled = true; btn.innerText = "PROCESSANDO...";
