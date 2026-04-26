@@ -211,7 +211,7 @@
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
                     
-                    // CORREÇÃO DO CONTADOR: Apenas conta check-ins REAIS recentes (últimas 12 horas), ignorando lixo do modo teste
+                    // CONTADOR RESTRITO ÀS ÚLTIMAS 12 HORAS
                     const totalTurno = bancoClientes.filter(c => {
                         if (!c.entrou || !c.data_entrada) return false;
                         const diffHoras = (new Date() - new Date(c.data_entrada)) / (1000 * 60 * 60);
@@ -229,7 +229,7 @@
             bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
                 // Já exclui nativamente quem é PIX e não pagou da contagem
-                const total = bancoClientes.filter(c => c.evento === ev.nome && (c.metodo !== 'pix_antecipado' || c.pago === true)).length;
+                const total = bancoClientes.filter(c => c.evento === ev.nome && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true')).length;
                 cont.innerHTML += `
                     <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
                         <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
@@ -253,9 +253,8 @@
                 const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 
-                // CORREÇÃO PIX PENDENTE: Esconde completamente da portaria se não pagou. 
-                // O porteiro nunca deve ver reservas de PIX pendentes.
-                if (c.metodo === 'pix_antecipado' && c.pago !== true) return false;
+                // TRAVA DEFINITIVA DE PIX PENDENTE: Se não pagou, ele é DESTRUÍDO da busca.
+                if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
                 
                 const nomeString = String(c.nome ?? '').toUpperCase();
                 const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
@@ -273,7 +272,9 @@
                 const ev = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase()) || {};
                 const tipoNorm = (c.tipo_entrada || '').toUpperCase().trim();
                 const pagPorta = (c.pagamento_porta || '').toUpperCase(); 
-                const isCasal = tipoNorm === "CASAL" || /\s+E\s+/i.test(c.nome);
+                
+                // CORREÇÃO DA REGRA DE CASAL: Agora ele lê corretamente quem comprou "CASAL CONSUMAÇÃO"
+                const isCasal = tipoNorm.includes("CASAL") || /\s+E\s+/i.test(c.nome);
                 
                 const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
                 const isCortesia = c.cortesia === true;
@@ -295,9 +296,35 @@
                     valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
                 }
 
-                // Todos os que chegam aqui de PIX já estão pagos (filtrados lá em cima)
                 const textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA';
                 const corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
+
+                // GERAÇÃO DOS BADGES (CORES DISTINTAS CORRIGIDAS)
+                let tagsHTML = '';
+                if (tipoNorm.includes("CAMAROTE")) {
+                    tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`;
+                    if (isPix) tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
+                    if (isCortesia && pagPorta && pagPorta !== 'ISENTO') {
+                        tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">${pagPorta === 'CASAL' ? '👫 CASAL (ENTRADA)' : '👤 SOLTEIRO (ENTRADA)'}</span>`;
+                    }
+                } else if (!isDono) {
+                    if (isCasal) {
+                        tagsHTML += `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👫 CASAL</span>`;
+                    } else {
+                        tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`;
+                    }
+                    
+                    if (isPix) {
+                        if (tipoNorm === 'CASAL CONSUMAÇÃO') {
+                            tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
+                        } else {
+                            tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>`;
+                        }
+                    }
+                }
+
+                if (isAniv) tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`;
+                if (isDono) tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`;
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -311,20 +338,7 @@
                     </div>
 
                     <div class="flex flex-col gap-1 w-[140px]">
-                        ${tipoNorm.includes("CAMAROTE") ? `
-                            <span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>
-                            ${isPix ? `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
-                            ${isCortesia && pagPorta && pagPorta !== 'ISENTO' ? `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">${pagPorta === 'CASAL' ? '👫 CASAL (ENTRADA)' : '👤 SOLTEIRO (ENTRADA)'}</span>` : ''}
-                        ` : ''}
-                        
-                        ${!isDono && !tipoNorm.includes("CAMAROTE") ? `
-                            <span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">${isCasal ? '👫 CASAL' : '👤 SOLTEIRO'}</span>
-                            ${isPix && tipoNorm !== 'CASAL CONSUMAÇÃO' ? `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>` : ''}
-                            ${isPix && tipoNorm === 'CASAL CONSUMAÇÃO' ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>` : ''}
-                        ` : ''}
-
-                        ${isAniv ? `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>` : ''}
-                        ${isDono ? `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>` : ''}
+                        ${tagsHTML}
                     </div>
 
                     <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px]">
