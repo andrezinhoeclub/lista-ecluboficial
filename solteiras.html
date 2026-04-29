@@ -111,10 +111,11 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const colRef = collection(db, "cadastro_solteiras");
+        
+        // MUDANÇA PRINCIPAL AQUI: Mudado para ler o novo banco "solteiras"
+        const colRef = collection(db, "solteiras");
         let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
 
-        // Função do POP-UP (Toast)
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
@@ -183,14 +184,12 @@
                 if (!usuarioData.senha) {
                     if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
                     btn.innerText = "SALVANDO...";
-                    // SALVA A SENHA E O HORÁRIO DO 1º ACESSO
                     await updateDoc(doc(db, "configuracoes", n), { senha: s, ultimo_login: new Date().toISOString() });
                     usuarioData.senha = s;
                     mostrarAviso("Senha cadastrada com sucesso!", true);
                 }
 
                 if (usuarioData.senha === s) {
-                    // REGISTRA O HORÁRIO DO LOGIN NORMAL!
                     await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString() });
                     
                     operadorLogado = n;
@@ -205,6 +204,7 @@
                 }
             }
         };
+
         function iniciarEscutas() {
             onSnapshot(colRef, (snap) => {
                 clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -215,7 +215,7 @@
 
         window.dispararCheckin = async (id) => {
             try {
-                await updateDoc(doc(db, "cadastro_solteiras", id), { ultima_visita: serverTimestamp() });
+                await updateDoc(doc(db, "solteiras", id), { ultima_visita: serverTimestamp() });
                 mostrarAviso("Liberada com sucesso!", true);
             } catch (e) { 
                 mostrarAviso("Erro ao liberar a cliente!"); 
@@ -227,11 +227,11 @@
                 if (acaoBloquear) {
                     const motivo = prompt("Qual o motivo do bloqueio?");
                     if (!motivo) return;
-                    await updateDoc(doc(db, "cadastro_solteiras", id), { bloqueada: true, motivo_bloqueio: motivo.toUpperCase() });
+                    await updateDoc(doc(db, "solteiras", id), { bloqueada: true, motivo_bloqueio: motivo.toUpperCase() });
                     mostrarAviso("Cliente bloqueada com sucesso!", true);
                 } else {
                     if (confirm("Tem certeza que deseja DESBLOQUEAR a entrada dessa cliente?")) {
-                        await updateDoc(doc(db, "cadastro_solteiras", id), { bloqueada: false, motivo_bloqueio: "" });
+                        await updateDoc(doc(db, "solteiras", id), { bloqueada: false, motivo_bloqueio: "" });
                         mostrarAviso("Cliente desbloqueada!", true);
                     }
                 }
@@ -246,12 +246,12 @@
             
             document.getElementById('editId').value = jaExiste.id; 
             document.getElementById('nome').value = jaExiste.nome; 
-            document.getElementById('tel').value = jaExiste.tel; 
-            document.getElementById('cpf').value = jaExiste.cpf; 
-            document.getElementById('nascimento').value = jaExiste.nascimento || ''; 
+            document.getElementById('tel').value = jaExiste.tel || ''; 
+            document.getElementById('cpf').value = jaExiste.cpf || ''; 
+            document.getElementById('nascimento').value = jaExiste.data_nascimento || jaExiste.nascimento || ''; 
             document.getElementById('obs').value = jaExiste.obs || '';
             
-            window.updateIdade(jaExiste.nascimento); 
+            window.updateIdade(jaExiste.data_nascimento || jaExiste.nascimento); 
             document.getElementById('btnSalvar').innerText = "ATUALIZAR DADOS"; 
             document.getElementById('btnCancelarEdicao').classList.remove('hidden');
             
@@ -263,18 +263,38 @@
             const agora = new Date();
             const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
             
-            let paraExibir = isBusca ? dados : dados.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte);
+            // Tratamento especial para "última visita": pode ser Firestore Timestamp (se deu check-in hoje) ou String (importado do Excel)
+            let paraExibir = isBusca ? dados : dados.filter(c => c.ultima_visita && typeof c.ultima_visita.toDate === 'function' && c.ultima_visita.toDate() >= corte);
             
             if (paraExibir.length === 0) {
                 container.innerHTML = `<div class="p-20 text-center opacity-30 font-black text-xs italic">NENHUM RESULTADO</div>`;
                 return;
             }
+            
             container.innerHTML = '';
-            paraExibir.sort((a,b) => (b.ultima_visita || 0) - (a.ultima_visita || 0)).forEach(c => {
-                const isNiver = checkAniversarioSemana(c.nascimento);
-                const u = c.ultima_visita ? c.ultima_visita.toDate() : null;
-                const naCasa = u && u >= corte;
-                const niverData = c.nascimento ? new Date(c.nascimento + "T12:00:00").toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) : '--/--';
+            
+            paraExibir.sort((a,b) => {
+                let valA = a.ultima_visita && typeof a.ultima_visita.toDate === 'function' ? a.ultima_visita.toDate().getTime() : 0;
+                let valB = b.ultima_visita && typeof b.ultima_visita.toDate === 'function' ? b.ultima_visita.toDate().getTime() : 0;
+                return valB - valA;
+            }).forEach(c => {
+                const dataNascReal = c.data_nascimento || c.nascimento;
+                const isNiver = checkAniversarioSemana(dataNascReal);
+                
+                let textoVisita = '---';
+                let naCasa = false;
+                
+                if (c.ultima_visita) {
+                    if (typeof c.ultima_visita.toDate === 'function') {
+                        const u = c.ultima_visita.toDate();
+                        naCasa = u >= corte;
+                        textoVisita = u.toLocaleDateString('pt-BR');
+                    } else if (typeof c.ultima_visita === 'string' && c.ultima_visita.trim() !== '') {
+                        textoVisita = c.ultima_visita; // Mantém o texto que veio do Excel
+                    }
+                }
+                
+                const niverData = dataNascReal ? new Date(dataNascReal + "T12:00:00").toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) : '--/--';
                 
                 const div = document.createElement('div');
                 div.className = `item-cliente p-6 flex justify-between items-center ${c.bloqueada ? 'cliente-bloqueada' : (isNiver ? 'card-aniversariante' : (naCasa ? 'bg-green-500/5' : ''))}`;
@@ -315,11 +335,11 @@
                     <div class="flex-grow pr-4 w-full">
                         <div class="flex flex-wrap items-center gap-2">
                             <h3 class="text-xl font-black uppercase ${c.bloqueada ? 'text-red-500' : 'text-white'}">${c.nome}</h3>
-                            <span class="text-zinc-400 font-bold text-sm">📱 ${c.tel}</span>
+                            <span class="text-zinc-400 font-bold text-sm">📱 ${c.tel || '---'}</span>
                             ${isNiver && !c.bloqueada ? '<span class="bg-yellow-500 text-black px-2 py-0.5 rounded-lg text-[8px] font-black animate-bounce">🎂 ANIVERSARIANTE</span>' : ''}
                         </div>
                         <p class="text-[10px] text-zinc-500 font-bold uppercase mt-1">
-                            🆔 ${c.cpf} | 📅 VISITA: <span class="${naCasa ? 'text-green-500 font-black' : 'text-white'}">${u ? u.toLocaleDateString('pt-BR') : '---'}</span> | 🎂 NIVER: <span class="text-yellow-500/70">${niverData}</span>
+                            🆔 ${c.cpf || '---'} | 📅 VISITA: <span class="${naCasa ? 'text-green-500 font-black' : 'text-white'}">${textoVisita}</span> | 🎂 NIVER: <span class="text-yellow-500/70">${niverData}</span>
                         </p>
                         ${c.obs && !c.bloqueada ? `<p class="mt-2 text-[9px] font-bold text-sky-400 uppercase italic">📌 ${c.obs}</p>` : ''}
                         ${infoBloqueio}
@@ -333,7 +353,7 @@
 
         window.maskCPF = (i) => { let v = i.value.replace(/\D/g,"").substring(0,11); v = v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2"); i.value = v; };
         window.maskTel = (i) => { let v = i.value.replace(/\D/g,"").substring(0,11); v = v.replace(/^(\d{2})(\d)/g,"($1) $2").replace(/(\d)(\d{4})$/,"$1-$2"); i.value = v; };
-        window.updateIdade = (v) => { const h = new Date(); const n = new Date(v + "T12:00:00"); let i = h.getFullYear() - n.getFullYear(); if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; document.getElementById('idadeDisplay').innerText = isNaN(i) ? "--" : i; };
+        window.updateIdade = (v) => { if(!v) { document.getElementById('idadeDisplay').innerText = "--"; return; } const h = new Date(); const n = new Date(v + "T12:00:00"); let i = h.getFullYear() - n.getFullYear(); if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; document.getElementById('idadeDisplay').innerText = isNaN(i) ? "--" : i; };
         
         window.limparFormulario = () => {
             document.getElementById('formSolteira').reset();
@@ -345,7 +365,7 @@
 
         window.validarDuplicidade = async (campo) => {
             const input = document.getElementById(campo); const valor = input.value.replace(/\D/g, ""); if (valor.length < 11) return;
-            const jaExiste = clientesCache.find(c => c.cpf.replace(/\D/g, "") === valor || c.tel.replace(/\D/g, "") === valor);
+            const jaExiste = clientesCache.find(c => (c.cpf || '').replace(/\D/g, "") === valor || (c.tel || '').replace(/\D/g, "") === valor);
             if (jaExiste && document.getElementById('editId').value !== jaExiste.id) {
                 if(jaExiste.bloqueada) {
                     mostrarAviso(`🚨 PROIBIDA! Motivo: ${jaExiste.motivo_bloqueio}`);
@@ -369,9 +389,9 @@
             btn.disabled = true;
             btn.innerText = "SALVANDO...";
             try {
-                const dados = { nome: document.getElementById('nome').value.toUpperCase(), tel: document.getElementById('tel').value, cpf: document.getElementById('cpf').value, nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() };
+                const dados = { nome: document.getElementById('nome').value.toUpperCase(), tel: document.getElementById('tel').value, cpf: document.getElementById('cpf').value, data_nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() };
                 if (idEx) {
-                    await updateDoc(doc(db, "cadastro_solteiras", idEx), dados);
+                    await updateDoc(doc(db, "solteiras", idEx), dados);
                     mostrarAviso("Dados atualizados com sucesso!", true);
                 } else {
                     await addDoc(colRef, { ...dados, bloqueada: false });
@@ -389,13 +409,18 @@
 
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase().trim();
-            if (b.length > 0) { const t = b.split(/\s+/); render(clientesCache.filter(c => t.every(x => `${c.nome.toUpperCase()} ${c.cpf} ${c.tel}`.includes(x))), true); }
+            if (b.length > 0) { 
+                const t = b.split(/\s+/); 
+                // Busca de forma segura caso algum campo esteja vazio
+                render(clientesCache.filter(c => t.every(x => `${c.nome?.toUpperCase() || ''} ${c.cpf || ''} ${c.tel || ''}`.includes(x))), true); 
+            }
             else { render(clientesCache, false); }
         };
 
         function atualizarContadores() { 
             const agora = new Date(); const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
-            const total = clientesCache.filter(c => c.ultima_visita && c.ultima_visita.toDate() >= corte).length;
+            // Conta apenas se for uma data válida do Firebase (check-ins reais hoje)
+            const total = clientesCache.filter(c => c.ultima_visita && typeof c.ultima_visita.toDate === 'function' && c.ultima_visita.toDate() >= corte).length;
             document.getElementById('contagemEvento').innerText = total;
         }
     </script>
