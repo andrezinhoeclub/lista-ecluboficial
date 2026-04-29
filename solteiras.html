@@ -98,7 +98,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, getDocs, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -111,10 +111,53 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        // MUDANÇA PRINCIPAL AQUI: Mudado para ler o novo banco "solteiras"
         const colRef = collection(db, "solteiras");
         let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
+
+        // --- TRADUTOR DE DATAS DO EXCEL ---
+        function normalizarDataNascimento(d) {
+            if (!d) return null;
+            
+            // Tratamento se for um número Serial de Data do Excel
+            if (!isNaN(d) && Number(d) > 10000) {
+                const excelDate = Number(d);
+                const dateObj = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+                const dia = String(dateObj.getUTCDate()).padStart(2, '0');
+                const mes = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                const ano = dateObj.getUTCFullYear();
+                return { raw: `${ano}-${mes}-${dia}`, display: `${dia}/${mes}` };
+            }
+
+            const s = String(d).trim();
+            // Tratamento se for texto com barra DD/MM/YYYY
+            if (s.includes('/')) {
+                const p = s.split('/');
+                if (p.length === 3) return { raw: `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`, display: `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}` };
+            }
+            
+            // Tratamento se já for padrão de sistema YYYY-MM-DD
+            if (s.includes('-')) {
+                const p = s.split('-');
+                if (p.length >= 3) return { raw: s.substring(0, 10), display: `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}` };
+            }
+            return null;
+        }
+
+        function checkAniversarioSemana(dataNorm) {
+            if (!dataNorm || !dataNorm.raw) return false;
+            const partes = dataNorm.raw.split('-'); // YYYY-MM-DD
+            if (partes.length < 3) return false;
+            
+            const hoje = new Date();
+            const diaSemana = hoje.getDay();
+            const diffParaSegunda = (diaSemana === 0 ? 6 : diaSemana - 1);
+            const seg = new Date(hoje); seg.setDate(hoje.getDate() - diffParaSegunda); seg.setHours(0,0,0,0);
+            const dom = new Date(seg); dom.setDate(seg.getDate() + 6); dom.setHours(23,59,59,999);
+            
+            // O mês no Javascript começa em 0, por isso subtraímos 1
+            const niverEsteAno = new Date(hoje.getFullYear(), parseInt(partes[1]) - 1, parseInt(partes[2]), 12, 0, 0);
+            return niverEsteAno >= seg && niverEsteAno <= dom;
+        }
 
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -123,32 +166,12 @@
             const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : (msg.includes('PROIBIDA') ? '🚨' : '⚠️'));
             
             toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
-            
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
             
-            setTimeout(() => {
-                toast.classList.remove('-translate-y-32', 'opacity-0');
-                toast.classList.add('translate-y-0', 'opacity-100');
-            }, 10);
-
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('-translate-y-32', 'opacity-0');
-            }, 4000);
+            setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
+            setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
-
-        function checkAniversarioSemana(dataNasc) {
-            if (!dataNasc) return false;
-            const hoje = new Date();
-            const nasc = new Date(dataNasc + "T12:00:00");
-            const diaSemana = hoje.getDay();
-            const diffParaSegunda = (diaSemana === 0 ? 6 : diaSemana - 1);
-            const seg = new Date(hoje); seg.setDate(hoje.getDate() - diffParaSegunda); seg.setHours(0,0,0,0);
-            const dom = new Date(seg); dom.setDate(seg.getDate() + 6); dom.setHours(23,59,59,999);
-            const niverEsteAno = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate(), 12, 0, 0);
-            return niverEsteAno >= seg && niverEsteAno <= dom;
-        }
 
         window.verificarOuLogar = async () => {
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
@@ -165,7 +188,6 @@
                     usuarioData = docSnap.data(); stepLogin = 1;
                     document.getElementById('areaSenha').classList.remove('hidden');
                     document.getElementById('inputNomeUsuario').readOnly = true;
-                    
                     if (!usuarioData.senha) {
                         mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
                         inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)";
@@ -174,13 +196,9 @@
                     } else {
                         btn.innerText = "ENTRAR NO SISTEMA";
                     }
-                } else { 
-                    mostrarAviso("Operador não autorizado."); 
-                    btn.innerText = "ACESSAR SISTEMA"; 
-                }
+                } else { mostrarAviso("Operador não autorizado."); btn.innerText = "ACESSAR SISTEMA"; }
             } else {
                 if(!s) return mostrarAviso("Digite a sua senha!");
-                
                 if (!usuarioData.senha) {
                     if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
                     btn.innerText = "SALVANDO...";
@@ -188,20 +206,15 @@
                     usuarioData.senha = s;
                     mostrarAviso("Senha cadastrada com sucesso!", true);
                 }
-
                 if (usuarioData.senha === s) {
                     await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString() });
-                    
                     operadorLogado = n;
                     document.getElementById('labelOperador').innerText = "OPERADOR: " + n.toUpperCase();
                     document.getElementById('telaLogin').classList.add('hidden');
                     document.getElementById('conteudo-sistema').classList.remove('hidden');
                     document.getElementById('rodape-desenvolvedor').classList.remove('hidden');
                     iniciarEscutas();
-                } else { 
-                    mostrarAviso("Senha incorreta."); 
-                    btn.innerText = "ENTRAR NO SISTEMA";
-                }
+                } else { mostrarAviso("Senha incorreta."); btn.innerText = "ENTRAR NO SISTEMA"; }
             }
         };
 
@@ -217,9 +230,7 @@
             try {
                 await updateDoc(doc(db, "solteiras", id), { ultima_visita: serverTimestamp() });
                 mostrarAviso("Liberada com sucesso!", true);
-            } catch (e) { 
-                mostrarAviso("Erro ao liberar a cliente!"); 
-            }
+            } catch (e) { mostrarAviso("Erro ao liberar a cliente!"); }
         };
 
         window.bloquearDesbloquear = async (id, acaoBloquear) => {
@@ -235,26 +246,26 @@
                         mostrarAviso("Cliente desbloqueada!", true);
                     }
                 }
-            } catch (e) { 
-                mostrarAviso("Erro ao executar ação de bloqueio!"); 
-            }
+            } catch (e) { mostrarAviso("Erro ao executar ação de bloqueio!"); }
         };
 
         window.prepararEdicao = (id) => {
             const jaExiste = clientesCache.find(c => c.id === id);
             if (!jaExiste) return;
             
+            const dataNascReal = jaExiste.data_nascimento || jaExiste.nascimento;
+            const normNasc = normalizarDataNascimento(dataNascReal);
+            
             document.getElementById('editId').value = jaExiste.id; 
             document.getElementById('nome').value = jaExiste.nome; 
             document.getElementById('tel').value = jaExiste.tel || ''; 
             document.getElementById('cpf').value = jaExiste.cpf || ''; 
-            document.getElementById('nascimento').value = jaExiste.data_nascimento || jaExiste.nascimento || ''; 
+            document.getElementById('nascimento').value = normNasc ? normNasc.raw : ''; 
             document.getElementById('obs').value = jaExiste.obs || '';
             
-            window.updateIdade(jaExiste.data_nascimento || jaExiste.nascimento); 
+            window.updateIdade(normNasc ? normNasc.raw : null); 
             document.getElementById('btnSalvar').innerText = "ATUALIZAR DADOS"; 
             document.getElementById('btnCancelarEdicao').classList.remove('hidden');
-            
             document.getElementById('tituloForm').scrollIntoView({ behavior: 'smooth' });
         };
 
@@ -263,7 +274,6 @@
             const agora = new Date();
             const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
             
-            // Tratamento especial para "última visita": pode ser Firestore Timestamp (se deu check-in hoje) ou String (importado do Excel)
             let paraExibir = isBusca ? dados : dados.filter(c => c.ultima_visita && typeof c.ultima_visita.toDate === 'function' && c.ultima_visita.toDate() >= corte);
             
             if (paraExibir.length === 0) {
@@ -278,29 +288,33 @@
                 let valB = b.ultima_visita && typeof b.ultima_visita.toDate === 'function' ? b.ultima_visita.toDate().getTime() : 0;
                 return valB - valA;
             }).forEach(c => {
+                // Passa as datas pelo nosso "Tradutor Mágico"
                 const dataNascReal = c.data_nascimento || c.nascimento;
-                const isNiver = checkAniversarioSemana(dataNascReal);
+                const normNasc = normalizarDataNascimento(dataNascReal);
+                const isNiver = checkAniversarioSemana(normNasc);
+                const niverData = normNasc ? normNasc.display : '--/--';
                 
+                // Tratamento seguro para "última visita" do Excel ou do Banco
                 let textoVisita = '---';
                 let naCasa = false;
-                
                 if (c.ultima_visita) {
                     if (typeof c.ultima_visita.toDate === 'function') {
                         const u = c.ultima_visita.toDate();
                         naCasa = u >= corte;
                         textoVisita = u.toLocaleDateString('pt-BR');
+                    } else if (!isNaN(c.ultima_visita) && Number(c.ultima_visita) > 10000) {
+                        const excelDate = Number(c.ultima_visita);
+                        const dateObj = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+                        textoVisita = String(dateObj.getUTCDate()).padStart(2, '0') + '/' + String(dateObj.getUTCMonth() + 1).padStart(2, '0') + '/' + dateObj.getUTCFullYear();
                     } else if (typeof c.ultima_visita === 'string' && c.ultima_visita.trim() !== '') {
-                        textoVisita = c.ultima_visita; // Mantém o texto que veio do Excel
+                        textoVisita = c.ultima_visita;
                     }
                 }
-                
-                const niverData = dataNascReal ? new Date(dataNascReal + "T12:00:00").toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) : '--/--';
                 
                 const div = document.createElement('div');
                 div.className = `item-cliente p-6 flex justify-between items-center ${c.bloqueada ? 'cliente-bloqueada' : (isNiver ? 'card-aniversariante' : (naCasa ? 'bg-green-500/5' : ''))}`;
                 
-                let painelAcao = '';
-                let infoBloqueio = '';
+                let painelAcao = ''; let infoBloqueio = '';
 
                 if (c.bloqueada) {
                     infoBloqueio = `<div class="mt-3 bg-red-900/40 p-3 rounded-xl border border-red-500/20"><span class="text-[8px] font-black uppercase text-red-400 block mb-1">🚨 PROIBIDA A ENTRADA. MOTIVO:</span><span class="text-xs font-bold text-white">${c.motivo_bloqueio || 'Sem motivo detalhado.'}</span></div>`;
@@ -353,7 +367,17 @@
 
         window.maskCPF = (i) => { let v = i.value.replace(/\D/g,"").substring(0,11); v = v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2"); i.value = v; };
         window.maskTel = (i) => { let v = i.value.replace(/\D/g,"").substring(0,11); v = v.replace(/^(\d{2})(\d)/g,"($1) $2").replace(/(\d)(\d{4})$/,"$1-$2"); i.value = v; };
-        window.updateIdade = (v) => { if(!v) { document.getElementById('idadeDisplay').innerText = "--"; return; } const h = new Date(); const n = new Date(v + "T12:00:00"); let i = h.getFullYear() - n.getFullYear(); if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; document.getElementById('idadeDisplay').innerText = isNaN(i) ? "--" : i; };
+        
+        window.updateIdade = (v) => { 
+            if(!v) { document.getElementById('idadeDisplay').innerText = "--"; return; } 
+            const norm = normalizarDataNascimento(v);
+            if (!norm) { document.getElementById('idadeDisplay').innerText = "--"; return; }
+            
+            const h = new Date(); const n = new Date(norm.raw + "T12:00:00"); 
+            let i = h.getFullYear() - n.getFullYear(); 
+            if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; 
+            document.getElementById('idadeDisplay').innerText = isNaN(i) ? "--" : i; 
+        };
         
         window.limparFormulario = () => {
             document.getElementById('formSolteira').reset();
@@ -369,25 +393,18 @@
             if (jaExiste && document.getElementById('editId').value !== jaExiste.id) {
                 if(jaExiste.bloqueada) {
                     mostrarAviso(`🚨 PROIBIDA! Motivo: ${jaExiste.motivo_bloqueio}`);
-                    window.limparFormulario();
-                    return;
+                    window.limparFormulario(); return;
                 }
                 if (confirm(`CLIENTE ENCONTRADA: ${jaExiste.nome}\n\nOK: Fazer Check-in (Ela já pagou).\nCANCELAR: Editar dados dela.`)) { 
-                    await window.dispararCheckin(jaExiste.id); 
-                    window.limparFormulario(); 
-                }
-                else { 
-                    window.prepararEdicao(jaExiste.id);
-                }
+                    await window.dispararCheckin(jaExiste.id); window.limparFormulario(); 
+                } else { window.prepararEdicao(jaExiste.id); }
             }
         };
 
         document.getElementById('formSolteira').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('btnSalvar');
-            const idEx = document.getElementById('editId').value;
-            btn.disabled = true;
-            btn.innerText = "SALVANDO...";
+            const btn = document.getElementById('btnSalvar'); const idEx = document.getElementById('editId').value;
+            btn.disabled = true; btn.innerText = "SALVANDO...";
             try {
                 const dados = { nome: document.getElementById('nome').value.toUpperCase(), tel: document.getElementById('tel').value, cpf: document.getElementById('cpf').value, data_nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() };
                 if (idEx) {
@@ -398,28 +415,20 @@
                     mostrarAviso("Cadastro salvo e liberado!", true);
                 }
                 window.limparFormulario();
-            } catch (e) { 
-                mostrarAviso("Erro ao salvar os dados!"); 
-            }
-            finally { 
-                btn.disabled = false; 
-                btn.innerText = idEx ? "ATUALIZAR DADOS" : "Confirmar e Liberar"; 
-            }
+            } catch (e) { mostrarAviso("Erro ao salvar os dados!"); }
+            finally { btn.disabled = false; btn.innerText = idEx ? "ATUALIZAR DADOS" : "Confirmar e Liberar"; }
         });
 
         window.filtrarClientes = () => {
             const b = document.getElementById('buscaCliente').value.toUpperCase().trim();
             if (b.length > 0) { 
                 const t = b.split(/\s+/); 
-                // Busca de forma segura caso algum campo esteja vazio
                 render(clientesCache.filter(c => t.every(x => `${c.nome?.toUpperCase() || ''} ${c.cpf || ''} ${c.tel || ''}`.includes(x))), true); 
-            }
-            else { render(clientesCache, false); }
+            } else { render(clientesCache, false); }
         };
 
         function atualizarContadores() { 
             const agora = new Date(); const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
-            // Conta apenas se for uma data válida do Firebase (check-ins reais hoje)
             const total = clientesCache.filter(c => c.ultima_visita && typeof c.ultima_visita.toDate === 'function' && c.ultima_visita.toDate() >= corte).length;
             document.getElementById('contagemEvento').innerText = total;
         }
