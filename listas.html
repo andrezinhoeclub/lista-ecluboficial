@@ -219,7 +219,6 @@
                 let temCamaroteAtivo = false;
                 for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`] && ev[`v_cam${i}`] && parseFloat(ev[`v_cam${i}`].toString().replace(',','.')) > 0) temCamaroteAtivo = true; }
 
-                // LOGICA DE ENCERRAMENTO AUTOMATICO ÀS 22H NO DIA DO EVENTO
                 const dataEventoFormatada = ev.data + "T22:00:00";
                 const limiteVendas = new Date(dataEventoFormatada);
                 const agora = new Date();
@@ -337,7 +336,9 @@
             
             if (!tipoAtivo) return mostrarAviso("Selecione o tipo de ingresso!");
             if (!n) return mostrarAviso("Faltou preencher o Nome Completo!");
-            if (t.length < 14) return mostrarAviso("O número do celular está incompleto!");
+            
+            // VERIFICAÇÃO RÍGOROSA DE 11 DÍGITOS
+            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto (faltam dígitos)!");
             
             if (eFluxoPix) {
                 if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
@@ -418,7 +419,10 @@
             const cpf = document.getElementById('cpf-camarote').value.trim();
             
             if (!n) return mostrarAviso("Faltou preencher o Nome do titular!");
-            if (t.length < 14) return mostrarAviso("O número do celular está incompleto!");
+            
+            // VERIFICAÇÃO RÍGOROSA DE 11 DÍGITOS NO CAMAROTE
+            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto (faltam dígitos)!");
+            
             if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
             if (cpf.length < 14) return mostrarAviso("CPF incompleto (são 11 dígitos)!");
 
