@@ -4,70 +4,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB | Master Portaria</title>
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
         .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
         .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
-        .client-card { background: #0a0a0a; border: 1px solid #1a1a1a; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-        .client-card.entrou { opacity: 0.2 !important; filter: grayscale(1); pointer-events: none; }
+        
+        .client-card { 
+            background: #0d0d0f; 
+            border: 1px solid #1a1a1c; 
+            border-left: 4px solid #eab308;
+            transition: all 0.2s ease;
+        }
+        .client-card:hover { background: #16161a; border-color: #333; }
+        .client-card.entrou { opacity: 0.3 !important; filter: grayscale(1); pointer-events: none; }
+        
         input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
+        
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
-        @keyframes pulse-alert { 0% { background-color: rgba(234, 179, 8, 0.1); } 50% { background-color: rgba(234, 179, 8, 0.3); } 100% { background-color: rgba(234, 179, 8, 0.1); } }
-        .alert-teste { animation: pulse-alert 2s infinite; border: 1px solid #eab308; color: #eab308; text-align: center; font-weight: 900; font-style: italic; padding: 10px; margin-bottom: 15px; border-radius: 10px; text-transform: uppercase; font-size: 11px; letter-spacing: 2px;}
+        
+        .btn-liberar { background: #eab308; color: #000; transition: all 0.2s; }
+        .btn-liberar:hover { background: #fbbf24; transform: translateY(-1px); }
     </style>
 </head>
-<body class="flex h-screen">
+<body class="flex h-screen relative">
+
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
+        <span id="toast-icon" class="text-lg">⚠️</span>
+        <span id="toast-msg">Mensagem de erro</span>
+    </div>
 
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
             <div class="space-y-4">
-                <input type="text" id="inputNomeUsuario" placeholder="OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs">
-                <div id="areaSenha" class="hidden"><input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50"></div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ENTRAR NO SISTEMA</button>
+                <input type="text" id="inputNomeUsuario" placeholder="LOGIN OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs outline-none focus:border-yellow-500 transition-all">
+                <div id="areaSenha" class="hidden">
+                    <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50 outline-none focus:border-yellow-500 transition-all">
+                </div>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ENTRAR</button>
             </div>
         </div>
     </div>
 
     <div id="interfacePrincipal" class="hidden flex w-full h-full">
-        <aside class="w-80 h-full flex flex-col p-6 bg-black/50 border-r border-zinc-900">
-            <div class="mb-10 text-center text-white">
+        <aside class="w-72 h-full flex flex-col p-6 bg-black/40 border-r border-zinc-900">
+            <div class="mb-10 text-center">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter leading-none">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[9px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg italic tracking-widest">---</p>
+                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
+                <p id="operadorAtivo" class="text-[8px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg tracking-widest italic">---</p>
             </div>
+            
             <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[9px] font-black uppercase mb-4 tracking-[0.2em] border-b border-zinc-900 pb-2">Monitor de Eventos</h3>
+                <h3 class="text-zinc-600 text-[8px] font-black uppercase mb-4 tracking-widest border-b border-zinc-900 pb-2">Status Eventos</h3>
                 <div id="lista-eventos-sidebar" class="space-y-3"></div>
             </div>
-            <button onclick="location.reload()" class="mt-6 text-zinc-700 text-[9px] font-black uppercase hover:text-white transition-colors">Sair</button>
+            
+            <div class="mt-6 flex flex-col gap-4 border-t border-zinc-900 pt-6">
+                <button onclick="location.reload()" class="text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors w-full text-center">Sair do Sistema</button>
+                
+                <div class="text-center opacity-30 hover:opacity-100 transition-all pt-4">
+                    <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-500 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
+                    </a>
+                </div>
+            </div>
         </aside>
 
         <main class="flex-grow flex flex-col">
-            <header class="p-8 border-b border-zinc-900 bg-black/20 relative">
-                <div class="max-w-5xl mx-auto flex gap-8 items-center relative">
+            <header class="p-6 border-b border-zinc-900 bg-black/20">
+                <div class="max-w-[1400px] mx-auto flex gap-6 items-center">
                     <div class="relative flex-grow">
                         <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
-                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR CLIENTE..." class="w-full p-6 pl-16 rounded-[2rem] text-sm font-bold uppercase text-white shadow-2xl">
+                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR NOME, TELEFONE OU CPF..." class="w-full p-5 pl-16 rounded-2xl text-sm font-bold uppercase text-white shadow-lg">
                     </div>
-                    <div class="text-right border-l border-zinc-800 pl-8 min-w-[140px]">
-                        <p id="total-checkins" class="text-5xl font-black italic leading-none text-green-500">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-2 italic">Check-ins Turno</p>
+                    <div class="text-right border-l border-zinc-800 pl-6 min-w-[120px]">
+                        <p id="total-checkins" class="text-4xl font-black italic text-green-500 leading-none">0</p>
+                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-1">Check-ins</p>
                     </div>
                 </div>
             </header>
 
-            <section class="flex-grow p-8 overflow-y-auto bg-[#030303] relative">
-                <div id="alertaModoTeste" class="alert-teste hidden max-w-5xl mx-auto">⚠️ MODO DE TESTE ATIVO</div>
-                <div id="painelRegras" class="max-w-5xl mx-auto mb-10"><div class="glass p-8 rounded-[2.5rem] border-l-4 border-l-yellow-500 bg-yellow-500/5 shadow-2xl"><h3 class="text-yellow-500 font-black uppercase italic text-sm mb-4 tracking-widest">● Regras Operacionais</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-black/40 p-5 rounded-2xl border border-white/5"><p class="text-[8px] text-zinc-500 font-black uppercase mb-2">Turno</p><p class="text-xs font-bold text-white">21:00h às 05:00h</p></div><div class="bg-black/40 p-5 rounded-2xl border border-white/5"><p class="text-[8px] text-zinc-500 font-black uppercase mb-2">Controle</p><p class="text-[10px] text-zinc-300 leading-tight">Liberação apenas para eventos <span class="text-green-500 font-black italic">ONLINE NOW</span>.</p></div></div></div></div>
-                <div id="container-resultados" class="max-w-5xl mx-auto"></div>
+            <section class="flex-grow p-6 overflow-y-auto bg-[#030303]">
+                <div id="alertaModoTeste" class="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-center font-black py-2 rounded-xl text-[10px] uppercase mb-6 hidden">
+                    ⚠️ MODO DE TESTE ATIVO - BUSCA LIBERADA PARA TODOS OS EVENTOS
+                </div>
+                <div id="container-resultados" class="max-w-[1400px] mx-auto space-y-3"></div>
             </section>
         </main>
     </div>
@@ -80,37 +110,114 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         
-        let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null; let isModoTeste = false;
+        let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
+        let isModoTeste = false;
 
-        const getStatusTurno = (dt) => {
+        window.mostrarAviso = (msg, isSucesso = false) => {
+            const toast = document.getElementById('toast-aviso');
+            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : '⚠️');
+            
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
+            
+            setTimeout(() => {
+                toast.classList.remove('-translate-y-32', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-32', 'opacity-0');
+            }, 4000);
+        };
+
+        const getStatusTurno = (dataEvento) => {
             if (isModoTeste) return "ONLINE"; 
-            const agora = new Date(); const hora = agora.getHours(); const hoje = agora.toLocaleDateString('en-CA');
+            const agora = new Date(); const hora = agora.getHours(); const hoje = agora.toLocaleDateString('en-CA'); 
             const ontemObj = new Date(agora); ontemObj.setDate(ontemObj.getDate() - 1); const ontemISO = ontemObj.toLocaleDateString('en-CA');
-            if (hora >= 21 && dt === hoje) return "ONLINE";
-            if (hora < 5 && dt === ontemISO) return "ONLINE";
-            return dt > hoje ? "RESTRITO" : "ENCERRADO";
+            if (hora >= 21 && dataEvento === hoje) return "ONLINE";
+            if (hora < 5 && dataEvento === ontemISO) return "ONLINE";
+            return "RESTRITO";
         };
 
         window.verificarOuLogar = async () => {
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
+            const btn = document.getElementById('btnAcao');
+            const inputSenha = document.getElementById('senhaUsuario');
+
             if (stepLogin === 0) {
-                const snap = await getDoc(doc(db, "configuracoes", n));
-                if (snap.exists()) { usuarioData = snap.data(); stepLogin = 1; document.getElementById('areaSenha').classList.remove('hidden'); document.getElementById('inputNomeUsuario').readOnly = true; }
-                else alert("Não encontrado");
+                if(!n) return mostrarAviso("Digite o login do operador!");
+                
+                btn.innerText = "VERIFICANDO...";
+                const docSnap = await getDoc(doc(db, "configuracoes", n));
+                
+                if (docSnap.exists()) {
+                    usuarioData = docSnap.data(); stepLogin = 1;
+                    document.getElementById('areaSenha').classList.remove('hidden');
+                    document.getElementById('inputNomeUsuario').readOnly = true;
+                    
+                    if (!usuarioData.senha) {
+                        mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
+                        inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)";
+                        inputSenha.style.borderColor = "#eab308";
+                        btn.innerText = "SALVAR SENHA E ENTRAR";
+                    } else {
+                        btn.innerText = "AUTENTICAR";
+                    }
+                } else { 
+                    btn.innerText = "ENTRAR"; 
+                    mostrarAviso("Operador não encontrado."); 
+                }
             } else {
-                if (usuarioData.senha === s) { operadorLogado = n; document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase(); document.getElementById('telaLogin').classList.add('hidden'); document.getElementById('interfacePrincipal').classList.remove('hidden'); iniciarEscutas(); }
-                else alert("Senha incorreta");
+                if(!s) return mostrarAviso("Digite a sua senha!");
+
+                if (!usuarioData.senha) {
+                    if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
+                    
+                    btn.innerText = "SALVANDO...";
+                    await updateDoc(doc(db, "configuracoes", n), { senha: s, ultimo_login: new Date().toISOString() });
+                    usuarioData.senha = s;
+                    mostrarAviso("Senha cadastrada com sucesso!", true);
+                }
+
+                if (usuarioData.senha === s) {
+                    await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString() });
+                    
+                    operadorLogado = n;
+                    document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
+                    document.getElementById('telaLogin').classList.add('hidden');
+                    document.getElementById('interfacePrincipal').classList.remove('hidden');
+                    iniciarEscutas();
+                } else { 
+                    mostrarAviso("Senha incorreta"); 
+                    btn.innerText = "AUTENTICAR";
+                }
             }
         };
 
         function iniciarEscutas() {
-            onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => { isModoTeste = snap.exists() && snap.data().modo_teste === true; document.getElementById('alertaModoTeste').classList.toggle('hidden', !isModoTeste); });
+            onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
+                isModoTeste = snap.exists() && snap.data().modo_teste === true;
+                document.getElementById('alertaModoTeste').classList.toggle('hidden', !isModoTeste);
+                if (bancoEventos.length > 0) { renderizarSidebar(); processarPesquisa(); }
+            });
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
                 bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
-                    document.getElementById('total-checkins').innerText = bancoClientes.filter(c => c.entrou && c.data_entrada).length;
+                    
+                    const totalTurno = bancoClientes.filter(c => {
+                        if (!c.entrou || !c.data_entrada) return false;
+                        const diffHoras = (new Date() - new Date(c.data_entrada)) / (1000 * 60 * 60);
+                        return diffHoras <= 12; 
+                    }).length;
+                    
+                    document.getElementById('total-checkins').innerText = totalTurno;
                     renderizarSidebar(); processarPesquisa();
                 });
             });
@@ -118,69 +225,171 @@
 
         function renderizarSidebar() {
             const cont = document.getElementById('lista-eventos-sidebar'); cont.innerHTML = '';
-            const ativos = bancoEventos.filter(ev => getStatusTurno(ev.data) !== "ENCERRADO");
-            document.getElementById('painelRegras').classList.toggle('hidden', ativos.some(ev => getStatusTurno(ev.data) === "ONLINE"));
-            ativos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
+            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
                 const status = getStatusTurno(ev.data);
-                const total = bancoClientes.filter(c => c.evento === ev.nome && (c.metodo !== 'pix_antecipado' || c.pago === true)).length;
-                cont.innerHTML += `<div class="p-4 rounded-2xl glass border-l-4 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2 shadow-lg"><h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4><div class="flex justify-between items-end mt-2"><span class="text-[8px] font-bold ${status === 'ONLINE' ? 'animate-online' : 'text-zinc-600'} italic uppercase">${status === 'ONLINE' ? '● ONLINE NOW' : '🔒 RESTRITO'}</span><span class="text-lg font-black text-yellow-500">${total}</span></div></div>`;
+                const total = bancoClientes.filter(c => c.evento === ev.nome && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true')).length;
+                cont.innerHTML += `
+                    <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
+                        <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-[7px] font-bold ${status === 'ONLINE' ? 'text-green-500 animate-online' : 'text-zinc-600'} uppercase">${status === 'ONLINE' ? '● ONLINE' : '🔒 RESTRITO'}</span>
+                            <span class="text-sm font-black text-yellow-500">${total}</span>
+                        </div>
+                    </div>`;
             });
         }
 
         window.processarPesquisa = () => {
-            const busca = document.getElementById('input-busca').value.trim().toUpperCase();
+            const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
-            if (busca.length < 2) { cont.innerHTML = ''; return; }
+            
+            if (buscaInput.length < 2) { cont.innerHTML = ''; return; }
+            
+            const termosBusca = buscaInput.split(/\s+/);
+            
             const filtrados = bancoClientes.filter(c => {
-                const ev = bancoEventos.find(e => e.nome === c.evento);
-                if (!ev || getStatusTurno(ev.data) !== "ONLINE") return false;
-                return (c.nome && c.nome.toUpperCase().includes(busca)) || (c.tel && c.tel.includes(busca));
-            });
-            if (filtrados.length === 0) { cont.innerHTML = `<div class="py-40 text-center font-black uppercase text-zinc-800 italic tracking-widest">Nenhum cliente ativo encontrado</div>`; return; }
-            cont.innerHTML = '';
-            filtrados.forEach(c => {
-                const ev = bancoEventos.find(e => e.nome === c.evento) || {};
-                let valorExibicao = '---'; let corNome = 'text-white';
-                const isCam = (c.tipo_entrada || '').toUpperCase().includes("CAMAROTE");
-                const isDono = c.tipo_entrada === "VIP_DONO";
-                const isConvidado = c.aniversariante && c.aniversariante.trim() !== "";
-                const isCortesia = c.cortesia === true && isCam;
+                const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
+                if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 
-                const tipoNorm = (c.tipo_entrada || '').toUpperCase();
-                const regexCasal = /\s+E\s+/i;
-                let isCasal = tipoNorm.includes("CASAL") || regexCasal.test(c.nome);
-                let isSolteiro = !isCasal;
+                // TRAVA DEFINITIVA DE PIX PENDENTE: Nunca mostra na portaria se não pagou
+                if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
+                
+                const nomeString = String(c.nome ?? '').toUpperCase();
+                const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
+                const telNumeros = telString.replace(/\D/g, ''); 
+                const cpfNumeros = String(c.cpf ?? '').replace(/\D/g, ''); 
+                
+                const todosOsDadosDoCliente = `${nomeString} ${telString} ${telNumeros} ${cpfNumeros}`;
+                return termosBusca.every(termo => todosOsDadosDoCliente.includes(termo));
+            });
 
-                let tagProm = `<span class="text-[9px] font-black uppercase text-zinc-400 bg-zinc-900 px-3 py-1.5 rounded-md border border-white/5">${c.promoter || 'DIRETO'}</span>`;
-                let tTipo = ''; let tExtra = ''; let tPag = '';
+            if (filtrados.length === 0) { cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>`; return; }
 
-                if (isCortesia) {
-                    const tipoPorta = c.pagamento_porta || 'SOLTEIRO';
-                    const isCasalCort = tipoPorta === 'CASAL';
-                    tTipo = `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase">🎁 CORTESIA: ${c.tipo_entrada}</span>`;
-                    tExtra = `<span class="${isCasalCort ? 'bg-purple-500/20 text-purple-400' : 'bg-emerald-500/20 text-emerald-400'} border border-white/5 px-3 py-1.5 rounded-md text-[10px] font-black uppercase">${isCasalCort ? '👫 CASAL' : '👤 SOLTEIRO'}</span>`;
-                    let vCalc = isCasalCort ? ev.valor_casal : ev.valor_solteiro;
-                    valorExibicao = vCalc ? "R$ " + String(vCalc).replace('R$','') : "PORTARIA";
-                } else if (isDono) { valorExibicao = "FREE"; corNome = 'text-green-400'; tExtra = `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase">👑 DONO(A) DA FESTA</span>`; }
-                else if (isCam) { valorExibicao = c.valor_pago ? "R$ " + c.valor_pago : "PAGO"; tTipo = `<span class="bg-cyan-400 text-black px-4 py-1.5 rounded-md text-[11px] font-black uppercase">💎 ${c.tipo_entrada}</span>`; }
-                else {
-                    tTipo = isCasal ? `<span class="bg-purple-500/20 text-purple-400 border border-purple-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase">👫 CASAL</span>` : `<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase">👤 SOLTEIRO</span>`;
-                    if (isConvidado) { tExtra = `<span class="bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase">🎉 CONVIDADO DE: ${c.aniversariante}</span>`; let v = isCasal ? ev.desc_casal : ev.desc_solteiro; valorExibicao = v ? "R$ " + String(v).replace('R$','') : "PORTARIA"; }
-                    else { let v = c.metodo === "pix_antecipado" ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro); valorExibicao = v ? "R$ " + String(v).replace('R$','') : "PORTARIA"; }
+            cont.innerHTML = '';
+            filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
+                const ev = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase()) || {};
+                const tipoNorm = (c.tipo_entrada || '').toUpperCase().trim();
+                const pagPorta = (c.pagamento_porta || '').toUpperCase(); 
+                
+                const isCasal = tipoNorm.includes("CASAL") || /\s+E\s+/i.test(c.nome);
+                const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
+                const isCortesia = c.cortesia === true;
+                const isAniv = c.aniversariante && c.aniversariante.trim() !== "";
+                const isPix = c.metodo === 'pix_antecipado';
+
+                let valorFinal = "PORTARIA";
+                if (isDono) {
+                    valorFinal = "FREE";
+                } else if (tipoNorm.includes("CAMAROTE")) {
+                    if (isCortesia && pagPorta && pagPorta !== "ISENTO") {
+                        let val = pagPorta === "CASAL" ? ev.valor_casal : ev.valor_solteiro;
+                        valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
+                    } else {
+                        valorFinal = "R$ " + (c.valor_pago || "---");
+                    }
+                } else {
+                    let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isPix ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
+                    valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
                 }
 
-                if (c.metodo === 'pix_antecipado' && c.pago) tPag = `<span class="bg-green-500/10 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-md text-[10px] font-black uppercase">✅ PIX PAGO</span>`;
-                else if (!isDono) tPag = `<span class="bg-zinc-800 text-zinc-300 px-3 py-1.5 rounded-md text-[10px] font-black uppercase">PAGA NA PORTA</span>`;
+                const textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA';
+                const corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
 
-                let bAcao = c.entrou ? '<span class="text-green-500 font-black italic uppercase text-sm bg-green-500/10 px-6 py-3 rounded-xl">CONFIRMADO</span>' : (c.metodo==='pix_antecipado' && !c.pago ? '<span class="text-red-500 font-black italic uppercase text-sm bg-red-500/10 px-6 py-3 rounded-xl animate-pulse">🔴 PIX PENDENTE</span>' : `<button onclick="confirmarCheckin('${c.id}')" class="bg-yellow-500 text-black px-12 py-5 rounded-2xl font-black uppercase italic text-sm shadow-[0_0_20px_rgba(234,179,8,0.4)]">LIBERAR AGORA</button>`);
+                // ==========================================
+                // NOVA LÓGICA DE BADGES: CASAL/SOLTEIRO NO TOPO
+                // ==========================================
+                let tagsHTML = '';
+                const ehCasalFinal = isCasal || pagPorta === 'CASAL';
 
-                const div = document.createElement('div'); div.className = `client-card p-8 rounded-[2.5rem] mb-4 shadow-xl ${c.entrou ? 'entrou' : ''}`;
-                div.innerHTML = `<div class="flex flex-col gap-4 text-white"><div class="flex justify-between items-center"><div class="flex items-center gap-4"><h3 class="text-2xl font-black uppercase italic ${corNome} leading-none">${c.nome}</h3><p class="text-lg font-bold text-zinc-400 font-mono italic leading-none">${c.tel || ''}</p></div><div>${bAcao}</div></div><div class="h-[1px] bg-zinc-900/50 w-full"></div><div class="flex justify-between items-center"><div class="flex flex-wrap items-center gap-2">${tagProm}${tTipo}${tExtra}${tPag}</div><div class="flex items-center gap-2 border-l border-zinc-800 pl-4 ml-4 text-right min-w-[120px] justify-end"><span class="text-[8px] text-zinc-600 font-black uppercase tracking-[0.2em]">VALOR</span><span class="text-xl font-black italic ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-none whitespace-nowrap">${valorExibicao}</span></div></div></div>`;
-                cont.appendChild(div);
+                // 1. Tag Principal (Identidade)
+                if (isDono) {
+                    tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`;
+                } else if (ehCasalFinal) {
+                    tagsHTML += `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👫 CASAL</span>`;
+                } else {
+                    tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`;
+                }
+
+                // 2. Tag Local (Camarote)
+                if (tipoNorm.includes("CAMAROTE")) {
+                    tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`;
+                }
+
+                // 3. Tag Benefício / Pix
+                if (!isDono) {
+                    if (tipoNorm.includes("CAMAROTE")) {
+                        if (isPix) {
+                            tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
+                        } else if (isCortesia && pagPorta && pagPorta !== 'ISENTO') {
+                            tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎁 CORTESIA</span>`;
+                        }
+                    } else {
+                        if (isPix) {
+                            if (tipoNorm === 'CASAL CONSUMAÇÃO') {
+                                tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
+                            } else {
+                                tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>`;
+                            }
+                        }
+                    }
+                }
+
+                // 4. Tag Aniversário
+                if (isAniv) {
+                    tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`;
+                }
+
+                cont.innerHTML += `
+                <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
+                    
+                    <div class="flex-1 min-w-[250px] max-w-[400px]">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
+                            <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
+                        </div>
+                        <p class="text-sm font-mono text-zinc-500">${c.tel || c.telefone || '---'}</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1 w-[140px]">
+                        ${tagsHTML}
+                    </div>
+
+                    <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px]">
+                        <div class="w-[100px]">
+                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
+                            <p class="text-xs font-black ${corPagamento}">${textoPagamento}</p>
+                        </div>
+                        <div class="flex-1 pr-4">
+                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Info / Total</p>
+                            <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase break-words whitespace-normal">${valorFinal}</p>
+                        </div>
+                    </div>
+
+                    <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4">
+                        ${c.entrou ? 
+                            '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : 
+                            `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
+                        }
+                    </div>
+                </div>`;
             });
         };
 
-        window.confirmarCheckin = async (id) => { await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() }); };
+        window.confirmarCheckin = async (id) => {
+            try {
+                await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
+                mostrarAviso("Check-in confirmado!", true);
+                
+                // MUDANÇA: Limpa a busca e foca nela novamente
+                const campoBusca = document.getElementById('input-busca');
+                campoBusca.value = '';
+                processarPesquisa(); // Para atualizar a lista
+                campoBusca.focus(); // Retorna o cursor para o campo
+                
+            } catch(e) {
+                mostrarAviso("Erro ao confirmar check-in.");
+            }
+        };
     </script>
 </body>
 </html>
