@@ -239,6 +239,40 @@
             });
         }
 
+        // ==========================================
+        // NOVA FUNÇÃO: COPIAR TELEFONE LIMPO
+        // ==========================================
+        window.copiarTelefoneLimpo = (numeroRaw) => {
+            if (!numeroRaw) return;
+            const apenasNumeros = String(numeroRaw).replace(/\D/g, ''); // Limpa tudo que não for dígito
+            if (apenasNumeros.length === 0) return;
+
+            // Tenta copiar nativamente no navegador
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(apenasNumeros).then(() => {
+                    mostrarAviso("Telefone copiado!", true);
+                }).catch(() => fallbackCopia(apenasNumeros));
+            } else {
+                fallbackCopia(apenasNumeros);
+            }
+        };
+
+        // Função de segurança caso o navegador bloqueie o clipboard direto
+        function fallbackCopia(texto) {
+            const textArea = document.createElement("textarea");
+            textArea.value = texto;
+            textArea.style.position = "fixed"; 
+            document.body.appendChild(textArea);
+            textArea.focus(); textArea.select();
+            try {
+                document.execCommand('copy');
+                mostrarAviso("Telefone copiado!", true);
+            } catch (err) {
+                mostrarAviso("Erro ao copiar.");
+            }
+            document.body.removeChild(textArea);
+        }
+
         window.processarPesquisa = () => {
             const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
@@ -295,13 +329,9 @@
                 const textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA';
                 const corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
 
-                // ==========================================
-                // NOVA LÓGICA DE BADGES: CASAL/SOLTEIRO NO TOPO
-                // ==========================================
                 let tagsHTML = '';
                 const ehCasalFinal = isCasal || pagPorta === 'CASAL';
 
-                // 1. Tag Principal (Identidade)
                 if (isDono) {
                     tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`;
                 } else if (ehCasalFinal) {
@@ -310,12 +340,10 @@
                     tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`;
                 }
 
-                // 2. Tag Local (Camarote)
                 if (tipoNorm.includes("CAMAROTE")) {
                     tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`;
                 }
 
-                // 3. Tag Benefício / Pix
                 if (!isDono) {
                     if (tipoNorm.includes("CAMAROTE")) {
                         if (isPix) {
@@ -334,10 +362,15 @@
                     }
                 }
 
-                // 4. Tag Aniversário
                 if (isAniv) {
                     tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`;
                 }
+
+                // ==========================================
+                // BOTAO DE COPIA INSERIDO AQUI
+                // ==========================================
+                const numTel = c.tel || c.telefone || '';
+                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -347,7 +380,10 @@
                             <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
                             <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
                         </div>
-                        <p class="text-sm font-mono text-zinc-500">${c.tel || c.telefone || '---'}</p>
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm font-mono text-zinc-500">${numTel || '---'}</p>
+                            ${btnCopiar}
+                        </div>
                     </div>
 
                     <div class="flex flex-col gap-1 w-[140px]">
@@ -383,8 +419,8 @@
                 // MUDANÇA: Limpa a busca e foca nela novamente
                 const campoBusca = document.getElementById('input-busca');
                 campoBusca.value = '';
-                processarPesquisa(); // Para atualizar a lista
-                campoBusca.focus(); // Retorna o cursor para o campo
+                processarPesquisa(); // Atualiza a lista pra sumir o cliente
+                campoBusca.focus(); // Joga o teclado de volta pra lá
                 
             } catch(e) {
                 mostrarAviso("Erro ao confirmar check-in.");
