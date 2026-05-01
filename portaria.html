@@ -239,6 +239,35 @@
             });
         }
 
+        window.copiarTelefoneLimpo = (numeroRaw) => {
+            if (!numeroRaw) return;
+            const apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
+            if (apenasNumeros.length === 0) return;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(apenasNumeros).then(() => {
+                    mostrarAviso("Telefone copiado!", true);
+                }).catch(() => fallbackCopia(apenasNumeros));
+            } else {
+                fallbackCopia(apenasNumeros);
+            }
+        };
+
+        function fallbackCopia(texto) {
+            const textArea = document.createElement("textarea");
+            textArea.value = texto;
+            textArea.style.position = "fixed"; 
+            document.body.appendChild(textArea);
+            textArea.focus(); textArea.select();
+            try {
+                document.execCommand('copy');
+                mostrarAviso("Telefone copiado!", true);
+            } catch (err) {
+                mostrarAviso("Erro ao copiar.");
+            }
+            document.body.removeChild(textArea);
+        }
+
         window.processarPesquisa = () => {
             const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
@@ -295,13 +324,9 @@
                 const textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA';
                 const corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
 
-                // ==========================================
-                // NOVA LÓGICA DE BADGES: CASAL/SOLTEIRO NO TOPO
-                // ==========================================
                 let tagsHTML = '';
                 const ehCasalFinal = isCasal || pagPorta === 'CASAL';
 
-                // 1. Tag Principal (Identidade)
                 if (isDono) {
                     tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`;
                 } else if (ehCasalFinal) {
@@ -310,12 +335,10 @@
                     tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`;
                 }
 
-                // 2. Tag Local (Camarote)
                 if (tipoNorm.includes("CAMAROTE")) {
                     tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`;
                 }
 
-                // 3. Tag Benefício / Pix
                 if (!isDono) {
                     if (tipoNorm.includes("CAMAROTE")) {
                         if (isPix) {
@@ -334,11 +357,14 @@
                     }
                 }
 
-                // 4. Tag Aniversário
                 if (isAniv) {
                     tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`;
                 }
 
+                const numTel = c.tel || c.telefone || '';
+                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
+
+                // AQUI FOI ALTERADO PARA PASSAR O NUMERO PARA O BOTAO DE LIBERAR TAMBÉM
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
                     
@@ -347,7 +373,10 @@
                             <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
                             <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
                         </div>
-                        <p class="text-sm font-mono text-zinc-500">${c.tel || c.telefone || '---'}</p>
+                        <div class="flex items-center gap-2">
+                            <p class="text-sm font-mono text-zinc-500">${numTel || '---'}</p>
+                            ${btnCopiar}
+                        </div>
                     </div>
 
                     <div class="flex flex-col gap-1 w-[140px]">
@@ -368,17 +397,56 @@
                     <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4">
                         ${c.entrou ? 
                             '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : 
-                            `<button onclick="confirmarCheckin('${c.id}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
+                            `<button onclick="confirmarCheckin('${c.id}', '${numTel}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
                         }
                     </div>
                 </div>`;
             });
         };
 
-        window.confirmarCheckin = async (id) => {
+        // NOVA FUNÇÃO DE CONFIRMAÇÃO COM CÓPIA INTEGRADA
+        window.confirmarCheckin = async (id, telefone) => {
             try {
+                let copiouSucesso = false;
+                
+                // 1. Tenta copiar o telefone silenciosamente
+                if (telefone) {
+                    const apenasNumeros = String(telefone).replace(/\D/g, '');
+                    if (apenasNumeros.length > 0) {
+                        try {
+                            if (navigator.clipboard && window.isSecureContext) {
+                                await navigator.clipboard.writeText(apenasNumeros);
+                                copiouSucesso = true;
+                            } else {
+                                const textArea = document.createElement("textarea");
+                                textArea.value = apenasNumeros;
+                                textArea.style.position = "fixed"; 
+                                document.body.appendChild(textArea);
+                                textArea.focus(); textArea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textArea);
+                                copiouSucesso = true;
+                            }
+                        } catch (err) {}
+                    }
+                }
+
+                // 2. Faz o registro do Check-in no banco
                 await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
-                mostrarAviso("Check-in confirmado!", true);
+                
+                // 3. Mostra o aviso adequado
+                if (copiouSucesso) {
+                    mostrarAviso("CHECK-IN OK E TELEFONE COPIADO!", true);
+                } else {
+                    mostrarAviso("Check-in confirmado!", true);
+                }
+                
+                // 4. Limpa e foca a busca para o próximo cliente
+                const campoBusca = document.getElementById('input-busca');
+                campoBusca.value = '';
+                processarPesquisa(); 
+                campoBusca.focus(); 
+                
             } catch(e) {
                 mostrarAviso("Erro ao confirmar check-in.");
             }
