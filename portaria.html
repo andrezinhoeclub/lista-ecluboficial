@@ -69,7 +69,8 @@
             </div>
             
             <div class="mt-6 flex flex-col gap-4 border-t border-zinc-900 pt-6">
-                <button onclick="location.reload()" class="text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors w-full text-center">Sair do Sistema</button>
+                <!-- BOTÃO DE SAIR AGORA CHAMA UMA FUNÇÃO PARA LIMPAR A SESSÃO -->
+                <button onclick="fazerLogout()" class="text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors w-full text-center">Sair do Sistema</button>
                 
                 <div class="text-center opacity-30 hover:opacity-100 transition-all pt-4">
                     <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
@@ -111,7 +112,7 @@
         const db = getFirestore(app);
         
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
-        let isModoTeste = false;
+        let isModoTeste = false; let listenerSessao = null;
 
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -124,15 +125,8 @@
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
             
-            setTimeout(() => {
-                toast.classList.remove('-translate-y-32', 'opacity-0');
-                toast.classList.add('translate-y-0', 'opacity-100');
-            }, 10);
-
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('-translate-y-32', 'opacity-0');
-            }, 4000);
+            setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
+            setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
         const getStatusTurno = (dataEvento) => {
@@ -178,26 +172,71 @@
 
                 if (!usuarioData.senha) {
                     if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
-                    
                     btn.innerText = "SALVANDO...";
-                    await updateDoc(doc(db, "configuracoes", n), { senha: s, ultimo_login: new Date().toISOString() });
+                    await updateDoc(doc(db, "configuracoes", n), { senha: s });
                     usuarioData.senha = s;
-                    mostrarAviso("Senha cadastrada com sucesso!", true);
                 }
 
                 if (usuarioData.senha === s) {
-                    await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString() });
+                    // ====== NOVA LÓGICA DE SESSÃO ÚNICA ======
+                    const meuToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+                    localStorage.setItem('sessao_eclub_master', meuToken);
+
+                    await updateDoc(doc(db, "configuracoes", n), { 
+                        ultimo_login: new Date().toISOString(),
+                        token_sessao: meuToken 
+                    });
                     
                     operadorLogado = n;
                     document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
                     document.getElementById('telaLogin').classList.add('hidden');
                     document.getElementById('interfacePrincipal').classList.remove('hidden');
+                    
                     iniciarEscutas();
+                    
+                    // Fica escutando se alguém fizer login com essa conta em outro PC
+                    listenerSessao = onSnapshot(doc(db, "configuracoes", n), (docSnap) => {
+                        if (docSnap.exists()) {
+                            const tokenBanco = docSnap.data().token_sessao;
+                            const meuTokenLocal = localStorage.getItem('sessao_eclub_master');
+                            // Se o token no banco mudou e não é vazio, fui derrubado!
+                            if (tokenBanco && tokenBanco !== meuTokenLocal) {
+                                document.getElementById('interfacePrincipal').classList.add('hidden');
+                                document.getElementById('telaLogin').classList.remove('hidden');
+                                
+                                // Resetando formulário de login
+                                stepLogin = 0;
+                                document.getElementById('inputNomeUsuario').value = '';
+                                document.getElementById('senhaUsuario').value = '';
+                                document.getElementById('areaSenha').classList.add('hidden');
+                                document.getElementById('inputNomeUsuario').readOnly = false;
+                                document.getElementById('btnAcao').innerText = "ENTRAR";
+                                localStorage.removeItem('sessao_eclub_master');
+                                
+                                // Mostra a mensagem vermelha de expulsão
+                                mostrarAviso("🚨 VOCÊ FOI DESCONECTADO! O usuário foi logado em outro computador.");
+                                if(listenerSessao) listenerSessao(); // Para de escutar para não bugar
+                            }
+                        }
+                    });
+
                 } else { 
                     mostrarAviso("Senha incorreta"); 
                     btn.innerText = "AUTENTICAR";
                 }
             }
+        };
+
+        // ====== FUNÇÃO PARA SAIR E LIMPAR A SESSÃO CORRETAMENTE ======
+        window.fazerLogout = async () => {
+            if (operadorLogado) {
+                try {
+                    // Apaga o token do banco, liberando o usuário limpo
+                    await updateDoc(doc(db, "configuracoes", operadorLogado), { token_sessao: "" });
+                } catch(e) {}
+            }
+            localStorage.removeItem('sessao_eclub_master');
+            location.reload();
         };
 
         function iniciarEscutas() {
@@ -280,7 +319,6 @@
                 const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 
-                // TRAVA DEFINITIVA DE PIX PENDENTE: Nunca mostra na portaria se não pagou
                 if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
                 
                 const nomeString = String(c.nome ?? '').toUpperCase();
@@ -307,15 +345,12 @@
                 const isPix = c.metodo === 'pix_antecipado';
 
                 let valorFinal = "PORTARIA";
-                if (isDono) {
-                    valorFinal = "FREE";
-                } else if (tipoNorm.includes("CAMAROTE")) {
+                if (isDono) { valorFinal = "FREE"; } 
+                else if (tipoNorm.includes("CAMAROTE")) {
                     if (isCortesia && pagPorta && pagPorta !== "ISENTO") {
                         let val = pagPorta === "CASAL" ? ev.valor_casal : ev.valor_solteiro;
                         valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
-                    } else {
-                        valorFinal = "R$ " + (c.valor_pago || "---");
-                    }
+                    } else { valorFinal = "R$ " + (c.valor_pago || "---"); }
                 } else {
                     let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isPix ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
                     valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
@@ -324,50 +359,33 @@
                 const textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA';
                 const corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
 
-                let tagsHTML = '';
-                const ehCasalFinal = isCasal || pagPorta === 'CASAL';
+                let tagsHTML = ''; const ehCasalFinal = isCasal || pagPorta === 'CASAL';
 
-                if (isDono) {
-                    tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`;
-                } else if (ehCasalFinal) {
-                    tagsHTML += `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👫 CASAL</span>`;
-                } else {
-                    tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`;
-                }
+                if (isDono) { tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`; } 
+                else if (ehCasalFinal) { tagsHTML += `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👫 CASAL</span>`; } 
+                else { tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`; }
 
-                if (tipoNorm.includes("CAMAROTE")) {
-                    tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`;
-                }
+                if (tipoNorm.includes("CAMAROTE")) { tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`; }
 
                 if (!isDono) {
                     if (tipoNorm.includes("CAMAROTE")) {
-                        if (isPix) {
-                            tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
-                        } else if (isCortesia && pagPorta && pagPorta !== 'ISENTO') {
-                            tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎁 CORTESIA</span>`;
-                        }
+                        if (isPix) { tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`; } 
+                        else if (isCortesia && pagPorta && pagPorta !== 'ISENTO') { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎁 CORTESIA</span>`; }
                     } else {
                         if (isPix) {
-                            if (tipoNorm === 'CASAL CONSUMAÇÃO') {
-                                tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
-                            } else {
-                                tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>`;
-                            }
+                            if (tipoNorm === 'CASAL CONSUMAÇÃO') { tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`; } 
+                            else { tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>`; }
                         }
                     }
                 }
 
-                if (isAniv) {
-                    tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`;
-                }
+                if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
 
                 const numTel = c.tel || c.telefone || '';
                 const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
 
-                // AQUI FOI ALTERADO PARA PASSAR O NUMERO PARA O BOTAO DE LIBERAR TAMBÉM
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
-                    
                     <div class="flex-1 min-w-[250px] max-w-[400px]">
                         <div class="flex items-center gap-2 mb-1">
                             <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
@@ -378,11 +396,7 @@
                             ${btnCopiar}
                         </div>
                     </div>
-
-                    <div class="flex flex-col gap-1 w-[140px]">
-                        ${tagsHTML}
-                    </div>
-
+                    <div class="flex flex-col gap-1 w-[140px]">${tagsHTML}</div>
                     <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px]">
                         <div class="w-[100px]">
                             <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
@@ -393,63 +407,37 @@
                             <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase break-words whitespace-normal">${valorFinal}</p>
                         </div>
                     </div>
-
                     <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4">
-                        ${c.entrou ? 
-                            '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : 
-                            `<button onclick="confirmarCheckin('${c.id}', '${numTel}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
-                        }
+                        ${c.entrou ? '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : `<button onclick="confirmarCheckin('${c.id}', '${numTel}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`}
                     </div>
                 </div>`;
             });
         };
 
-        // NOVA FUNÇÃO DE CONFIRMAÇÃO COM CÓPIA INTEGRADA
         window.confirmarCheckin = async (id, telefone) => {
             try {
                 let copiouSucesso = false;
-                
-                // 1. Tenta copiar o telefone silenciosamente
                 if (telefone) {
                     const apenasNumeros = String(telefone).replace(/\D/g, '');
                     if (apenasNumeros.length > 0) {
                         try {
-                            if (navigator.clipboard && window.isSecureContext) {
-                                await navigator.clipboard.writeText(apenasNumeros);
-                                copiouSucesso = true;
-                            } else {
-                                const textArea = document.createElement("textarea");
-                                textArea.value = apenasNumeros;
-                                textArea.style.position = "fixed"; 
-                                document.body.appendChild(textArea);
-                                textArea.focus(); textArea.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(textArea);
-                                copiouSucesso = true;
+                            if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(apenasNumeros); copiouSucesso = true; } 
+                            else {
+                                const textArea = document.createElement("textarea"); textArea.value = apenasNumeros; textArea.style.position = "fixed"; document.body.appendChild(textArea);
+                                textArea.focus(); textArea.select(); document.execCommand('copy'); document.body.removeChild(textArea); copiouSucesso = true;
                             }
                         } catch (err) {}
                     }
                 }
 
-                // 2. Faz o registro do Check-in no banco
                 await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
                 
-                // 3. Mostra o aviso adequado
-                if (copiouSucesso) {
-                    mostrarAviso("CHECK-IN OK E TELEFONE COPIADO!", true);
-                } else {
-                    mostrarAviso("Check-in confirmado!", true);
-                }
+                if (copiouSucesso) { mostrarAviso("CHECK-IN OK E TELEFONE COPIADO!", true); } 
+                else { mostrarAviso("Check-in confirmado!", true); }
                 
-                // 4. Limpa e foca a busca para o próximo cliente
                 const campoBusca = document.getElementById('input-busca');
-                campoBusca.value = '';
-                processarPesquisa(); 
-                campoBusca.focus(); 
-                
-            } catch(e) {
-                mostrarAviso("Erro ao confirmar check-in.");
-            }
+                campoBusca.value = ''; processarPesquisa(); campoBusca.focus(); 
+            } catch(e) { mostrarAviso("Erro ao confirmar check-in."); }
         };
     </script>
 </body>
