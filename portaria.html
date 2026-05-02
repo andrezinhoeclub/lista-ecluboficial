@@ -19,7 +19,11 @@
             transition: all 0.2s ease;
         }
         .client-card:hover { background: #16161a; border-color: #333; }
-        .client-card.entrou { opacity: 0.3 !important; filter: grayscale(1); pointer-events: none; }
+        
+        /* SEGREDO AQUI: O card inteiro perde o clique, mas o grayscale vai só para os dados! */
+        .client-card.entrou { pointer-events: none; border-color: #1a1a1c; background: #08080a; border-left-color: #333; }
+        .client-card.entrou .dados-cliente { filter: grayscale(1); opacity: 0.3; }
+        .client-card.entrou .area-checkin { opacity: 0.75; }
         
         input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
         input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
@@ -204,23 +208,18 @@
                 onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
                     bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
                     
-                    // CONTADOR COM REGRA RESTRITA: ZERA EXATAMENTE AS 5H DA MANHA
                     let totalTurno = 0;
                     const agora = new Date();
                     const hora = agora.getHours();
                     
                     if (isModoTeste) {
-                        // No modo teste, soma tudo das ultimas 12h pra você conseguir ver na tela
                         totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && (agora - new Date(c.data_entrada)) / 3600000 <= 12).length;
                     } else if (hora >= 5 && hora < 21) {
-                        // Durante o dia de portas fechadas, o contador fica travado no zero
                         totalTurno = 0;
                     } else {
-                        // Horário do evento rolando
                         let inicioTurno = new Date(agora);
-                        if (hora >= 21) inicioTurno.setHours(21, 0, 0, 0); // Começou as 21h de hoje
-                        else { inicioTurno.setDate(inicioTurno.getDate() - 1); inicioTurno.setHours(21, 0, 0, 0); } // Começou as 21h de ontem
-                        
+                        if (hora >= 21) inicioTurno.setHours(21, 0, 0, 0); 
+                        else { inicioTurno.setDate(inicioTurno.getDate() - 1); inicioTurno.setHours(21, 0, 0, 0); } 
                         totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && new Date(c.data_entrada) >= inicioTurno).length;
                     }
                     
@@ -326,9 +325,10 @@
                 const numTel = c.tel || c.telefone || '';
                 const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
 
+                // ESTRUTURA COM A CLASSE "dados-cliente" PARA RECEBER O GRAYSCALE, E "area-checkin" PARA FICAR COM A COR ORIGINAL
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
-                    <div class="flex-1 min-w-[250px] max-w-[400px]">
+                    <div class="flex-1 min-w-[250px] max-w-[400px] dados-cliente">
                         <div class="flex items-center gap-2 mb-1">
                             <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
                             <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
@@ -338,8 +338,8 @@
                             ${btnCopiar}
                         </div>
                     </div>
-                    <div class="flex flex-col gap-1 w-[140px]">${tagsHTML}</div>
-                    <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px]">
+                    <div class="flex flex-col gap-1 w-[140px] dados-cliente">${tagsHTML}</div>
+                    <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px] dados-cliente">
                         <div class="w-[100px]">
                             <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
                             <p class="text-xs font-black ${corPagamento}">${textoPagamento}</p>
@@ -349,8 +349,12 @@
                             <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase break-words whitespace-normal">${valorFinal}</p>
                         </div>
                     </div>
-                    <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4">
-                        ${c.entrou ? '<span class="text-green-500 font-black uppercase text-[10px]">✓ OK</span>' : `<button onclick="confirmarCheckin('${c.id}', '${numTel}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`}
+                    <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4 area-checkin flex-col items-end justify-center">
+                        ${c.entrou ? 
+                            `<span class="text-green-500 font-black uppercase text-[12px] leading-none">✓ OK</span>
+                             <span class="text-yellow-500 text-[8px] font-black uppercase mt-1.5 tracking-widest">👤 ${c.porteiro || 'SISTEMA'}</span>` : 
+                            `<button onclick="confirmarCheckin('${c.id}', '${numTel}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
+                        }
                     </div>
                 </div>`;
             });
