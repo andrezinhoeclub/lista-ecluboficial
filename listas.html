@@ -65,6 +65,7 @@
         </footer>
     </div>
 
+    <!-- MODAL LISTA / PIX -->
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -116,7 +117,8 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
             <h2 class="text-purple-400 font-black uppercase italic mb-6 text-xl text-center">💎 CAMAROTES VIP</h2>
             
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png" class="w-full max-h-64 object-contain mx-auto rounded-xl mb-6">
+            <!-- MAPA INTEIRO SEM CORTAR -->
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png" class="w-full h-auto object-contain mx-auto rounded-xl mb-6 shadow-lg border border-purple-500/20">
             
             <div id="grid-camarotes-venda" class="grid grid-cols-2 gap-3 mb-6"></div>
             
@@ -182,11 +184,19 @@
             const icon = isSucesso ? '✅' : '⚠️';
             
             toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
             
-            setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
-            setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
+            setTimeout(() => {
+                toast.classList.remove('-translate-y-32', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-32', 'opacity-0');
+            }, 4000);
         };
 
         async function validarDuplicidade(telefone, nomeEvento) {
@@ -313,9 +323,19 @@
 
             const container = document.getElementById('listaEventos');
             container.innerHTML = eventosCache.map(ev => {
-                const temPixAtivo = (ev.ant_casal && parseFloat(ev.ant_casal.toString().replace(',','.')) > 0) || (ev.ant_solteiro && parseFloat(ev.ant_solteiro.toString().replace(',','.')) > 0) || (ev.ant_casal_cons && parseFloat(ev.ant_casal_cons.toString().replace(',','.')) > 0);
+                
+                // LEITURA INTELIGENTE DE NÚMEROS PRA NÃO FALHAR SE TIVER "R$" OU VÍRGULA
+                const valPixCasal = parseFloat(String(ev.ant_casal || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.'));
+                const valPixCasalCons = parseFloat(String(ev.ant_casal_cons || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.'));
+                const valPixSolt = parseFloat(String(ev.ant_solteiro || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.'));
+                
+                const temPixAtivo = (valPixCasal > 0 || valPixCasalCons > 0 || valPixSolt > 0);
+                
                 let temCamaroteAtivo = false;
-                for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`] && ev[`v_cam${i}`] && parseFloat(ev[`v_cam${i}`].toString().replace(',','.')) > 0) temCamaroteAtivo = true; }
+                for(let i=1; i<=8; i++) { 
+                    let valCam = parseFloat(String(ev[`v_cam${i}`] || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.'));
+                    if(ev[`cam${i}_ativo`] && valCam > 0) temCamaroteAtivo = true; 
+                }
 
                 const dataEventoFormatada = ev.data + "T22:00:00";
                 const limiteVendas = new Date(dataEventoFormatada);
@@ -392,9 +412,9 @@
             const tSolteiro = document.getElementById('titulo-btn-solteiro');
 
             if (isPix) {
-                const valCasal = parseFloat((eventoAtivo.ant_casal || "0").toString().replace('R$', '').replace(',', '.'));
-                const valCasalCons = parseFloat((eventoAtivo.ant_casal_cons || "0").toString().replace('R$', '').replace(',', '.'));
-                const valSolt = parseFloat((eventoAtivo.ant_solteiro || "0").toString().replace('R$', '').replace(',', '.'));
+                const valCasal = parseFloat(String(eventoAtivo.ant_casal || "0").replace('R$', '').replace(/\s/g, '').replace(',', '.'));
+                const valCasalCons = parseFloat(String(eventoAtivo.ant_casal_cons || "0").replace('R$', '').replace(/\s/g, '').replace(',', '.'));
+                const valSolt = parseFloat(String(eventoAtivo.ant_solteiro || "0").replace('R$', '').replace(/\s/g, '').replace(',', '.'));
 
                 let countVisible = 0;
 
@@ -527,7 +547,7 @@
             }
         };
 
-        // ====== NOVA LÓGICA: VIP 1 e VIP 2 ======
+        // ====== LÓGICA VIP 1 e VIP 2 ======
         window.iniciarFluxoCamarote = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
             const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
@@ -538,11 +558,11 @@
                 grid.innerHTML = '';
                 
                 for(let i=1; i<=8; i++) {
-                    if(eventoAtivo[`cam${i}_ativo`] && parseFloat(eventoAtivo[`v_cam${i}`]) > 0) {
+                    let valCam = parseFloat(String(eventoAtivo[`v_cam${i}`] || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.'));
+                    if(eventoAtivo[`cam${i}_ativo`] && valCam > 0) {
                         
-                        // Define o nome de busca no DB: se for 7 ou 8, busca por VIP 1 / VIP 2. Se não, CAMAROTE X.
                         const nomeDB = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `CAMAROTE ${i}`;
-                        const nomeAlternativo = `CAMAROTE 0${i}`; // Por segurança nas buscas legadas
+                        const nomeAlternativo = `CAMAROTE 0${i}`; 
 
                         const resCam = reservas.filter(r => { 
                             const ent = String(r.tipo_entrada).toUpperCase().trim(); 
@@ -560,7 +580,6 @@
                         
                         const observacao = eventoAtivo[`obs_cam${i}`] ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>` : '';
 
-                        // Define o layout do botão: Camarotes 7 e 8 mostram VIP 1 e VIP 2.
                         let nomeVisor = (i === 7) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 1</span>` : 
                                         (i === 8) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 2</span>` : 
                                         `CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span>`;
@@ -606,7 +625,6 @@
                 const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
                 if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
                 
-                // Define como vai salvar no banco de dados
                 let nomeSalvar = (numCamaroteSelecionado === 7) ? "VIP 1" : (numCamaroteSelecionado === 8) ? "VIP 2" : `CAMAROTE ${numCamaroteSelecionado}`;
 
                 const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: eventoAtivo[`v_cam${numCamaroteSelecionado}`] });
