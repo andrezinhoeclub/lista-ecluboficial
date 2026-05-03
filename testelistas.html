@@ -89,7 +89,7 @@
             <div class="space-y-3 text-left">
                 <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
                 
-                <!-- O ONINPUT AGORA ACIONA A VERIFICAÇÃO DE FIDELIDADE -->
+                <!-- O ONINPUT ACIONA A VERIFICAÇÃO DE FIDELIDADE (SEXTA-FEIRA) -->
                 <input type="tel" id="tel-cliente" oninput="maskTel(this); checarTelefoneFidelidade(this.value);" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
                 
                 <div id="campos-pix" class="hidden space-y-3">
@@ -97,10 +97,10 @@
                     <input type="tel" id="cpf-cliente" oninput="maskCPF(this)" placeholder="SEU CPF" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
                 </div>
 
-                <!-- ALERTA DE FIDELIDADE (SÓ APARECE SE ELE VEIO QUINTA/SEXTA) -->
+                <!-- ALERTA DE FIDELIDADE (SÓ APARECE SE ELE VEIO NA SEXTA) -->
                 <div id="alerta-fidelidade" class="hidden bg-fuchsia-900/20 border border-fuchsia-500/40 p-5 rounded-2xl mb-4 text-center mt-4">
                     <p class="text-[11px] font-black uppercase text-fuchsia-400 mb-1">🎉 Cliente VIP Detectado!</p>
-                    <p class="text-[9px] font-bold text-zinc-300 mb-4 uppercase">Este cliente veio na Quinta/Sexta.<br>Liberar desconto no valor de porta?</p>
+                    <p class="text-[9px] font-bold text-zinc-300 mb-4 uppercase">Este cliente veio na SEXTA-FEIRA.<br>Liberar desconto no valor de porta?</p>
                     <div class="flex gap-2">
                         <button type="button" onclick="aplicarDescontoFidelidade(true)" class="flex-1 bg-fuchsia-600 text-white text-[10px] font-black py-3 rounded-xl uppercase hover:bg-fuchsia-500 transition-colors">SIM, DESCONTO</button>
                         <button type="button" onclick="aplicarDescontoFidelidade(false)" class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-zinc-700 transition-colors">NÃO, NORMAL</button>
@@ -204,10 +204,47 @@
         }
 
         // ==========================================
+        // LÓGICA DE VERIFICAR HISTÓRICO DA SEXTA (FIDELIDADE)
+        // ==========================================
+        async function verificarFidelidade(telefone) {
+            try {
+                // Busca o cliente no banco
+                const q = query(collection(db, "lista_eventos"), where("tel", "==", telefone), where("entrou", "==", true));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) return false;
+
+                let veioNaSexta = false;
+                const agora = new Date();
+
+                snap.forEach(doc => {
+                    const dados = doc.data();
+                    if (dados.data_entrada) {
+                        const dataEntrada = new Date(dados.data_entrada);
+                        
+                        // Ajuste de turno: recua 5 horas.
+                        // (ex: se entrou Sabado as 03:00 da manhã, o sistema lê como Sexta-Feira 22:00)
+                        const dataTurno = new Date(dataEntrada.getTime() - (5 * 60 * 60 * 1000));
+                        
+                        // Checa se a diferença é de menos de 48h (pra garantir que é da semana atual)
+                        const diffHoras = (agora - dataEntrada) / (1000 * 60 * 60);
+                        
+                        // O dia da semana 5 = Sexta-Feira no JavaScript
+                        if (dataTurno.getDay() === 5 && diffHoras <= 48) {
+                            veioNaSexta = true;
+                        }
+                    }
+                });
+
+                return veioNaSexta;
+            } catch(e) { return false; }
+        }
+
+        // ==========================================
         // ⚡ O GATILHO DA FIDELIDADE NA TELA
         // ==========================================
         window.checarTelefoneFidelidade = async (val) => {
-            // Se o promoter apagar um número, cancela a fidelidade visual
+            // Se apagar número, reseta a interface
             if (val.length < 15) {
                 document.getElementById('alerta-fidelidade').classList.add('hidden');
                 document.getElementById('btn-final-acao').classList.remove('hidden');
@@ -220,40 +257,27 @@
                 return;
             }
 
-            // REGRAS:
-            // 1. Não aplica se for link de aniversário/VIP (tem que ser lista normal da casa)
+            // REGRAS ESTRITAS (Conforme solicitado):
+            // 1. NÃO aplica se for link de Aniversariante/VIP.
             if (globalAniversariante) return;
-            // 2. Não aplica se for compra no PIX (só portaria)
+            // 2. NÃO aplica se for compra no PIX (só portaria).
             if (eFluxoPix) return;
-            // 3. Não aplica se o promoter não for status 'aniversario' na dashboard
+            // 3. NÃO aplica se o promoter não tiver o status 'aniversario' na dashboard.
             if (promoterTipo !== 'aniversario') return;
+            // 4. NÃO aplica se for o link geral da casa (sem promoter).
+            if (!globalPromoter || globalPromoter === "site_direto") return;
 
             const btnFinal = document.getElementById('btn-final-acao');
             btnFinal.innerText = "VERIFICANDO...";
             btnFinal.disabled = true;
 
             try {
-                const agora = new Date();
-                const diasAtras = new Date();
-                diasAtras.setDate(agora.getDate() - 3);
-
-                const q = query(collection(db, "lista_eventos"), where("tel", "==", val), where("entrou", "==", true));
-                const snap = await getDocs(q);
-                
-                let veioRecente = false;
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    if (d.data_entrada) {
-                        const dataEntrada = new Date(d.data_entrada);
-                        if (dataEntrada >= diasAtras) veioRecente = true;
-                    }
-                });
-
-                if (veioRecente) {
+                const veioNaSexta = await verificarFidelidade(val);
+                if (veioNaSexta) {
                     document.getElementById('alerta-fidelidade').classList.remove('hidden');
                     btnFinal.classList.add('hidden');
                 }
-            } catch(e) { console.log(e); }
+            } catch(e) {}
             
             btnFinal.innerText = "Confirmar Presença";
             btnFinal.disabled = false;
@@ -284,10 +308,10 @@
                     globalAniversariante = d.aniversariante; eventoFixo = d.festa;
                 }
             } else if (globalPromoter && globalPromoter !== "site_direto") {
-                // Se não é link de aniversário, busca o tipo do promoter na base de dados
+                // Checa na base de dados se o promoter que enviou o link tem status 'aniversario'
                 const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
                 if (pSnap.exists()) {
-                    promoterTipo = pSnap.data().tipo; // "aniversario", "padrao" ou "visualizar"
+                    promoterTipo = pSnap.data().tipo; // Puxa o status "padrao", "aniversario" ou "visualizar"
                 }
             }
 
@@ -362,7 +386,6 @@
             tipoAtivo = null;
             aplicouDescontoFidelidade = false;
             
-            // Reseta a interface do modal
             document.getElementById('btn-casal').classList.remove('active'); 
             document.getElementById('btn-casal-cons').classList.remove('active'); 
             document.getElementById('btn-solteiro').classList.remove('active');
@@ -421,7 +444,8 @@
                 if (jaExiste) throw new Error("Você já possui uma reserva ativa!");
 
                 let valorFinal;
-                // Aplica o preço dependendo das escolhas feitas no formulário
+                
+                // Puxa os valores na hora do insert no DB:
                 if (aplicouDescontoFidelidade) {
                     valorFinal = (tipoAtivo === 'SOLTEIRO') ? (eventoAtivo.valor_recorrente_solteiro || "FREE") : (eventoAtivo.valor_recorrente_casal || "FREE");
                 } else {
