@@ -79,7 +79,7 @@
             </div>
         </section>
 
-        <!-- NOVA ABA: AUDITORIA DE RESERVAS -->
+        <!-- NOVA ABA: AUDITORIA DE RESERVAS COM CHECK-IN INFO -->
         <section id="aba-auditoria" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-emerald-500">
                 <div class="flex justify-between items-center mb-6">
@@ -90,18 +90,19 @@
                 <!-- Barra de Pesquisa Múltipla -->
                 <div class="relative w-full mb-8">
                     <span class="absolute left-5 top-5 text-lg text-zinc-500">🔍</span>
-                    <input type="text" id="busca-auditoria" oninput="renderAuditoria()" placeholder="BUSQUE POR NOME, EVENTO, PROMOTER OU DATA..." class="w-full p-5 pl-14 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-sm font-bold uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg">
+                    <input type="text" id="busca-auditoria" oninput="renderAuditoria()" placeholder="BUSQUE POR NOME, EVENTO, PROMOTER, DATA OU OPERADOR..." class="w-full p-5 pl-14 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-sm font-bold uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg">
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-zinc-800/50">
-                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Data/Hora (Registro)</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Data/Hora (Reserva)</th>
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Cliente</th>
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Evento</th>
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Promoter / Origem</th>
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Tipo</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Status / Check-in</th>
                             </tr>
                         </thead>
                         <tbody id="tabela-auditoria-body" class="divide-y divide-zinc-800">
@@ -309,7 +310,7 @@
         });
 
         // ==========================================
-        // NOVA LÓGICA DE AUDITORIA DE RESERVAS
+        // LÓGICA DE AUDITORIA DE RESERVAS
         // ==========================================
         window.renderAuditoria = () => {
             const tbody = document.getElementById('tabela-auditoria-body');
@@ -326,22 +327,44 @@
                 reservasSort = reservasSort.filter(r => {
                     const dObj = new Date(r.data_reserva);
                     const dataF = isNaN(dObj) ? '' : dObj.toLocaleDateString('pt-BR');
-                    const strUnida = `${r.nome || ''} ${r.tel || ''} ${r.promoter || ''} ${r.evento || ''} ${r.cpf || ''} ${dataF}`.toUpperCase();
+                    
+                    // Adicionamos 'r.porteiro' na string de busca para filtrar quem liberou
+                    const strUnida = `${r.nome || ''} ${r.tel || ''} ${r.promoter || ''} ${r.evento || ''} ${r.cpf || ''} ${dataF} ${r.porteiro || ''}`.toUpperCase();
                     return termosList.every(t => strUnida.includes(t));
                 });
             } else {
-                // Se não tiver busca, mostra só as últimas 50 para o sistema ficar super rápido
                 reservasSort = reservasSort.slice(0, 50);
             }
 
             if (reservasSort.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-zinc-500 font-bold uppercase text-[10px] italic">Nenhuma reserva encontrada</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-zinc-500 font-bold uppercase text-[10px] italic">Nenhuma reserva encontrada</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = reservasSort.map(r => {
                 const dObj = new Date(r.data_reserva);
                 const dataFormatada = isNaN(dObj) ? '---' : dObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' - ' + dObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+
+                // Bloco que mostra o status do Check-in
+                let statusCheckinHtml = `<span class="text-[9px] font-black uppercase text-zinc-500 flex items-center justify-end gap-1">○ Aguardando</span>`;
+                
+                if (r.entrou) {
+                    let dataFEntrada = '---';
+                    if (r.data_entrada) {
+                        const dEntrada = new Date(r.data_entrada);
+                        if (!isNaN(dEntrada)) {
+                            dataFEntrada = dEntrada.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + dEntrada.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                        }
+                    }
+                    
+                    statusCheckinHtml = `
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="text-[10px] font-black uppercase text-green-500">✓ Entrou</span>
+                            <span class="text-[8px] text-yellow-500 font-black uppercase tracking-widest">👤 ${r.porteiro || 'Sistema'}</span>
+                            <span class="text-[8px] text-zinc-500 font-mono">🕒 ${dataFEntrada}</span>
+                        </div>
+                    `;
+                }
 
                 return `
                 <tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500">
@@ -363,6 +386,9 @@
                     </td>
                     <td class="p-4">
                         <span class="text-[9px] font-black uppercase text-cyan-400">${r.tipo_entrada || '---'}</span>
+                    </td>
+                    <td class="p-4 text-right">
+                        ${statusCheckinHtml}
                     </td>
                 </tr>`;
             }).join('');
