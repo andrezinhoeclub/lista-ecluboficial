@@ -111,23 +111,20 @@
         </div>
     </div>
 
-    <!-- MODAL CAMAROTES / VIPs - 100% REESCRITO PARA NÃO CORTAR E 2 COLUNAS -->
+    <!-- MODAL CAMAROTES / VIPs -->
     <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl overflow-y-auto">
-        <!-- flex items-start e py-10 cria uma barra de rolagem perfeita, sem cortar nada em cima ou embaixo -->
         <div class="min-h-screen px-4 py-10 flex items-start justify-center">
             
-            <div class="w-full max-w-3xl bg-[#0d0d14] border border-purple-500/30 p-6 md:p-10 rounded-[2.5rem] shadow-2xl relative text-white">
+            <div class="w-full max-w-4xl bg-[#0d0d14] border border-purple-500/30 p-6 md:p-10 rounded-[2.5rem] shadow-2xl relative text-white">
                 
-                <!-- Apenas a logo no topo, sem o título "CAMAROTES VIP" -->
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-8">
                 
-                <!-- MAPA INTEIRO SEM CORTAR - ENCAIXE TOTAL -->
+                <!-- MAPA INTEIRO SEM CORTAR -->
                 <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-2 mb-8 flex justify-center shadow-lg">
-                    <!-- object-contain diz para o navegador NUNCA cortar a imagem, e max-h-[60vh] garante que caiba na tela -->
                     <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png" class="w-full h-auto max-h-[60vh] object-contain rounded-xl" alt="Mapa de Camarotes">
                 </div>
                 
-                <!-- BOTÕES FORÇADOS EM EXATAMENTE 2 COLUNAS (grid-cols-2) -->
+                <!-- BOTÕES FORÇADOS EM EXATAMENTE 2 COLUNAS -->
                 <div id="grid-camarotes-venda" class="grid grid-cols-2 gap-3 md:gap-4 mb-8"></div>
                 
                 <!-- FORMULÁRIO -->
@@ -250,13 +247,27 @@
         }
 
         window.checarTelefoneFidelidade = async (val) => {
+            // ==========================================
+            // 🛑 DESATIVADO TEMPORARIAMENTE (VOLTA SEMANA QUE VEM)
+            // ==========================================
+            aplicouDescontoFidelidade = false;
+            
+            // Retorna ao valor original da portaria se não for PIX nem Aniversariante
+            if(eventoAtivo && !eFluxoPix && !globalAniversariante) {
+                const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
+                const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
+                document.getElementById('v-modal-casal').innerText = formatarMoeda(pCasal);
+                document.getElementById('v-modal-solteiro').innerText = formatarMoeda(pSolt);
+            }
+            return; 
+
+            // (O CÓDIGO ANTIGO DE VERIFICAÇÃO CONTINUA AQUI PARA BAIXO, MAS O JAVASCRIPT IGNORA)
             const telLimpo = val.trim();
             if (telLimpo.length < 15) {
                 document.getElementById('alerta-fidelidade').classList.add('hidden');
                 document.getElementById('btn-final-acao').classList.remove('hidden');
                 aplicouDescontoFidelidade = false;
                 
-                // Retorna ao valor original da portaria se não for PIX nem Aniversariante
                 if(eventoAtivo && !eFluxoPix && !globalAniversariante) {
                     const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
                     const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
@@ -376,7 +387,7 @@
                     } else {
                         botoesVendaHTML = `
                             ${temPixAtivo ? `<button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] font-black italic transition-all active:scale-95">⚡ PIX ANTECIPADO</button>` : `<div class="bg-zinc-900/50 rounded-2xl py-4 flex items-center justify-center opacity-30 border border-white/5"><span class="text-[9px] font-black italic uppercase">S/ PIX</span></div>`}
-                            ${temCamaroteAtivo ? `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] font-black italic transition-all active:scale-95">💎 VIP / CAMAROTE</button>` : `<div class="bg-zinc-900/50 rounded-2xl py-4 flex items-center justify-center opacity-30 border border-white/5"><span class="text-[9px] font-black italic uppercase">S/ CAM</span></div>`}
+                            ${temCamaroteAtivo ? `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] font-black italic transition-all active:scale-95">💎 CAMAROTE / VIP</button>` : `<div class="bg-zinc-900/50 rounded-2xl py-4 flex items-center justify-center opacity-30 border border-white/5"><span class="text-[9px] font-black italic uppercase">S/ CAM</span></div>`}
                         `;
                     }
 
