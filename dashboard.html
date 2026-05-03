@@ -19,7 +19,7 @@
         .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
         .event-bubble { flex: 0 0 auto; width: 340px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
         input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; cursor: pointer; }
-        input:focus { border-color: #eab308 !important; }
+        input:focus, select:focus { border-color: #eab308 !important; }
         .mini-capa { width: 100%; height: 100px; object-fit: cover; border-bottom: 1px solid #1a1a1c; border-radius: 1.5rem; opacity: 0.8; margin-bottom: 1rem; }
         .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #22d3ee; cursor: pointer; }
         input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; padding: 5px; }
@@ -79,18 +79,26 @@
             </div>
         </section>
 
-        <!-- NOVA ABA: AUDITORIA DE RESERVAS COM CHECK-IN INFO -->
+        <!-- NOVA ABA: AUDITORIA DE RESERVAS COM CONFERÊNCIA -->
         <section id="aba-auditoria" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-emerald-500">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-emerald-500 font-black uppercase italic text-xl tracking-tighter">Auditoria de Reservas Live</h2>
+                    <h2 class="text-emerald-500 font-black uppercase italic text-xl tracking-tighter">Conferência & Auditoria Live</h2>
                     <span class="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-emerald-500 uppercase animate-pulse">● Tempo Real</span>
                 </div>
                 
-                <!-- Barra de Pesquisa Múltipla -->
-                <div class="relative w-full mb-8">
-                    <span class="absolute left-5 top-5 text-lg text-zinc-500">🔍</span>
-                    <input type="text" id="busca-auditoria" oninput="renderAuditoria()" placeholder="BUSQUE POR NOME, EVENTO, PROMOTER, DATA OU OPERADOR..." class="w-full p-5 pl-14 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-sm font-bold uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg">
+                <!-- Barra de Pesquisa e Filtro de Status -->
+                <div class="flex flex-col md:flex-row gap-4 mb-8">
+                    <div class="relative flex-grow">
+                        <span class="absolute left-5 top-5 text-lg text-zinc-500">🔍</span>
+                        <input type="text" id="busca-auditoria" oninput="renderAuditoria()" placeholder="BUSQUE POR NOME, EVENTO, PROMOTER, DATA OU OPERADOR..." class="w-full p-5 pl-14 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-sm font-bold uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg">
+                    </div>
+                    <!-- FILTRO DE CHECK-IN -->
+                    <select id="filtro-status-auditoria" onchange="renderAuditoria()" class="p-5 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-[11px] font-black uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg min-w-[220px]">
+                        <option value="todos">Todos os Status</option>
+                        <option value="entrou">✓ Fizeram Check-in</option>
+                        <option value="aguardando">○ Aguardando Entrada</option>
+                    </select>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -148,6 +156,13 @@
                         <input type="text" id="ant_casal" placeholder="CASAL SECO PIX R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30 text-[10px]">
                         <input type="text" id="ant_casal_cons" placeholder="CASAL CONSUMA PIX R$" class="p-4 rounded-2xl font-bold text-fuchsia-400 border-fuchsia-900/50 text-[10px]">
                         <input type="text" id="ant_solteiro" placeholder="SOLTEIRO PIX R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30 text-[10px]">
+                    </div>
+
+                    <!-- CAMPO: VALORES DE FIDELIDADE -->
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-yellow-500/5 p-4 rounded-3xl border border-yellow-500/10 mb-4">
+                        <div class="md:col-span-2 text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 mb-2">Valores Fidelidade (Desconto Sábado)</div>
+                        <input type="text" id="valor_recorrente_casal" placeholder="CASAL FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
+                        <input type="text" id="valor_recorrente_solteiro" placeholder="SOLTEIRO FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
                     </div>
 
                     <div class="md:col-span-6 bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5">
@@ -248,7 +263,6 @@
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
         let modoTesteAtivo = false;
 
-        // FUNÇÃO DE AVISO MODERNA (TOAST)
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
@@ -310,7 +324,7 @@
         });
 
         // ==========================================
-        // LÓGICA DE AUDITORIA DE RESERVAS
+        // AUDITORIA COM FILTRO DE CONFERÊNCIA
         // ==========================================
         window.renderAuditoria = () => {
             const tbody = document.getElementById('tabela-auditoria-body');
@@ -318,22 +332,29 @@
 
             const termoInput = document.getElementById('busca-auditoria');
             const termo = termoInput ? termoInput.value.trim().toUpperCase() : '';
+            
+            const selectFiltro = document.getElementById('filtro-status-auditoria');
+            const filtroStatus = selectFiltro ? selectFiltro.value : 'todos';
 
-            // Ordena as reservas por data de registro (mais recentes primeiro)
             let reservasSort = [...dadosReservas].sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
+
+            // APLICA O FILTRO DE CONFERÊNCIA
+            if (filtroStatus === 'entrou') {
+                reservasSort = reservasSort.filter(r => r.entrou === true);
+            } else if (filtroStatus === 'aguardando') {
+                reservasSort = reservasSort.filter(r => r.entrou !== true);
+            }
 
             if (termo.length > 1) {
                 const termosList = termo.split(/\s+/);
                 reservasSort = reservasSort.filter(r => {
                     const dObj = new Date(r.data_reserva);
                     const dataF = isNaN(dObj) ? '' : dObj.toLocaleDateString('pt-BR');
-                    
-                    // Adicionamos 'r.porteiro' na string de busca para filtrar quem liberou
                     const strUnida = `${r.nome || ''} ${r.tel || ''} ${r.promoter || ''} ${r.evento || ''} ${r.cpf || ''} ${dataF} ${r.porteiro || ''}`.toUpperCase();
                     return termosList.every(t => strUnida.includes(t));
                 });
             } else {
-                reservasSort = reservasSort.slice(0, 50);
+                reservasSort = reservasSort.slice(0, 100);
             }
 
             if (reservasSort.length === 0) {
@@ -345,18 +366,13 @@
                 const dObj = new Date(r.data_reserva);
                 const dataFormatada = isNaN(dObj) ? '---' : dObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' - ' + dObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
 
-                // Bloco que mostra o status do Check-in
                 let statusCheckinHtml = `<span class="text-[9px] font-black uppercase text-zinc-500 flex items-center justify-end gap-1">○ Aguardando</span>`;
-                
                 if (r.entrou) {
                     let dataFEntrada = '---';
                     if (r.data_entrada) {
                         const dEntrada = new Date(r.data_entrada);
-                        if (!isNaN(dEntrada)) {
-                            dataFEntrada = dEntrada.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + dEntrada.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-                        }
+                        if (!isNaN(dEntrada)) dataFEntrada = dEntrada.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + dEntrada.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
                     }
-                    
                     statusCheckinHtml = `
                         <div class="flex flex-col items-end gap-1">
                             <span class="text-[10px] font-black uppercase text-green-500">✓ Entrou</span>
@@ -394,7 +410,6 @@
             }).join('');
         };
 
-        // RESTANTE DO CÓDIGO (NÃO ALTERADO PARA MANTER SEU FUNCIONAMENTO INTACTO)
         function renderRelatorios() {
             const container = document.getElementById('container-bolhas');
             if(!container) return;
@@ -595,6 +610,7 @@
                     valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, 
                     desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, 
                     ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, 
+                    valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value,
                     imagem: urlFinal, ativo: true 
                 };
                 for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
@@ -612,7 +628,9 @@
             const ev = dadosEventos.find(e => e.id === id); document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; 
             document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; 
             document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; 
-            document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; 
+            document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || "";
+            document.getElementById('url_imagem_atual').value = ev.imagem || "";
             for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
             document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
         };
