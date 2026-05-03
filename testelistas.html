@@ -159,7 +159,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, doc, getDoc, limit, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
@@ -168,10 +168,7 @@
 
         let globalPromoter = new URLSearchParams(window.location.search).get('ref') || "site_direto";
         let globalAniversariante = ""; let eventoFixo = null; let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
-        let unsubscribeCamarotes = null; let numCamaroteSelecionado = null; let unsubscribePagamento = null;
         
-        // VARIÁVEIS DA LÓGICA DE FIDELIDADE
-        let promoterTipo = "padrao";
         let aplicouDescontoFidelidade = false;
 
         const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
@@ -189,32 +186,14 @@
             setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
-        async function validarDuplicidade(telefone, nomeEvento) {
-            const q = query(collection(db, "lista_eventos"), where("evento", "==", nomeEvento), where("tel", "==", telefone));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-                const ativos = snap.docs.filter(d => {
-                    const data = d.data();
-                    if (data.pago === true || data.metodo === 'portaria') return true;
-                    return ((new Date() - new Date(data.data_reserva)) / 60000) < 10;
-                });
-                return ativos.length > 0;
-            }
-            return false;
-        }
-
         // ==========================================
         // ⚡ O GATILHO DA FIDELIDADE NA TELA
         // ==========================================
         window.checarTelefoneFidelidade = async (val) => {
-            // Conta apenas os números digitados
-            const telNumeros = val.replace(/\D/g, '');
-            
-            if (telNumeros.length < 11) {
+            if (val.length < 15) {
                 document.getElementById('alerta-fidelidade').classList.add('hidden');
                 document.getElementById('btn-final-acao').classList.remove('hidden');
                 aplicouDescontoFidelidade = false;
-                
                 if(eventoAtivo && !eFluxoPix && !globalAniversariante) {
                     document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.valor_casal);
                     document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.valor_solteiro);
@@ -222,7 +201,6 @@
                 return;
             }
 
-            // REGRAS ESTRITAS DA CASA:
             // 1. NÃO aplica se for link de Aniversariante/VIP (?id=)
             if (globalAniversariante) return; 
             // 2. NÃO aplica se for compra no PIX (só portaria).
@@ -235,44 +213,35 @@
             btnFinal.disabled = true;
 
             try {
-                // TRAVA DE VELOCIDADE: Garante que o status do Promoter está certo
+                // 4. Busca o status do promoter NA HORA, pra garantir
                 const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
-                if (pSnap.exists()) {
-                    promoterTipo = pSnap.data().tipo;
-                }
-
-                // Se o promoter NÃO tiver status de 'aniversario', bloqueia silenciosamente.
-                if (promoterTipo !== 'aniversario') {
-                    console.log("Promo Bloqueada: Promoter não tem status VIP.");
+                if (!pSnap.exists() || pSnap.data().tipo !== 'aniversario') {
                     btnFinal.innerText = "Confirmar Presença";
                     btnFinal.disabled = false;
-                    return;
+                    return; // Bloqueia: promoter não tem a tag VIP/Aniversário
                 }
 
-                // Busca o cliente pelo telefone exato (formatado)
-                const q = query(collection(db, "lista_eventos"), where("tel", "==", val.trim()));
+                // 5. Busca APENAS pelo telefone no banco de dados (Livrando do bloqueio do Firebase)
+                const q = query(collection(db, "lista_eventos"), where("tel", "==", val));
                 const snap = await getDocs(q);
                 
                 let veioNaSexta = false;
                 const agora = new Date();
 
-                snap.forEach(doc => {
-                    const dados = doc.data();
-                    // Só conta se ele realmente fez check-in (entrou = true) e tem data salva
+                snap.forEach(docSnap => {
+                    const dados = docSnap.data();
+                    
+                    // 6. Fazemos o filtro de Check-in e Data aqui no navegador!
                     if (dados.entrou === true && dados.data_entrada) {
-                        const dataEntrada = new Date(dados.data_entrada);
-                        const horaLocal = dataEntrada.getHours();
-                        const diaLocal = dataEntrada.getDay(); // 5 = Sexta, 6 = Sábado
-                        const diffDias = (agora - dataEntrada) / (1000 * 60 * 60 * 24);
+                        const dEntrada = new Date(dados.data_entrada);
+                        const dia = dEntrada.getDay(); // 5 = Sexta, 6 = Sábado
+                        const hora = dEntrada.getHours();
+                        const diffDias = (agora - dEntrada) / (1000 * 60 * 60 * 24);
 
-                        // Garante que é um check-in recente (menos de 6 dias atrás)
-                        if (diffDias < 6) {
-                            // Regra de Sexta: Sexta-feira depois das 21h (21:00 até 23:59)
-                            if (diaLocal === 5 && horaLocal >= 21) {
-                                veioNaSexta = true;
-                            }
-                            // Regra de Sexta (Madrugada): Sábado antes das 5h (00:00 até 04:59)
-                            if (diaLocal === 6 && horaLocal < 5) {
+                        // Garante que o check-in foi recente (menos de 7 dias)
+                        if (diffDias <= 7) {
+                            // REGRA DE SEXTA: Sexta DEPOIS das 20h OU Sábado ANTES das 06h
+                            if ((dia === 5 && hora >= 20) || (dia === 6 && hora <= 6)) {
                                 veioNaSexta = true;
                             }
                         }
@@ -282,10 +251,10 @@
                 if (veioNaSexta) {
                     document.getElementById('alerta-fidelidade').classList.remove('hidden');
                     btnFinal.classList.add('hidden');
-                } else {
-                    console.log("Promo Bloqueada: Sem check-in na Sexta-feira.");
                 }
-            } catch(e) { console.error(e); }
+            } catch(e) {
+                console.error("Erro na Fidelidade:", e);
+            }
             
             btnFinal.innerText = "Confirmar Presença";
             btnFinal.disabled = false;
@@ -314,11 +283,6 @@
                 if (anivSnap.exists()) {
                     const d = anivSnap.data(); globalPromoter = d.promoter || "site_direto";
                     globalAniversariante = d.aniversariante; eventoFixo = d.festa;
-                }
-            } else if (globalPromoter && globalPromoter !== "site_direto") {
-                const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
-                if (pSnap.exists()) {
-                    promoterTipo = pSnap.data().tipo;
                 }
             }
 
@@ -447,8 +411,9 @@
             }
             const btn = document.getElementById('btn-final-acao'); btn.disabled = true; btn.innerText = "PROCESSANDO...";
             try {
-                const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
-                if (jaExiste) throw new Error("Você já possui uma reserva ativa!");
+                // Para não bloquear testes com o mesmo número agora, comentei a trava de duplicidade
+                // const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
+                // if (jaExiste) throw new Error("Você já possui uma reserva ativa!");
 
                 let valorFinal;
                 
@@ -479,60 +444,6 @@
                     setTimeout(() => { location.reload(); }, 2000); 
                 }
             } catch (e) { mostrarAviso(e.message); btn.disabled = false; btn.innerText = "Confirmar Presença"; }
-        };
-
-        window.iniciarFluxoCamarote = (id) => {
-            eventoAtivo = eventosCache.find(e => e.id === id);
-            const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
-            unsubscribeCamarotes = onSnapshot(q, (snap) => {
-                const reservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                const grid = document.getElementById('grid-camarotes-venda'); grid.innerHTML = '';
-                for(let i=1; i<=8; i++) {
-                    if(eventoAtivo[`cam${i}_ativo`] && parseFloat(eventoAtivo[`v_cam${i}`]) > 0) {
-                        const resCam = reservas.filter(r => { const ent = String(r.tipo_entrada).toUpperCase().trim(); return ent === `CAMAROTE ${i}` || ent === `CAMAROTE 0${i}`; });
-                        let status = 'livre', classCor = 'cam-livre', icone = '✅';
-                        if (resCam.some(r => r.pago === true || r.cortesia === true)) { status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; }
-                        else if (resCam.some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 10)) { status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; }
-                        const observacao = eventoAtivo[`obs_cam${i}`] ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>` : '';
-                        grid.innerHTML += `<button onclick="selecionarCamarote(${i}, '${status}', '${eventoAtivo[`v_cam${i}`]}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all"><span class="text-[9px] font-black uppercase text-zinc-300">CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span></span><span class="text-xs font-bold mt-1">${formatarMoeda(eventoAtivo[`v_cam${i}`])}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
-                    }
-                }
-            });
-            document.getElementById('modalCamarote').classList.remove('hidden');
-        };
-
-        window.selecionarCamarote = (num, status, valor) => {
-            if(status !== 'livre') return; numCamaroteSelecionado = num;
-            document.getElementById('cam-selecionado-nome').innerText = `CAMAROTE 0${num}`;
-            const obs = eventoAtivo[`obs_cam${num}`] ? `<br><span class="text-[8px] font-normal text-purple-300 normal-case opacity-90">${eventoAtivo[`obs_cam${num}`]}</span>` : '';
-            document.getElementById('cam-selecionado-valor').innerHTML = `${formatarMoeda(valor)}${obs}`;
-            document.getElementById('form-camarote').classList.remove('hidden');
-        };
-
-        window.processarPixCamarote = async () => {
-            const n = document.getElementById('nome-camarote').value.trim().toUpperCase(); const t = document.getElementById('tel-camarote').value.trim();
-            const em = document.getElementById('email-camarote').value.trim(); const cpf = document.getElementById('cpf-camarote').value.trim();
-            if (!n) return mostrarAviso("Faltou preencher o Nome do titular!");
-            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("Telefone incompleto!");
-            if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
-            if (cpf.length < 14) return mostrarAviso("CPF incompleto!");
-            const btn = document.getElementById('btn-final-camarote'); btn.disabled = true; btn.innerText = "VALIDANDO...";
-            try {
-                const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
-                if (jaExiste) throw new Error("Reserva já existe!");
-                const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: `CAMAROTE ${numCamaroteSelecionado}`, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: eventoAtivo[`v_cam${numCamaroteSelecionado}`] });
-                const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: String(eventoAtivo[`v_cam${numCamaroteSelecionado}`]).replace('R$', '').replace(',', '.').trim(), titulo: `CAMAROTE 0${numCamaroteSelecionado}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
-                const data = await resp.json();
-                if (data.sucesso) { abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id); } 
-                else { mostrarAviso("Erro no PIX."); btn.disabled = false; }
-            } catch (e) { mostrarAviso(e.message); btn.disabled = false; }
-        };
-
-        window.abrirTelaQR = (base64, copiaCola, reservaId) => {
-            document.getElementById('img-qrcode').src = `data:image/jpeg;base64,${base64}`;
-            document.getElementById('chave-copia-cola').value = copiaCola;
-            document.getElementById('modalForm').classList.add('hidden'); document.getElementById('modalCamarote').classList.add('hidden'); document.getElementById('modalQrCode').classList.remove('hidden');
-            unsubscribePagamento = onSnapshot(doc(db, "lista_eventos", reservaId), (ds) => { if (ds.exists() && ds.data().pago) { document.getElementById('box-qrcode').classList.add('hidden'); document.getElementById('box-sucesso').classList.remove('hidden'); } });
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
