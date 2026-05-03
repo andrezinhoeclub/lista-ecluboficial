@@ -170,7 +170,7 @@
         let globalAniversariante = ""; let eventoFixo = null; let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
         let unsubscribeCamarotes = null; let numCamaroteSelecionado = null; let unsubscribePagamento = null;
         
-        // VARIÁVEIS DA NOVA LÓGICA DE FIDELIDADE
+        // VARIÁVEIS DA LÓGICA DE FIDELIDADE
         let promoterTipo = "padrao";
         let aplicouDescontoFidelidade = false;
 
@@ -248,8 +248,8 @@
         // ⚡ O GATILHO DA FIDELIDADE NA TELA
         // ==========================================
         window.checarTelefoneFidelidade = async (val) => {
-            // Se apagar número, reseta a interface
-            if (val.length < 15) {
+            const telLimpo = val.trim();
+            if (telLimpo.length < 15) {
                 document.getElementById('alerta-fidelidade').classList.add('hidden');
                 document.getElementById('btn-final-acao').classList.remove('hidden');
                 aplicouDescontoFidelidade = false;
@@ -262,13 +262,11 @@
             }
 
             // REGRAS ESTRITAS DA CASA:
-            // 1. NÃO aplica se for link de Aniversariante/VIP.
-            if (globalAniversariante) return;
+            // 1. NÃO aplica se for link de Aniversariante/VIP (?id=)
+            if (globalAniversariante) return; 
             // 2. NÃO aplica se for compra no PIX (só portaria).
             if (eFluxoPix) return;
-            // 3. NÃO aplica se o promoter não tiver o status 'aniversario' na dashboard.
-            if (promoterTipo !== 'aniversario') return;
-            // 4. NÃO aplica se for o link geral da casa (sem promoter).
+            // 3. NÃO aplica se for o link geral da casa (sem promoter).
             if (!globalPromoter || globalPromoter === "site_direto") return;
 
             const btnFinal = document.getElementById('btn-final-acao');
@@ -276,10 +274,29 @@
             btnFinal.disabled = true;
 
             try {
-                const veioNaSexta = await verificarFidelidade(val);
+                // TRAVA DE VELOCIDADE: Se a internet piscou e o promoterTipo não atualizou, 
+                // o sistema vai forçar a busca na base de dados AGORA, antes de bloquear.
+                if (promoterTipo === "padrao") {
+                    const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
+                    if (pSnap.exists()) {
+                        promoterTipo = pSnap.data().tipo;
+                    }
+                }
+
+                // Se depois de verificar, o promoter ainda NÃO tiver status de 'aniversario' na dashboard, bloqueia!
+                if (promoterTipo !== 'aniversario') {
+                    console.log("Promo Bloqueada: O Promoter do link (" + globalPromoter + ") não tem status 'aniversario' na aba Equipe.");
+                    btnFinal.innerText = "Confirmar Presença";
+                    btnFinal.disabled = false;
+                    return;
+                }
+
+                const veioNaSexta = await verificarFidelidade(telLimpo);
                 if (veioNaSexta) {
                     document.getElementById('alerta-fidelidade').classList.remove('hidden');
                     btnFinal.classList.add('hidden');
+                } else {
+                    console.log("Promo Bloqueada: Este cliente não tem check-in registrado entre 21h de Sexta e 05h de Sábado.");
                 }
             } catch(e) {}
             
