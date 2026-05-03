@@ -3,410 +3,646 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB | Master Portaria</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <title>E-CLUB | Reservas VIP ⚡</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
-        .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
-        .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
-        
-        .client-card { 
-            background: #0d0d0f; 
-            border: 1px solid #1a1a1c; 
-            border-left: 4px solid #eab308;
-            transition: all 0.2s ease;
-        }
-        .client-card:hover { background: #16161a; border-color: #333; }
-        
-        .client-card.entrou { pointer-events: none; border-color: #1a1a1c; background: #08080a; border-left-color: #333; }
-        .client-card.entrou .dados-cliente { filter: grayscale(1); opacity: 0.3; }
-        .client-card.entrou .area-checkin { opacity: 0.75; }
-        
-        input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
-        input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
-        
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        
-        @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
-        
-        .btn-liberar { background: #eab308; color: #000; transition: all 0.2s; }
-        .btn-liberar:hover { background: #fbbf24; transform: translateY(-1px); }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; min-height: 100vh; background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-lista { background: #eab308; color: #000; font-weight: 900; }
+        .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; }
+        .btn-camarote { background: linear-gradient(135deg, #a855f7 0%, #c084fc 100%); color: #fff; font-weight: 900; }
+        .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; transition: 0.3s; }
+        .banner-img { width: 100%; height: auto; display: block; opacity: 1; border-radius: 2.5rem 2.5rem 0 0; }
+        .btn-sel { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .btn-sel.active { border-color: #eab308; background: rgba(234, 179, 8, 0.05); box-shadow: 0 0 20px rgba(234, 179, 8, 0.1); }
+        .btn-sel-pix.active { border-color: #00f5d4; background: rgba(0, 245, 212, 0.05); }
+        .cam-livre { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); cursor: pointer; }
+        .cam-vendido { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        .cam-aguardando { border-color: #eab308; background: rgba(234, 179, 8, 0.1); opacity: 0.7; cursor: not-allowed; }
+        .cam-selecionado { border-color: #a855f7 !important; background: rgba(168, 85, 247, 0.2) !important; box-shadow: 0 0 20px rgba(168,85,247,0.4); }
+        @keyframes scaleUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .success-anim { animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     </style>
 </head>
-<body class="flex h-screen relative">
+<body class="p-4 flex flex-col items-center">
 
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
 
-    <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
-        <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
-            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
-            <div class="space-y-4">
-                <input type="text" id="inputNomeUsuario" placeholder="LOGIN OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs outline-none focus:border-yellow-500 transition-all">
-                <div id="areaSenha" class="hidden">
-                    <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50 outline-none focus:border-yellow-500 transition-all">
-                </div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ENTRAR</button>
+    <div class="max-w-md w-full">
+        <header class="flex flex-col items-center justify-center py-6">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
+            <h2 id="header-aniv" class="text-fuchsia-400 font-black uppercase italic mt-4 text-xl tracking-widest hidden text-center leading-tight"></h2>
+        </header>
+        
+        <div id="listaEventos" class="space-y-10"></div>
+
+        <footer class="mt-12 mb-8 flex flex-col items-center gap-8">
+            <div class="flex gap-3 w-full">
+                <a href="https://api.whatsapp.com/send?phone=5541995040506" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-green-500/10 border border-transparent transition-all group">
+                    <span class="text-2xl">💬</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-green-400">WhatsApp</span>
+                </a>
+                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-fuchsia-500/10 border border-transparent transition-all group">
+                    <span class="text-2xl">📸</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-fuchsia-400">Instagram</span>
+                </a>
+                <a href="https://www.google.com/maps/search/?api=1&query=R.+Aníbal+Goularte+Maia+Filho,+81+-+Bairro+Alto,+Curitiba+-+PR,+82820-480" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-blue-500/10 border border-transparent transition-all group">
+                    <span class="text-2xl">📍</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-blue-400">Chegar</span>
+                </a>
             </div>
+            <div class="text-center opacity-40 hover:opacity-100 transition-all">
+                <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
+                    <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-sky-400 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
+        <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
+            <h2 id="modal-titulo" class="font-black uppercase italic mb-6 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
+            
+            <div id="grid-botoes-tipo" class="grid grid-cols-2 gap-2 mb-6">
+                <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-3 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span id="titulo-btn-casal" class="text-[9px] font-black uppercase opacity-80 leading-tight">👫 Casal</span>
+                    <span id="v-modal-casal" class="text-xs font-black mt-1">---</span>
+                </button>
+                <button onclick="selecionarTipo('CASAL CONSUMAÇÃO')" id="btn-casal-cons" class="hidden btn-sel p-3 rounded-2xl flex-col items-center justify-center text-center">
+                    <span id="titulo-btn-casal-cons" class="text-[9px] font-black uppercase text-fuchsia-400 leading-tight">🍹 Casal</span>
+                    <span id="v-modal-casal-cons" class="text-xs font-black mt-1">---</span>
+                </button>
+                <button onclick="selecionarTipo('SOLTEIRO')" id="btn-solteiro" class="btn-sel p-3 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span id="titulo-btn-solteiro" class="text-[9px] font-black uppercase opacity-80 leading-tight">👤 Solteiro</span>
+                    <span id="v-modal-solteiro" class="text-xs font-black mt-1">---</span>
+                </button>
+            </div>
+
+            <div class="space-y-3 text-left">
+                <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
+                <input type="tel" id="tel-cliente" oninput="maskTel(this); checarTelefoneFidelidade(this.value);" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                
+                <div id="campos-pix" class="hidden space-y-3">
+                    <input type="email" id="email-cliente" placeholder="SEU E-MAIL" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white lowercase">
+                    <input type="tel" id="cpf-cliente" oninput="maskCPF(this)" placeholder="SEU CPF" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                </div>
+
+                <!-- ALERTA DE FIDELIDADE -->
+                <div id="alerta-fidelidade" class="hidden bg-fuchsia-900/20 border border-fuchsia-500/40 p-5 rounded-2xl mb-4 text-center mt-4 shadow-[0_0_20px_rgba(192,38,211,0.2)]">
+                    <p class="text-[11px] font-black uppercase text-fuchsia-400 mb-1">🎉 Cliente VIP Detectado!</p>
+                    <p class="text-[9px] font-bold text-zinc-300 mb-4 uppercase">Este cliente veio na SEXTA-FEIRA.<br>Liberar desconto no valor de porta?</p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="aplicarDescontoFidelidade(true)" class="flex-1 bg-fuchsia-600 text-white text-[10px] font-black py-3 rounded-xl uppercase hover:bg-fuchsia-500 transition-colors shadow-md">SIM, DESCONTO</button>
+                        <button type="button" onclick="aplicarDescontoFidelidade(false)" class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-zinc-700 transition-colors">NÃO, NORMAL</button>
+                    </div>
+                </div>
+
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all">Confirmar Presença</button>
+            </div>
+            <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic">Voltar</button>
         </div>
     </div>
 
-    <div id="interfacePrincipal" class="hidden flex w-full h-full">
-        <aside class="w-72 h-full flex flex-col p-6 bg-black/40 border-r border-zinc-900">
-            <div class="mb-10 text-center">
-                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[8px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg tracking-widest italic">---</p>
-            </div>
+    <!-- MODAL CAMAROTES / VIPs -->
+    <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 text-white overflow-y-auto">
+        <div class="w-full max-w-sm bg-[#0d0d14] border border-purple-500/30 p-6 md:p-8 rounded-[2.5rem] shadow-2xl relative my-auto mt-10 mb-10">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
+            <h2 class="text-purple-400 font-black uppercase italic mb-6 text-xl text-center">💎 CAMAROTES VIP</h2>
             
-            <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[8px] font-black uppercase mb-4 tracking-widest border-b border-zinc-900 pb-2">Status Eventos</h3>
-                <div id="lista-eventos-sidebar" class="space-y-3"></div>
-            </div>
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png" class="w-full max-h-64 object-contain mx-auto rounded-xl mb-6">
             
-            <div class="mt-6 flex flex-col gap-4 border-t border-zinc-900 pt-6">
-                <button onclick="fazerLogout()" class="text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors w-full text-center">Sair do Sistema</button>
-                
-                <div class="text-center opacity-30 hover:opacity-100 transition-all pt-4">
-                    <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
-                        <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-500 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
-                    </a>
+            <div id="grid-camarotes-venda" class="grid grid-cols-2 gap-3 mb-6"></div>
+            
+            <div id="form-camarote" class="space-y-3 hidden">
+                <div class="bg-purple-900/20 p-4 rounded-2xl border border-purple-500/30 text-center mb-4">
+                    <p class="text-[10px] text-purple-300 font-black uppercase" id="cam-selecionado-nome">CAMAROTE X</p>
+                    <p class="text-xl font-black text-white leading-tight" id="cam-selecionado-valor">R$ 0,00</p>
                 </div>
+                <input type="text" id="nome-camarote" placeholder="NOME DO TITULAR" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
+                <input type="tel" id="tel-camarote" oninput="maskTel(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                <input type="email" id="email-camarote" placeholder="SEU E-MAIL" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white lowercase">
+                <input type="tel" id="cpf-camarote" oninput="maskCPF(this)" placeholder="SEU CPF" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                <button onclick="processarPixCamarote()" id="btn-final-camarote" class="w-full btn-camarote py-5 rounded-2xl uppercase text-xs font-black shadow-xl">Garantir Ingresso ⚡</button>
             </div>
-        </aside>
+            <button onclick="fecharModalCamarote()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic text-center">Voltar</button>
+        </div>
+    </div>
 
-        <main class="flex-grow flex flex-col">
-            <header class="p-6 border-b border-zinc-900 bg-black/20">
-                <div class="max-w-[1400px] mx-auto flex gap-6 items-center">
-                    <div class="relative flex-grow">
-                        <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
-                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR NOME, TELEFONE OU CPF..." class="w-full p-5 pl-16 rounded-2xl text-sm font-bold uppercase text-white shadow-lg">
-                    </div>
-                    <div class="text-right border-l border-zinc-800 pl-6 min-w-[120px]">
-                        <p id="total-checkins" class="text-4xl font-black italic text-green-500 leading-none">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-1">Check-ins</p>
-                    </div>
-                </div>
-            </header>
-
-            <section class="flex-grow p-6 overflow-y-auto bg-[#030303]">
-                <div id="alertaModoTeste" class="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-center font-black py-2 rounded-xl text-[10px] uppercase mb-6 hidden">
-                    ⚠️ MODO DE TESTE ATIVO - BUSCA LIBERADA PARA TODOS OS EVENTOS
-                </div>
-                <div id="container-resultados" class="max-w-[1400px] mx-auto space-y-3"></div>
-            </section>
-        </main>
+    <!-- MODAL QR CODE E SUCESSO -->
+    <div id="modalQrCode" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
+        <div id="box-qrcode" class="w-full max-w-sm bg-[#0d0d14] border border-[#00f5d4]/30 p-8 rounded-[2.5rem] text-center">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
+            <h2 class="text-[#00f5d4] font-black uppercase italic mb-6 text-2xl">PIX GERADO</h2>
+            <div class="bg-white p-4 rounded-3xl mx-auto inline-block mb-6 shadow-xl"><img id="img-qrcode" src="" class="w-48 h-48 object-contain"></div>
+            <div class="flex gap-2 mb-6">
+                <input type="text" id="chave-copia-cola" readonly class="w-full bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-zinc-400 text-[9px] font-mono outline-none">
+                <button onclick="copiarChavePix()" class="bg-[#00f5d4] text-black px-4 rounded-xl font-black text-[10px]">Copiar</button>
+            </div>
+            <p class="text-[9px] text-yellow-500 font-black uppercase italic mb-6 animate-pulse">⏳ Aguardando pagamento...</p>
+            <button onclick="fecharModalQrCode()" class="w-full border border-zinc-800 text-zinc-400 py-4 rounded-2xl uppercase text-[10px] font-black">Voltar</button>
+        </div>
+        <div id="box-sucesso" class="hidden w-full max-w-sm bg-[#0d0d14] border border-green-500/50 p-10 rounded-[2.5rem] text-center success-anim">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
+            <div class="text-5xl mb-6">✅</div>
+            <h2 class="text-green-500 font-black uppercase italic mb-2 text-3xl">PAGO!</h2>
+            <p class="text-white text-[10px] font-bold uppercase mb-8">Sua entrada foi confirmada com sucesso.</p>
+            <button onclick="location.reload()" class="w-full bg-green-600 text-white py-5 rounded-2xl uppercase text-xs font-black shadow-xl">Concluir</button>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
+        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
-        let isModoTeste = false; let listenerSessao = null;
+        const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let globalPromoter = urlParams.get('ref') || "site_direto";
+        let globalAniversariante = ""; let eventoFixo = null; let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
+        let unsubscribeCamarotes = null; let numCamaroteSelecionado = null; let unsubscribePagamento = null;
+        let promoterTipo = "padrao";
+        let aplicouDescontoFidelidade = false;
+
+        const formatarMoeda = (v) => v ? "R$ " + String(v).toUpperCase().replace("R$", "").trim() : "PORTARIA";
 
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
             const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
-            const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : '⚠️');
+            const icon = isSucesso ? '✅' : '⚠️';
             
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
-            document.getElementById('toast-icon').innerText = icon; document.getElementById('toast-msg').innerText = msg;
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
+            
             setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
             setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
-        const getStatusTurno = (dataEvento) => {
-            if (isModoTeste) return "ONLINE"; 
-            const agora = new Date(); const hora = agora.getHours(); const hoje = agora.toLocaleDateString('en-CA'); 
-            const ontemObj = new Date(agora); ontemObj.setDate(ontemObj.getDate() - 1); const ontemISO = ontemObj.toLocaleDateString('en-CA');
-            if (hora >= 21 && dataEvento === hoje) return "ONLINE";
-            if (hora < 5 && dataEvento === ontemISO) return "ONLINE";
-            return "RESTRITO";
-        };
-
-        window.verificarOuLogar = async () => {
-            const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
-            const s = document.getElementById('senhaUsuario').value.trim();
-            const btn = document.getElementById('btnAcao');
-            const inputSenha = document.getElementById('senhaUsuario');
-
-            if (stepLogin === 0) {
-                if(!n) return mostrarAviso("Digite o login do operador!");
-                btn.innerText = "VERIFICANDO...";
-                const docSnap = await getDoc(doc(db, "configuracoes", n));
-                if (docSnap.exists()) {
-                    usuarioData = docSnap.data(); stepLogin = 1;
-                    document.getElementById('areaSenha').classList.remove('hidden');
-                    document.getElementById('inputNomeUsuario').readOnly = true;
-                    if (!usuarioData.senha) {
-                        mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
-                        inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)"; inputSenha.style.borderColor = "#eab308";
-                        btn.innerText = "SALVAR SENHA E ENTRAR";
-                    } else { btn.innerText = "AUTENTICAR"; }
-                } else { btn.innerText = "ENTRAR"; mostrarAviso("Operador não encontrado."); }
-            } else {
-                if(!s) return mostrarAviso("Digite a sua senha!");
-                if (!usuarioData.senha) {
-                    if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
-                    btn.innerText = "SALVANDO...";
-                    await updateDoc(doc(db, "configuracoes", n), { senha: s });
-                    usuarioData.senha = s;
-                }
-                if (usuarioData.senha === s) {
-                    const meuToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-                    localStorage.setItem('sessao_eclub_master', meuToken);
-                    await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString(), token_sessao: meuToken });
-                    
-                    operadorLogado = n; document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
-                    document.getElementById('telaLogin').classList.add('hidden'); document.getElementById('interfacePrincipal').classList.remove('hidden');
-                    iniciarEscutas();
-                    
-                    listenerSessao = onSnapshot(doc(db, "configuracoes", n), (docSnap) => {
-                        if (docSnap.exists()) {
-                            const tokenBanco = docSnap.data().token_sessao; const meuTokenLocal = localStorage.getItem('sessao_eclub_master');
-                            if (tokenBanco && tokenBanco !== meuTokenLocal) {
-                                document.getElementById('interfacePrincipal').classList.add('hidden'); document.getElementById('telaLogin').classList.remove('hidden');
-                                stepLogin = 0; document.getElementById('inputNomeUsuario').value = ''; document.getElementById('senhaUsuario').value = '';
-                                document.getElementById('areaSenha').classList.add('hidden'); document.getElementById('inputNomeUsuario').readOnly = false;
-                                document.getElementById('btnAcao').innerText = "ENTRAR"; localStorage.removeItem('sessao_eclub_master');
-                                mostrarAviso("🚨 VOCÊ FOI DESCONECTADO! O usuário foi logado em outro computador.");
-                                if(listenerSessao) listenerSessao(); 
-                            }
-                        }
-                    });
-                } else { mostrarAviso("Senha incorreta"); btn.innerText = "AUTENTICAR"; }
-            }
-        };
-
-        window.fazerLogout = async () => {
-            if (operadorLogado) { try { await updateDoc(doc(db, "configuracoes", operadorLogado), { token_sessao: "" }); } catch(e) {} }
-            localStorage.removeItem('sessao_eclub_master'); location.reload();
-        };
-
-        function iniciarEscutas() {
-            onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
-                isModoTeste = snap.exists() && snap.data().modo_teste === true;
-                document.getElementById('alertaModoTeste').classList.toggle('hidden', !isModoTeste);
-                if (bancoEventos.length > 0) { renderizarSidebar(); processarPesquisa(); }
-            });
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
-                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
-                onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
-                    bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
-                    
-                    let totalTurno = 0;
-                    const agora = new Date();
-                    const hora = agora.getHours();
-                    
-                    if (isModoTeste) {
-                        totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && (agora - new Date(c.data_entrada)) / 3600000 <= 12).length;
-                    } else if (hora >= 5 && hora < 21) {
-                        totalTurno = 0;
-                    } else {
-                        let inicioTurno = new Date(agora);
-                        if (hora >= 21) inicioTurno.setHours(21, 0, 0, 0); 
-                        else { inicioTurno.setDate(inicioTurno.getDate() - 1); inicioTurno.setHours(21, 0, 0, 0); } 
-                        totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && new Date(c.data_entrada) >= inicioTurno).length;
-                    }
-                    
-                    document.getElementById('total-checkins').innerText = totalTurno;
-                    renderizarSidebar(); processarPesquisa();
+        async function validarDuplicidade(telefone, nomeEvento) {
+            const q = query(collection(db, "lista_eventos"), where("evento", "==", nomeEvento), where("tel", "==", telefone));
+            const snap = await getDocs(q);
+            if (!snap.empty) {
+                const ativos = snap.docs.filter(d => {
+                    const data = d.data();
+                    if (data.pago === true || data.metodo === 'portaria') return true;
+                    return ((new Date() - new Date(data.data_reserva)) / 60000) < 10;
                 });
-            });
-        }
-
-        window.copiarTelefoneLimpo = (numeroRaw) => {
-            if (!numeroRaw) return;
-            let apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
-            if (apenasNumeros.length >= 9) {
-                apenasNumeros = apenasNumeros.slice(-9);
+                return ativos.length > 0;
             }
-            if (apenasNumeros.length === 0) return;
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(apenasNumeros).then(() => { mostrarAviso("Telefone copiado!", true); }).catch(() => fallbackCopia(apenasNumeros));
-            } else { fallbackCopia(apenasNumeros); }
-        };
-
-        function fallbackCopia(texto) {
-            const textArea = document.createElement("textarea"); textArea.value = texto; textArea.style.position = "fixed"; 
-            document.body.appendChild(textArea); textArea.focus(); textArea.select();
-            try { document.execCommand('copy'); mostrarAviso("Telefone copiado!", true); } catch (err) { mostrarAviso("Erro ao copiar."); }
-            document.body.removeChild(textArea);
+            return false;
         }
 
-        window.processarPesquisa = () => {
-            const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
-            const cont = document.getElementById('container-resultados');
-            
-            if (buscaInput.length < 2) { cont.innerHTML = ''; return; }
-            
-            const termosBusca = buscaInput.split(/\s+/);
-            
-            const filtrados = bancoClientes.filter(c => {
-                const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
-                if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
-                if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
-                
-                const nomeString = String(c.nome ?? '').toUpperCase();
-                const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
-                const telNumeros = telString.replace(/\D/g, ''); 
-                const cpfNumeros = String(c.cpf ?? '').replace(/\D/g, ''); 
-                
-                const todosOsDadosDoCliente = `${nomeString} ${telString} ${telNumeros} ${cpfNumeros}`;
-                return termosBusca.every(termo => todosOsDadosDoCliente.includes(termo));
-            });
-
-            if (filtrados.length === 0) { cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>`; return; }
-
-            cont.innerHTML = '';
-            filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
-                const ev = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase()) || {};
-                const tipoNorm = (c.tipo_entrada || '').toUpperCase().trim(); const pagPorta = (c.pagamento_porta || '').toUpperCase(); 
-                const isCasal = tipoNorm.includes("CASAL") || /\s+E\s+/i.test(c.nome); const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
-                const isCortesia = c.cortesia === true; const isAniv = c.aniversariante && c.aniversariante.trim() !== ""; const isPix = c.metodo === 'pix_antecipado';
-                const isFidelidade = tipoNorm.includes("FIDELIDADE");
-
-                // SE FOR VIP 1, VIP 2 ou CAMAROTE
-                const isCamaroteOrVip = tipoNorm.includes("CAMAROTE") || tipoNorm === "VIP 1" || tipoNorm === "VIP 2";
-
-                let valorFinal = "PORTARIA";
-                if (isDono) { 
-                    valorFinal = "FREE"; 
-                } 
-                else if (isCamaroteOrVip) {
-                    if (isCortesia && pagPorta && pagPorta !== "ISENTO") {
-                        let val = pagPorta === "CASAL" ? ev.valor_casal : ev.valor_solteiro; 
-                        valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
-                    } else { 
-                        valorFinal = "R$ " + (c.valor_pago || "---"); 
-                    }
-                } 
-                else if (isFidelidade) {
-                    let val = c.valor_pago || (isCasal ? ev.valor_recorrente_casal : ev.valor_recorrente_solteiro);
-                    valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PROMO";
-                } 
-                else {
-                    let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isPix ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
-                    valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
-                }
-
-                let textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA'; 
-                let corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
-                
-                if (isFidelidade && !isPix) {
-                    textoPagamento = 'PROMO';
-                    corPagamento = 'text-fuchsia-500';
-                }
-
-                let tagsHTML = ''; const ehCasalFinal = isCasal || pagPorta === 'CASAL';
-
-                if (isDono) { tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`; } 
-                else if (ehCasalFinal) { tagsHTML += `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👫 CASAL</span>`; } 
-                else { tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`; }
-                
-                if (isCamaroteOrVip) { tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`; }
-                
-                if (isFidelidade) { 
-                    tagsHTML += `<span class="bg-fuchsia-600 text-white border border-fuchsia-400 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate animate-pulse shadow-[0_0_10px_rgba(192,38,211,0.5)]">⭐ PROMO VIP</span>`; 
-                }
-
-                if (!isDono && !isFidelidade) {
-                    if (isCamaroteOrVip) {
-                        if (isPix) { 
-                            // VIP 1 e VIP 2 são entrada seca!
-                            if (tipoNorm === "VIP 1" || tipoNorm === "VIP 2" || tipoNorm === "CAMAROTE 7" || tipoNorm === "CAMAROTE 8") {
-                                tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ SEM CONSUMAÇÃO</span>`;
-                            } else {
-                                tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
-                            }
-                        } 
-                        else if (isCortesia && pagPorta && pagPorta !== 'ISENTO') { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎁 CORTESIA</span>`; }
-                    } else {
-                        if (isPix) {
-                            if (tipoNorm === 'CASAL CONSUMAÇÃO') { tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`; } 
-                            else { tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>`; }
-                        }
-                    }
-                }
-                
-                if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
-                
-                const numTel = c.tel || c.telefone || '';
-                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
-
-                cont.innerHTML += `
-                <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
-                    <div class="flex-1 min-w-[250px] max-w-[400px] dados-cliente">
-                        <div class="flex items-center gap-2 mb-1">
-                            <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
-                            <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <p class="text-sm font-mono text-zinc-500">${numTel || '---'}</p>
-                            ${btnCopiar}
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-1 w-[140px] dados-cliente">${tagsHTML}</div>
-                    <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px] dados-cliente">
-                        <div class="w-[100px]">
-                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
-                            <p class="text-xs font-black ${corPagamento}">${textoPagamento}</p>
-                        </div>
-                        <div class="flex-1 pr-4">
-                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Info / Total</p>
-                            <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase break-words whitespace-normal">${valorFinal}</p>
-                        </div>
-                    </div>
-                    <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4 area-checkin flex-col items-end justify-center">
-                        ${c.entrou ? 
-                            `<span class="text-green-500 font-black uppercase text-[12px] leading-none">✓ OK</span>
-                             <span class="text-yellow-500 text-[8px] font-black uppercase mt-1.5 tracking-widest">👤 ${c.porteiro || 'SISTEMA'}</span>` : 
-                            `<button onclick="confirmarCheckin('${c.id}', '${numTel}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
-                        }
-                    </div>
-                </div>`;
-            });
-        };
-
-        window.confirmarCheckin = async (id, telefone) => {
+        async function verificarFidelidade(telefone) {
             try {
-                let copiouSucesso = false;
-                if (telefone) {
-                    let apenasNumeros = String(telefone).replace(/\D/g, '');
-                    if (apenasNumeros.length >= 9) {
-                        apenasNumeros = apenasNumeros.slice(-9);
-                    }
-                    if (apenasNumeros.length > 0) {
-                        try {
-                            if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(apenasNumeros); copiouSucesso = true; } 
-                            else {
-                                const textArea = document.createElement("textarea"); textArea.value = apenasNumeros; textArea.style.position = "fixed"; document.body.appendChild(textArea);
-                                textArea.focus(); textArea.select(); document.execCommand('copy'); document.body.removeChild(textArea); copiouSucesso = true;
+                const q = query(collection(db, "lista_eventos"), where("tel", "==", telefone));
+                const snap = await getDocs(q);
+                if (snap.empty) return false;
+                let veioNaSexta = false;
+                const agora = new Date();
+                snap.forEach(docSnap => {
+                    const dados = docSnap.data();
+                    if (dados.entrou === true && dados.data_entrada) {
+                        const dEntrada = new Date(dados.data_entrada);
+                        const dia = dEntrada.getDay();
+                        const hora = dEntrada.getHours();
+                        const diffDias = (agora - dEntrada) / (1000 * 60 * 60 * 24);
+                        if (diffDias <= 7) {
+                            if ((dia === 5 && hora >= 20) || (dia === 6 && hora <= 6)) {
+                                veioNaSexta = true;
                             }
-                        } catch (err) {}
+                        }
+                    }
+                });
+                return veioNaSexta;
+            } catch(e) { return false; }
+        }
+
+        window.checarTelefoneFidelidade = async (val) => {
+            const telLimpo = val.trim();
+            if (telLimpo.length < 15) {
+                document.getElementById('alerta-fidelidade').classList.add('hidden');
+                document.getElementById('btn-final-acao').classList.remove('hidden');
+                aplicouDescontoFidelidade = false;
+                
+                if(eventoAtivo && !eFluxoPix && !globalAniversariante) {
+                    const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
+                    const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
+                    document.getElementById('v-modal-casal').innerText = formatarMoeda(pCasal);
+                    document.getElementById('v-modal-solteiro').innerText = formatarMoeda(pSolt);
+                }
+                return;
+            }
+
+            if (globalAniversariante) return; 
+            if (eFluxoPix) return;
+            if (!globalPromoter || globalPromoter === "site_direto") return;
+
+            const btnFinal = document.getElementById('btn-final-acao');
+            btnFinal.innerText = "VERIFICANDO...";
+            btnFinal.disabled = true;
+
+            try {
+                if (promoterTipo === "padrao") {
+                    const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
+                    if (pSnap.exists()) { promoterTipo = pSnap.data().tipo; }
+                }
+                if (promoterTipo !== 'aniversario') {
+                    btnFinal.innerText = "Confirmar Presença";
+                    btnFinal.disabled = false;
+                    return;
+                }
+
+                const veioNaSexta = await verificarFidelidade(telLimpo);
+                if (veioNaSexta) {
+                    document.getElementById('alerta-fidelidade').classList.remove('hidden');
+                    btnFinal.classList.add('hidden');
+                }
+            } catch(e) {}
+            
+            btnFinal.innerText = "Confirmar Presença";
+            btnFinal.disabled = false;
+        };
+
+        window.aplicarDescontoFidelidade = (aplicar) => {
+            aplicouDescontoFidelidade = aplicar;
+            document.getElementById('alerta-fidelidade').classList.add('hidden');
+            document.getElementById('btn-final-acao').classList.remove('hidden');
+
+            if (aplicar) {
+                mostrarAviso("Desconto Liberado!", true);
+                document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.valor_recorrente_casal || "FREE");
+                document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.valor_recorrente_solteiro || "FREE");
+            } else {
+                document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.valor_casal);
+                document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.valor_solteiro);
+            }
+        };
+
+        async function carregarPagina() {
+            const anivId = urlParams.get('id');
+            if (anivId) {
+                const anivSnap = await getDoc(doc(db, "links_aniversario", anivId));
+                if (anivSnap.exists()) {
+                    const d = anivSnap.data();
+                    globalPromoter = d.promoter || "site_direto";
+                    globalAniversariante = d.aniversariante;
+                    eventoFixo = d.festa;
+                }
+            } else if (globalPromoter && globalPromoter !== "site_direto") {
+                const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
+                if (pSnap.exists()) {
+                    promoterTipo = pSnap.data().tipo;
+                }
+            }
+
+            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+            const hojeStr = new Date().toLocaleDateString('en-CA');
+            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= hojeStr).sort((a, b) => a.data.localeCompare(b.data));
+            if (eventoFixo) eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
+
+            const container = document.getElementById('listaEventos');
+            container.innerHTML = eventosCache.map(ev => {
+                const temPixAtivo = (ev.ant_casal && parseFloat(ev.ant_casal.toString().replace(',','.')) > 0) || (ev.ant_solteiro && parseFloat(ev.ant_solteiro.toString().replace(',','.')) > 0) || (ev.ant_casal_cons && parseFloat(ev.ant_casal_cons.toString().replace(',','.')) > 0);
+                let temCamaroteAtivo = false;
+                for(let i=1; i<=8; i++) { if(ev[`cam${i}_ativo`] && ev[`v_cam${i}`] && parseFloat(ev[`v_cam${i}`].toString().replace(',','.')) > 0) temCamaroteAtivo = true; }
+
+                const dataEventoFormatada = ev.data + "T22:00:00";
+                const limiteVendas = new Date(dataEventoFormatada);
+                const agora = new Date();
+                const vendasEncerradas = agora >= limiteVendas;
+
+                let renderHtml = '';
+
+                if (globalAniversariante) {
+                    renderHtml = `
+                    <div class="glass overflow-hidden rounded-[2.5rem] border-fuchsia-500/20 border shadow-[0_0_30px_rgba(217,70,239,0.15)]">
+                        <div class="bg-fuchsia-900/20 p-10 flex flex-col items-center justify-center text-center border-b border-fuchsia-500/20">
+                            <span class="text-6xl mb-4 block drop-shadow-[0_0_15px_rgba(217,70,239,0.5)]">🎉</span>
+                            <h3 class="text-[9px] font-black text-fuchsia-400 uppercase tracking-[0.2em] mb-1">CONVITE VIP ESPECIAL</h3>
+                            <p class="text-2xl font-black uppercase text-white italic tracking-tighter">${globalAniversariante}</p>
+                        </div>
+                        <div class="p-8">
+                            <h3 class="text-lg font-black uppercase italic text-zinc-400 mb-6 text-center tracking-tighter">EVENTO:<br><span class="text-white text-xl">${ev.nome}</span></h3>
+                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs font-black italic transition-all active:scale-95">🎁 COLOCAR NOME NA LISTA</button>
+                        </div>
+                    </div>`;
+                } else {
+                    const topoCardHTML = ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black uppercase tracking-tighter italic text-xl">E-CLUB</div>`;
+                    
+                    let botoesVendaHTML = '';
+                    if (vendasEncerradas && (temPixAtivo || temCamaroteAtivo)) {
+                        botoesVendaHTML = `<div class="col-span-2 bg-red-900/20 border border-red-500/30 py-4 rounded-2xl text-center"><span class="text-[10px] font-black uppercase text-red-500 tracking-widest">🚫 Vendas Online Encerradas</span></div>`;
+                    } else {
+                        botoesVendaHTML = `
+                            ${temPixAtivo ? `<button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] font-black italic transition-all active:scale-95">⚡ PIX ANTECIPADO</button>` : `<div class="bg-zinc-900/50 rounded-2xl py-4 flex items-center justify-center opacity-30 border border-white/5"><span class="text-[9px] font-black italic uppercase">S/ PIX</span></div>`}
+                            ${temCamaroteAtivo ? `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] font-black italic transition-all active:scale-95">💎 CAMAROTE / VIP</button>` : `<div class="bg-zinc-900/50 rounded-2xl py-4 flex items-center justify-center opacity-30 border border-white/5"><span class="text-[9px] font-black italic uppercase">S/ CAM</span></div>`}
+                        `;
+                    }
+
+                    renderHtml = `
+                    <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
+                        ${topoCardHTML}
+                        <div class="p-8">
+                            <h3 class="text-2xl font-black uppercase italic mb-6 text-center text-white tracking-tighter">${ev.nome}</h3>
+                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs font-black mb-3 italic transition-all active:scale-95">📝 NOME NA LISTA</button>
+                            <div class="grid grid-cols-2 gap-3">
+                                ${botoesVendaHTML}
+                            </div>
+                        </div>
+                    </div>`;
+                }
+
+                return renderHtml;
+            }).join('');
+        }
+
+        window.iniciarFluxo = (id, isPix) => {
+            eventoAtivo = eventosCache.find(e => e.id === id); 
+            eFluxoPix = isPix;
+            tipoAtivo = null;
+            aplicouDescontoFidelidade = false;
+
+            const btnCasal = document.getElementById('btn-casal');
+            const btnCasalCons = document.getElementById('btn-casal-cons');
+            const btnSolteiro = document.getElementById('btn-solteiro');
+
+            btnCasal.classList.remove('active');
+            btnCasalCons.classList.remove('active');
+            btnSolteiro.classList.remove('active');
+            document.getElementById('alerta-fidelidade').classList.add('hidden');
+            document.getElementById('btn-final-acao').classList.remove('hidden');
+
+            document.getElementById('modal-titulo').innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
+            document.getElementById('tel-cliente').value = '';
+            
+            const gridBotoes = document.getElementById('grid-botoes-tipo');
+            const tCasal = document.getElementById('titulo-btn-casal');
+            const tCasalCons = document.getElementById('titulo-btn-casal-cons');
+            const tSolteiro = document.getElementById('titulo-btn-solteiro');
+
+            if (isPix) {
+                const valCasal = parseFloat((eventoAtivo.ant_casal || "0").toString().replace('R$', '').replace(',', '.'));
+                const valCasalCons = parseFloat((eventoAtivo.ant_casal_cons || "0").toString().replace('R$', '').replace(',', '.'));
+                const valSolt = parseFloat((eventoAtivo.ant_solteiro || "0").toString().replace('R$', '').replace(',', '.'));
+
+                let countVisible = 0;
+
+                if (valCasal > 0) {
+                    btnCasal.classList.remove('hidden'); btnCasal.classList.add('flex');
+                    document.getElementById('v-modal-casal').innerText = formatarMoeda(eventoAtivo.ant_casal);
+                    tCasal.innerHTML = '👫 CASAL<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>';
+                    countVisible++;
+                } else {
+                    btnCasal.classList.add('hidden'); btnCasal.classList.remove('flex');
+                }
+
+                if (valCasalCons > 0) {
+                    btnCasalCons.classList.remove('hidden'); btnCasalCons.classList.add('flex');
+                    document.getElementById('v-modal-casal-cons').innerText = formatarMoeda(eventoAtivo.ant_casal_cons);
+                    tCasalCons.innerHTML = '🍹 CASAL<br><span class="text-[6.5px] font-bold tracking-widest mt-0.5 block text-fuchsia-300">100% Consumo</span>';
+                    countVisible++;
+                } else {
+                    btnCasalCons.classList.add('hidden'); btnCasalCons.classList.remove('flex');
+                }
+
+                if (valSolt > 0) {
+                    btnSolteiro.classList.remove('hidden'); btnSolteiro.classList.add('flex');
+                    document.getElementById('v-modal-solteiro').innerText = formatarMoeda(eventoAtivo.ant_solteiro);
+                    tSolteiro.innerHTML = '👤 SOLTEIRO<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>';
+                    countVisible++;
+                } else {
+                    btnSolteiro.classList.add('hidden'); btnSolteiro.classList.remove('flex');
+                }
+
+                gridBotoes.className = `grid gap-2 mb-6 ${countVisible === 1 ? 'grid-cols-1' : countVisible === 2 ? 'grid-cols-2' : 'grid-cols-3'}`;
+
+            } else {
+                const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
+                const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
+
+                document.getElementById('v-modal-casal').innerText = formatarMoeda(pCasal);
+                document.getElementById('v-modal-solteiro').innerText = formatarMoeda(pSolt);
+
+                tCasal.innerHTML = '👫 CASAL';
+                tSolteiro.innerHTML = '👤 SOLTEIRO';
+
+                btnCasal.classList.remove('hidden'); btnCasal.classList.add('flex');
+                btnSolteiro.classList.remove('hidden'); btnSolteiro.classList.add('flex');
+                btnCasalCons.classList.add('hidden'); btnCasalCons.classList.remove('flex');
+                
+                gridBotoes.className = 'grid grid-cols-2 gap-2 mb-6';
+            }
+            
+            document.getElementById('campos-pix').className = isPix ? "space-y-3" : "hidden";
+            document.getElementById('modalForm').classList.remove('hidden');
+        };
+
+        window.selecionarTipo = (tipo) => {
+            tipoAtivo = tipo;
+            document.getElementById('btn-casal').classList.remove('active');
+            document.getElementById('btn-casal-cons').classList.remove('active');
+            document.getElementById('btn-solteiro').classList.remove('active');
+            
+            if(tipo === 'CASAL') document.getElementById('btn-casal').classList.add('active');
+            if(tipo === 'CASAL CONSUMAÇÃO') document.getElementById('btn-casal-cons').classList.add('active');
+            if(tipo === 'SOLTEIRO') document.getElementById('btn-solteiro').classList.add('active');
+        };
+
+        window.processarFinalizacao = async () => {
+            const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
+            const t = document.getElementById('tel-cliente').value.trim();
+            const em = document.getElementById('email-cliente').value.trim();
+            const cpf = document.getElementById('cpf-cliente').value.trim();
+            
+            if (!tipoAtivo) return mostrarAviso("Selecione o tipo de ingresso!");
+            if (!n) return mostrarAviso("Faltou preencher o Nome Completo!");
+            
+            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto (faltam dígitos)!");
+            
+            if (eFluxoPix) {
+                if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
+                if (cpf.length < 14) return mostrarAviso("CPF incompleto (são 11 dígitos)!");
+            }
+            
+            const btn = document.getElementById('btn-final-acao'); 
+            btn.disabled = true; 
+            btn.innerText = "PROCESSANDO...";
+            
+            try {
+                const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
+                if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
+                
+                let valorRef;
+                if (aplicouDescontoFidelidade) {
+                    valorRef = (tipoAtivo === 'SOLTEIRO') ? (eventoAtivo.valor_recorrente_solteiro || "FREE") : (eventoAtivo.valor_recorrente_casal || "FREE");
+                } else {
+                    if (tipoAtivo === 'CASAL') valorRef = eFluxoPix ? eventoAtivo.ant_casal : (globalAniversariante ? eventoAtivo.desc_casal : eventoAtivo.valor_casal);
+                    else if (tipoAtivo === 'CASAL CONSUMAÇÃO') valorRef = eFluxoPix ? eventoAtivo.ant_casal_cons : eventoAtivo.valor_casal_cons;
+                    else valorRef = eFluxoPix ? eventoAtivo.ant_solteiro : (globalAniversariante ? eventoAtivo.desc_solteiro : eventoAtivo.valor_solteiro);
+                }
+
+                const docRef = await addDoc(collection(db, "lista_eventos"), { 
+                    nome: n, 
+                    tel: t, 
+                    cpf: cpf, 
+                    evento: eventoAtivo.nome, 
+                    tipo_entrada: aplicouDescontoFidelidade ? (tipoAtivo + " FIDELIDADE") : tipoAtivo, 
+                    promoter: globalPromoter, 
+                    aniversariante: globalAniversariante, 
+                    data_reserva: new Date().toISOString(), 
+                    entrou: false, 
+                    pago: false, 
+                    metodo: eFluxoPix ? 'pix_antecipado' : 'portaria', 
+                    valor_pago: valorRef || "" 
+                });
+                
+                if (eFluxoPix) {
+                    const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: String(valorRef).replace('R$', '').replace(',', '.').trim(), titulo: `PISTA: ${eventoAtivo.nome}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
+                    const data = await resp.json();
+                    
+                    if (data.sucesso) {
+                        abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id);
+                    } else {
+                        mostrarAviso(data.mensagem || "Erro na chave Pix. Revise seus dados.");
+                        btn.disabled = false; btn.innerText = "Confirmar Presença";
+                    }
+                } else { 
+                    mostrarAviso(aplicouDescontoFidelidade ? "Confirmado com Desconto Fidelidade! 🏆" : "Confirmado na lista! ✨", true);
+                    setTimeout(() => { location.reload(); }, 2000);
+                }
+            } catch (e) { 
+                mostrarAviso(e.message); 
+                btn.disabled = false; btn.innerText = "Confirmar Presença"; 
+            }
+        };
+
+        // ====== NOVA LÓGICA: VIP 1 e VIP 2 ======
+        window.iniciarFluxoCamarote = (id) => {
+            eventoAtivo = eventosCache.find(e => e.id === id);
+            const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
+            
+            unsubscribeCamarotes = onSnapshot(q, (snap) => {
+                const reservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                const grid = document.getElementById('grid-camarotes-venda'); 
+                grid.innerHTML = '';
+                
+                for(let i=1; i<=8; i++) {
+                    if(eventoAtivo[`cam${i}_ativo`] && parseFloat(eventoAtivo[`v_cam${i}`]) > 0) {
+                        
+                        // Define o nome de busca no DB: se for 7 ou 8, busca por VIP 1 / VIP 2. Se não, CAMAROTE X.
+                        const nomeDB = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `CAMAROTE ${i}`;
+                        const nomeAlternativo = `CAMAROTE 0${i}`; // Por segurança nas buscas legadas
+
+                        const resCam = reservas.filter(r => { 
+                            const ent = String(r.tipo_entrada).toUpperCase().trim(); 
+                            return ent === nomeDB || ent === nomeAlternativo; 
+                        });
+                        
+                        let status = 'livre', classCor = 'cam-livre', icone = '✅';
+                        
+                        if (resCam.some(r => r.pago === true || r.cortesia === true)) { 
+                            status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; 
+                        }
+                        else if (resCam.some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 10)) { 
+                            status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; 
+                        }
+                        
+                        const observacao = eventoAtivo[`obs_cam${i}`] ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>` : '';
+
+                        // Define o layout do botão: Camarotes 7 e 8 mostram VIP 1 e VIP 2.
+                        let nomeVisor = (i === 7) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 1</span>` : 
+                                        (i === 8) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 2</span>` : 
+                                        `CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span>`;
+
+                        grid.innerHTML += `<button onclick="selecionarCamarote(${i}, '${status}', '${eventoAtivo[`v_cam${i}`]}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all"><span class="text-[9px] font-black uppercase text-zinc-300">${nomeVisor}</span><span class="text-xs font-bold mt-1">${formatarMoeda(eventoAtivo[`v_cam${i}`])}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
                     }
                 }
-                await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
-                if (copiouSucesso) { mostrarAviso("CHECK-IN OK E TELEFONE COPIADO!", true); } 
-                else { mostrarAviso("Check-in confirmado!", true); }
-                
-                const campoBusca = document.getElementById('input-busca');
-                campoBusca.value = ''; processarPesquisa(); campoBusca.focus(); 
-            } catch(e) { mostrarAviso("Erro ao confirmar check-in."); }
+            });
+            document.getElementById('modalCamarote').classList.remove('hidden');
         };
+
+        window.selecionarCamarote = (num, status, valor) => {
+            if(status !== 'livre') return; 
+            numCamaroteSelecionado = num;
+            
+            let nomeCam = (num === 7) ? "VIP 1" : (num === 8) ? "VIP 2" : `CAMAROTE 0${num}`;
+            document.getElementById('cam-selecionado-nome').innerText = nomeCam;
+            
+            const obs = eventoAtivo[`obs_cam${num}`] ? `<br><span class="text-[8px] font-normal text-purple-300 normal-case opacity-90">${eventoAtivo[`obs_cam${num}`]}</span>` : '';
+            document.getElementById('cam-selecionado-valor').innerHTML = `${formatarMoeda(valor)}${obs}`;
+            
+            document.getElementById('form-camarote').classList.remove('hidden');
+        };
+
+        window.processarPixCamarote = async () => {
+            const n = document.getElementById('nome-camarote').value.trim().toUpperCase();
+            const t = document.getElementById('tel-camarote').value.trim();
+            const em = document.getElementById('email-camarote').value.trim();
+            const cpf = document.getElementById('cpf-camarote').value.trim();
+            
+            if (!n) return mostrarAviso("Faltou preencher o Nome do titular!");
+            
+            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto (faltam dígitos)!");
+            
+            if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
+            if (cpf.length < 14) return mostrarAviso("CPF incompleto (são 11 dígitos)!");
+
+            const btn = document.getElementById('btn-final-camarote'); 
+            btn.disabled = true; 
+            btn.innerText = "VALIDANDO...";
+            
+            try {
+                const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
+                if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
+                
+                // Define como vai salvar no banco de dados
+                let nomeSalvar = (numCamaroteSelecionado === 7) ? "VIP 1" : (numCamaroteSelecionado === 8) ? "VIP 2" : `CAMAROTE ${numCamaroteSelecionado}`;
+
+                const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: eventoAtivo[`v_cam${numCamaroteSelecionado}`] });
+                
+                const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: String(eventoAtivo[`v_cam${numCamaroteSelecionado}`]).replace('R$', '').replace(',', '.').trim(), titulo: `${nomeSalvar}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
+                const data = await resp.json();
+                
+                if (data.sucesso) {
+                    abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id);
+                } else {
+                    mostrarAviso(data.mensagem || "Erro na geração do PIX. Tente novamente.");
+                    btn.disabled = false; btn.innerText = "Garantir Ingresso ⚡";
+                }
+            } catch (e) { 
+                mostrarAviso(e.message); 
+                btn.disabled = false; btn.innerText = "Garantir Ingresso ⚡"; 
+            }
+        };
+
+        window.abrirTelaQR = (base64, copiaCola, reservaId) => {
+            document.getElementById('img-qrcode').src = `data:image/jpeg;base64,${base64}`;
+            document.getElementById('chave-copia-cola').value = copiaCola;
+            document.getElementById('modalForm').classList.add('hidden');
+            document.getElementById('modalCamarote').classList.add('hidden');
+            document.getElementById('modalQrCode').classList.remove('hidden');
+            unsubscribePagamento = onSnapshot(doc(db, "lista_eventos", reservaId), (ds) => { if (ds.exists() && ds.data().pago) { document.getElementById('box-qrcode').classList.add('hidden'); document.getElementById('box-sucesso').classList.remove('hidden'); } });
+        };
+
+        window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
+        window.fecharModalCamarote = () => { if(unsubscribeCamarotes) unsubscribeCamarotes(); document.getElementById('modalCamarote').classList.add('hidden'); };
+        window.fecharModalQrCode = () => { location.reload(); };
+        window.copiarChavePix = () => { const c = document.getElementById('chave-copia-cola'); c.select(); document.execCommand('copy'); mostrarAviso("Copiado com sucesso!", true); };
+        window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
+        window.maskCPF = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 3) v = v.substring(0, 3) + "." + v.substring(3); if (v.length > 7) v = v.substring(0, 7) + "." + v.substring(7); if (v.length > 11) v = v.substring(0, 11) + "-" + v.substring(11); i.value = v; };
+
+        carregarPagina();
     </script>
 </body>
 </html>
