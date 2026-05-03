@@ -98,11 +98,11 @@
                 </div>
 
                 <!-- ALERTA DE FIDELIDADE (SÓ APARECE SE ELE VEIO NA SEXTA) -->
-                <div id="alerta-fidelidade" class="hidden bg-fuchsia-900/20 border border-fuchsia-500/40 p-5 rounded-2xl mb-4 text-center mt-4">
+                <div id="alerta-fidelidade" class="hidden bg-fuchsia-900/20 border border-fuchsia-500/40 p-5 rounded-2xl mb-4 text-center mt-4 shadow-[0_0_20px_rgba(192,38,211,0.2)]">
                     <p class="text-[11px] font-black uppercase text-fuchsia-400 mb-1">🎉 Cliente VIP Detectado!</p>
                     <p class="text-[9px] font-bold text-zinc-300 mb-4 uppercase">Este cliente veio na SEXTA-FEIRA.<br>Liberar desconto no valor de porta?</p>
                     <div class="flex gap-2">
-                        <button type="button" onclick="aplicarDescontoFidelidade(true)" class="flex-1 bg-fuchsia-600 text-white text-[10px] font-black py-3 rounded-xl uppercase hover:bg-fuchsia-500 transition-colors">SIM, DESCONTO</button>
+                        <button type="button" onclick="aplicarDescontoFidelidade(true)" class="flex-1 bg-fuchsia-600 text-white text-[10px] font-black py-3 rounded-xl uppercase hover:bg-fuchsia-500 transition-colors shadow-md">SIM, DESCONTO</button>
                         <button type="button" onclick="aplicarDescontoFidelidade(false)" class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-zinc-700 transition-colors">NÃO, NORMAL</button>
                     </div>
                 </div>
@@ -204,11 +204,10 @@
         }
 
         // ==========================================
-        // LÓGICA DE VERIFICAR HISTÓRICO DA SEXTA (FIDELIDADE)
+        // LÓGICA EXATA: CHECK-IN SEXTA 21:00 ÀS 05:00
         // ==========================================
         async function verificarFidelidade(telefone) {
             try {
-                // Busca o cliente no banco
                 const q = query(collection(db, "lista_eventos"), where("tel", "==", telefone), where("entrou", "==", true));
                 const snap = await getDocs(q);
                 
@@ -216,21 +215,26 @@
 
                 let veioNaSexta = false;
                 const agora = new Date();
+                
+                // Encontra a sexta-feira mais recente
+                const ultimaSexta = new Date();
+                const diasParaSexta = (agora.getDay() + 7 - 5) % 7; 
+                ultimaSexta.setDate(agora.getDate() - diasParaSexta);
+                
+                // Define Turno da Sexta Exato: 21:00 até as 05:00 de Sábado
+                const inicioSexta = new Date(ultimaSexta);
+                inicioSexta.setHours(21, 0, 0, 0);
+                
+                const fimSexta = new Date(ultimaSexta);
+                fimSexta.setDate(inicioSexta.getDate() + 1); // Avança para o Sábado
+                fimSexta.setHours(5, 0, 0, 0);
 
                 snap.forEach(doc => {
                     const dados = doc.data();
                     if (dados.data_entrada) {
                         const dataEntrada = new Date(dados.data_entrada);
-                        
-                        // Ajuste de turno: recua 5 horas.
-                        // (ex: se entrou Sabado as 03:00 da manhã, o sistema lê como Sexta-Feira 22:00)
-                        const dataTurno = new Date(dataEntrada.getTime() - (5 * 60 * 60 * 1000));
-                        
-                        // Checa se a diferença é de menos de 48h (pra garantir que é da semana atual)
-                        const diffHoras = (agora - dataEntrada) / (1000 * 60 * 60);
-                        
-                        // O dia da semana 5 = Sexta-Feira no JavaScript
-                        if (dataTurno.getDay() === 5 && diffHoras <= 48) {
+                        // Checa se o check-in aconteceu cravado nesse intervalo de tempo
+                        if (dataEntrada >= inicioSexta && dataEntrada <= fimSexta) {
                             veioNaSexta = true;
                         }
                     }
@@ -257,7 +261,7 @@
                 return;
             }
 
-            // REGRAS ESTRITAS (Conforme solicitado):
+            // REGRAS ESTRITAS DA CASA:
             // 1. NÃO aplica se for link de Aniversariante/VIP.
             if (globalAniversariante) return;
             // 2. NÃO aplica se for compra no PIX (só portaria).
