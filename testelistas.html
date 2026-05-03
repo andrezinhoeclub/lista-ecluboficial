@@ -204,52 +204,13 @@
         }
 
         // ==========================================
-        // LÓGICA EXATA: CHECK-IN SEXTA 21:00 ÀS 05:00
-        // ==========================================
-        async function verificarFidelidade(telefone) {
-            try {
-                const q = query(collection(db, "lista_eventos"), where("tel", "==", telefone), where("entrou", "==", true));
-                const snap = await getDocs(q);
-                
-                if (snap.empty) return false;
-
-                let veioNaSexta = false;
-                const agora = new Date();
-                
-                // Encontra a sexta-feira mais recente
-                const ultimaSexta = new Date();
-                const diasParaSexta = (agora.getDay() + 7 - 5) % 7; 
-                ultimaSexta.setDate(agora.getDate() - diasParaSexta);
-                
-                // Define Turno da Sexta Exato: 21:00 até as 05:00 de Sábado
-                const inicioSexta = new Date(ultimaSexta);
-                inicioSexta.setHours(21, 0, 0, 0);
-                
-                const fimSexta = new Date(ultimaSexta);
-                fimSexta.setDate(inicioSexta.getDate() + 1); // Avança para o Sábado
-                fimSexta.setHours(5, 0, 0, 0);
-
-                snap.forEach(doc => {
-                    const dados = doc.data();
-                    if (dados.data_entrada) {
-                        const dataEntrada = new Date(dados.data_entrada);
-                        // Checa se o check-in aconteceu cravado nesse intervalo de tempo
-                        if (dataEntrada >= inicioSexta && dataEntrada <= fimSexta) {
-                            veioNaSexta = true;
-                        }
-                    }
-                });
-
-                return veioNaSexta;
-            } catch(e) { return false; }
-        }
-
-        // ==========================================
         // ⚡ O GATILHO DA FIDELIDADE NA TELA
         // ==========================================
         window.checarTelefoneFidelidade = async (val) => {
-            const telLimpo = val.trim();
-            if (telLimpo.length < 15) {
+            // Conta apenas os números digitados
+            const telNumeros = val.replace(/\D/g, '');
+            
+            if (telNumeros.length < 11) {
                 document.getElementById('alerta-fidelidade').classList.add('hidden');
                 document.getElementById('btn-final-acao').classList.remove('hidden');
                 aplicouDescontoFidelidade = false;
@@ -274,31 +235,57 @@
             btnFinal.disabled = true;
 
             try {
-                // TRAVA DE VELOCIDADE: Se a internet piscou e o promoterTipo não atualizou, 
-                // o sistema vai forçar a busca na base de dados AGORA, antes de bloquear.
-                if (promoterTipo === "padrao") {
-                    const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
-                    if (pSnap.exists()) {
-                        promoterTipo = pSnap.data().tipo;
-                    }
+                // TRAVA DE VELOCIDADE: Garante que o status do Promoter está certo
+                const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
+                if (pSnap.exists()) {
+                    promoterTipo = pSnap.data().tipo;
                 }
 
-                // Se depois de verificar, o promoter ainda NÃO tiver status de 'aniversario' na dashboard, bloqueia!
+                // Se o promoter NÃO tiver status de 'aniversario', bloqueia silenciosamente.
                 if (promoterTipo !== 'aniversario') {
-                    console.log("Promo Bloqueada: O Promoter do link (" + globalPromoter + ") não tem status 'aniversario' na aba Equipe.");
+                    console.log("Promo Bloqueada: Promoter não tem status VIP.");
                     btnFinal.innerText = "Confirmar Presença";
                     btnFinal.disabled = false;
                     return;
                 }
 
-                const veioNaSexta = await verificarFidelidade(telLimpo);
+                // Busca o cliente pelo telefone exato (formatado)
+                const q = query(collection(db, "lista_eventos"), where("tel", "==", val.trim()));
+                const snap = await getDocs(q);
+                
+                let veioNaSexta = false;
+                const agora = new Date();
+
+                snap.forEach(doc => {
+                    const dados = doc.data();
+                    // Só conta se ele realmente fez check-in (entrou = true) e tem data salva
+                    if (dados.entrou === true && dados.data_entrada) {
+                        const dataEntrada = new Date(dados.data_entrada);
+                        const horaLocal = dataEntrada.getHours();
+                        const diaLocal = dataEntrada.getDay(); // 5 = Sexta, 6 = Sábado
+                        const diffDias = (agora - dataEntrada) / (1000 * 60 * 60 * 24);
+
+                        // Garante que é um check-in recente (menos de 6 dias atrás)
+                        if (diffDias < 6) {
+                            // Regra de Sexta: Sexta-feira depois das 21h (21:00 até 23:59)
+                            if (diaLocal === 5 && horaLocal >= 21) {
+                                veioNaSexta = true;
+                            }
+                            // Regra de Sexta (Madrugada): Sábado antes das 5h (00:00 até 04:59)
+                            if (diaLocal === 6 && horaLocal < 5) {
+                                veioNaSexta = true;
+                            }
+                        }
+                    }
+                });
+
                 if (veioNaSexta) {
                     document.getElementById('alerta-fidelidade').classList.remove('hidden');
                     btnFinal.classList.add('hidden');
                 } else {
-                    console.log("Promo Bloqueada: Este cliente não tem check-in registrado entre 21h de Sexta e 05h de Sábado.");
+                    console.log("Promo Bloqueada: Sem check-in na Sexta-feira.");
                 }
-            } catch(e) {}
+            } catch(e) { console.error(e); }
             
             btnFinal.innerText = "Confirmar Presença";
             btnFinal.disabled = false;
@@ -329,10 +316,9 @@
                     globalAniversariante = d.aniversariante; eventoFixo = d.festa;
                 }
             } else if (globalPromoter && globalPromoter !== "site_direto") {
-                // Checa na base de dados se o promoter que enviou o link tem status 'aniversario'
                 const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
                 if (pSnap.exists()) {
-                    promoterTipo = pSnap.data().tipo; // Puxa o status "padrao", "aniversario" ou "visualizar"
+                    promoterTipo = pSnap.data().tipo;
                 }
             }
 
