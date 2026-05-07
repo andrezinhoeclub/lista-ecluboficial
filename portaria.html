@@ -39,20 +39,12 @@
 </head>
 <body class="flex h-screen relative">
 
-    <div class="fixed inset-0 z-[99999] bg-[#050505] flex-col items-center justify-center p-8 text-center flex md:hidden">
-        <div class="glass p-8 rounded-[2.5rem] border border-red-500/30 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.15)]">
-            <span class="text-6xl mb-6">🖥️</span>
-            <h1 class="text-xl font-black uppercase italic text-red-500 mb-3 tracking-tighter">Acesso Restrito</h1>
-            <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">O sistema de Portaria Master deve ser acessado <br><span class="text-white">exclusivamente por um computador</span>.</p>
-        </div>
-    </div>
-
     <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
 
-    <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg hidden md:flex">
+    <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
@@ -66,7 +58,7 @@
         </div>
     </div>
 
-    <div id="interfacePrincipal" class="hidden w-full h-full md:flex">
+    <div id="interfacePrincipal" class="hidden flex w-full h-full">
         <aside class="w-72 h-full flex flex-col p-6 bg-black/40 border-r border-zinc-900">
             <div class="mb-10 text-center">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
@@ -169,29 +161,41 @@
             if (stepLogin === 0) {
                 if(!n) return mostrarAviso("Digite o login do operador!");
                 btn.innerText = "VERIFICANDO...";
-                const docSnap = await getDoc(doc(db, "configuracoes", n));
-                if (docSnap.exists()) {
-                    usuarioData = docSnap.data(); stepLogin = 1;
-                    document.getElementById('areaSenha').classList.remove('hidden');
-                    document.getElementById('inputNomeUsuario').readOnly = true;
-                    if (!usuarioData.senha) {
-                        mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
-                        inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)"; inputSenha.style.borderColor = "#eab308";
-                        btn.innerText = "SALVAR SENHA E ENTRAR";
-                    } else { btn.innerText = "AUTENTICAR"; }
-                } else { btn.innerText = "ENTRAR"; mostrarAviso("Operador não encontrado."); }
+                try {
+                    const docSnap = await getDoc(doc(db, "configuracoes", n));
+                    if (docSnap.exists()) {
+                        usuarioData = docSnap.data(); stepLogin = 1;
+                        document.getElementById('areaSenha').classList.remove('hidden');
+                        document.getElementById('inputNomeUsuario').readOnly = true;
+                        if (!usuarioData.senha) {
+                            mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
+                            inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)"; inputSenha.style.borderColor = "#eab308";
+                            btn.innerText = "SALVAR SENHA E ENTRAR";
+                        } else { btn.innerText = "AUTENTICAR"; }
+                    } else { btn.innerText = "ENTRAR"; mostrarAviso("Operador não encontrado."); }
+                } catch(err) {
+                    btn.innerText = "ENTRAR";
+                    mostrarAviso("Erro ao conectar no banco de dados.");
+                }
             } else {
                 if(!s) return mostrarAviso("Digite a sua senha!");
                 if (!usuarioData.senha) {
                     if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
                     btn.innerText = "SALVANDO...";
-                    await updateDoc(doc(db, "configuracoes", n), { senha: s });
-                    usuarioData.senha = s;
+                    try {
+                        await updateDoc(doc(db, "configuracoes", n), { senha: s });
+                        usuarioData.senha = s;
+                    } catch(err) {
+                        btn.innerText = "SALVAR SENHA E ENTRAR";
+                        return mostrarAviso("Erro ao salvar nova senha.");
+                    }
                 }
                 if (usuarioData.senha === s) {
                     const meuToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
                     localStorage.setItem('sessao_eclub_master', meuToken);
-                    await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString(), token_sessao: meuToken });
+                    try {
+                        await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString(), token_sessao: meuToken });
+                    } catch(err) {}
                     
                     operadorLogado = n; document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
                     document.getElementById('telaLogin').classList.add('hidden'); document.getElementById('interfacePrincipal').classList.remove('hidden');
@@ -310,10 +314,10 @@
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
                 
-                const nomeString = String(c.nome ?? '').toUpperCase();
-                const telString = String(c.tel ?? '') + " " + String(c.telefone ?? '');
+                const nomeString = String(c.nome || '').toUpperCase();
+                const telString = String(c.tel || '') + " " + String(c.telefone || '');
                 const telNumeros = telString.replace(/\D/g, ''); 
-                const cpfNumeros = String(c.cpf ?? '').replace(/\D/g, ''); 
+                const cpfNumeros = String(c.cpf || '').replace(/\D/g, ''); 
                 
                 const todosOsDadosDoCliente = `${nomeString} ${telString} ${telNumeros} ${cpfNumeros}`;
                 return termosBusca.every(termo => todosOsDadosDoCliente.includes(termo));
