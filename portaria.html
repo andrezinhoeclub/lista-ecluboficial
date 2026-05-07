@@ -20,7 +20,6 @@
         }
         .client-card:hover { background: #16161a; border-color: #333; }
         
-        /* SEGREDO AQUI: O card inteiro perde o clique, mas o grayscale vai só para os dados! */
         .client-card.entrou { pointer-events: none; border-color: #1a1a1c; background: #08080a; border-left-color: #333; }
         .client-card.entrou .dados-cliente { filter: grayscale(1); opacity: 0.3; }
         .client-card.entrou .area-checkin { opacity: 0.75; }
@@ -129,12 +128,28 @@
             setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
+        // CRIEI UM EXTRATOR MANUAL DE DATA PARA NÃO TER BUG DE TIMEZONE
+        const formatarDataLocal = (data) => {
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        };
+
         const getStatusTurno = (dataEvento) => {
+            if (!dataEvento) return "RESTRITO";
             if (isModoTeste) return "ONLINE"; 
-            const agora = new Date(); const hora = agora.getHours(); const hoje = agora.toLocaleDateString('en-CA'); 
-            const ontemObj = new Date(agora); ontemObj.setDate(ontemObj.getDate() - 1); const ontemISO = ontemObj.toLocaleDateString('en-CA');
+            
+            const agora = new Date(); 
+            const hora = agora.getHours(); 
+            const hoje = formatarDataLocal(agora);
+            
+            const ontemObj = new Date(agora); 
+            ontemObj.setDate(ontemObj.getDate() - 1); 
+            const ontem = formatarDataLocal(ontemObj);
+            
             if (hora >= 21 && dataEvento === hoje) return "ONLINE";
-            if (hora < 5 && dataEvento === ontemISO) return "ONLINE";
+            if (hora < 5 && dataEvento === ontem) return "ONLINE";
             return "RESTRITO";
         };
 
@@ -230,24 +245,39 @@
         }
 
         function renderizarSidebar() {
-            const cont = document.getElementById('lista-eventos-sidebar'); cont.innerHTML = '';
-            bancoEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).forEach(ev => {
-                const status = getStatusTurno(ev.data);
-                const total = bancoClientes.filter(c => c.evento === ev.nome && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true')).length;
-                cont.innerHTML += `
-                    <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
-                        <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
-                        <div class="flex justify-between items-center mt-1">
-                            <span class="text-[7px] font-bold ${status === 'ONLINE' ? 'text-green-500 animate-online' : 'text-zinc-600'} uppercase">${status === 'ONLINE' ? '● ONLINE' : '🔒 RESTRITO'}</span>
-                            <span class="text-sm font-black text-yellow-500">${total}</span>
-                        </div>
-                    </div>`;
-            });
+            try {
+                const cont = document.getElementById('lista-eventos-sidebar'); 
+                if(!cont) return;
+                cont.innerHTML = '';
+                
+                bancoEventos.sort((a,b) => new Date(a.data || 0) - new Date(b.data || 0)).forEach(ev => {
+                    if (!ev.data) return;
+                    const status = getStatusTurno(ev.data);
+                    const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
+                    
+                    // FILTRO ULTRA ROBUSTO PARA CONTAR AS RESERVAS
+                    const total = bancoClientes.filter(c => String(c.evento || '').trim().toUpperCase() === evNomeLimpo && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true')).length;
+                    
+                    cont.innerHTML += `
+                        <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
+                            <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="text-[7px] font-bold ${status === 'ONLINE' ? 'text-green-500 animate-online' : 'text-zinc-600'} uppercase">${status === 'ONLINE' ? '● ONLINE' : '🔒 RESTRITO'}</span>
+                                <span class="text-sm font-black text-yellow-500">${total}</span>
+                            </div>
+                        </div>`;
+                });
+            } catch (e) {
+                console.error("Erro ao renderizar sidebar:", e);
+            }
         }
 
         window.copiarTelefoneLimpo = (numeroRaw) => {
             if (!numeroRaw) return;
-            const apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
+            let apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
+            if (apenasNumeros.length >= 9) {
+                apenasNumeros = apenasNumeros.slice(-9);
+            }
             if (apenasNumeros.length === 0) return;
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(apenasNumeros).then(() => { mostrarAviso("Telefone copiado!", true); }).catch(() => fallbackCopia(apenasNumeros));
@@ -270,7 +300,7 @@
             const termosBusca = buscaInput.split(/\s+/);
             
             const filtrados = bancoClientes.filter(c => {
-                const evRel = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase());
+                const evRel = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
                 
@@ -287,32 +317,65 @@
 
             cont.innerHTML = '';
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
-                const ev = bancoEventos.find(e => (e.nome || '').trim().toUpperCase() === (c.evento || '').trim().toUpperCase()) || {};
-                const tipoNorm = (c.tipo_entrada || '').toUpperCase().trim(); const pagPorta = (c.pagamento_porta || '').toUpperCase(); 
+                const ev = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase()) || {};
+                const tipoNorm = String(c.tipo_entrada || '').toUpperCase().trim(); 
+                const pagPorta = String(c.pagamento_porta || '').toUpperCase(); 
                 const isCasal = tipoNorm.includes("CASAL") || /\s+E\s+/i.test(c.nome); const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
                 const isCortesia = c.cortesia === true; const isAniv = c.aniversariante && c.aniversariante.trim() !== ""; const isPix = c.metodo === 'pix_antecipado';
+                const isFidelidade = tipoNorm.includes("FIDELIDADE");
+
+                const isCamaroteOrVip = tipoNorm.includes("CAMAROTE") || tipoNorm === "VIP 1" || tipoNorm === "VIP 2";
 
                 let valorFinal = "PORTARIA";
-                if (isDono) { valorFinal = "FREE"; } 
-                else if (tipoNorm.includes("CAMAROTE")) {
+                if (isDono) { 
+                    valorFinal = "FREE"; 
+                } 
+                else if (isCamaroteOrVip) {
                     if (isCortesia && pagPorta && pagPorta !== "ISENTO") {
-                        let val = pagPorta === "CASAL" ? ev.valor_casal : ev.valor_solteiro; valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
-                    } else { valorFinal = "R$ " + (c.valor_pago || "---"); }
-                } else {
+                        let val = pagPorta === "CASAL" ? ev.valor_casal : ev.valor_solteiro; 
+                        valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
+                    } else { 
+                        valorFinal = "R$ " + (c.valor_pago || "---"); 
+                    }
+                } 
+                else if (isFidelidade) {
+                    let val = c.valor_pago || (isCasal ? ev.valor_recorrente_casal : ev.valor_recorrente_solteiro);
+                    valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PROMO";
+                } 
+                else {
                     let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isPix ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
                     valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
                 }
 
-                const textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA'; const corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
+                let textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA'; 
+                let corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
+                
+                if (isFidelidade && !isPix) {
+                    textoPagamento = 'PROMO';
+                    corPagamento = 'text-fuchsia-500';
+                }
+
                 let tagsHTML = ''; const ehCasalFinal = isCasal || pagPorta === 'CASAL';
 
                 if (isDono) { tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`; } 
                 else if (ehCasalFinal) { tagsHTML += `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👫 CASAL</span>`; } 
                 else { tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`; }
-                if (tipoNorm.includes("CAMAROTE")) { tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`; }
-                if (!isDono) {
-                    if (tipoNorm.includes("CAMAROTE")) {
-                        if (isPix) { tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`; } 
+                
+                if (isCamaroteOrVip) { tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`; }
+                
+                if (isFidelidade) { 
+                    tagsHTML += `<span class="bg-fuchsia-600 text-white border border-fuchsia-400 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate animate-pulse shadow-[0_0_10px_rgba(192,38,211,0.5)]">⭐ PROMO VIP</span>`; 
+                }
+
+                if (!isDono && !isFidelidade) {
+                    if (isCamaroteOrVip) {
+                        if (isPix) { 
+                            if (tipoNorm === "VIP 1" || tipoNorm === "VIP 2" || tipoNorm === "CAMAROTE 7" || tipoNorm === "CAMAROTE 8") {
+                                tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ SEM CONSUMAÇÃO</span>`;
+                            } else {
+                                tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
+                            }
+                        } 
                         else if (isCortesia && pagPorta && pagPorta !== 'ISENTO') { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎁 CORTESIA</span>`; }
                     } else {
                         if (isPix) {
@@ -321,11 +384,12 @@
                         }
                     }
                 }
+                
                 if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
+                
                 const numTel = c.tel || c.telefone || '';
                 const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
 
-                // ESTRUTURA COM A CLASSE "dados-cliente" PARA RECEBER O GRAYSCALE, E "area-checkin" PARA FICAR COM A COR ORIGINAL
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
                     <div class="flex-1 min-w-[250px] max-w-[400px] dados-cliente">
@@ -364,7 +428,10 @@
             try {
                 let copiouSucesso = false;
                 if (telefone) {
-                    const apenasNumeros = String(telefone).replace(/\D/g, '');
+                    let apenasNumeros = String(telefone).replace(/\D/g, '');
+                    if (apenasNumeros.length >= 9) {
+                        apenasNumeros = apenasNumeros.slice(-9);
+                    }
                     if (apenasNumeros.length > 0) {
                         try {
                             if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(apenasNumeros); copiouSucesso = true; } 
