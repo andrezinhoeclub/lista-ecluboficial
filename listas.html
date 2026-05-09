@@ -65,12 +65,13 @@
         </footer>
     </div>
 
+    <!-- MODAL LISTA / PIX -->
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
             <h2 id="modal-titulo" class="font-black uppercase italic mb-6 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
             
-            <div id="grid-botoes-tipo" class="grid grid-cols-2 gap-2 mb-6">
+            <div id="grid-botoes-tipo" class="grid grid-cols-2 gap-2 mb-2">
                 <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-3 rounded-2xl flex flex-col items-center justify-center text-center">
                     <span id="titulo-btn-casal" class="text-[9px] font-black uppercase opacity-80 leading-tight">👫 Casal</span>
                     <span id="v-modal-casal" class="text-xs font-black mt-1 leading-snug text-center">---</span>
@@ -84,6 +85,9 @@
                     <span id="v-modal-solteiro" class="text-xs font-black mt-1 leading-snug text-center">---</span>
                 </button>
             </div>
+            
+            <!-- AVISO DA TAXA (SÓ APARECE NO PIX) -->
+            <p id="aviso-taxa-pista" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-6 hidden">* Valores já incluem taxa de conveniência</p>
 
             <div class="space-y-3 text-left">
                 <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
@@ -109,9 +113,9 @@
         </div>
     </div>
 
+    <!-- MODAL CAMAROTES / VIPs -->
     <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl overflow-y-auto">
         <div class="min-h-screen px-4 py-10 flex items-start justify-center">
-            
             <div class="w-full max-w-4xl bg-[#0d0d14] border border-purple-500/30 p-6 md:p-10 rounded-[2.5rem] shadow-2xl relative text-white">
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-8">
                 
@@ -119,7 +123,8 @@
                     <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png" class="w-full h-auto max-h-[60vh] object-contain rounded-xl" alt="Mapa de Camarotes">
                 </div>
                 
-                <div id="grid-camarotes-venda" class="grid grid-cols-2 gap-3 md:gap-4 mb-8"></div>
+                <div id="grid-camarotes-venda" class="grid grid-cols-2 gap-3 md:gap-4 mb-4"></div>
+                <p id="aviso-taxa-camarote" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-8 hidden">* Valores já incluem taxa de conveniência</p>
                 
                 <div id="form-camarote" class="space-y-3 hidden max-w-sm mx-auto">
                     <div class="bg-purple-900/20 p-4 rounded-2xl border border-purple-500/30 text-center mb-4">
@@ -138,6 +143,7 @@
         </div>
     </div>
 
+    <!-- MODAL QR CODE E SUCESSO -->
     <div id="modalQrCode" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
         <div id="box-qrcode" class="w-full max-w-sm bg-[#0d0d14] border border-[#00f5d4]/30 p-8 rounded-[2.5rem] text-center">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -344,9 +350,17 @@
             const tCasal = document.getElementById('titulo-btn-casal');
             const tCasalCons = document.getElementById('titulo-btn-casal-cons');
             const tSolteiro = document.getElementById('titulo-btn-solteiro');
+            
+            const avisoTaxa = document.getElementById('aviso-taxa-pista');
 
             if (isPix) {
-                // Função para renderizar os botões com a taxa separada
+                // APLICA A TAXA VISUALMENTE SE HOUVER
+                const valCasalBase = eventoAtivo.ant_casal || "0";
+                const valCasalConsBase = eventoAtivo.ant_casal_cons || "0";
+                const valSoltBase = eventoAtivo.ant_solteiro || "0";
+
+                let countVisible = 0;
+
                 const renderBotaoPix = (btnEl, tEl, valorRaw, titulo) => {
                     let base = extrairValorNumerico(valorRaw);
                     if (base > 0) {
@@ -363,15 +377,20 @@
                     }
                 };
 
-                let countVisible = 0;
-                countVisible += renderBotaoPix(btnCasal, tCasal, eventoAtivo.ant_casal, '👫 CASAL<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>');
-                countVisible += renderBotaoPix(btnCasalCons, tCasalCons, eventoAtivo.ant_casal_cons, '🍹 CASAL<br><span class="text-[6.5px] font-bold tracking-widest mt-0.5 block text-fuchsia-300">100% Consumo</span>');
-                countVisible += renderBotaoPix(btnSolteiro, tSolteiro, eventoAtivo.ant_solteiro, '👤 SOLTEIRO<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>');
+                countVisible += renderBotaoPix(btnCasal, tCasal, valCasalBase, '👫 CASAL<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>');
+                countVisible += renderBotaoPix(btnCasalCons, tCasalCons, valCasalConsBase, '🍹 CASAL<br><span class="text-[6.5px] font-bold tracking-widest mt-0.5 block text-fuchsia-300">100% Consumo</span>');
+                countVisible += renderBotaoPix(btnSolteiro, tSolteiro, valSoltBase, '👤 SOLTEIRO<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>');
 
-                gridBotoes.className = `grid gap-2 mb-6 ${countVisible === 1 ? 'grid-cols-1' : countVisible === 2 ? 'grid-cols-2' : 'grid-cols-3'}`;
+                gridBotoes.className = `grid gap-2 mb-2 ${countVisible === 1 ? 'grid-cols-1' : countVisible === 2 ? 'grid-cols-2' : 'grid-cols-3'}`;
+                
+                if (taxaPixTipo !== 'desativado' && taxaPixValor > 0) {
+                    avisoTaxa.classList.remove('hidden');
+                } else { avisoTaxa.classList.add('hidden'); }
 
             } else {
-                // LISTA NORMAL: Injeta o texto livre diretamente sem tentar calcular matemática
+                avisoTaxa.classList.add('hidden');
+                
+                // LISTA NORMAL (PORTARIA) - MOSTRA EXATAMENTE O TEXTO CADASTRADO NO EVENTO
                 const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
                 const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
 
@@ -434,10 +453,10 @@
                     else valorRefRaw = eFluxoPix ? eventoAtivo.ant_solteiro : (globalAniversariante ? eventoAtivo.desc_solteiro : eventoAtivo.valor_solteiro);
                 }
 
-                // O VALOR SALVO É O TEXTO LIVRE NA LISTA, MAS NO PIX É A SOMA MATEMÁTICA
-                let valorFinalDB = valorRefRaw;
+                // A MÁGICA FINANCEIRA: Salva o valor puro no banco de dados, mas cobra a taxa no PIX.
+                let valorPuroDB = valorRefRaw; 
                 if (eFluxoPix) {
-                    valorFinalDB = calcularComTaxa(valorRefRaw);
+                    valorPuroDB = extrairValorNumerico(valorRefRaw); 
                 }
 
                 const docRef = await addDoc(collection(db, "lista_eventos"), { 
@@ -446,11 +465,12 @@
                     promoter: globalPromoter, aniversariante: globalAniversariante, 
                     data_reserva: new Date().toISOString(), entrou: false, pago: false, 
                     metodo: eFluxoPix ? 'pix_antecipado' : 'portaria', 
-                    valor_pago: String(valorFinalDB) 
+                    valor_pago: valorPuroDB > 0 ? String(valorPuroDB) : String(valorRefRaw)
                 });
                 
                 if (eFluxoPix) {
-                    const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorFinalDB.toFixed(2), titulo: `PISTA: ${eventoAtivo.nome}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
+                    let valorTotalComTaxa = calcularComTaxa(valorRefRaw);
+                    const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorTotalComTaxa.toFixed(2), titulo: `PISTA: ${eventoAtivo.nome}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
                     const data = await resp.json();
                     if (data.sucesso) { abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id); } 
                     else { mostrarAviso(data.mensagem || "Erro na chave Pix. Revise seus dados."); btn.disabled = false; btn.innerText = "Confirmar Presença"; }
@@ -470,6 +490,10 @@
                 const reservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
                 const grid = document.getElementById('grid-camarotes-venda'); 
                 grid.innerHTML = '';
+                
+                let temTaxa = taxaPixTipo !== 'desativado' && taxaPixValor > 0;
+                if (temTaxa) document.getElementById('aviso-taxa-camarote').classList.remove('hidden');
+                else document.getElementById('aviso-taxa-camarote').classList.add('hidden');
                 
                 for(let i=1; i<=8; i++) {
                     let valCamCru = String(eventoAtivo[`v_cam${i}`] || '0');
@@ -491,7 +515,7 @@
                         // EXIBIÇÃO SEPARADA DE TAXA E BASE
                         let taxa = calcularTaxaApenas(valCamCru);
                         let txtDisplay = formatarNumeroMoeda(valBase);
-                        if (taxa > 0) txtDisplay += `<br><span class="text-[7.5px] text-yellow-500 tracking-widest">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
+                        if (taxa > 0) txtDisplay += `<br><span class="text-[7.5px] text-yellow-500 tracking-widest mt-1">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
 
                         grid.innerHTML += `<button onclick="selecionarCamarote(${i}, '${status}', '${valCamCru}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all text-center"><span class="text-[9px] font-black uppercase text-zinc-300">${nomeVisor}</span><span class="text-xs font-bold mt-1 leading-tight">${txtDisplay}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
                     }
@@ -539,9 +563,16 @@
                 let nomeSalvar = (numCamaroteSelecionado === 7) ? "VIP 1" : (numCamaroteSelecionado === 8) ? "VIP 2" : `CAMAROTE ${numCamaroteSelecionado}`;
 
                 let valRawBase = eventoAtivo[`v_cam${numCamaroteSelecionado}`];
+                let valPuroDB = extrairValorNumerico(valRawBase);
                 let valFinalCobrado = calcularComTaxa(valRawBase);
 
-                const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: valFinalCobrado });
+                // SALVA O VALOR PURO NO BANCO!
+                const docRef = await addDoc(collection(db, "lista_eventos"), { 
+                    nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, 
+                    promoter: globalPromoter, data_reserva: new Date().toISOString(), 
+                    entrou: false, pago: false, metodo: 'pix_antecipado', 
+                    valor_pago: String(valPuroDB) 
+                });
                 
                 const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valFinalCobrado.toFixed(2), titulo: `${nomeSalvar}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
                 const data = await resp.json();
