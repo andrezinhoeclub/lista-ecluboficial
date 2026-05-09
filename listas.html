@@ -65,6 +65,7 @@
         </footer>
     </div>
 
+    <!-- MODAL LISTA / PIX -->
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -85,6 +86,7 @@
                 </button>
             </div>
             
+            <!-- AVISO DA TAXA (SÓ APARECE NO PIX) -->
             <p id="aviso-taxa-pista" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-6 hidden">* Valores já incluem taxa de conveniência</p>
 
             <div class="space-y-3 text-left">
@@ -111,6 +113,7 @@
         </div>
     </div>
 
+    <!-- MODAL CAMAROTES / VIPs -->
     <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl overflow-y-auto">
         <div class="min-h-screen px-4 py-10 flex items-start justify-center">
             <div class="w-full max-w-4xl bg-[#0d0d14] border border-purple-500/30 p-6 md:p-10 rounded-[2.5rem] shadow-2xl relative text-white">
@@ -120,7 +123,7 @@
                     <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png" class="w-full h-auto max-h-[60vh] object-contain rounded-xl" alt="Mapa de Camarotes">
                 </div>
                 
-                <div id="grid-camarotes-venda" class="grid grid-cols-2 gap-3 md:gap-4 mb-4"></div>
+                <div id="grid-camarotes-venda" class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4"></div>
                 <p id="aviso-taxa-camarote" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-8 hidden">* Valores já incluem taxa de conveniência</p>
                 
                 <div id="form-camarote" class="space-y-3 hidden max-w-sm mx-auto">
@@ -140,6 +143,7 @@
         </div>
     </div>
 
+    <!-- MODAL QR CODE E SUCESSO -->
     <div id="modalQrCode" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
         <div id="box-qrcode" class="w-full max-w-sm bg-[#0d0d14] border border-[#00f5d4]/30 p-8 rounded-[2.5rem] text-center">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -263,7 +267,6 @@
         window.checarTelefoneFidelidade = async (val) => {
             const telLimpo = val.trim();
             
-            // CÓDIGO SECRETO DE TESTE (IGNORA AS REGRAS E FORÇA O VIP A APARECER)
             if (telLimpo === "(00) 00000-0000" && globalPromoter !== "site_direto") {
                 document.getElementById('alerta-fidelidade').classList.remove('hidden');
                 document.getElementById('btn-final-acao').classList.add('hidden');
@@ -318,16 +321,23 @@
 
         window.aplicarDescontoFidelidade = (aplicar) => {
             aplicouDescontoFidelidade = aplicar;
+            
+            // INDEPENDENTE DE 'SIM' OU 'NÃO', ESCONDE O ALERTA
             document.getElementById('alerta-fidelidade').classList.add('hidden');
-            document.getElementById('btn-final-acao').classList.remove('hidden');
 
             if (aplicar) {
-                mostrarAviso("Desconto Liberado!", true);
+                // SE CLICOU EM 'SIM', ATUALIZA OS VALORES VISUALMENTE
                 let valCasalFid = eventoAtivo.valor_recorrente_casal || "FREE";
                 let valSoltFid = eventoAtivo.valor_recorrente_solteiro || "FREE";
                 document.getElementById('v-modal-casal').innerText = String(valCasalFid).toUpperCase();
                 document.getElementById('v-modal-solteiro').innerText = String(valSoltFid).toUpperCase();
+                
+                // MÁGICA: DISPARA A FINALIZAÇÃO AUTOMATICAMENTE SEM PRECISAR CLICAR NO BOTÃO DE BAIXO
+                mostrarAviso("Desconto Fidelidade Aplicado! Finalizando...", true);
+                setTimeout(() => { processarFinalizacao(); }, 800); // Dá um tempinho pro usuário ver o valor mudar
             } else {
+                // SE CLICOU EM 'NÃO', VOLTA A MOSTRAR O BOTÃO DE FINALIZAR E MANTÉM OS VALORES NORMAIS
+                document.getElementById('btn-final-acao').classList.remove('hidden');
                 const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
                 const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
                 document.getElementById('v-modal-casal').innerText = String(pCasal || "PORTARIA").toUpperCase();
@@ -521,21 +531,25 @@
             const em = document.getElementById('email-cliente').value.trim();
             const cpf = document.getElementById('cpf-cliente').value.trim();
             
-            if (!tipoAtivo) return mostrarAviso("Selecione o tipo de ingresso!");
+            // Validação de tipo ativa apenas se não for finalização automática de fidelidade
+            if (!tipoAtivo) return mostrarAviso("Selecione o tipo de ingresso (Casal ou Solteiro)!");
             if (!n) return mostrarAviso("Faltou preencher o Nome Completo!");
-            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto (faltam dígitos)!");
+            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto!");
             
             if (eFluxoPix) {
                 if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
-                if (cpf.length < 14) return mostrarAviso("CPF incompleto (são 11 dígitos)!");
+                if (cpf.length < 14) return mostrarAviso("CPF incompleto!");
             }
             
             const btn = document.getElementById('btn-final-acao'); 
             btn.disabled = true; btn.innerText = "PROCESSANDO...";
             
             try {
-                const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
-                if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
+                // Duplicidade checada apenas para PIX ou se não for finalização automática
+                if(eFluxoPix || !aplicouDescontoFidelidade) {
+                   const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
+                   if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
+                }
                 
                 let valorRefRaw;
                 if (aplicouDescontoFidelidade) {
@@ -567,7 +581,7 @@
                     if (data.sucesso) { abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id); } 
                     else { mostrarAviso(data.mensagem || "Erro na chave Pix. Revise seus dados."); btn.disabled = false; btn.innerText = "Confirmar Presença"; }
                 } else { 
-                    mostrarAviso(aplicouDescontoFidelidade ? "Confirmado com Desconto Fidelidade! 🏆" : "Confirmado na lista! ✨", true);
+                    mostrarAviso(aplicouDescontoFidelidade ? "🏆 Reserva Fidelidade Finalizada com Sucesso!" : "✨ Confirmado na lista com sucesso!", true);
                     setTimeout(() => { location.reload(); }, 2000);
                 }
             } catch (e) { mostrarAviso(e.message); btn.disabled = false; btn.innerText = "Confirmar Presença"; }
