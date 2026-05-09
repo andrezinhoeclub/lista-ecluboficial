@@ -18,11 +18,9 @@
         .banner-img { width: 100%; height: auto; display: block; opacity: 1; border-radius: 2.5rem 2.5rem 0 0; }
         .btn-sel { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05); transition: 0.3s; }
         .btn-sel.active { border-color: #eab308; background: rgba(234, 179, 8, 0.05); box-shadow: 0 0 20px rgba(234, 179, 8, 0.1); }
-        .btn-sel-pix.active { border-color: #00f5d4; background: rgba(0, 245, 212, 0.05); }
         .cam-livre { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); cursor: pointer; }
         .cam-vendido { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
         .cam-aguardando { border-color: #eab308; background: rgba(234, 179, 8, 0.1); opacity: 0.7; cursor: not-allowed; }
-        .cam-selecionado { border-color: #a855f7 !important; background: rgba(168, 85, 247, 0.2) !important; box-shadow: 0 0 20px rgba(168,85,247,0.4); }
         @keyframes scaleUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .success-anim { animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     </style>
@@ -86,7 +84,6 @@
                 </button>
             </div>
             
-            <!-- AVISO DA TAXA (SÓ APARECE NO PIX) -->
             <p id="aviso-taxa-pista" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-6 hidden">* Valores já incluem taxa de conveniência</p>
 
             <div class="space-y-3 text-left">
@@ -98,9 +95,10 @@
                     <input type="tel" id="cpf-cliente" oninput="maskCPF(this)" placeholder="SEU CPF" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
                 </div>
 
+                <!-- ALERTA DE FIDELIDADE (VIP SEXTA) -->
                 <div id="alerta-fidelidade" class="hidden bg-fuchsia-900/20 border border-fuchsia-500/40 p-5 rounded-2xl mb-4 text-center mt-4 shadow-[0_0_20px_rgba(192,38,211,0.2)]">
                     <p class="text-[11px] font-black uppercase text-fuchsia-400 mb-1">🎉 Cliente VIP Detectado!</p>
-                    <p class="text-[9px] font-bold text-zinc-300 mb-4 uppercase">Este cliente veio na SEXTA-FEIRA.<br>Liberar desconto no valor de porta?</p>
+                    <p class="text-[9px] font-bold text-zinc-300 mb-4 uppercase">Este cliente fez check-in na SEXTA-FEIRA.<br>Liberar desconto de Fidelidade?</p>
                     <div class="flex gap-2">
                         <button type="button" onclick="aplicarDescontoFidelidade(true)" class="flex-1 bg-fuchsia-600 text-white text-[10px] font-black py-3 rounded-xl uppercase hover:bg-fuchsia-500 transition-colors shadow-md">SIM, DESCONTO</button>
                         <button type="button" onclick="aplicarDescontoFidelidade(false)" class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-zinc-700 transition-colors">NÃO, NORMAL</button>
@@ -123,7 +121,7 @@
                     <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png" class="w-full h-auto max-h-[60vh] object-contain rounded-xl" alt="Mapa de Camarotes">
                 </div>
                 
-                <div id="grid-camarotes-venda" class="grid grid-cols-2 gap-3 md:gap-4 mb-4"></div>
+                <div id="grid-camarotes-venda" class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4"></div>
                 <p id="aviso-taxa-camarote" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-8 hidden">* Valores já incluem taxa de conveniência</p>
                 
                 <div id="form-camarote" class="space-y-3 hidden max-w-sm mx-auto">
@@ -181,9 +179,6 @@
         let promoterTipo = "padrao";
         let aplicouDescontoFidelidade = false;
         
-        // ==========================
-        // REGRAS DE MATEMÁTICA E EXIBIÇÃO
-        // ==========================
         let taxaPixTipo = 'desativado';
         let taxaPixValor = 0;
 
@@ -239,8 +234,107 @@
             return false;
         }
 
+        // ==========================================
+        // LÓGICA DE FIDELIDADE (SEXTA -> SÁBADO)
+        // ==========================================
+        async function verificarFidelidade(telefone) {
+            try {
+                const q = query(collection(db, "lista_eventos"), where("tel", "==", telefone));
+                const snap = await getDocs(q);
+                if (snap.empty) return false;
+                
+                let veioNaSexta = false;
+                const agora = new Date();
+                
+                snap.forEach(docSnap => {
+                    const dados = docSnap.data();
+                    if (dados.entrou === true && dados.data_entrada) {
+                        const dEntrada = new Date(dados.data_entrada);
+                        const dia = dEntrada.getDay(); // 0=Dom, 1=Seg, ..., 5=Sex, 6=Sáb
+                        const hora = dEntrada.getHours();
+                        const diffDias = (agora - dEntrada) / (1000 * 60 * 60 * 24);
+                        
+                        // Verifica se o check-in foi nos últimos 7 dias para garantir que é da semana vigente
+                        if (diffDias <= 7) {
+                            // Regra: Entrou na Sexta-feira depois das 21h OU no Sábado antes das 05h da manhã
+                            if ((dia === 5 && hora >= 21) || (dia === 6 && hora <= 5)) {
+                                veioNaSexta = true;
+                            }
+                        }
+                    }
+                });
+                return veioNaSexta;
+            } catch(e) { return false; }
+        }
+
+        window.checarTelefoneFidelidade = async (val) => {
+            const telLimpo = val.trim();
+            if (telLimpo.length < 15) {
+                document.getElementById('alerta-fidelidade').classList.add('hidden');
+                document.getElementById('btn-final-acao').classList.remove('hidden');
+                aplicouDescontoFidelidade = false;
+                
+                if(eventoAtivo && !eFluxoPix && !globalAniversariante) {
+                    const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
+                    const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
+                    document.getElementById('v-modal-casal').innerText = String(pCasal || "PORTARIA").toUpperCase();
+                    document.getElementById('v-modal-solteiro').innerText = String(pSolt || "PORTARIA").toUpperCase();
+                }
+                return;
+            }
+
+            // Não aplica fidelidade se for Aniversariante, Pix, ou Site Direto
+            if (globalAniversariante) return; 
+            if (eFluxoPix) return;
+            if (!globalPromoter || globalPromoter === "site_direto") return;
+
+            const btnFinal = document.getElementById('btn-final-acao');
+            btnFinal.innerText = "VERIFICANDO...";
+            btnFinal.disabled = true;
+
+            try {
+                // Checa no banco se o promoter atual tem tipo "aniversario" (VIP)
+                if (promoterTipo === "padrao") {
+                    const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
+                    if (pSnap.exists()) { promoterTipo = pSnap.data().tipo; }
+                }
+                
+                // Se o promoter não for do tipo VIP/Aniversário, a regra aborta
+                if (promoterTipo !== 'aniversario') {
+                    btnFinal.innerText = "Confirmar Presença";
+                    btnFinal.disabled = false;
+                    return;
+                }
+
+                // Dispara a verificação no banco de dados para ver se o cliente entrou na sexta
+                const veioNaSexta = await verificarFidelidade(telLimpo);
+                
+                if (veioNaSexta) {
+                    document.getElementById('alerta-fidelidade').classList.remove('hidden');
+                    btnFinal.classList.add('hidden');
+                }
+            } catch(e) {}
+            
+            btnFinal.innerText = "Confirmar Presença";
+            btnFinal.disabled = false;
+        };
+
+        window.aplicarDescontoFidelidade = (aplicar) => {
+            aplicouDescontoFidelidade = aplicar;
+            document.getElementById('alerta-fidelidade').classList.add('hidden');
+            document.getElementById('btn-final-acao').classList.remove('hidden');
+
+            if (aplicar) {
+                mostrarAviso("Desconto Liberado!", true);
+                document.getElementById('v-modal-casal').innerText = String(eventoAtivo.valor_recorrente_casal || "FREE").toUpperCase();
+                document.getElementById('v-modal-solteiro').innerText = String(eventoAtivo.valor_recorrente_solteiro || "FREE").toUpperCase();
+            } else {
+                document.getElementById('v-modal-casal').innerText = String(eventoAtivo.valor_casal || "PORTARIA").toUpperCase();
+                document.getElementById('v-modal-solteiro').innerText = String(eventoAtivo.valor_solteiro || "PORTARIA").toUpperCase();
+            }
+        };
+
         async function carregarPagina() {
-            // Puxa a taxa do banco de dados na hora de abrir
             const sysSnap = await getDoc(doc(db, "configuracoes", "sistema"));
             if (sysSnap.exists()) {
                 taxaPixTipo = sysSnap.data().taxa_tipo || 'desativado';
@@ -354,7 +448,6 @@
             const avisoTaxa = document.getElementById('aviso-taxa-pista');
 
             if (isPix) {
-                // APLICA A TAXA VISUALMENTE SE HOUVER
                 const valCasalBase = eventoAtivo.ant_casal || "0";
                 const valCasalConsBase = eventoAtivo.ant_casal_cons || "0";
                 const valSoltBase = eventoAtivo.ant_solteiro || "0";
@@ -390,7 +483,6 @@
             } else {
                 avisoTaxa.classList.add('hidden');
                 
-                // LISTA NORMAL (PORTARIA) - MOSTRA EXATAMENTE O TEXTO CADASTRADO NO EVENTO
                 const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
                 const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
 
@@ -453,7 +545,6 @@
                     else valorRefRaw = eFluxoPix ? eventoAtivo.ant_solteiro : (globalAniversariante ? eventoAtivo.desc_solteiro : eventoAtivo.valor_solteiro);
                 }
 
-                // A MÁGICA FINANCEIRA: Salva o valor puro no banco de dados, mas cobra a taxa no PIX.
                 let valorPuroDB = valorRefRaw; 
                 if (eFluxoPix) {
                     valorPuroDB = extrairValorNumerico(valorRefRaw); 
@@ -481,7 +572,6 @@
             } catch (e) { mostrarAviso(e.message); btn.disabled = false; btn.innerText = "Confirmar Presença"; }
         };
 
-        // ====== LÓGICA VIP E CAMAROTES ======
         window.iniciarFluxoCamarote = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
             const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
@@ -512,7 +602,6 @@
                         const observacao = eventoAtivo[`obs_cam${i}`] ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>` : '';
                         let nomeVisor = (i === 7) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 1</span>` : (i === 8) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 2</span>` : `CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span>`;
 
-                        // EXIBIÇÃO SEPARADA DE TAXA E BASE
                         let taxa = calcularTaxaApenas(valCamCru);
                         let txtDisplay = formatarNumeroMoeda(valBase);
                         if (taxa > 0) txtDisplay += `<br><span class="text-[7.5px] text-yellow-500 tracking-widest mt-1">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
@@ -566,13 +655,7 @@
                 let valPuroDB = extrairValorNumerico(valRawBase);
                 let valFinalCobrado = calcularComTaxa(valRawBase);
 
-                // SALVA O VALOR PURO NO BANCO!
-                const docRef = await addDoc(collection(db, "lista_eventos"), { 
-                    nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, 
-                    promoter: globalPromoter, data_reserva: new Date().toISOString(), 
-                    entrou: false, pago: false, metodo: 'pix_antecipado', 
-                    valor_pago: String(valPuroDB) 
-                });
+                const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: valPuroDB });
                 
                 const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valFinalCobrado.toFixed(2), titulo: `${nomeSalvar}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
                 const data = await resp.json();
