@@ -116,7 +116,6 @@
             </div>
         </section>
 
-        <!-- ABA DE FESTAS ATUALIZADA COM O GERADOR DE COPY -->
         <section id="aba-festas" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
                 <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento & Camarotes</h2>
@@ -159,7 +158,6 @@
                         <input type="text" id="valor_recorrente_solteiro" placeholder="SOLTEIRO FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
                     </div>
 
-                    <!-- NOVO CAMPO DE DIFERENCIAIS DA NOITE -->
                     <div class="md:col-span-6 bg-purple-500/10 p-4 rounded-3xl border border-purple-500/20 mb-4">
                         <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">📱 Informações para Marketing (Ads e Orgânico)</label>
                         <textarea id="diferenciais_noite" placeholder="Quais os diferenciais desta noite? Ex: Open Bar para elas até 00h, Dose dupla de Tequila..." class="w-full p-4 rounded-2xl text-[11px] h-20 resize-none"></textarea>
@@ -178,7 +176,6 @@
                     <button type="submit" id="btnSalvarEvento" class="md:col-span-6 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
                 </form>
 
-                <!-- PAINEL DO COPY GERADO AUTOMATICAMENTE -->
                 <div id="painel-copy-marketing" class="hidden mt-8 bg-black/50 border border-purple-500/30 rounded-[2rem] p-6 md:p-8 relative">
                     <h3 class="text-purple-400 font-black uppercase italic text-sm mb-4 tracking-widest">📝 Copy Validado para Ads</h3>
                     <p class="text-[10px] text-zinc-400 mb-6 font-bold uppercase">Texto pronto para impulsionamento, estruturado sem violações e com a hashtag oficial.</p>
@@ -367,6 +364,9 @@
             renderAniversarios();
         });
 
+        // =====================================
+        // ATUALIZAÇÃO DA AUDITORIA: STATUS PIX ABANDONADO
+        // =====================================
         function renderAuditoria() {
             const tbody = document.getElementById('tabela-auditoria-body');
             if(!tbody) return;
@@ -407,7 +407,16 @@
                 const dataFormatada = isNaN(dObj) ? '---' : dObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' - ' + dObj.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
 
                 let statusCheckinHtml = `<span class="text-[9px] font-black uppercase text-zinc-500 flex items-center justify-end gap-1">○ Aguardando</span>`;
-                if (r.entrou) {
+                
+                // MÁGICA AQUI: Se for PIX e não estiver pago, mostra a tag vermelha na Auditoria
+                if (r.metodo === 'pix_antecipado' && r.pago !== true) {
+                    statusCheckinHtml = `
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="text-[9px] font-black uppercase text-red-500">🚫 PIX PENDENTE</span>
+                            <span class="text-[7px] text-zinc-500">(ABANDONADO)</span>
+                        </div>
+                    `;
+                } else if (r.entrou) {
                     let dataFEntrada = '---';
                     if (r.data_entrada) {
                         const dEntrada = new Date(r.data_entrada);
@@ -458,6 +467,8 @@
             container.innerHTML = ativos.map(ev => {
                 const evNomeLimpo = (ev.nome || '').trim().toLowerCase();
                 const todasRes = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo);
+                
+                // Os relatórios excluem automaticamente os "carrinhos abandonados" do PIX
                 const validas = todasRes.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
                 const parseMoeda = (val) => Number(String(val || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
                 const formataBRL = (v) => v.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
@@ -647,23 +658,19 @@
         // GERADOR DE COPY PARA ADS (META) - MODELO PREMIUM
         // ==========================================
         window.gerarCopyMeta = (dadosEvento) => {
-            // Formatação de Datas
             const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
             const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
             const diaDaSemana = diasSemana[dataObj.getDay()];
             const dataBr = dataObj.toLocaleDateString('pt-BR');
             
-            // Tratamento Inteligente de Hashtags
             const nomeFestaHashtag = dadosEvento.nome.replace(/\s+/g, '');
-            const diaSemanaHashtag = diaDaSemana.split('-')[0]; // Pega só "Sexta" ou "Segunda" sem o feira
+            const diaSemanaHashtag = diaDaSemana.split('-')[0]; 
             
-            // Montagem dos Diferenciais
             let dptoInfo = "";
             if (dadosEvento.diferenciais_noite && dadosEvento.diferenciais_noite.trim() !== '') {
                 dptoInfo = `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}`;
             }
 
-            // O MOLDE PREMIUM
             const copyText = `👑 ${dadosEvento.nome.toUpperCase()} — A noite onde você dita as regras na E-Club! 🌹✨
 
 Neste(a) ${diaDaSemana.toLowerCase()}, a nossa festa ganha um tom mais ousado e sofisticado. O evento ${dadosEvento.nome} é um convite especial para celebrar a sua essência em sua forma mais livre e envolvente. Porque você merece um momento para se desconectar da rotina e despertar o seu lado mais magnético.
@@ -697,6 +704,13 @@ Viva a sua essência. Viva a E-Club.
             painel.classList.remove('hidden');
         };
 
+        window.copiarTextoMarketing = () => {
+            const textArea = document.getElementById('texto-copy-gerado');
+            textArea.select();
+            document.execCommand('copy');
+            mostrarAviso("Copy de vendas copiado!", true);
+        };
+
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
             try {
@@ -726,7 +740,6 @@ Viva a sua essência. Viva a E-Club.
                 e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; 
                 mostrarAviso("Evento salvo com sucesso!", true);
                 
-                // Dispara a geração do Copy na tela
                 gerarCopyMeta(d);
                 document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
 
@@ -746,7 +759,6 @@ Viva a sua essência. Viva a E-Club.
             document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || "";
             document.getElementById('url_imagem_atual').value = ev.imagem || "";
             
-            // Oculta o painel de copy ao editar um evento antigo (ele só aparece ao salvar)
             document.getElementById('painel-copy-marketing').classList.add('hidden');
 
             for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
