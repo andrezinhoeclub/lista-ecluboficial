@@ -644,30 +644,57 @@
         }
 
         // ==========================================
-        // GERADOR DE COPY PARA ADS (META)
+        // GERADOR DE COPY PARA ADS (META) - MODELO PREMIUM
         // ==========================================
         window.gerarCopyMeta = (dadosEvento) => {
+            // Formatação de Datas
             const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
             const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
             const diaDaSemana = diasSemana[dataObj.getDay()];
             const dataBr = dataObj.toLocaleDateString('pt-BR');
-            const dptoInfo = dadosEvento.diferenciais_noite ? `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}` : '';
+            
+            // Tratamento Inteligente de Hashtags
+            const nomeFestaHashtag = dadosEvento.nome.replace(/\s+/g, '');
+            const diaSemanaHashtag = diaDaSemana.split('-')[0]; // Pega só "Sexta" ou "Segunda" sem o feira
+            
+            // Montagem dos Diferenciais
+            let dptoInfo = "";
+            if (dadosEvento.diferenciais_noite && dadosEvento.diferenciais_noite.trim() !== '') {
+                dptoInfo = `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}`;
+            }
 
-            // Construção do Copy focada em experiência (evitando spam terms)
-            const copyText = `Prepare-se para uma noite inesquecível no E-Club! 💥\n\nNeste ${diaDaSemana} (${dataBr}), a pista vai esquentar com o melhor do Tech House e muito mais.\n${dptoInfo}\n\n🎧 Line-up confirmado:\nResidente: DJ Neto\nSpecial Guest: Andrezinho\n\n🎟️ Garanta seu nome na lista VIP ou seu PIX antecipado pelo link na bio.\n\n📍 E-Club Curitiba\n\n#andrezinhoeclub #eclub #curitiba #techhouse #housemusic #festacuritiba`;
+            // O MOLDE PREMIUM
+            const copyText = `👑 ${dadosEvento.nome.toUpperCase()} — A noite onde você dita as regras na E-Club! 🌹✨
+
+Neste(a) ${diaDaSemana.toLowerCase()}, a nossa festa ganha um tom mais ousado e sofisticado. O evento ${dadosEvento.nome} é um convite especial para celebrar a sua essência em sua forma mais livre e envolvente. Porque você merece um momento para se desconectar da rotina e despertar o seu lado mais magnético.
+
+Prepare-se para uma atmosfera de reverência à liberdade, atitude e beleza. Um ambiente de total entrega e respeito, onde a única regra é se sentir incrível. Afinal, o que acontece na eclub, fica na eclub.
+
+🎧 No comando da trilha sonora:
+Nosso residente DJ Neto e o convidado especial DJ Andrezinho assumem a cabine com aquele set feito sob medida para dominar a pista, elevar a energia lá no alto e não deixar ninguém parado!${dptoInfo}
+
+🔥 Uma noite desenhada para exaltar a liberdade de ser a sua melhor e mais sedutora versão. Deixe o seu brilho guiar a festa.
+
+🗓️ Programe-se:
+Quando: ${diaDaSemana} (${dataBr})
+Horário: Abertura da casa às ${dadosEvento.hora || '22h'}
+Local: Rua Aníbal Goulart Maia Filho, 81 — Bairro Alto.
+
+Viva a sua essência. Viva a E-Club.
+
+👉 Siga-nos no Instagram: @eclubswingdance
+📞 Reservas VIPs e Infos (WhatsApp): (41) 99504-0506
+🌐 Garanta seu nome na lista e PIX Antecipado pelo link na bio!
+
+🔞 Aviso Importante: Evento exclusivo para maiores de 18 anos. Indispensável a apresentação de documento oficial com foto.
+
+#${nomeFestaHashtag} #eclub #${diaSemanaHashtag}Curitiba #Lifestyle #MundoLiberal #andrezinhoeclub #DJNeto #CuritibaNight #BairroAlto #eclubswingdance #Liberdade #NoiteCuritibana`;
 
             const painel = document.getElementById('painel-copy-marketing');
             const textArea = document.getElementById('texto-copy-gerado');
             
             textArea.value = copyText;
             painel.classList.remove('hidden');
-        };
-
-        window.copiarTextoMarketing = () => {
-            const textArea = document.getElementById('texto-copy-gerado');
-            textArea.select();
-            document.execCommand('copy');
-            mostrarAviso("Copy de vendas copiado!", true);
         };
 
         document.getElementById('formEvento').addEventListener('submit', async e => {
