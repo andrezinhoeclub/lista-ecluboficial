@@ -19,7 +19,7 @@
         .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
         .event-bubble { flex: 0 0 auto; width: 340px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
         input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; cursor: pointer; }
-        input:focus, select:focus { border-color: #eab308 !important; }
+        input:focus, select:focus, textarea:focus { border-color: #eab308 !important; }
         .mini-capa { width: 100%; height: 100px; object-fit: cover; border-bottom: 1px solid #1a1a1c; border-radius: 1.5rem; opacity: 0.8; margin-bottom: 1rem; }
         .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #22d3ee; cursor: pointer; }
         input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; padding: 5px; }
@@ -116,6 +116,7 @@
             </div>
         </section>
 
+        <!-- ABA DE FESTAS ATUALIZADA COM O GERADOR DE COPY -->
         <section id="aba-festas" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
                 <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento & Camarotes</h2>
@@ -158,7 +159,13 @@
                         <input type="text" id="valor_recorrente_solteiro" placeholder="SOLTEIRO FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
                     </div>
 
-                    <div class="md:col-span-6 bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5">
+                    <!-- NOVO CAMPO DE DIFERENCIAIS DA NOITE -->
+                    <div class="md:col-span-6 bg-purple-500/10 p-4 rounded-3xl border border-purple-500/20 mb-4">
+                        <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">📱 Informações para Marketing (Ads e Orgânico)</label>
+                        <textarea id="diferenciais_noite" placeholder="Quais os diferenciais desta noite? Ex: Open Bar para elas até 00h, Dose dupla de Tequila..." class="w-full p-4 rounded-2xl text-[11px] h-20 resize-none"></textarea>
+                    </div>
+
+                    <div class="md:col-span-6 bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5 mb-4">
                         <label class="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-4 block ml-2">🖼️ Capa do Evento (Upload Seguro)</label>
                         <input type="file" id="upload_capa" accept="image/*" class="w-full text-xs text-zinc-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-yellow-600 file:text-black hover:file:bg-yellow-500 cursor-pointer">
                     </div>
@@ -170,6 +177,15 @@
 
                     <button type="submit" id="btnSalvarEvento" class="md:col-span-6 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
                 </form>
+
+                <!-- PAINEL DO COPY GERADO AUTOMATICAMENTE -->
+                <div id="painel-copy-marketing" class="hidden mt-8 bg-black/50 border border-purple-500/30 rounded-[2rem] p-6 md:p-8 relative">
+                    <h3 class="text-purple-400 font-black uppercase italic text-sm mb-4 tracking-widest">📝 Copy Validado para Ads</h3>
+                    <p class="text-[10px] text-zinc-400 mb-6 font-bold uppercase">Texto pronto para impulsionamento, estruturado sem violações e com a hashtag oficial.</p>
+                    <textarea id="texto-copy-gerado" readonly class="w-full bg-[#0a0a0f] border border-zinc-800 rounded-2xl p-5 text-xs text-zinc-300 min-h-[250px] mb-4"></textarea>
+                    <button onclick="copiarTextoMarketing()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors">Copiar Texto de Vendas</button>
+                </div>
+
             </div>
             <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </section>
@@ -627,6 +643,33 @@
             if(lpPort) lpPort.innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${formatTime(op.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
         }
 
+        // ==========================================
+        // GERADOR DE COPY PARA ADS (META)
+        // ==========================================
+        window.gerarCopyMeta = (dadosEvento) => {
+            const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
+            const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+            const diaDaSemana = diasSemana[dataObj.getDay()];
+            const dataBr = dataObj.toLocaleDateString('pt-BR');
+            const dptoInfo = dadosEvento.diferenciais_noite ? `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}` : '';
+
+            // Construção do Copy focada em experiência (evitando spam terms)
+            const copyText = `Prepare-se para uma noite inesquecível no E-Club! 💥\n\nNeste ${diaDaSemana} (${dataBr}), a pista vai esquentar com o melhor do Tech House e muito mais.\n${dptoInfo}\n\n🎧 Line-up confirmado:\nResidente: DJ Neto\nSpecial Guest: Andrezinho\n\n🎟️ Garanta seu nome na lista VIP ou seu PIX antecipado pelo link na bio.\n\n📍 E-Club Curitiba\n\n#andrezinhoeclub #eclub #curitiba #techhouse #housemusic #festacuritiba`;
+
+            const painel = document.getElementById('painel-copy-marketing');
+            const textArea = document.getElementById('texto-copy-gerado');
+            
+            textArea.value = copyText;
+            painel.classList.remove('hidden');
+        };
+
+        window.copiarTextoMarketing = () => {
+            const textArea = document.getElementById('texto-copy-gerado');
+            textArea.select();
+            document.execCommand('copy');
+            mostrarAviso("Copy de vendas copiado!", true);
+        };
+
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
             try {
@@ -646,12 +689,20 @@
                     desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, 
                     ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, 
                     valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value,
+                    diferenciais_noite: document.getElementById('diferenciais_noite').value,
                     imagem: urlFinal, ativo: true 
                 };
                 for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
+                
                 if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
+                
                 e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; 
                 mostrarAviso("Evento salvo com sucesso!", true);
+                
+                // Dispara a geração do Copy na tela
+                gerarCopyMeta(d);
+                document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
+
             } catch(err) { 
                 mostrarAviso("Erro ao salvar evento."); 
             } finally { 
@@ -665,7 +716,12 @@
             document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; 
             document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; 
             document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || "";
+            document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || "";
             document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            
+            // Oculta o painel de copy ao editar um evento antigo (ele só aparece ao salvar)
+            document.getElementById('painel-copy-marketing').classList.add('hidden');
+
             for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
             document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
         }
