@@ -66,7 +66,17 @@
             <p class="text-center text-xs text-zinc-500 italic">Buscando programações...</p>
         </div>
 
-        <footer class="mt-16 text-center opacity-40">
+        <div class="mt-10 mb-4 w-full anim-fade" style="animation-delay: 0.2s;">
+            <a href="https://api.whatsapp.com/send?phone=554196280156" target="_blank" class="glass w-full flex items-center justify-center gap-4 px-6 py-5 rounded-2xl border-pink-500/30 hover:border-pink-500/80 hover:bg-pink-900/20 transition-all shadow-[0_0_20px_rgba(219,39,119,0.1)]">
+                <span class="text-3xl drop-shadow-[0_0_10px_rgba(219,39,119,0.5)]">💬</span>
+                <div class="text-left">
+                    <p class="text-[9px] font-black uppercase text-pink-400 tracking-widest mb-0.5">Atendimento Exclusivo Solteiras</p>
+                    <p class="text-sm font-bold text-white tracking-widest">+55 41 9628-0156</p>
+                </div>
+            </a>
+        </div>
+
+        <footer class="mt-12 text-center opacity-40">
             <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1">
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
             </a>
@@ -150,6 +160,7 @@
         window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
         window.maskCEP = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 8); if (v.length > 5) v = v.substring(0, 5) + "-" + v.substring(5); i.value = v; };
 
+        // INTELIGÊNCIA DE MEMÓRIA (LOCALSTORAGE)
         function salvarMemoria(dados) { localStorage.setItem('eclub_solteira_perfil', JSON.stringify(dados)); }
         function recuperarMemoria() { const p = localStorage.getItem('eclub_solteira_perfil'); return p ? JSON.parse(p) : null; }
 
@@ -270,6 +281,13 @@
             btn.disabled = true; btn.innerText = "AGENDANDO...";
             
             try {
+                // TRAVA DE DUPLICIDADE: Impede agendamento duplo para o mesmo evento com o mesmo número
+                const qBusca = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome), where("tel", "==", t));
+                const snapBusca = await getDocs(qBusca);
+                if (!snapBusca.empty) {
+                    throw new Error("Você já possui um VIP ou Carona agendada para este evento com este número!");
+                }
+
                 salvarMemoria({ nome: n, tel: t, cep: cep, bairro: bairro, rua: rua, num: num, comp: comp });
 
                 let vaiTerCarona = !bloqueioBairro;
@@ -305,7 +323,7 @@
 
                 document.getElementById('modalSucesso').classList.remove('hidden');
             } catch (e) { 
-                mostrarAviso("Erro ao processar. Tente novamente."); 
+                mostrarAviso(e.message); 
                 btn.disabled = false; btn.innerText = "Confirmar";
             }
         };
