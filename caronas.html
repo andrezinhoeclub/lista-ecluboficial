@@ -140,7 +140,15 @@
                     </div>
                     
                     <div class="space-y-3 mt-2">
-                        <input type="tel" id="cep-cliente" oninput="maskCEP(this); buscarCEP(this.value)" placeholder="SEU CEP" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white" maxlength="9">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="tel" id="cep-cliente" oninput="maskCEP(this); buscarCEP(this.value)" placeholder="SEU CEP" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white" maxlength="9">
+                            <select id="qtd-cliente" class="w-full site-input p-4 rounded-2xl font-bold text-[10px] uppercase text-white outline-none cursor-pointer">
+                                <option value="1">1 Passageira</option>
+                                <option value="2">2 Passageiras</option>
+                                <option value="3">3 Passageiras</option>
+                                <option value="4">4 Passageiras</option>
+                            </select>
+                        </div>
                         <input type="text" id="bairro-cliente" placeholder="BAIRRO (Automático)" readonly class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-zinc-400">
                         <input type="text" id="rua-cliente" placeholder="RUA (Automático)" readonly class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-zinc-400">
                         <div class="grid grid-cols-2 gap-3">
@@ -292,6 +300,7 @@
                 document.getElementById('rua-cliente').value = perfil.rua || '';
                 document.getElementById('num-cliente').value = perfil.num || '';
                 document.getElementById('comp-cliente').value = perfil.comp || '';
+                document.getElementById('qtd-cliente').value = perfil.qtd || '1';
                 
                 if(perfil.bairro && regrasLogistica.bairros.length > 0) {
                     if(!regrasLogistica.bairros.includes(perfil.bairro.toUpperCase())) {
@@ -347,6 +356,7 @@
             const rua = document.getElementById('rua-cliente').value;
             const num = document.getElementById('num-cliente').value.trim();
             const comp = document.getElementById('comp-cliente').value.trim().toUpperCase();
+            const qtdPass = document.getElementById('qtd-cliente').value;
 
             if (!n || !t || !num || cep.length < 8) return mostrarAviso("Por favor, preencha todos os campos do endereço!");
 
@@ -360,7 +370,7 @@
                     throw new Error("Você já possui um VIP ou Carona agendada para este evento com este número!");
                 }
 
-                salvarMemoria({ nome: n, tel: t, cep: cep, bairro: bairro, rua: rua, num: num, comp: comp });
+                salvarMemoria({ nome: n, tel: t, cep: cep, bairro: bairro, rua: rua, num: num, comp: comp, qtd: qtdPass });
 
                 let vaiTerCarona = !bloqueioBairro;
 
@@ -376,6 +386,7 @@
                     metodo: 'portaria', 
                     valor_pago: "FREE", 
                     carona: vaiTerCarona,
+                    qtd_solteiras: vaiTerCarona ? parseInt(qtdPass) : 1,
                     bairro: vaiTerCarona ? bairro : "", 
                     cep: vaiTerCarona ? cep : "", 
                     endereco: vaiTerCarona ? `${rua}, ${num} ${comp ? '('+comp+')' : ''}` : ""
@@ -502,7 +513,10 @@
             Object.keys(grupos).sort().forEach(bairro => {
                 texto += `🛑 BAIRRO: ${bairro}\n`;
                 grupos[bairro].forEach(p => {
-                    texto += `\n${cont}. ${p.nome} - ${p.tel || 'Sem número'}\n`;
+                    const qtdPass = p.qtd_solteiras || 1;
+                    const labelVagas = qtdPass > 1 ? 'VAGAS' : 'VAGA';
+                    
+                    texto += `\n${cont}. ${p.nome} - ${p.tel || 'Sem número'} [${qtdPass} ${labelVagas}]\n`;
                     texto += `Endereço: ${p.endereco || 'Sem endereço'} - CEP: ${p.cep || '---'}\n`;
                     cont++;
                 });
