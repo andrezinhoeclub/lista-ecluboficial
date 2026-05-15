@@ -109,7 +109,7 @@
             </select>
             
             <h2 class="text-[10px] font-black uppercase text-blue-400 mb-2 tracking-widest">Rotas Geradas (Automático)</h2>
-            <textarea id="output-rotas-carona" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[400px] resize-none" placeholder="Aguardando seleção do evento..."></textarea>
+            <textarea id="output-rotas-carona" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[400px] resize-none whitespace-pre" placeholder="Aguardando seleção do evento..."></textarea>
             
             <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(59,130,246,0.4)]">📋 Copiar para o Motorista</button>
         </div>
@@ -195,9 +195,6 @@
         let bloqueioBairro = false;
         let reservasCaronaMemoria = []; 
 
-        // ==========================================
-        // CONTROLE DE NAVEGAÇÃO (BOTÃO VOLTAR DO CELULAR)
-        // ==========================================
         let controleNavegacao = false;
         window.addEventListener('popstate', function() {
             controleNavegacao = false;
@@ -431,7 +428,6 @@
             try {
                 let acessoLiberado = false;
                 
-                // MUDANÇA AQUI: Checa APENAS na tabela de Promoters
                 let snap = await getDoc(doc(db, "promoters", u));
                 if(snap.exists() && snap.data().senha === s) acessoLiberado = true;
 
@@ -490,6 +486,9 @@
                 return;
             }
 
+            // Ordena cronologicamente por hora da reserva (quem pediu primeiro)
+            passageiras.sort((a,b) => new Date(a.data_reserva || 0) - new Date(b.data_reserva || 0));
+
             const grupos = {};
             passageiras.forEach(p => {
                 const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase();
@@ -503,11 +502,11 @@
             Object.keys(grupos).sort().forEach(bairro => {
                 texto += `🛑 BAIRRO: ${bairro}\n`;
                 grupos[bairro].forEach(p => {
-                    texto += `${cont}. ${p.nome} - ${p.tel || 'Sem número'}\n`;
+                    texto += `\n${cont}. ${p.nome} - ${p.tel || 'Sem número'}\n`;
                     texto += `Endereço: ${p.endereco || 'Sem endereço'} - CEP: ${p.cep || '---'}\n`;
                     cont++;
                 });
-                texto += `\n`;
+                texto += `\n------------------------------------\n\n`;
             });
             
             textarea.value = texto.trim();
