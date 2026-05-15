@@ -90,11 +90,11 @@
                 <div class="pt-4">
                     <label class="text-[9px] font-black text-pink-400 uppercase tracking-widest ml-2">Endereço para Busca</label>
                     
-                    <div id="aviso-bairro" class="hidden bg-red-950/50 border border-red-500/50 p-5 rounded-2xl mb-4 mt-2 shadow-[0_0_20px_rgba(239,68,68,0.2)] text-center transition-all">
-                        <span class="text-2xl block mb-2">📍</span>
-                        <p class="text-[11px] font-black text-red-400 uppercase tracking-widest mb-1">Região Indisponível</p>
-                        <p class="text-[9px] font-bold text-zinc-300 leading-relaxed mb-3">Ops! No momento, nosso motorista não atende este bairro.</p>
-                        <p class="text-[9px] font-black text-pink-400 uppercase border-t border-red-500/20 pt-3">Deseja desmarcar a carona e apenas garantir a Lista VIP?</p>
+                    <div id="aviso-bairro" class="hidden bg-red-950/80 border-2 border-red-500 p-5 rounded-2xl mb-4 mt-2 shadow-[0_0_20px_rgba(239,68,68,0.5)] text-center transition-all animate-pulse">
+                        <span class="text-3xl block mb-2">🚫🚗</span>
+                        <p class="text-[12px] font-black text-red-400 uppercase tracking-widest mb-1">Região Fora da Rota</p>
+                        <p class="text-[10px] font-bold text-zinc-300 leading-relaxed mb-3">Nosso motorista não atende este bairro.</p>
+                        <p class="text-[10px] font-black text-pink-400 uppercase border-t border-red-500/30 pt-3">Se você confirmar agora, garantirá APENAS sua entrada VIP na lista (sem a carona).</p>
                     </div>
                     
                     <div class="space-y-3 mt-2">
@@ -108,7 +108,7 @@
                     </div>
                 </div>
 
-                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full btn-rosa py-5 rounded-2xl uppercase text-xs mt-6">Confirmar Agendamento 🚗</button>
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full btn-rosa py-5 rounded-2xl uppercase text-xs mt-6 transition-all">Confirmar Solicitação 🚗</button>
                 <p class="text-[8px] text-zinc-500 text-center mt-4">Sua carona passará para te buscar no endereço informado.</p>
             </div>
         </div>
@@ -116,9 +116,9 @@
 
     <div id="modalSucesso" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
         <div class="w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-pink-500/50">
-            <span class="text-6xl mb-6 block drop-shadow-[0_0_20px_rgba(219,39,119,0.8)]">💖</span>
-            <h2 class="text-pink-500 font-black uppercase italic mb-2 text-2xl tracking-tighter">Agendado!</h2>
-            <p class="text-zinc-300 text-[10px] font-bold uppercase mb-8 leading-relaxed">
+            <span id="sucesso-icone" class="text-6xl mb-6 block drop-shadow-[0_0_20px_rgba(219,39,119,0.8)]">💖</span>
+            <h2 id="sucesso-titulo" class="text-pink-500 font-black uppercase italic mb-2 text-2xl tracking-tighter">Agendado!</h2>
+            <p id="sucesso-texto" class="text-zinc-300 text-[10px] font-bold uppercase mb-8 leading-relaxed whitespace-pre-line">
                 Tudo pronto! Seu VIP está garantido e o motorista te chamará no WhatsApp para confirmar o horário.
             </p>
             <button onclick="location.reload()" class="w-full bg-pink-600 hover:bg-pink-500 text-white py-5 rounded-2xl uppercase text-xs font-black transition-colors shadow-lg">Entendido</button>
@@ -150,7 +150,6 @@
         window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
         window.maskCEP = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 8); if (v.length > 5) v = v.substring(0, 5) + "-" + v.substring(5); i.value = v; };
 
-        // INTELIGÊNCIA DE MEMÓRIA (LOCALSTORAGE)
         function salvarMemoria(dados) { localStorage.setItem('eclub_solteira_perfil', JSON.stringify(dados)); }
         function recuperarMemoria() { const p = localStorage.getItem('eclub_solteira_perfil'); return p ? JSON.parse(p) : null; }
 
@@ -201,11 +200,10 @@
             eventoAtivo = eventosCache.find(e => e.id === id); 
             document.getElementById('modal-evento-nome').innerText = eventoAtivo.nome;
             
-            // Limpa dados por precaução
             document.getElementById('aviso-bairro').classList.add('hidden');
             bloqueioBairro = false;
+            document.getElementById('btn-final-acao').innerText = "Confirmar Solicitação 🚗";
 
-            // PREENCHER COM MEMÓRIA SE EXISTIR
             const perfil = recuperarMemoria();
             if (perfil) {
                 document.getElementById('nome-cliente').value = perfil.nome || '';
@@ -216,11 +214,11 @@
                 document.getElementById('num-cliente').value = perfil.num || '';
                 document.getElementById('comp-cliente').value = perfil.comp || '';
                 
-                // Se já tinha bairro na memória, re-valida para ver se ele continua na lista do motorista
                 if(perfil.bairro && regrasLogistica.bairros.length > 0) {
                     if(!regrasLogistica.bairros.includes(perfil.bairro.toUpperCase())) {
                         document.getElementById('aviso-bairro').classList.remove('hidden');
                         bloqueioBairro = true;
+                        document.getElementById('btn-final-acao').innerText = "Confirmar Apenas VIP ✨";
                     }
                 }
             }
@@ -240,12 +238,16 @@
                         document.getElementById('rua-cliente').value = data.logradouro.toUpperCase();
                         
                         const avisoBairro = document.getElementById('aviso-bairro');
+                        const btnFinal = document.getElementById('btn-final-acao');
+                        
                         if (regrasLogistica.bairros.length > 0 && !regrasLogistica.bairros.includes(b)) {
                             avisoBairro.classList.remove('hidden');
                             bloqueioBairro = true;
+                            btnFinal.innerText = "Confirmar Apenas VIP ✨";
                         } else {
                             avisoBairro.classList.add('hidden');
                             bloqueioBairro = false;
+                            btnFinal.innerText = "Confirmar Solicitação 🚗";
                             document.getElementById('num-cliente').focus();
                         }
                     }
@@ -262,29 +264,49 @@
             const num = document.getElementById('num-cliente').value.trim();
             const comp = document.getElementById('comp-cliente').value.trim().toUpperCase();
 
-            // Validações
             if (!n || !t || !num || cep.length < 8) return mostrarAviso("Por favor, preencha todos os campos do endereço!");
-            if (bloqueioBairro) return mostrarAviso("O bairro informado não é atendido pelo nosso motorista. Desmarque a carona na portaria principal.");
 
             const btn = document.getElementById('btn-final-acao'); 
             btn.disabled = true; btn.innerText = "AGENDANDO...";
             
             try {
-                // SALVAR MEMÓRIA PARA A PRÓXIMA VEZ
                 salvarMemoria({ nome: n, tel: t, cep: cep, bairro: bairro, rua: rua, num: num, comp: comp });
 
+                let vaiTerCarona = !bloqueioBairro;
+
                 await addDoc(collection(db, "lista_eventos"), { 
-                    nome: n, tel: t, evento: eventoAtivo.nome, tipo_entrada: "SOLTEIRA VIP", 
-                    promoter: "CARONA VIP", data_reserva: new Date().toISOString(), entrou: false, 
-                    pago: false, metodo: 'portaria', valor_pago: "FREE", carona: true,
-                    bairro: bairro, cep: cep, endereco: `${rua}, ${num} ${comp ? '('+comp+')' : ''}`
+                    nome: n, 
+                    tel: t, 
+                    evento: eventoAtivo.nome, 
+                    tipo_entrada: "SOLTEIRA VIP", 
+                    promoter: vaiTerCarona ? "CARONA VIP" : "LOUNGE VIP", 
+                    data_reserva: new Date().toISOString(), 
+                    entrou: false, 
+                    pago: false, 
+                    metodo: 'portaria', 
+                    valor_pago: "FREE", 
+                    carona: vaiTerCarona,
+                    bairro: vaiTerCarona ? bairro : "", 
+                    cep: vaiTerCarona ? cep : "", 
+                    endereco: vaiTerCarona ? `${rua}, ${num} ${comp ? '('+comp+')' : ''}` : ""
                 });
                 
                 document.getElementById('modalForm').classList.add('hidden');
+
+                if (vaiTerCarona) {
+                    document.getElementById('sucesso-icone').innerText = "💖";
+                    document.getElementById('sucesso-titulo').innerText = "Agendado!";
+                    document.getElementById('sucesso-texto').innerText = "Tudo pronto! Seu VIP está garantido e o motorista te chamará no WhatsApp para confirmar o horário.";
+                } else {
+                    document.getElementById('sucesso-icone').innerText = "✨";
+                    document.getElementById('sucesso-titulo').innerText = "Confirmada!";
+                    document.getElementById('sucesso-texto').innerText = "Seu nome já está na nossa Lista VIP na recepção!\n\n(Como sua região não é coberta pelo motorista, a carona não foi incluída na rota).";
+                }
+
                 document.getElementById('modalSucesso').classList.remove('hidden');
             } catch (e) { 
                 mostrarAviso("Erro ao processar. Tente novamente."); 
-                btn.disabled = false; btn.innerText = "Confirmar Agendamento 🚗";
+                btn.disabled = false; btn.innerText = "Confirmar";
             }
         };
 
