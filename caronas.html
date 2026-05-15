@@ -13,7 +13,10 @@
         .glass { background: rgba(20, 5, 15, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(219, 39, 119, 0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .site-input { background: #0f0a0d !important; border: 1px solid #3d142b !important; color: #fff !important; outline: none; transition: 0.3s; }
         .site-input:focus { border-color: #db2777 !important; box-shadow: 0 0 15px rgba(219, 39, 119, 0.3); }
-        .banner-img { width: 100%; height: 180px; object-fit: cover; border-radius: 2rem 2rem 0 0; opacity: 0.9; }
+        
+        /* NOVA PROPORÇÃO 1080x1350 (4:5) */
+        .banner-img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 2.5rem 2.5rem 0 0; opacity: 0.95; }
+        
         .btn-rosa { background: linear-gradient(135deg, #db2777 0%, #be185d 100%); color: #fff; font-weight: 900; transition: all 0.3s; }
         .btn-rosa:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(219, 39, 119, 0.4); }
         .btn-disabled { filter: grayscale(1); opacity: 0.4; cursor: not-allowed !important; }
@@ -29,7 +32,7 @@
         <span id="toast-msg">Mensagem</span>
     </div>
 
-    <div class="max-w-md w-full mt-6">
+    <div id="tela-principal" class="max-w-md w-full mt-6">
         <header class="flex flex-col items-center justify-center mb-8">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-20 mb-4 drop-shadow-[0_0_15px_rgba(219,39,119,0.3)]">
             <h1 class="text-pink-500 font-black uppercase italic text-2xl tracking-tighter text-center leading-none">Lounge VIP</h1>
@@ -62,7 +65,7 @@
 
         <h3 class="text-center text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-6">Escolha o Evento para Agendar Carona</h3>
         
-        <div id="listaEventos" class="space-y-6">
+        <div id="listaEventos" class="space-y-8">
             <p class="text-center text-xs text-zinc-500 italic">Buscando programações...</p>
         </div>
 
@@ -76,11 +79,33 @@
             </a>
         </div>
 
-        <footer class="mt-12 text-center opacity-40">
+        <footer class="mt-12 text-center opacity-40 flex flex-col items-center gap-3">
             <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1">
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
             </a>
+            <button onclick="abrirModalLogin()" class="text-[9px] font-bold text-zinc-600 hover:text-white transition-colors tracking-widest uppercase">🔐 Restrito</button>
         </footer>
+    </div>
+
+    <div id="tela-rotas" class="hidden max-w-md w-full mt-6 anim-fade">
+        <header class="flex flex-col items-center justify-center mb-8 relative">
+            <button onclick="sairPainelRotas()" class="absolute left-0 top-0 text-pink-500 font-black text-xs uppercase hover:text-white transition-colors">◀ Sair</button>
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mb-4 drop-shadow-[0_0_15px_rgba(219,39,119,0.3)]">
+            <h1 class="text-blue-500 font-black uppercase italic text-2xl tracking-tighter text-center leading-none">Gerador de Rotas</h1>
+            <p id="label-logado" class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-2">Acesso Logística</p>
+        </header>
+
+        <div class="glass p-6 md:p-8 rounded-[2.5rem] flex flex-col border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
+            <h2 class="text-[10px] font-black uppercase text-blue-400 mb-2 tracking-widest">Selecione o Evento</h2>
+            <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full site-input p-4 rounded-2xl text-xs font-black uppercase mb-6 text-white outline-none">
+                <option value="">Aguardando reservas...</option>
+            </select>
+            
+            <h2 class="text-[10px] font-black uppercase text-blue-400 mb-2 tracking-widest">Rotas Geradas (Automático)</h2>
+            <textarea id="output-rotas-carona" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[400px] resize-none" placeholder="Aguardando seleção do evento..."></textarea>
+            
+            <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(59,130,246,0.4)]">📋 Copiar para o Motorista</button>
+        </div>
     </div>
 
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
@@ -124,6 +149,20 @@
         </div>
     </div>
 
+    <div id="modalLogin" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="w-full max-w-sm glass p-8 rounded-[2.5rem] relative shadow-[0_0_50px_rgba(59,130,246,0.15)] text-center border-blue-500/30">
+            <button onclick="fecharModalLogin()" class="absolute top-6 right-6 text-blue-500 font-black text-xl hover:text-white transition-colors">✕</button>
+            <span class="text-4xl block mb-4">🔐</span>
+            <h2 class="font-black uppercase italic tracking-tighter text-xl text-blue-400 mb-6">Acesso Restrito</h2>
+            
+            <div class="space-y-3">
+                <input type="text" id="login-user" placeholder="USUÁRIO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
+                <input type="password" id="login-senha" placeholder="SENHA" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
+                <button onclick="fazerLoginGerador()" id="btn-login" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-lg mt-4">Acessar Painel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalSucesso" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
         <div class="w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-pink-500/50">
             <span id="sucesso-icone" class="text-6xl mb-6 block drop-shadow-[0_0_20px_rgba(219,39,119,0.8)]">💖</span>
@@ -137,7 +176,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
@@ -147,6 +186,7 @@
         let eventoAtivo = null;
         let regrasLogistica = { hora: '18:00', bairros: [] };
         let bloqueioBairro = false;
+        let reservasCaronaMemoria = []; // Usado pelo gerador de rotas oculto
 
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -194,12 +234,12 @@
                 const btnClasse = passouLimite ? "btn-disabled" : "";
 
                 return `
-                <div class="glass overflow-hidden rounded-[2rem] transition-all hover:border-pink-500/50">
-                    ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-32 bg-pink-900/10 flex items-center justify-center text-pink-500/30 font-black italic text-xl border-b border-pink-500/10">E-CLUB</div>`}
-                    <div class="p-6 text-center">
-                        <h3 class="text-xl font-black uppercase italic mb-1 tracking-tighter text-white">${ev.nome}</h3>
-                        <p class="text-[9px] font-bold text-pink-300 uppercase tracking-widest mb-6">${ev.data.split('-').reverse().join('/')}</p>
-                        <button onclick="abrirReserva('${ev.id}', ${passouLimite})" class="w-full btn-rosa py-4 rounded-xl text-[10px] uppercase tracking-widest shadow-lg ${btnClasse}">${btnTexto}</button>
+                <div class="glass overflow-hidden rounded-[2.5rem] transition-all hover:border-pink-500/50">
+                    ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-64 bg-pink-900/10 flex items-center justify-center text-pink-500/30 font-black italic text-2xl border-b border-pink-500/10">E-CLUB</div>`}
+                    <div class="p-6 md:p-8 text-center">
+                        <h3 class="text-2xl font-black uppercase italic mb-1 tracking-tighter text-white">${ev.nome}</h3>
+                        <p class="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-6">${ev.data.split('-').reverse().join('/')}</p>
+                        <button onclick="abrirReserva('${ev.id}', ${passouLimite})" class="w-full btn-rosa py-5 rounded-2xl text-[11px] uppercase tracking-widest shadow-lg ${btnClasse}">${btnTexto}</button>
                     </div>
                 </div>`;
             }).join('');
@@ -324,11 +364,130 @@
                 document.getElementById('modalSucesso').classList.remove('hidden');
             } catch (e) { 
                 mostrarAviso(e.message); 
-                btn.disabled = false; btn.innerText = "Confirmar";
+                btn.disabled = false; btn.innerText = "Confirmar Solicitação 🚗";
             }
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
+
+        // ==========================================
+        // SISTEMA OCULTO DO GERADOR DE ROTAS
+        // ==========================================
+        
+        window.abrirModalLogin = () => {
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-senha').value = '';
+            document.getElementById('modalLogin').classList.remove('hidden');
+        };
+
+        window.fecharModalLogin = () => {
+            document.getElementById('modalLogin').classList.add('hidden');
+        };
+
+        window.fazerLoginGerador = async () => {
+            const u = document.getElementById('login-user').value.trim().toLowerCase();
+            const s = document.getElementById('login-senha').value.trim();
+            
+            if(!u || !s) return mostrarAviso("Preencha usuário e senha!");
+
+            const btn = document.getElementById('btn-login'); 
+            btn.innerText = "VERIFICANDO..."; btn.disabled = true;
+
+            try {
+                let acessoLiberado = false;
+                
+                // Checa nos Promoters
+                let snap = await getDoc(doc(db, "promoters", u));
+                if(snap.exists() && snap.data().senha === s) acessoLiberado = true;
+                
+                // Checa nas Configurações (Operadores Portaria/Admin)
+                if(!acessoLiberado) {
+                    snap = await getDoc(doc(db, "configuracoes", u));
+                    if(snap.exists() && snap.data().senha === s) acessoLiberado = true;
+                }
+
+                if(acessoLiberado) {
+                    document.getElementById('label-logado').innerText = "OPERADOR: " + u.toUpperCase();
+                    fecharModalLogin();
+                    document.getElementById('tela-principal').classList.add('hidden');
+                    document.getElementById('tela-rotas').classList.remove('hidden');
+                    iniciarSistemaRotas();
+                } else {
+                    mostrarAviso("Acesso negado. Senha ou usuário incorretos.");
+                }
+            } catch (e) {
+                mostrarAviso("Erro de conexão.");
+            }
+            
+            btn.innerText = "Acessar Painel"; btn.disabled = false;
+        };
+
+        window.sairPainelRotas = () => {
+            document.getElementById('tela-rotas').classList.add('hidden');
+            document.getElementById('tela-principal').classList.remove('hidden');
+        };
+
+        function iniciarSistemaRotas() {
+            // Escuta a lista de eventos apenas para quem solicitou carona
+            onSnapshot(query(collection(db, "lista_eventos"), where("carona", "==", true)), (snap) => {
+                reservasCaronaMemoria = snap.docs.map(d => d.data());
+                
+                const selectCarona = document.getElementById('filtro-evento-carona');
+                const valAtual = selectCarona.value;
+                
+                const eventosComCarona = [...new Set(reservasCaronaMemoria.map(r => r.evento))];
+                selectCarona.innerHTML = '<option value="">Selecione o Evento com Caronas...</option>' + 
+                    eventosComCarona.map(e => `<option value="${e}">${e}</option>`).join('');
+                
+                if(eventosComCarona.includes(valAtual)) selectCarona.value = valAtual;
+                if(valAtual) window.gerarRelatorioCaronas();
+            });
+        }
+
+        window.gerarRelatorioCaronas = () => {
+            const eventoNome = document.getElementById('filtro-evento-carona').value;
+            const textarea = document.getElementById('output-rotas-carona');
+            
+            if(!eventoNome) { textarea.value = "Aguardando seleção do evento..."; return; }
+            
+            const passageiras = reservasCaronaMemoria.filter(r => r.evento === eventoNome);
+            
+            if(passageiras.length === 0) {
+                textarea.value = `Nenhuma solicitação de carona registrada para o evento ${eventoNome}.`;
+                return;
+            }
+
+            // Agrupa por bairro
+            const grupos = {};
+            passageiras.forEach(p => {
+                const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase();
+                if(!grupos[b]) grupos[b] = [];
+                grupos[b].push(p);
+            });
+
+            // Monta o texto
+            let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`;
+            let cont = 1;
+            
+            Object.keys(grupos).sort().forEach(bairro => {
+                texto += `🛑 BAIRRO: ${bairro}\n`;
+                grupos[bairro].forEach(p => {
+                    texto += `${cont}. ${p.nome} - ${p.tel || 'Sem número'}\n`;
+                    texto += `Endereço: ${p.endereco || 'Sem endereço'} - CEP: ${p.cep || '---'}\n`;
+                    cont++;
+                });
+                texto += `\n`;
+            });
+            
+            textarea.value = texto.trim();
+        };
+
+        window.copiarRotasCarona = () => {
+            const t = document.getElementById('output-rotas-carona');
+            t.select(); document.execCommand('copy');
+            mostrarAviso("Rotas copiadas para o motorista!", true);
+        };
+
         carregarPagina();
     </script>
 </body>
