@@ -58,6 +58,13 @@
                     <li>• Doses cortesia durante a noite</li>
                     <li>• Serviço de Carona (Leva e Trás) em regiões selecionadas</li>
                 </ul>
+                
+                <div class="mt-5 bg-red-950/40 border border-red-500/50 p-4 rounded-xl text-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                    <p class="text-[11px] font-black text-red-400 uppercase tracking-widest mb-1">⏳ Atenção aos Horários</p>
+                    <p class="text-[9px] font-bold text-zinc-300 leading-relaxed">
+                        As solicitações de carona se encerram pontualmente às <span id="display-hora-limite" class="bg-red-600 text-white px-2 py-0.5 rounded-md font-black text-[11px] ml-1 mr-1">--:--</span> no dia do evento.
+                    </p>
+                </div>
             </div>
             
             <p class="text-[9px] text-zinc-500 text-center mt-6 italic">Aqui o limite é você que faz! 💋</p>
@@ -186,7 +193,7 @@
         let eventoAtivo = null;
         let regrasLogistica = { hora: '18:00', bairros: [] };
         let bloqueioBairro = false;
-        let reservasCaronaMemoria = []; // Usado pelo gerador de rotas oculto
+        let reservasCaronaMemoria = []; 
 
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -200,7 +207,6 @@
         window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
         window.maskCEP = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 8); if (v.length > 5) v = v.substring(0, 5) + "-" + v.substring(5); i.value = v; };
 
-        // INTELIGÊNCIA DE MEMÓRIA (LOCALSTORAGE)
         function salvarMemoria(dados) { localStorage.setItem('eclub_solteira_perfil', JSON.stringify(dados)); }
         function recuperarMemoria() { const p = localStorage.getItem('eclub_solteira_perfil'); return p ? JSON.parse(p) : null; }
 
@@ -213,6 +219,10 @@
                     if(d.carona_bairros) regrasLogistica.bairros = d.carona_bairros.toUpperCase().split(',').map(b => b.trim());
                 }
             } catch(e) {}
+
+            // ATUALIZA A TELA COM O HORÁRIO LIMITE DO BANCO DE DADOS
+            const displayHora = document.getElementById('display-hora-limite');
+            if (displayHora) displayHora.innerText = regrasLogistica.hora;
 
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             const hojeStr = new Date().toLocaleDateString('en-CA');
@@ -321,7 +331,6 @@
             btn.disabled = true; btn.innerText = "AGENDANDO...";
             
             try {
-                // TRAVA DE DUPLICIDADE: Impede agendamento duplo para o mesmo evento com o mesmo número
                 const qBusca = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome), where("tel", "==", t));
                 const snapBusca = await getDocs(qBusca);
                 if (!snapBusca.empty) {
@@ -396,11 +405,9 @@
             try {
                 let acessoLiberado = false;
                 
-                // Checa nos Promoters
                 let snap = await getDoc(doc(db, "promoters", u));
                 if(snap.exists() && snap.data().senha === s) acessoLiberado = true;
                 
-                // Checa nas Configurações (Operadores Portaria/Admin)
                 if(!acessoLiberado) {
                     snap = await getDoc(doc(db, "configuracoes", u));
                     if(snap.exists() && snap.data().senha === s) acessoLiberado = true;
@@ -428,7 +435,6 @@
         };
 
         function iniciarSistemaRotas() {
-            // Escuta a lista de eventos apenas para quem solicitou carona
             onSnapshot(query(collection(db, "lista_eventos"), where("carona", "==", true)), (snap) => {
                 reservasCaronaMemoria = snap.docs.map(d => d.data());
                 
@@ -457,7 +463,6 @@
                 return;
             }
 
-            // Agrupa por bairro
             const grupos = {};
             passageiras.forEach(p => {
                 const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase();
@@ -465,7 +470,6 @@
                 grupos[b].push(p);
             });
 
-            // Monta o texto
             let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`;
             let cont = 1;
             
