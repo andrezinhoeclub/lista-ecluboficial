@@ -163,7 +163,7 @@
             <h2 class="font-black uppercase italic tracking-tighter text-xl text-blue-400 mb-6">Acesso Restrito</h2>
             
             <div class="space-y-3">
-                <input type="text" id="login-user" placeholder="USUÁRIO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
+                <input type="text" id="login-user" placeholder="USUÁRIO (PROMOTER)" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
                 <input type="password" id="login-senha" placeholder="SENHA" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
                 <button onclick="fazerLoginGerador()" id="btn-login" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-lg mt-4">Acessar Painel</button>
             </div>
@@ -277,7 +277,7 @@
         window.abrirReserva = (id, bloqueado) => {
             if (bloqueado) return mostrarAviso("As solicitações de carona para o evento de hoje já foram encerradas.");
             
-            adicionarHistorico(); // Chama o histórico do celular
+            adicionarHistorico(); 
 
             eventoAtivo = eventosCache.find(e => e.id === id); 
             document.getElementById('modal-evento-nome').innerText = eventoAtivo.nome;
@@ -431,16 +431,12 @@
             try {
                 let acessoLiberado = false;
                 
+                // MUDANÇA AQUI: Checa APENAS na tabela de Promoters
                 let snap = await getDoc(doc(db, "promoters", u));
                 if(snap.exists() && snap.data().senha === s) acessoLiberado = true;
-                
-                if(!acessoLiberado) {
-                    snap = await getDoc(doc(db, "configuracoes", u));
-                    if(snap.exists() && snap.data().senha === s) acessoLiberado = true;
-                }
 
                 if(acessoLiberado) {
-                    document.getElementById('label-logado').innerText = "OPERADOR: " + u.toUpperCase();
+                    document.getElementById('label-logado').innerText = "PROMOTER: " + u.toUpperCase();
                     
                     document.getElementById('modalLogin').classList.add('hidden');
                     document.getElementById('tela-principal').classList.add('hidden');
@@ -448,7 +444,7 @@
                     
                     iniciarSistemaRotas();
                 } else {
-                    mostrarAviso("Acesso negado. Senha ou usuário incorretos.");
+                    mostrarAviso("Acesso negado. Senha incorreta ou usuário não é promoter.");
                 }
             } catch (e) {
                 mostrarAviso("Erro de conexão.");
