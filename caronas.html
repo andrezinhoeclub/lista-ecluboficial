@@ -89,8 +89,12 @@
                 
                 <div class="pt-4">
                     <label class="text-[9px] font-black text-pink-400 uppercase tracking-widest ml-2">Endereço para Busca</label>
-                    <div id="aviso-bairro" class="hidden text-[9px] font-bold text-red-400 bg-red-500/10 p-2 rounded-lg leading-snug mb-2 mt-1">
-                        Ops! No momento nosso motorista não atende este bairro. Deseja apenas colocar o nome na lista VIP sem carona?
+                    
+                    <div id="aviso-bairro" class="hidden bg-red-950/50 border border-red-500/50 p-5 rounded-2xl mb-4 mt-2 shadow-[0_0_20px_rgba(239,68,68,0.2)] text-center transition-all">
+                        <span class="text-2xl block mb-2">📍</span>
+                        <p class="text-[11px] font-black text-red-400 uppercase tracking-widest mb-1">Região Indisponível</p>
+                        <p class="text-[9px] font-bold text-zinc-300 leading-relaxed mb-3">Ops! No momento, nosso motorista não atende este bairro.</p>
+                        <p class="text-[9px] font-black text-pink-400 uppercase border-t border-red-500/20 pt-3">Deseja desmarcar a carona e apenas garantir a Lista VIP?</p>
                     </div>
                     
                     <div class="space-y-3 mt-2">
@@ -132,6 +136,7 @@
         let eventosCache = [];
         let eventoAtivo = null;
         let regrasLogistica = { hora: '18:00', bairros: [] };
+        let bloqueioBairro = false;
 
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -175,7 +180,7 @@
             container.innerHTML = eventosCache.map(ev => {
                 const isHoje = ev.data === hojeStr;
                 const passouLimite = isHoje && horaAtual >= regrasLogistica.hora;
-                const btnTexto = passouLimite ? "CARONAS ENCERRADAS PARA HOJE" : "SOLICITAR CARONA VIP🌹";
+                const btnTexto = passouLimite ? "CARONAS ENCERRADAS PARA HOJE" : "SOLICITAR CARONA VIP 🚗";
                 const btnClasse = passouLimite ? "btn-disabled" : "";
 
                 return `
@@ -191,10 +196,14 @@
         }
 
         window.abrirReserva = (id, bloqueado) => {
-            if (bloqueado) return mostrarAviso("As solicitações de carona para hoje já foram encerradas.");
+            if (bloqueado) return mostrarAviso("As solicitações de carona para o evento de hoje já foram encerradas.");
             
             eventoAtivo = eventosCache.find(e => e.id === id); 
             document.getElementById('modal-evento-nome').innerText = eventoAtivo.nome;
+            
+            // Limpa dados por precaução
+            document.getElementById('aviso-bairro').classList.add('hidden');
+            bloqueioBairro = false;
 
             // PREENCHER COM MEMÓRIA SE EXISTIR
             const perfil = recuperarMemoria();
@@ -206,6 +215,14 @@
                 document.getElementById('rua-cliente').value = perfil.rua || '';
                 document.getElementById('num-cliente').value = perfil.num || '';
                 document.getElementById('comp-cliente').value = perfil.comp || '';
+                
+                // Se já tinha bairro na memória, re-valida para ver se ele continua na lista do motorista
+                if(perfil.bairro && regrasLogistica.bairros.length > 0) {
+                    if(!regrasLogistica.bairros.includes(perfil.bairro.toUpperCase())) {
+                        document.getElementById('aviso-bairro').classList.remove('hidden');
+                        bloqueioBairro = true;
+                    }
+                }
             }
 
             document.getElementById('modalForm').classList.remove('hidden');
@@ -225,8 +242,10 @@
                         const avisoBairro = document.getElementById('aviso-bairro');
                         if (regrasLogistica.bairros.length > 0 && !regrasLogistica.bairros.includes(b)) {
                             avisoBairro.classList.remove('hidden');
+                            bloqueioBairro = true;
                         } else {
                             avisoBairro.classList.add('hidden');
+                            bloqueioBairro = false;
                             document.getElementById('num-cliente').focus();
                         }
                     }
@@ -243,7 +262,9 @@
             const num = document.getElementById('num-cliente').value.trim();
             const comp = document.getElementById('comp-cliente').value.trim().toUpperCase();
 
-            if (!n || !t || !num || cep.length < 8) return mostrarAviso("Por favor, preencha todos os campos!");
+            // Validações
+            if (!n || !t || !num || cep.length < 8) return mostrarAviso("Por favor, preencha todos os campos do endereço!");
+            if (bloqueioBairro) return mostrarAviso("O bairro informado não é atendido pelo nosso motorista. Desmarque a carona na portaria principal.");
 
             const btn = document.getElementById('btn-final-acao'); 
             btn.disabled = true; btn.innerText = "AGENDANDO...";
