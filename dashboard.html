@@ -129,11 +129,10 @@
                         <span class="bg-pink-500/10 text-pink-400 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-pink-500/20">🔒 Imune a Limpeza de Sistema</span>
                     </div>
 
-                    <form id="formAddSolteira" class="flex flex-col md:flex-row gap-3 mb-8">
-                        <input type="text" id="nome_solteira" placeholder="NOME DA SOLTEIRA" class="flex-grow p-4 rounded-2xl font-bold text-xs uppercase" required>
-                        <input type="tel" id="tel_solteira" oninput="window.maskTel(this)" placeholder="(41) 99999-9999" class="p-4 rounded-2xl font-bold text-xs" required>
-                        <button type="submit" class="bg-pink-600 px-8 py-4 rounded-2xl font-black uppercase text-xs text-white transition-all hover:bg-pink-500">Cadastrar</button>
-                    </form>
+                    <div class="relative mb-8">
+                        <span class="absolute left-4 top-4 text-zinc-500">🔍</span>
+                        <input type="text" id="busca-solteira" oninput="renderSolteiras()" placeholder="Consultar solteira por nome ou telefone..." class="w-full p-4 pl-12 rounded-2xl bg-[#0a0a0f] border border-zinc-800 font-bold text-xs uppercase text-white outline-none focus:border-pink-500 transition-all shadow-lg">
+                    </div>
 
                     <div class="overflow-x-auto max-h-[400px]">
                         <table class="w-full text-left border-collapse">
@@ -361,8 +360,6 @@
         }
         window.mostrarAviso = mostrarAviso;
 
-        window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
-
         const gridCamarotes = document.getElementById('grid-camarotes-inputs');
         for(let i=1; i<=8; i++) {
             let nomeFiltro = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `Cam 0${i}`;
@@ -428,7 +425,6 @@
             const textarea = document.getElementById('output-rotas-carona');
             if(!eventoNome) { textarea.value = "Aguardando seleção do evento..."; return; }
             
-            // Puxa as reservas daquele evento que pediram carona (carona == true)
             const passageiras = dadosReservas.filter(r => r.evento === eventoNome && r.carona === true);
             
             if(passageiras.length === 0) {
@@ -436,7 +432,6 @@
                 return;
             }
 
-            // Agrupa por bairro
             const grupos = {};
             passageiras.forEach(p => {
                 const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase();
@@ -444,11 +439,9 @@
                 grupos[b].push(p);
             });
 
-            // Monta o texto
             let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`;
             let cont = 1;
             
-            // Ordena os bairros alfabeticamente para facilitar a rota
             Object.keys(grupos).sort().forEach(bairro => {
                 texto += `🛑 BAIRRO: ${bairro}\n`;
                 grupos[bairro].forEach(p => {
@@ -468,8 +461,27 @@
             mostrarAviso("Rotas copiadas para o motorista!", true);
         };
 
+        // ROBÔ DE LIMPEZA DE 90 DIAS (Limpa a base de solteiras de forma silenciosa)
         onSnapshot(collection(db, "solteiras"), snap => {
-            dadosSolteiras = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            const agora = new Date();
+            const batch = writeBatch(db);
+            let deletouAlgo = false;
+
+            dadosSolteiras = snap.docs.map(d => {
+                const data = d.data();
+                let dataRef = data.ultima_visita ? new Date(data.ultima_visita) : new Date(data.data_cadastro);
+                
+                // Se a referência de data for maior que 90 dias, deleta do banco
+                if (!isNaN(dataRef) && (agora - dataRef) / (1000 * 60 * 60 * 24) > 90) {
+                    batch.delete(d.ref);
+                    deletouAlgo = true;
+                    return null;
+                }
+                return { id: d.id, ...data };
+            }).filter(s => s !== null);
+
+            if(deletouAlgo) batch.commit(); // Efetiva a limpeza no Firebase
+
             renderSolteiras();
         });
 
@@ -477,7 +489,6 @@
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderAuditoria(); renderSolteiras();
             
-            // Atualiza select de eventos das caronas
             const selectCarona = document.getElementById('filtro-evento-carona');
             const evtAtuais = [...new Set(dadosReservas.filter(r=>r.carona===true).map(r=>r.evento))];
             if(selectCarona) {
@@ -489,7 +500,7 @@
 
         onSnapshot(collection(db, "eventos"), snap => { 
             dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderSolteiras(); // Chama aqui também para garantir que pega os eventos ativos
+            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderSolteiras();
         });
 
         onSnapshot(collection(db, "promoters"), snap => { 
@@ -503,34 +514,6 @@
             renderAniversarios();
         });
 
-        document.getElementById('formAddSolteira').addEventListener('submit', async e => {
-            e.preventDefault();
-            const n = document.getElementById('nome_solteira').value.trim().toUpperCase();
-            const t = document.getElementById('tel_solteira').value.trim();
-            if(!n || t.replace(/\D/g, '').length < 11) return mostrarAviso("Preencha corretamente o nome e o WhatsApp!");
-
-            const btn = e.target.querySelector('button');
-            btn.innerText = "SALVANDO...";
-            btn.disabled = true;
-            try {
-                const q = query(collection(db, "solteiras"), where("tel", "==", t.replace(/\D/g, '')));
-                const snap = await getDocs(q);
-                if(!snap.empty) {
-                    mostrarAviso("Este telefone já está no banco de Solteiras!");
-                } else {
-                    await addDoc(collection(db, "solteiras"), {
-                        nome: n, tel: t.replace(/\D/g, ''), data_cadastro: new Date().toISOString(), ultima_visita: null
-                    });
-                    mostrarAviso("Solteira VIP cadastrada com sucesso!", true);
-                    e.target.reset();
-                }
-            } catch(err) {
-                mostrarAviso("Erro ao cadastrar solteira.");
-            }
-            btn.innerText = "CADASTRAR";
-            btn.disabled = false;
-        });
-
         function renderSolteiras() {
             // ATUALIZA O CONTADOR
             const badgeCount = document.getElementById('total-solteiras-badge');
@@ -539,12 +522,20 @@
             }
 
             const tbody = document.getElementById('tabela-solteiras-body');
+            const buscaEl = document.getElementById('busca-solteira');
+            const termoBusca = buscaEl ? buscaEl.value.trim().toUpperCase() : '';
+
             if(tbody) {
-                const sorteds = [...dadosSolteiras].sort((a,b) => new Date(b.data_cadastro || 0) - new Date(a.data_cadastro || 0));
-                if(sorteds.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-[10px] font-bold text-zinc-600 uppercase italic">Nenhuma solteira cadastrada no banco.</td></tr>`;
+                let filtradas = [...dadosSolteiras].sort((a,b) => new Date(b.data_cadastro || 0) - new Date(a.data_cadastro || 0));
+                
+                if (termoBusca) {
+                    filtradas = filtradas.filter(s => String(s.nome).toUpperCase().includes(termoBusca) || String(s.tel).includes(termoBusca));
+                }
+
+                if(filtradas.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-[10px] font-bold text-zinc-600 uppercase italic">Nenhuma solteira encontrada.</td></tr>`;
                 } else {
-                    tbody.innerHTML = sorteds.map(s => {
+                    tbody.innerHTML = filtradas.map(s => {
                         const dCad = s.data_cadastro ? new Date(s.data_cadastro).toLocaleDateString('pt-BR') : '---';
                         const dVis = s.ultima_visita ? new Date(s.ultima_visita).toLocaleDateString('pt-BR') : '<span class="text-zinc-600 font-bold">NUNCA</span>';
                         let fTel = s.tel || '---';
@@ -563,14 +554,10 @@
             const textarea = document.getElementById('output-solteiras-presentes');
             if(textarea) {
                 const telefonesCadastrados = dadosSolteiras.map(s => String(s.tel).replace(/\D/g, ''));
-                
-                // MÁGICA AQUI: Pega apenas os nomes dos eventos que estão ATIVOS na aba Eventos
                 const eventosAtivosNomes = dadosEventos.filter(e => e.ativo).map(e => String(e.nome).trim().toUpperCase());
                 
                 const presentesNaCasa = dadosReservas.filter(r => {
                     if (!r.entrou) return false;
-                    
-                    // Verifica se o check-in pertence a um evento que ainda está ativo
                     const eventoReserva = String(r.evento || '').trim().toUpperCase();
                     if (!eventosAtivosNomes.includes(eventoReserva)) return false;
                     
@@ -595,6 +582,7 @@
                 }
             }
         }
+        window.renderSolteiras = renderSolteiras;
 
         window.copiarSolteirasPresentes = () => {
             const t = document.getElementById('output-solteiras-presentes');
@@ -603,7 +591,7 @@
         };
 
         // =====================================
-        // AUDITORIA E RELATÓRIOS
+        // AUDITORIA E RELATÓRIOS (SOLTEIRAS OCULTAS)
         // =====================================
         function renderAuditoria() {
             const tbody = document.getElementById('tabela-auditoria-body');
@@ -615,7 +603,9 @@
             const selectFiltro = document.getElementById('filtro-status-auditoria');
             const filtroStatus = selectFiltro ? selectFiltro.value : 'todos';
 
-            let reservasSort = [...dadosReservas].sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
+            // MÁGICA DE ISOLAMENTO: Filtra as solteiras VIP da lista geral
+            let reservasGerais = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP');
+            let reservasSort = reservasGerais.sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
 
             if (filtroStatus === 'entrou') {
                 reservasSort = reservasSort.filter(r => r.entrou === true);
@@ -703,7 +693,9 @@
             const ativos = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data));
             container.innerHTML = ativos.map(ev => {
                 const evNomeLimpo = (ev.nome || '').trim().toLowerCase();
-                const todasRes = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo);
+                
+                // MÁGICA DE ISOLAMENTO: Filtra as solteiras VIP dos totais de vendas e reservas
+                const todasRes = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.evento || '').trim().toLowerCase() === evNomeLimpo);
                 
                 const validas = todasRes.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
                 const parseMoeda = (val) => Number(String(val || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
@@ -738,14 +730,22 @@
                     else luzesCamarotes += `<div class="w-full h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
                 }
                 
-                return `<div class="event-bubble p-6 flex flex-col justify-between"><div><div class="flex justify-between items-start mb-4"><p class="text-[9px] font-black text-yellow-500 uppercase italic mt-1">${ev.data.split('-').reverse().join('/')}</p><div class="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg flex flex-col items-end"><span class="text-[7px] font-black text-green-500 uppercase tracking-widest">💰 Total Arrecadado</span><span class="text-sm font-black text-white">${formataBRL(totalGeral)}</span></div></div><h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4></div><div class="bg-cyan-900/10 border border-cyan-500/20 p-4 rounded-2xl mb-4"><div class="flex flex-col gap-2 text-[10px]"><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCasalQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Seco Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCasalConsQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2 text-fuchsia-400">Casais Consuma Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSolteiroQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div></div><div class="grid grid-cols-8 gap-1.5 mt-4">${luzesCamarotes}</div></div><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista</p><p class="text-lg font-black text-white">${validas.length}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins</p><p class="text-lg font-black text-green-500">${validas.filter(r => r.entrou === true).length}</p></div></div></div>`;
+                return `<div class="event-bubble p-6 flex flex-col justify-between"><div><div class="flex justify-between items-start mb-4"><p class="text-[9px] font-black text-yellow-500 uppercase italic mt-1">${ev.data.split('-').reverse().join('/')}</p><div class="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg flex flex-col items-end"><span class="text-[7px] font-black text-green-500 uppercase tracking-widest">💰 Total Arrecadado</span><span class="text-sm font-black text-white">${formataBRL(totalGeral)}</span></div></div><h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4></div><div class="bg-cyan-900/10 border border-cyan-500/20 p-4 rounded-2xl mb-4"><div class="flex flex-col gap-2 text-[10px]"><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCasalQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Seco Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCasalConsQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2 text-fuchsia-400">Casais Consuma Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSolteiroQtd}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div></div><div class="grid grid-cols-8 gap-1.5 mt-4">${luzesCamarotes}</div></div><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista VIP/Pagante</p><p class="text-lg font-black text-white">${validas.length}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins Pagantes</p><p class="text-lg font-black text-green-500">${validas.filter(r => r.entrou === true).length}</p></div></div></div>`;
             }).join('');
             renderPodios();
         }
 
         function renderPodios() {
             const stats = {};
-            dadosReservas.forEach(r => { if (r.metodo === 'pix_antecipado' && r.pago !== true) return; const p = (r.promoter || 'DIRETO').toUpperCase(); if(!stats[p]) stats[p] = { res: 0, chk: 0 }; stats[p].res += 1; if(r.entrou === true) stats[p].chk += 1; });
+            dadosReservas.forEach(r => { 
+                if (r.tipo_entrada === 'SOLTEIRA VIP') return; // Isola Solteiras do Pódio
+                if (r.metodo === 'pix_antecipado' && r.pago !== true) return; 
+                
+                const p = (r.promoter || 'DIRETO').toUpperCase(); 
+                if(!stats[p]) stats[p] = { res: 0, chk: 0 }; 
+                stats[p].res += 1; 
+                if(r.entrou === true) stats[p].chk += 1; 
+            });
             const medals = ['🥇', '🥈', '🥉'];
             const rankRes = Object.entries(stats).sort((a,b) => b[1].res - a[1].res).slice(0,5);
             const rankChk = Object.entries(stats).sort((a,b) => b[1].chk - a[1].chk).slice(0,5);
@@ -755,9 +755,11 @@
 
         function gerarRelatorioGerencial() {
             const textoArea = document.getElementById('output-excel');
-            if (dadosReservas.length === 0) { textoArea.value = "Sem reservas."; return; }
             
-            const validas = dadosReservas.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
+            // Isola Solteiras do Resumo Gerencial
+            const validas = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.metodo !== 'pix_antecipado' || r.pago === true));
+            if (validas.length === 0) { textoArea.value = "Sem reservas de pagantes."; return; }
+            
             const ativos = dadosEventos.sort((a,b) => a.data.localeCompare(b.data));
             let cabecalho = "";
             if (ativos.length > 0) {
@@ -813,7 +815,7 @@
         function gerarApenasCheckins() {
             const filtro = document.getElementById('filtro-promoter-excel').value;
             const textoArea = document.getElementById('output-excel');
-            let fRes = dadosReservas.filter(r => r.entrou === true);
+            let fRes = dadosReservas.filter(r => r.entrou === true && r.tipo_entrada !== 'SOLTEIRA VIP');
             if (filtro) fRes = fRes.filter(r => (r.promoter || '').toUpperCase() === filtro);
             if (fRes.length === 0) { textoArea.value = "Nenhum check-in encontrado."; return; }
             let texto = "NOME\tTELEFONE\n";
@@ -890,9 +892,6 @@
             if(lpPort) lpPort.innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${formatTime(op.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
         }
 
-        // ==========================================
-        // GERADOR DE COPY PARA ADS (META)
-        // ==========================================
         window.gerarCopyMeta = (dadosEvento) => {
             const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
             const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -907,37 +906,15 @@
                 dptoInfo = `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}`;
             }
 
-            const copyText = `👑 ${dadosEvento.nome.toUpperCase()} — A noite onde você dita as regras na E-Club! 🌹✨
-
-Neste(a) ${diaDaSemana.toLowerCase()}, a nossa festa ganha um tom mais ousado e sofisticado. O evento ${dadosEvento.nome} é um convite especial para celebrar a sua essência em sua forma mais livre e envolvente. Porque você merece um momento para se desconectar da rotina e despertar o seu lado mais magnético.
-
-Prepare-se para uma atmosfera de reverência à liberdade, atitude e beleza. Um ambiente de total entrega e respeito, onde a única regra é se sentir incrível. Afinal, o que acontece na eclub, fica na eclub.
-
-🎧 No comando da trilha sonora:
-Nosso residente DJ Neto e o convidado especial DJ Andrezinho assumem a cabine com aquele set feito sob medida para dominar a pista, elevar a energia lá no alto e não deixar ninguém parado!${dptoInfo}
-
-🔥 Uma noite desenhada para exaltar a liberdade de ser a sua melhor e mais sedutora versão. Deixe o seu brilho guiar a festa.
-
-🗓️ Programe-se:
-Quando: ${diaDaSemana} (${dataBr})
-Horário: Abertura da casa às ${dadosEvento.hora || '22h'}
-Local: Rua Aníbal Goulart Maia Filho, 81 — Bairro Alto.
-
-Viva a sua essência. Viva a E-Club.
-
-👉 Siga-nos no Instagram: @eclubswingdance
-📞 Reservas VIPs e Infos (WhatsApp): (41) 99504-0506
-🌐 Garanta seu nome na lista e PIX Antecipado pelo link na bio!
-
-🔞 Aviso Importante: Evento exclusivo para maiores de 18 anos. Indispensável a apresentação de documento oficial com foto.
-
-#${nomeFestaHashtag} #eclub #${diaSemanaHashtag}Curitiba #Lifestyle #MundoLiberal #andrezinhoeclub #DJNeto #CuritibaNight #BairroAlto #eclubswingdance #Liberdade #NoiteCuritibana`;
+            const copyText = `👑 ${dadosEvento.nome.toUpperCase()} — A noite onde você dita as regras na E-Club! 🌹✨\n\nNeste(a) ${diaDaSemana.toLowerCase()}, a nossa festa ganha um tom mais ousado e sofisticado. O evento ${dadosEvento.nome} é um convite especial para celebrar a sua essência em sua forma mais livre e envolvente. Porque você merece um momento para se desconectar da rotina e despertar o seu lado mais magnético.\n\nPrepare-se para uma atmosfera de reverência à liberdade, atitude e beleza. Um ambiente de total entrega e respeito, onde a única regra é se sentir incrível. Afinal, o que acontece na eclub, fica na eclub.\n\n🎧 No comando da trilha sonora:\nNosso residente DJ Neto e o convidado especial DJ Andrezinho assumem a cabine com aquele set feito sob medida para dominar a pista, elevar a energia lá no alto e não deixar ninguém parado!${dptoInfo}\n\n🔥 Uma noite desenhada para exaltar a liberdade de ser a sua melhor e mais sedutora versão. Deixe o seu brilho guiar a festa.\n\n🗓️ Programe-se:\nQuando: ${diaDaSemana} (${dataBr})\nHorário: Abertura da casa às ${dadosEvento.hora || '22h'}\nLocal: Rua Aníbal Goulart Maia Filho, 81 — Bairro Alto.\n\nViva a sua essência. Viva a E-Club.\n\n👉 Siga-nos no Instagram: @eclubswingdance\n📞 Reservas VIPs e Infos (WhatsApp): (41) 99504-0506\n🌐 Garanta seu nome na lista e PIX Antecipado pelo link na bio!\n\n🔞 Aviso Importante: Evento exclusivo para maiores de 18 anos. Indispensável a apresentação de documento oficial com foto.\n\n#${nomeFestaHashtag} #eclub #${diaSemanaHashtag}Curitiba #Lifestyle #MundoLiberal #andrezinhoeclub #DJNeto #CuritibaNight #BairroAlto #eclubswingdance #Liberdade #NoiteCuritibana`;
 
             const painel = document.getElementById('painel-copy-marketing');
             const textArea = document.getElementById('texto-copy-gerado');
             
-            textArea.value = copyText;
-            painel.classList.remove('hidden');
+            if(textArea) {
+                textArea.value = copyText;
+                if(painel) painel.classList.remove('hidden');
+            }
         };
 
         window.copiarTextoMarketing = () => {
@@ -966,7 +943,7 @@ Viva a sua essência. Viva a E-Club.
                     desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, 
                     ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, 
                     valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value,
-                    diferenciais_noite: document.getElementById('diferenciais_noite').value,
+                    diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '',
                     imagem: urlFinal, ativo: true 
                 };
                 for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
@@ -976,7 +953,10 @@ Viva a sua essência. Viva a E-Club.
                 e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; 
                 mostrarAviso("Evento salvo com sucesso!", true);
                 
-                gerarCopyMeta(d);
+                if (document.getElementById('diferenciais_noite')) {
+                    gerarCopyMeta(d);
+                }
+                
                 document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
 
             } catch(err) { 
@@ -992,10 +972,10 @@ Viva a sua essência. Viva a E-Club.
             document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; 
             document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; 
             document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || "";
-            document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || "";
+            if (document.getElementById('diferenciais_noite')) document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || "";
             document.getElementById('url_imagem_atual').value = ev.imagem || "";
             
-            document.getElementById('painel-copy-marketing').classList.add('hidden');
+            if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
 
             for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
             document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
