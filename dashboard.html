@@ -125,7 +125,7 @@
                             <h2 class="text-pink-500 font-black uppercase italic text-xl tracking-tighter">Banco de Solteiras VIP</h2>
                             <span id="total-solteiras-badge" class="bg-pink-600 text-white px-3 py-1 rounded-md text-[10px] font-black uppercase shadow-lg">0</span>
                         </div>
-                        <span class="bg-pink-500/10 text-pink-400 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-pink-500/20">🔒 Imune a Limpeza de Sistema</span>
+                        <span class="bg-pink-500/10 text-pink-400 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border border-pink-500/20">🔒 Imune a Limpeza</span>
                     </div>
 
                     <div class="relative mb-8">
@@ -149,8 +149,13 @@
                 </div>
 
                 <div class="glass-card p-8 border-t-4 border-t-pink-500 flex flex-col">
-                    <h2 class="text-[11px] font-black uppercase text-pink-400 mb-2 tracking-widest">💃 Presentes na Casa</h2>
-                    <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6 leading-relaxed">Solteiras que fizeram check-in nos eventos ativos.</p>
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h2 class="text-[11px] font-black uppercase text-pink-400 mb-1 tracking-widest">💃 Presentes na Casa</h2>
+                            <p class="text-[9px] text-zinc-500 font-bold uppercase leading-relaxed">Check-ins do turno atual.</p>
+                        </div>
+                        <span id="contador-presentes" class="bg-pink-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shadow-lg">0 NA CASA</span>
+                    </div>
 
                     <textarea id="output-solteiras-presentes" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800 border" placeholder="Nenhuma solteira detectada na casa no momento..."></textarea>
                     <button onclick="copiarSolteirasPresentes()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar Lista de Presentes</button>
@@ -340,6 +345,21 @@
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
         let dadosSolteiras = []; let modoTesteAtivo = false;
 
+        // FUNÇÃO DE CORREÇÃO DE DATAS DE VISITAS
+        const parseVisita = (val) => {
+            if (!val) return null;
+            if (typeof val.toDate === 'function') return val.toDate();
+            if (typeof val === 'string') {
+                if (val.includes('/')) {
+                    const p = val.split(/[/\s:]+/);
+                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]);
+                }
+                return new Date(val);
+            }
+            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
+            return null;
+        };
+
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
@@ -420,9 +440,8 @@
         onSnapshot(collection(db, "solteiras"), snap => {
             const agora = new Date(); const batch = writeBatch(db); let del = false;
             dadosSolteiras = snap.docs.map(d => {
-                const data = d.data(); let ref = null;
-                if (data.ultima_visita) { ref = typeof data.ultima_visita.toDate === 'function' ? data.ultima_visita.toDate() : new Date(data.ultima_visita); } 
-                else if (data.data_cadastro) { ref = new Date(data.data_cadastro); }
+                const data = d.data(); 
+                let ref = parseVisita(data.ultima_visita) || parseVisita(data.data_cadastro);
                 if (ref && !isNaN(ref) && (agora - ref) / (1000 * 60 * 60 * 24) > 90) { batch.delete(d.ref); del = true; return null; }
                 return { id: d.id, ...data };
             }).filter(s => s !== null);
@@ -474,8 +493,8 @@
                         const dCad = s.data_cadastro ? new Date(s.data_cadastro).toLocaleDateString('pt-BR') : '---';
                         let dVis = '<span class="text-zinc-600 font-bold">NUNCA</span>';
                         if (s.ultima_visita) {
-                            let obj = typeof s.ultima_visita.toDate === 'function' ? s.ultima_visita.toDate() : new Date(s.ultima_visita);
-                            if (!isNaN(obj)) dVis = obj.toLocaleDateString('pt-BR');
+                            let obj = parseVisita(s.ultima_visita);
+                            if (obj && !isNaN(obj)) dVis = obj.toLocaleDateString('pt-BR');
                         }
                         let fTel = s.tel || '---'; if(fTel.length === 11) fTel = `(${fTel.substring(0,2)}) ${fTel.substring(2,7)}-${fTel.substring(7,11)}`;
                         return `<tr class="border-b border-white/5 text-[10px] hover:bg-white/5 transition-colors"><td class="py-4 pl-4 text-zinc-400 font-mono">${dCad}</td><td class="py-4 font-black uppercase text-white">${s.nome}</td><td class="py-4 font-mono text-pink-400">${fTel}</td><td class="py-4 text-right pr-4 text-zinc-400">${dVis}</td></tr>`;
@@ -484,13 +503,13 @@
             }
 
             const ta = document.getElementById('output-solteiras-presentes');
+            const badgePres = document.getElementById('contador-presentes');
             if(ta) {
                 const agora = new Date(); const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
                 
                 const presPortaria = dadosSolteiras.filter(s => {
-                    if (!s.ultima_visita) return false;
-                    let d = typeof s.ultima_visita.toDate === 'function' ? s.ultima_visita.toDate() : new Date(s.ultima_visita);
-                    return !isNaN(d) && d >= corte;
+                    let d = parseVisita(s.ultima_visita);
+                    return d && !isNaN(d) && d >= corte;
                 });
 
                 const telPort = presPortaria.map(s => String(s.tel).replace(/\D/g, ''));
@@ -508,6 +527,7 @@
                 const todas = [...presPortaria, ...presEvt];
                 if (todas.length === 0) {
                     ta.value = "Nenhuma solteira detectada na casa no momento.";
+                    if(badgePres) badgePres.innerText = "0 NA CASA";
                 } else {
                     const unicos = []; const map = new Map();
                     for (const c of todas) {
@@ -515,6 +535,7 @@
                         if(!map.has(t) && t.length > 5) { map.set(t, true); unicos.push(c); }
                     }
                     ta.value = unicos.map(r => `${r.nome}\t${r.tel || ''}`).join('\n');
+                    if(badgePres) badgePres.innerText = unicos.length + " NA CASA";
                 }
             }
         };
@@ -590,7 +611,7 @@
             });
             const med = ['🥇', '🥈', '🥉'];
             const rR = Object.entries(st).sort((a,b) => b[1].r - a[1].r).slice(0,5); const rC = Object.entries(st).sort((a,b) => b[1].c - a[1].c).slice(0,5);
-            document.getElementById('lista-ranking-reservas').innerHTML = rR.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.r}</p></div>`).join('');
+            document.getElementById('lista-ranking-reservas').innerHTML = rR.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.res}</p></div>`).join('');
             document.getElementById('lista-ranking-checkins').innerHTML = rC.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.c}</p></div>`).join('');
         };
 
