@@ -195,6 +195,26 @@
         let bloqueioBairro = false;
         let reservasCaronaMemoria = []; 
 
+        // ==========================================
+        // CONTROLE DE NAVEGAÇÃO (BOTÃO VOLTAR DO CELULAR)
+        // ==========================================
+        let controleNavegacao = false;
+        window.addEventListener('popstate', function() {
+            controleNavegacao = false;
+            document.getElementById('modalForm').classList.add('hidden');
+            document.getElementById('modalLogin').classList.add('hidden');
+            document.getElementById('modalSucesso').classList.add('hidden');
+            document.getElementById('tela-rotas').classList.add('hidden');
+            document.getElementById('tela-principal').classList.remove('hidden');
+        });
+
+        function adicionarHistorico() {
+            if (!controleNavegacao) {
+                history.pushState({ aberto: true }, "");
+                controleNavegacao = true;
+            }
+        }
+
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${isSucesso ? 'bg-pink-600 shadow-[0_0_20px_rgba(219,39,119,0.5)]' : 'bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.5)]'}`;
@@ -220,7 +240,6 @@
                 }
             } catch(e) {}
 
-            // ATUALIZA A TELA COM O HORÁRIO LIMITE DO BANCO DE DADOS
             const displayHora = document.getElementById('display-hora-limite');
             if (displayHora) displayHora.innerText = regrasLogistica.hora;
 
@@ -258,6 +277,8 @@
         window.abrirReserva = (id, bloqueado) => {
             if (bloqueado) return mostrarAviso("As solicitações de carona para o evento de hoje já foram encerradas.");
             
+            adicionarHistorico(); // Chama o histórico do celular
+
             eventoAtivo = eventosCache.find(e => e.id === id); 
             document.getElementById('modal-evento-nome').innerText = eventoAtivo.nome;
             
@@ -285,6 +306,11 @@
             }
 
             document.getElementById('modalForm').classList.remove('hidden');
+        };
+
+        window.fecharModal = () => {
+            if(controleNavegacao) history.back();
+            else document.getElementById('modalForm').classList.add('hidden');
         };
 
         window.buscarCEP = async (val) => {
@@ -377,20 +403,20 @@
             }
         };
 
-        window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
-
         // ==========================================
         // SISTEMA OCULTO DO GERADOR DE ROTAS
         // ==========================================
         
         window.abrirModalLogin = () => {
+            adicionarHistorico();
             document.getElementById('login-user').value = '';
             document.getElementById('login-senha').value = '';
             document.getElementById('modalLogin').classList.remove('hidden');
         };
 
         window.fecharModalLogin = () => {
-            document.getElementById('modalLogin').classList.add('hidden');
+            if(controleNavegacao) history.back();
+            else document.getElementById('modalLogin').classList.add('hidden');
         };
 
         window.fazerLoginGerador = async () => {
@@ -415,9 +441,11 @@
 
                 if(acessoLiberado) {
                     document.getElementById('label-logado').innerText = "OPERADOR: " + u.toUpperCase();
-                    fecharModalLogin();
+                    
+                    document.getElementById('modalLogin').classList.add('hidden');
                     document.getElementById('tela-principal').classList.add('hidden');
                     document.getElementById('tela-rotas').classList.remove('hidden');
+                    
                     iniciarSistemaRotas();
                 } else {
                     mostrarAviso("Acesso negado. Senha ou usuário incorretos.");
@@ -430,8 +458,11 @@
         };
 
         window.sairPainelRotas = () => {
-            document.getElementById('tela-rotas').classList.add('hidden');
-            document.getElementById('tela-principal').classList.remove('hidden');
+            if(controleNavegacao) history.back();
+            else {
+                document.getElementById('tela-rotas').classList.add('hidden');
+                document.getElementById('tela-principal').classList.remove('hidden');
+            }
         };
 
         function iniciarSistemaRotas() {
