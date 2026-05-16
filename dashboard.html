@@ -294,6 +294,15 @@
                         </div>
                         <button onclick="salvarTaxaPix()" class="w-full bg-yellow-600 text-black text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-yellow-500 transition-all">Salvar Taxa</button>
                     </div>
+                    
+                    <div class="bg-indigo-500/10 border border-indigo-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
+                        <h3 class="text-indigo-400 font-black uppercase tracking-widest text-[11px] mb-4">Custo Fixo do Sistema</h3>
+                        <div class="flex gap-2 mb-4">
+                            <span class="bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-zinc-500">R$</span>
+                            <input type="number" id="custo_sistema" placeholder="VALOR MENSALIDADE" class="flex-1 bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
+                        </div>
+                        <button onclick="salvarCustoSistema()" class="w-full bg-indigo-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-indigo-500 transition-all">Salvar Custo</button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -310,7 +319,7 @@
         const storage = getStorage(app);
         
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
-        let dadosSolteiras = []; let modoTesteAtivo = false;
+        let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
 
         const getPromoterName = (p) => {
             if (!p) return 'SITE DIRETO';
@@ -397,8 +406,13 @@
                 modoTesteAtivo = data.modo_teste === true;
                 const btn = document.getElementById('btnModoTeste');
                 if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
+                
                 if (document.getElementById('tipo_taxa')) { document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado'; document.getElementById('valor_taxa').value = data.taxa_valor || ''; }
                 if (document.getElementById('config_hora_carona')) { document.getElementById('config_hora_carona').value = data.carona_hora_limite || '18:00'; document.getElementById('config_bairros_carona').value = data.carona_bairros || ''; }
+                
+                // NOVO: Valor Custo do Sistema
+                if (document.getElementById('custo_sistema')) { document.getElementById('custo_sistema').value = data.custo_sistema !== undefined ? data.custo_sistema : 125; }
+                custoSistemaGlobal = data.custo_sistema !== undefined ? parseFloat(data.custo_sistema) : 125.00;
             }
             dadosOperadores = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.id !== "sistema");
             renderEquipe();
@@ -411,31 +425,11 @@
             catch(e) { mostrarAviso("Erro ao salvar taxa."); }
         };
 
-        window.salvarConfigCaronas = async () => {
-            const h = document.getElementById('config_hora_carona').value;
-            const b = document.getElementById('config_bairros_carona').value.toUpperCase();
-            try { await setDoc(doc(db, "configuracoes", "sistema"), { carona_hora_limite: h, carona_bairros: b }, { merge: true }); mostrarAviso("Regras salvas!", true); } 
-            catch(e) { mostrarAviso("Erro ao salvar configurações."); }
+        window.salvarCustoSistema = async () => {
+            const valor = parseFloat(document.getElementById('custo_sistema').value) || 0;
+            try { await setDoc(doc(db, "configuracoes", "sistema"), { custo_sistema: valor }, { merge: true }); mostrarAviso("Custo do sistema salvo com sucesso!", true); } 
+            catch(e) { mostrarAviso("Erro ao salvar custo."); }
         };
-
-        window.gerarRelatorioCaronas = () => {
-            const eventoNome = document.getElementById('filtro-evento-carona').value;
-            const textarea = document.getElementById('output-rotas-carona');
-            if(!eventoNome) { textarea.value = "Aguardando seleção do evento..."; return; }
-            const passageiras = dadosReservas.filter(r => r.evento === eventoNome && r.carona === true);
-            if(passageiras.length === 0) { textarea.value = `Nenhuma solicitação de carona para ${eventoNome}.`; return; }
-            const grupos = {};
-            passageiras.forEach(p => { const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase(); if(!grupos[b]) grupos[b] = []; grupos[b].push(p); });
-            let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`; let cont = 1;
-            Object.keys(grupos).sort().forEach(bairro => {
-                texto += `🛑 BAIRRO: ${bairro}\n`;
-                grupos[bairro].forEach(p => { texto += `${cont}. ${p.nome} - ${p.tel || 'S/N'}\nEndereço: ${p.endereco || 'S/E'} - CEP: ${p.cep || '---'}\n`; cont++; });
-                texto += `\n`;
-            });
-            textarea.value = texto.trim();
-        };
-
-        window.copiarRotasCarona = () => { document.getElementById('output-rotas-carona').select(); document.execCommand('copy'); mostrarAviso("Rotas copiadas!", true); };
 
         onSnapshot(collection(db, "solteiras"), snap => {
             const agora = new Date(); const batch = writeBatch(db); let del = false;
@@ -452,13 +446,6 @@
         onSnapshot(collection(db, "lista_eventos"), snap => { 
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderAuditoria(); renderSolteiras();
-            const sCarona = document.getElementById('filtro-evento-carona');
-            const evtAtuais = [...new Set(dadosReservas.filter(r=>r.carona===true).map(r=>r.evento))];
-            if(sCarona) {
-                const vAtual = sCarona.value;
-                sCarona.innerHTML = '<option value="">Selecione o Evento com Caronas...</option>' + evtAtuais.map(e => `<option value="${e}">${e}</option>`).join('');
-                if(evtAtuais.includes(vAtual)) sCarona.value = vAtual;
-            }
         });
 
         onSnapshot(collection(db, "eventos"), snap => { 
@@ -574,14 +561,14 @@
             const pM = (v) => Number(String(v || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
             const tPx = val.filter(r => r.metodo === 'pix_antecipado' && r.pago === true).reduce((acc, r) => acc + pM(r.valor_pago), 0);
             
-            // NOVO: Desconto de Custo do Sistema
-            const taxaSistema = 125.00;
+            // NOVO: Cálculo e Exibição do Custo Dinâmico do Sistema
+            const taxaSistema = custoSistemaGlobal || 0;
             const saldoLiquido = tPx - taxaSistema;
             
             txt += `\n--------------------------------\n\n**Enviado pra conta PAGSEGURO**\n`;
-            txt += `Entradas: R$ ${tPx.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
+            txt += `Entradas PIX: R$ ${tPx.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
             txt += `Desconto Sistema: - R$ ${taxaSistema.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
-            txt += `> Saldo Enviado: R$ ${saldoLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n\n`;
+            txt += `> Saldo Final Enviado: R$ ${saldoLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n\n`;
             
             txt += `Ingressos vendidos (E Solteiras)\n\n`;
             const dS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -606,7 +593,6 @@
                 if (cA.length > 0) { 
                     txt += `*${dS[new Date(ev.data + "T12:00:00Z").getDay()]}*\n`; 
                     cA.sort((a,b) => a.tipo_entrada.localeCompare(b.tipo_entrada)).forEach(c => { 
-                        // NOVO: Adicionado nome do comprador caso não seja cortesia
                         if (c.cortesia) {
                             txt += `${c.tipo_entrada} - Cortesia (${getPromoterName(c.promoter)})\n`;
                         } else {
@@ -668,21 +654,39 @@
             if (document.getElementById('lista-portaria')) document.getElementById('lista-portaria').innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(op.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
         }
 
+        window.gerarCopyMeta = (dadosEvento) => {
+            const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
+            const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+            const diaDaSemana = diasSemana[dataObj.getDay()];
+            const dataBr = dataObj.toLocaleDateString('pt-BR');
+            const nomeFestaHashtag = dadosEvento.nome.replace(/\s+/g, '');
+            const diaSemanaHashtag = diaDaSemana.split('-')[0]; 
+            let dptoInfo = ""; if (dadosEvento.diferenciais_noite && dadosEvento.diferenciais_noite.trim() !== '') { dptoInfo = `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}`; }
+            const copyText = `👑 ${dadosEvento.nome.toUpperCase()} — A noite onde você dita as regras na E-Club! 🌹✨\n\nNeste(a) ${diaDaSemana.toLowerCase()}, a nossa festa ganha um tom mais ousado e sofisticado. O evento ${dadosEvento.nome} é um convite especial para celebrar a sua essência em sua forma mais livre e envolvente. Porque você merece um momento para se desconectar da rotina e despertar o seu lado mais magnético.\n\nPrepare-se para uma atmosfera de reverência à liberdade, atitude e beleza. Um ambiente de total entrega e respeito, onde a única regra é se sentir incrível. Afinal, o que acontece na eclub, fica na eclub.\n\n🎧 No comando da trilha sonora:\nNosso residente DJ Neto e o convidado especial DJ Andrezinho assumem a cabine com aquele set feito sob medida para dominar a pista, elevar a energia lá no alto e não deixar ninguém parado!${dptoInfo}\n\n🔥 Uma noite desenhada para exaltar a liberdade de ser a sua melhor e mais sedutora versão. Deixe o seu brilho guiar a festa.\n\n🗓️ Programe-se:\nQuando: ${diaDaSemana} (${dataBr})\nHorário: Abertura da casa às ${dadosEvento.hora || '22h'}\nLocal: Rua Aníbal Goulart Maia Filho, 81 — Bairro Alto.\n\nViva a sua essência. Viva a E-Club.\n\n👉 Siga-nos no Instagram: @eclubswingdance\n📞 Reservas VIPs e Infos (WhatsApp): (41) 99504-0506\n🌐 Garanta seu nome na lista e PIX Antecipado pelo link na bio!\n\n🔞 Aviso Importante: Evento exclusivo para maiores de 18 anos. Indispensável a apresentação de documento oficial com foto.\n\n#${nomeFestaHashtag} #eclub #${diaSemanaHashtag}Curitiba #Lifestyle #MundoLiberal #andrezinhoeclub #DJNeto #CuritibaNight #BairroAlto #eclubswingdance #Liberdade #NoiteCuritibana`;
+            const painel = document.getElementById('painel-copy-marketing'); const textArea = document.getElementById('texto-copy-gerado');
+            if(textArea) { textArea.value = copyText; if(painel) painel.classList.remove('hidden'); }
+        };
+
+        window.copiarTextoMarketing = () => { document.getElementById('texto-copy-gerado').select(); document.execCommand('copy'); mostrarAviso("Copy de vendas copiado!", true); };
+
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
             try {
                 const id = document.getElementById('edit_evento_id').value; const arq = document.getElementById('upload_capa').files[0]; let url = document.getElementById('url_imagem_atual').value;
                 if (arq) { const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); await uploadBytes(sr, arq); url = await getDownloadURL(sr); }
-                const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, hora: document.getElementById('hora_inicio').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value, imagem: url, ativo: true };
+                const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, hora: document.getElementById('hora_inicio').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value, diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '', imagem: url, ativo: true };
                 for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
                 if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
                 e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; mostrarAviso("Evento salvo com sucesso!", true);
+                if (document.getElementById('diferenciais_noite')) gerarCopyMeta(d);
                 document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
             } catch(err) { mostrarAviso("Erro ao salvar evento."); } finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
         });
 
         window.prepararEdicaoEvento = (id) => {
-            const ev = dadosEventos.find(e => e.id === id); document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            const ev = dadosEventos.find(e => e.id === id); document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || "";
+            if (document.getElementById('diferenciais_noite')) document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
             for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
             document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
         };
