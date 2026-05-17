@@ -291,13 +291,21 @@
             }
         }
 
-        // ==========================================
-        // CÓDIGO ATUALIZADO: COPIA APENAS OS NÚMEROS
-        // ==========================================
+        // =========================================================================
+        // FORMATAÇÃO DO TELEFONE EXATAMENTE COMO: (41)99590-6901
+        // =========================================================================
         window.copiarTelefoneLimpo = (numeroRaw) => {
             if (!numeroRaw) return;
-            // Pega estritamente só os números limpos
-            const formatado = String(numeroRaw).replace(/\D/g, ''); 
+            let val = String(numeroRaw).replace(/\D/g, ''); 
+            
+            let formatado = val;
+            if (val.length === 11) {
+                // (DDD) mais 5 numeros do prefixo + traço + 4 ultimos
+                formatado = `(${val.substring(0,2)})${val.substring(2,7)}-${val.substring(7,11)}`; 
+            } else if (val.length === 10) {
+                // (DDD) mais 4 numeros do prefixo + traço + 4 ultimos
+                formatado = `(${val.substring(0,2)})${val.substring(2,6)}-${val.substring(6,10)}`;
+            }
 
             if (formatado.length === 0) return;
 
@@ -379,102 +387,4 @@
 
                 let tagsHTML = ''; const ehCasalFinal = isCasal || pagPorta === 'CASAL';
 
-                if (isDono) { tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`; } 
-                else if (ehCasalFinal) { tagsHTML += `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👫 CASAL</span>`; } 
-                else { tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`; }
-                
-                if (isCamaroteOrVip) { tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`; }
-                
-                if (isFidelidade) { 
-                    tagsHTML += `<span class="bg-fuchsia-600 text-white border border-fuchsia-400 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate animate-pulse shadow-[0_0_10px_rgba(192,38,211,0.5)]">⭐ PROMO VIP</span>`; 
-                }
-
-                if (!isDono && !isFidelidade) {
-                    if (isCamaroteOrVip) {
-                        if (isPix) { 
-                            if (tipoNorm === "VIP 1" || tipoNorm === "VIP 2" || tipoNorm === "CAMAROTE 7" || tipoNorm === "CAMAROTE 8") {
-                                tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ SEM CONSUMAÇÃO</span>`;
-                            } else {
-                                tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
-                            }
-                        } 
-                        else if (isCortesia && pagPorta && pagPorta !== 'ISENTO') { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎁 CORTESIA</span>`; }
-                    } else {
-                        if (isPix) {
-                            if (tipoNorm === 'CASAL CONSUMAÇÃO') { tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`; } 
-                            else { tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>`; }
-                        }
-                    }
-                }
-                
-                if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
-                
-                const numTel = c.tel || c.telefone || '';
-                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
-
-                cont.innerHTML += `
-                <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
-                    <div class="flex-1 min-w-[250px] max-w-[400px] dados-cliente">
-                        <div class="flex items-center gap-2 mb-1">
-                            <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
-                            <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <p class="text-sm font-mono text-zinc-500">${numTel || '---'}</p>
-                            ${btnCopiar}
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-1 w-[140px] dados-cliente">${tagsHTML}</div>
-                    <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px] dados-cliente">
-                        <div class="w-[100px]">
-                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
-                            <p class="text-xs font-black ${corPagamento}">${textoPagamento}</p>
-                        </div>
-                        <div class="flex-1 pr-4">
-                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Info / Total</p>
-                            <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase break-words whitespace-normal">${valorFinal}</p>
-                        </div>
-                    </div>
-                    <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4 area-checkin flex-col items-end justify-center">
-                        ${c.entrou ? 
-                            `<span class="text-green-500 font-black uppercase text-[12px] leading-none">✓ OK</span>
-                             <span class="text-yellow-500 text-[8px] font-black uppercase mt-1.5 tracking-widest">👤 ${c.porteiro || 'SISTEMA'}</span>` : 
-                            `<button onclick="confirmarCheckin('${c.id}', '${numTel}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
-                        }
-                    </div>
-                </div>`;
-            });
-        };
-
-        // ==========================================
-        // CÓDIGO ATUALIZADO: COPIA APENAS OS NÚMEROS AO DAR CHECK-IN
-        // ==========================================
-        window.confirmarCheckin = async (id, telefone) => {
-            try {
-                let copiouSucesso = false;
-                if (telefone) {
-                    const formatado = String(telefone).replace(/\D/g, '');
-                    
-                    if (formatado.length > 0) {
-                        try {
-                            if (navigator.clipboard && window.isSecureContext) { 
-                                await navigator.clipboard.writeText(formatado); 
-                                copiouSucesso = true; 
-                            } else {
-                                const textArea = document.createElement("textarea"); textArea.value = formatado; textArea.style.position = "fixed"; document.body.appendChild(textArea);
-                                textArea.focus(); textArea.select(); document.execCommand('copy'); document.body.removeChild(textArea); copiouSucesso = true;
-                            }
-                        } catch (err) {}
-                    }
-                }
-                await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
-                if (copiouSucesso) { mostrarAviso("CHECK-IN OK E TELEFONE COPIADO!", true); } 
-                else { mostrarAviso("Check-in confirmado!", true); }
-                
-                const campoBusca = document.getElementById('input-busca');
-                campoBusca.value = ''; processarPesquisa(); campoBusca.focus(); 
-            } catch(e) { mostrarAviso("Erro ao confirmar check-in."); }
-        };
-    </script>
-</body>
-</html>
+                if (isDono) { tagsHTML += `<span class="bg-green-900/30 text-green-
