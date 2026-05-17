@@ -127,14 +127,14 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, getDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const colRef = collection(db, "solteiras");
-        let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
+        let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null; let eventoHojeCache = null;
 
         function normalizarDataNascimento(d) {
             if (!d) return null;
@@ -181,6 +181,51 @@
             setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
+        // NOVA FUNÇÃO: Gera recibo na lista_eventos para o relatório histórico não perder dados.
+        async function gerarReciboCheckin(clienteDados) {
+            try {
+                if(!eventoHojeCache) return; // Se não tem evento hoje, não tem como gerar recibo
+
+                // Verifica se já gerou recibo para essa cliente HOJE para evitar duplo checkin na dashboard
+                const qBusca = query(collection(db, "lista_eventos"), 
+                    where("evento", "==", eventoHojeCache.nome), 
+                    where("tel", "==", clienteDados.tel || '')
+                );
+                const snapBusca = await getDocs(qBusca);
+                
+                if (snapBusca.empty) {
+                    await addDoc(collection(db, "lista_eventos"), { 
+                        nome: clienteDados.nome, 
+                        tel: clienteDados.tel || '', 
+                        cpf: clienteDados.cpf || '',
+                        evento: eventoHojeCache.nome, 
+                        tipo_entrada: "SOLTEIRA VIP", 
+                        promoter: "PORTARIA VIP", 
+                        porteiro: operadorLogado,
+                        data_reserva: new Date().toISOString(), 
+                        entrou: true, 
+                        data_entrada: new Date().toISOString(),
+                        pago: false, 
+                        metodo: 'portaria', 
+                        valor_pago: "FREE"
+                    });
+                } else {
+                    // Se a cliente já fez agendamento pelo site e está entrando agora
+                    snapBusca.forEach(async (docEncontrado) => {
+                        if(docEncontrado.data().entrou !== true) {
+                            await updateDoc(doc(db, "lista_eventos", docEncontrado.id), {
+                                entrou: true,
+                                data_entrada: new Date().toISOString(),
+                                porteiro: operadorLogado
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Erro ao gerar recibo de solteira", e);
+            }
+        }
+
         window.verificarOuLogar = async () => {
             const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const s = document.getElementById('senhaUsuario').value.trim();
@@ -223,6 +268,13 @@
         };
 
         function iniciarEscutas() {
+            // Escuta para descobrir qual o evento de hoje para a Dashboard
+            const hojeStr = new Date().toLocaleDateString('en-CA');
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true), where("data", "==", hojeStr)), (snap) => {
+                if(!snap.empty) eventoHojeCache = snap.docs[0].data();
+                else eventoHojeCache = null;
+            });
+
             onSnapshot(colRef, (snap) => {
                 clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 atualizarContadores();
@@ -230,19 +282,22 @@
             });
         }
 
-        // --- FUNÇÃO PARA LIMPAR BUSCA E FOCAR ---
         function limparFocarBusca() {
             const campoBusca = document.getElementById('buscaCliente');
             campoBusca.value = '';
-            filtrarClientes(); // Atualiza a lista
-            campoBusca.focus(); // Retorna o cursor
+            filtrarClientes(); 
+            campoBusca.focus(); 
         }
 
         window.dispararCheckin = async (id) => {
             try {
                 await updateDoc(doc(db, "solteiras", id), { ultima_visita: serverTimestamp() });
+                
+                const clienteData = clientesCache.find(c => c.id === id);
+                if(clienteData) await gerarReciboCheckin(clienteData);
+
                 mostrarAviso("Liberada com sucesso!", true);
-                limparFocarBusca(); // Limpa e foca ao liberar na lista
+                limparFocarBusca(); 
             } catch (e) { mostrarAviso("Erro ao liberar a cliente!"); }
         };
 
@@ -410,13 +465,15 @@
                 const dados = { nome: document.getElementById('nome').value.toUpperCase(), tel: document.getElementById('tel').value, cpf: document.getElementById('cpf').value, data_nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() };
                 if (idEx) {
                     await updateDoc(doc(db, "solteiras", idEx), dados);
+                    await gerarReciboCheckin(dados); // Registra no caixa do dia
                     mostrarAviso("Dados atualizados com sucesso!", true);
                 } else {
-                    await addDoc(colRef, { ...dados, bloqueada: false });
+                    const docRefAdd = await addDoc(colRef, { ...dados, bloqueada: false });
+                    await gerarReciboCheckin(dados); // Registra no caixa do dia
                     mostrarAviso("Cadastro salvo e liberado!", true);
                 }
                 window.limparFormulario();
-                limparFocarBusca(); // Limpa a busca e foca ao salvar formulário
+                limparFocarBusca(); 
             } catch (e) { mostrarAviso("Erro ao salvar os dados!"); }
             finally { btn.disabled = false; btn.innerText = idEx ? "ATUALIZAR DADOS" : "Confirmar e Liberar"; }
         });
