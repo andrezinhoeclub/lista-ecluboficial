@@ -48,7 +48,7 @@
         </div>
     </div>
 
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20">
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none border border-white/20">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
@@ -64,6 +64,15 @@
                 </div>
                 <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ACESSAR SISTEMA</button>
             </div>
+        </div>
+    </div>
+
+    <div id="telaBloqueio" class="hidden fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex-col items-center justify-center p-8 text-center flex">
+        <div class="login-card p-8 rounded-[2.5rem] border border-red-500/50 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.3)]">
+            <span class="text-6xl mb-6 animate-pulse">🚨</span>
+            <h1 class="text-2xl font-black uppercase italic text-red-500 mb-3 tracking-tighter">CONEXÃO ENCERRADA</h1>
+            <p class="text-xs text-zinc-300 font-bold uppercase tracking-widest leading-relaxed">Sua conta foi acessada de outro dispositivo.</p>
+            <button onclick="location.reload()" class="mt-8 px-8 py-4 bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase rounded-2xl transition-colors">Voltar ao Login</button>
         </div>
     </div>
 
@@ -134,7 +143,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const colRef = collection(db, "solteiras");
-        let clientesCache = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null; let eventoHojeCache = null;
+        
+        let clientesCache = []; 
+        let operadorLogado = ""; 
+        let stepLogin = 0; 
+        let usuarioData = null; 
+        let eventoHojeCache = null;
+        
+        let sessionTokenAtual = null;
+        let listenerSessao = null;
 
         function normalizarDataNascimento(d) {
             if (!d) return null;
@@ -173,7 +190,7 @@
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
             const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.3)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.3)]';
-            const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : (msg.includes('PROIBIDA') ? '🚨' : '⚠️'));
+            const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : (msg.includes('PROIBIDA') || msg.includes('ENCERRADA') ? '🚨' : '⚠️'));
             toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20 ${bgClass} ${shadowClass}`;
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
@@ -181,12 +198,10 @@
             setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
-        // NOVA FUNÇÃO: Gera recibo na lista_eventos para o relatório histórico não perder dados.
         async function gerarReciboCheckin(clienteDados) {
             try {
-                if(!eventoHojeCache) return; // Se não tem evento hoje, não tem como gerar recibo
+                if(!eventoHojeCache) return; 
 
-                // Verifica se já gerou recibo para essa cliente HOJE para evitar duplo checkin na dashboard
                 const qBusca = query(collection(db, "lista_eventos"), 
                     where("evento", "==", eventoHojeCache.nome), 
                     where("tel", "==", clienteDados.tel || '')
@@ -210,7 +225,6 @@
                         valor_pago: "FREE"
                     });
                 } else {
-                    // Se a cliente já fez agendamento pelo site e está entrando agora
                     snapBusca.forEach(async (docEncontrado) => {
                         if(docEncontrado.data().entrou !== true) {
                             await updateDoc(doc(db, "lista_eventos", docEncontrado.id), {
@@ -244,7 +258,7 @@
                         mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
                         inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)";
                         inputSenha.style.borderColor = "#eab308";
-                        btn.innerText = "SALVAR SENHA E ENTRAR";
+                        btn.innerText = "SALVAR E ENTRAR";
                     } else { btn.innerText = "ENTRAR NO SISTEMA"; }
                 } else { mostrarAviso("Operador não autorizado."); btn.innerText = "ACESSAR SISTEMA"; }
             } else {
@@ -252,23 +266,61 @@
                 if (!usuarioData.senha) {
                     if (s.length < 6) return mostrarAviso("Mínimo de 6 caracteres.");
                     btn.innerText = "SALVANDO...";
-                    await updateDoc(doc(db, "configuracoes", n), { senha: s, ultimo_login: new Date().toISOString() });
+                    
+                    // GERA O TOKEN NA PRIMEIRA SENHA
+                    sessionTokenAtual = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                    
+                    await updateDoc(doc(db, "configuracoes", n), { 
+                        senha: s, 
+                        ultimo_login: new Date().toISOString(),
+                        session_token: sessionTokenAtual
+                    });
                     usuarioData.senha = s;
                     mostrarAviso("Senha cadastrada com sucesso!", true);
                 }
+                
                 if (usuarioData.senha === s) {
-                    await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString() });
+                    // GERA O TOKEN PARA O LOGIN
+                    sessionTokenAtual = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                    
+                    await updateDoc(doc(db, "configuracoes", n), { 
+                        ultimo_login: new Date().toISOString(),
+                        session_token: sessionTokenAtual
+                    });
+                    
                     operadorLogado = n;
                     document.getElementById('labelOperador').innerText = "OPERADOR: " + n.toUpperCase();
                     document.getElementById('telaLogin').classList.add('hidden');
                     document.getElementById('conteudo-sistema').classList.remove('hidden');
                     iniciarEscutas();
-                } else { mostrarAviso("Senha incorreta."); btn.innerText = "ENTRAR NO SISTEMA"; }
+                    iniciarListenerSessao(n); // INICIA A TRAVA DE SEGURANÇA
+                } else { 
+                    mostrarAviso("Senha incorreta."); 
+                    btn.innerText = "ENTRAR NO SISTEMA"; 
+                }
             }
         };
 
+        // FUNÇÃO ANTI-DUPLICIDADE DE TELA LOGADA
+        function iniciarListenerSessao(operadorId) {
+            if(listenerSessao) listenerSessao();
+            
+            listenerSessao = onSnapshot(doc(db, "configuracoes", operadorId), (docSnap) => {
+                if (docSnap.exists()) {
+                    const dadosDb = docSnap.data();
+                    // Se o token mudou no banco, significa que alguém logou em outro lugar
+                    if (dadosDb.session_token && dadosDb.session_token !== sessionTokenAtual) {
+                        if(listenerSessao) listenerSessao();
+                        document.getElementById('conteudo-sistema').classList.add('hidden');
+                        document.getElementById('telaBloqueio').classList.remove('hidden');
+                        document.getElementById('telaBloqueio').classList.add('flex');
+                        mostrarAviso("🚨 CONEXÃO ENCERRADA: Acesso em outro dispositivo.");
+                    }
+                }
+            });
+        }
+
         function iniciarEscutas() {
-            // Escuta para descobrir qual o evento de hoje para a Dashboard
             const hojeStr = new Date().toLocaleDateString('en-CA');
             onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true), where("data", "==", hojeStr)), (snap) => {
                 if(!snap.empty) eventoHojeCache = snap.docs[0].data();
@@ -465,11 +517,11 @@
                 const dados = { nome: document.getElementById('nome').value.toUpperCase(), tel: document.getElementById('tel').value, cpf: document.getElementById('cpf').value, data_nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() };
                 if (idEx) {
                     await updateDoc(doc(db, "solteiras", idEx), dados);
-                    await gerarReciboCheckin(dados); // Registra no caixa do dia
+                    await gerarReciboCheckin(dados); 
                     mostrarAviso("Dados atualizados com sucesso!", true);
                 } else {
                     const docRefAdd = await addDoc(colRef, { ...dados, bloqueada: false });
-                    await gerarReciboCheckin(dados); // Registra no caixa do dia
+                    await gerarReciboCheckin(dados); 
                     mostrarAviso("Cadastro salvo e liberado!", true);
                 }
                 window.limparFormulario();
