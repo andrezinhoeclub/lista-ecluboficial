@@ -292,20 +292,12 @@
         }
 
         // ==========================================
-        // NOVO FORMATO DE TELEFONE: 4199999-9999
+        // CÓDIGO ATUALIZADO: COPIA APENAS OS NÚMEROS
         // ==========================================
         window.copiarTelefoneLimpo = (numeroRaw) => {
             if (!numeroRaw) return;
-            let val = String(numeroRaw).replace(/\D/g, ''); 
-            
-            let formatado = val;
-            if (val.length === 11) {
-                // Junta o DDD (0,2) com os primeiros 5 números (2,7) e poe traço no final
-                formatado = `${val.substring(0,7)}-${val.substring(7,11)}`; 
-            } else if (val.length === 10) {
-                // Junta o DDD (0,2) com os primeiros 4 números (2,6) e poe traço no final
-                formatado = `${val.substring(0,6)}-${val.substring(6,10)}`;
-            }
+            // Pega estritamente só os números limpos
+            const formatado = String(numeroRaw).replace(/\D/g, ''); 
 
             if (formatado.length === 0) return;
 
@@ -418,7 +410,7 @@
                 if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
                 
                 const numTel = c.tel || c.telefone || '';
-                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar número formatado">📋 COPIAR</button>` : '';
+                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -455,21 +447,13 @@
         };
 
         // ==========================================
-        // NOVO FORMATO DE TELEFONE AO LIBERAR: 4199999-9999
+        // CÓDIGO ATUALIZADO: COPIA APENAS OS NÚMEROS AO DAR CHECK-IN
         // ==========================================
         window.confirmarCheckin = async (id, telefone) => {
             try {
                 let copiouSucesso = false;
                 if (telefone) {
-                    let val = String(telefone).replace(/\D/g, '');
-                    let formatado = val;
-                    if (val.length === 11) {
-                        // Junta o DDD (0,2) com os primeiros 5 números (2,7) e poe traço no final
-                        formatado = `${val.substring(0,7)}-${val.substring(7,11)}`;
-                    } else if (val.length === 10) {
-                        // Junta o DDD (0,2) com os primeiros 4 números (2,6) e poe traço no final
-                        formatado = `${val.substring(0,6)}-${val.substring(6,10)}`;
-                    }
+                    const formatado = String(telefone).replace(/\D/g, '');
                     
                     if (formatado.length > 0) {
                         try {
