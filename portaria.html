@@ -248,7 +248,6 @@
                     const hora = agora.getHours();
                     
                     if (isModoTeste) {
-                        // Filtra também as SOLTEIRAS VIP da contagem da Master
                         totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && (agora - new Date(c.data_entrada)) / 3600000 <= 12 && c.tipo_entrada !== 'SOLTEIRA VIP').length;
                     } else if (hora >= 5 && hora < 21) {
                         totalTurno = 0;
@@ -256,7 +255,6 @@
                         let inicioTurno = new Date(agora);
                         if (hora >= 21) inicioTurno.setHours(21, 0, 0, 0); 
                         else { inicioTurno.setDate(inicioTurno.getDate() - 1); inicioTurno.setHours(21, 0, 0, 0); } 
-                        // Filtra também as SOLTEIRAS VIP da contagem da Master
                         totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && new Date(c.data_entrada) >= inicioTurno && c.tipo_entrada !== 'SOLTEIRA VIP').length;
                     }
                     
@@ -277,7 +275,6 @@
                     const status = getStatusTurno(ev.data);
                     const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
                     
-                    // Filtra SOLTEIRAS VIP para não inflar o número de reservas da Master
                     const total = bancoClientes.filter(c => String(c.evento || '').trim().toUpperCase() === evNomeLimpo && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true') && c.tipo_entrada !== 'SOLTEIRA VIP').length;
                     
                     cont.innerHTML += `
@@ -295,11 +292,17 @@
         }
 
         // =========================================================================
-        // CÓPIA 100% LIMPA: xxxxxxxxxxx (SÓ NÚMEROS)
+        // CÓPIA APENAS DE NÚMEROS LIMPOS SEM DDD E SEM TRAÇO (EX: 995906901)
         // =========================================================================
         window.copiarTelefoneLimpo = (numeroRaw) => {
             if (!numeroRaw) return;
-            const apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
+            let apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
+            
+            // Pega apenas os 9 últimos dígitos (descarta o DDD)
+            if (apenasNumeros.length >= 9) {
+                apenasNumeros = apenasNumeros.slice(-9);
+            }
+
             if (apenasNumeros.length === 0) return;
 
             if (navigator.clipboard && window.isSecureContext) {
@@ -323,7 +326,6 @@
             const termosBusca = buscaInput.split(/\s+/);
             
             const filtrados = bancoClientes.filter(c => {
-                // ESCONDE AS SOLTEIRAS DA BUSCA DA MASTER PORTARIA
                 if (c.tipo_entrada === 'SOLTEIRA VIP') return false;
 
                 const evRel = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase());
@@ -414,7 +416,7 @@
                 if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
                 
                 const numTel = c.tel || c.telefone || '';
-                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números limpos">📋 COPIAR</button>` : '';
+                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os 9 dígitos limpos">📋 COPIAR</button>` : '';
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -451,13 +453,18 @@
         };
 
         // =========================================================================
-        // CÓPIA 100% LIMPA AO DAR CHECK-IN
+        // CÓPIA APENAS DE NÚMEROS LIMPOS (9 DÍGITOS) AO DAR CHECK-IN
         // =========================================================================
         window.confirmarCheckin = async (id, telefone) => {
             try {
                 let copiouSucesso = false;
                 if (telefone) {
-                    const apenasNumeros = String(telefone).replace(/\D/g, '');
+                    let apenasNumeros = String(telefone).replace(/\D/g, '');
+                    
+                    // Pega apenas os 9 últimos dígitos (descarta o DDD)
+                    if (apenasNumeros.length >= 9) {
+                        apenasNumeros = apenasNumeros.slice(-9);
+                    }
                     
                     if (apenasNumeros.length > 0) {
                         try {
