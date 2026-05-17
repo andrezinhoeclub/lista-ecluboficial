@@ -291,32 +291,6 @@
             }
         }
 
-        // =========================================================================
-        // CÓPIA APENAS DE NÚMEROS LIMPOS SEM DDD E SEM TRAÇO (EX: 995906901)
-        // =========================================================================
-        window.copiarTelefoneLimpo = (numeroRaw) => {
-            if (!numeroRaw) return;
-            let apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
-            
-            // Pega apenas os 9 últimos dígitos (descarta o DDD)
-            if (apenasNumeros.length >= 9) {
-                apenasNumeros = apenasNumeros.slice(-9);
-            }
-
-            if (apenasNumeros.length === 0) return;
-
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(apenasNumeros).then(() => { mostrarAviso("Telefone copiado!", true); }).catch(() => fallbackCopia(apenasNumeros));
-            } else { fallbackCopia(apenasNumeros); }
-        };
-
-        function fallbackCopia(texto) {
-            const textArea = document.createElement("textarea"); textArea.value = texto; textArea.style.position = "fixed"; 
-            document.body.appendChild(textArea); textArea.focus(); textArea.select();
-            try { document.execCommand('copy'); mostrarAviso("Telefone copiado!", true); } catch (err) { mostrarAviso("Erro ao copiar."); }
-            document.body.removeChild(textArea);
-        }
-
         window.processarPesquisa = () => {
             const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
             const cont = document.getElementById('container-resultados');
@@ -416,7 +390,6 @@
                 if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
                 
                 const numTel = c.tel || c.telefone || '';
-                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os 9 dígitos limpos">📋 COPIAR</button>` : '';
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -427,7 +400,6 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <p class="text-sm font-mono text-zinc-500">${numTel || '---'}</p>
-                            ${btnCopiar}
                         </div>
                     </div>
                     <div class="flex flex-col gap-1 w-[140px] dados-cliente">${tagsHTML}</div>
@@ -453,7 +425,7 @@
         };
 
         // =========================================================================
-        // CÓPIA APENAS DE NÚMEROS LIMPOS (9 DÍGITOS) AO DAR CHECK-IN
+        // CÓPIA 100% LIMPA (9 DÍGITOS) AO DAR CHECK-IN
         // =========================================================================
         window.confirmarCheckin = async (id, telefone) => {
             try {
@@ -461,7 +433,6 @@
                 if (telefone) {
                     let apenasNumeros = String(telefone).replace(/\D/g, '');
                     
-                    // Pega apenas os 9 últimos dígitos (descarta o DDD)
                     if (apenasNumeros.length >= 9) {
                         apenasNumeros = apenasNumeros.slice(-9);
                     }
