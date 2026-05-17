@@ -248,14 +248,16 @@
                     const hora = agora.getHours();
                     
                     if (isModoTeste) {
-                        totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && (agora - new Date(c.data_entrada)) / 3600000 <= 12).length;
+                        // Filtra também as SOLTEIRAS VIP da contagem da Master
+                        totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && (agora - new Date(c.data_entrada)) / 3600000 <= 12 && c.tipo_entrada !== 'SOLTEIRA VIP').length;
                     } else if (hora >= 5 && hora < 21) {
                         totalTurno = 0;
                     } else {
                         let inicioTurno = new Date(agora);
                         if (hora >= 21) inicioTurno.setHours(21, 0, 0, 0); 
                         else { inicioTurno.setDate(inicioTurno.getDate() - 1); inicioTurno.setHours(21, 0, 0, 0); } 
-                        totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && new Date(c.data_entrada) >= inicioTurno).length;
+                        // Filtra também as SOLTEIRAS VIP da contagem da Master
+                        totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && new Date(c.data_entrada) >= inicioTurno && c.tipo_entrada !== 'SOLTEIRA VIP').length;
                     }
                     
                     document.getElementById('total-checkins').innerText = totalTurno;
@@ -275,7 +277,8 @@
                     const status = getStatusTurno(ev.data);
                     const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
                     
-                    const total = bancoClientes.filter(c => String(c.evento || '').trim().toUpperCase() === evNomeLimpo && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true')).length;
+                    // Filtra SOLTEIRAS VIP para não inflar o número de reservas da Master
+                    const total = bancoClientes.filter(c => String(c.evento || '').trim().toUpperCase() === evNomeLimpo && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true') && c.tipo_entrada !== 'SOLTEIRA VIP').length;
                     
                     cont.innerHTML += `
                         <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
@@ -292,7 +295,7 @@
         }
 
         // =========================================================================
-        // CÓPIA APENAS DE NÚMEROS LIMPOS
+        // CÓPIA 100% LIMPA: xxxxxxxxxxx (SÓ NÚMEROS)
         // =========================================================================
         window.copiarTelefoneLimpo = (numeroRaw) => {
             if (!numeroRaw) return;
@@ -320,6 +323,9 @@
             const termosBusca = buscaInput.split(/\s+/);
             
             const filtrados = bancoClientes.filter(c => {
+                // ESCONDE AS SOLTEIRAS DA BUSCA DA MASTER PORTARIA
+                if (c.tipo_entrada === 'SOLTEIRA VIP') return false;
+
                 const evRel = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase());
                 if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
                 if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
@@ -408,7 +414,7 @@
                 if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
                 
                 const numTel = c.tel || c.telefone || '';
-                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
+                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números limpos">📋 COPIAR</button>` : '';
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -444,6 +450,9 @@
             });
         };
 
+        // =========================================================================
+        // CÓPIA 100% LIMPA AO DAR CHECK-IN
+        // =========================================================================
         window.confirmarCheckin = async (id, telefone) => {
             try {
                 let copiouSucesso = false;
