@@ -406,11 +406,9 @@
                 modoTesteAtivo = data.modo_teste === true;
                 const btn = document.getElementById('btnModoTeste');
                 if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
-                
                 if (document.getElementById('tipo_taxa')) { document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado'; document.getElementById('valor_taxa').value = data.taxa_valor || ''; }
                 if (document.getElementById('config_hora_carona')) { document.getElementById('config_hora_carona').value = data.carona_hora_limite || '18:00'; document.getElementById('config_bairros_carona').value = data.carona_bairros || ''; }
                 
-                // NOVO: Valor Custo do Sistema
                 if (document.getElementById('custo_sistema')) { document.getElementById('custo_sistema').value = data.custo_sistema !== undefined ? data.custo_sistema : 125; }
                 custoSistemaGlobal = data.custo_sistema !== undefined ? parseFloat(data.custo_sistema) : 125.00;
             }
@@ -431,6 +429,32 @@
             catch(e) { mostrarAviso("Erro ao salvar custo."); }
         };
 
+        window.salvarConfigCaronas = async () => {
+            const h = document.getElementById('config_hora_carona').value;
+            const b = document.getElementById('config_bairros_carona').value.toUpperCase();
+            try { await setDoc(doc(db, "configuracoes", "sistema"), { carona_hora_limite: h, carona_bairros: b }, { merge: true }); mostrarAviso("Regras salvas!", true); } 
+            catch(e) { mostrarAviso("Erro ao salvar configurações."); }
+        };
+
+        window.gerarRelatorioCaronas = () => {
+            const eventoNome = document.getElementById('filtro-evento-carona').value;
+            const textarea = document.getElementById('output-rotas-carona');
+            if(!eventoNome) { textarea.value = "Aguardando seleção do evento..."; return; }
+            const passageiras = dadosReservas.filter(r => r.evento === eventoNome && r.carona === true);
+            if(passageiras.length === 0) { textarea.value = `Nenhuma solicitação de carona para ${eventoNome}.`; return; }
+            const grupos = {};
+            passageiras.forEach(p => { const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase(); if(!grupos[b]) grupos[b] = []; grupos[b].push(p); });
+            let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`; let cont = 1;
+            Object.keys(grupos).sort().forEach(bairro => {
+                texto += `🛑 BAIRRO: ${bairro}\n`;
+                grupos[bairro].forEach(p => { texto += `${cont}. ${p.nome} - ${p.tel || 'S/N'}\nEndereço: ${p.endereco || 'S/E'} - CEP: ${p.cep || '---'}\n`; cont++; });
+                texto += `\n`;
+            });
+            textarea.value = texto.trim();
+        };
+
+        window.copiarRotasCarona = () => { document.getElementById('output-rotas-carona').select(); document.execCommand('copy'); mostrarAviso("Rotas copiadas!", true); };
+
         onSnapshot(collection(db, "solteiras"), snap => {
             const agora = new Date(); const batch = writeBatch(db); let del = false;
             dadosSolteiras = snap.docs.map(d => {
@@ -446,6 +470,13 @@
         onSnapshot(collection(db, "lista_eventos"), snap => { 
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderAuditoria(); renderSolteiras();
+            const sCarona = document.getElementById('filtro-evento-carona');
+            const evtAtuais = [...new Set(dadosReservas.filter(r=>r.carona===true).map(r=>r.evento))];
+            if(sCarona) {
+                const vAtual = sCarona.value;
+                sCarona.innerHTML = '<option value="">Selecione o Evento com Caronas...</option>' + evtAtuais.map(e => `<option value="${e}">${e}</option>`).join('');
+                if(evtAtuais.includes(vAtual)) sCarona.value = vAtual;
+            }
         });
 
         onSnapshot(collection(db, "eventos"), snap => { 
@@ -550,7 +581,8 @@
             if (val.length === 0) { tA.value = "Sem reservas de pagantes."; return; }
             const at = dadosEventos.sort((a,b) => a.data.localeCompare(b.data)); let cab = "";
             if (at.length > 0) {
-                const mes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+                // ATUALIZADO: Meses por extenso
+                const mes = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
                 const dI = new Date(at[0].data + "T12:00:00Z"); const dF = new Date(at[at.length-1].data + "T12:00:00Z");
                 cab = `**De ${String(dI.getDate()).padStart(2, '0')} de ${mes[dI.getMonth()]} a ${String(dF.getDate()).padStart(2, '0')} de ${mes[dF.getMonth()]} de ${dF.getFullYear()}**\n\n`;
             }
@@ -561,7 +593,6 @@
             const pM = (v) => Number(String(v || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
             const tPx = val.filter(r => r.metodo === 'pix_antecipado' && r.pago === true).reduce((acc, r) => acc + pM(r.valor_pago), 0);
             
-            // NOVO: Cálculo e Exibição do Custo Dinâmico do Sistema
             const taxaSistema = custoSistemaGlobal || 0;
             const saldoLiquido = tPx - taxaSistema;
             
@@ -571,7 +602,10 @@
             txt += `> Saldo Final Enviado: R$ ${saldoLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n\n`;
             
             txt += `Ingressos vendidos (E Solteiras)\n\n`;
-            const dS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+            
+            // ATUALIZADO: Dias da semana por extenso
+            const dS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+            
             at.forEach(ev => {
                 const rE = val.filter(r => (r.evento || '').trim().toUpperCase() === (ev.nome||'').trim().toUpperCase());
                 const px = rE.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP'));
@@ -684,8 +718,7 @@
         });
 
         window.prepararEdicaoEvento = (id) => {
-            const ev = dadosEventos.find(e => e.id === id); document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || "";
-            if (document.getElementById('diferenciais_noite')) document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            const ev = dadosEventos.find(e => e.id === id); document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
             if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
             for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
             document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
