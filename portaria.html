@@ -39,7 +39,6 @@
 </head>
 <body class="flex h-screen relative">
 
-    <!-- TELA DE BLOQUEIO PARA CELULARES -->
     <div class="fixed inset-0 z-[99999] bg-[#050505] flex-col items-center justify-center p-8 text-center flex md:hidden">
         <div class="glass p-8 rounded-[2.5rem] border border-red-500/30 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.15)]">
             <span class="text-6xl mb-6">🖥️</span>
@@ -53,7 +52,6 @@
         <span id="toast-msg">Mensagem de erro</span>
     </div>
 
-    <!-- TELA DE LOGIN (Sem a trava de flex conflitante) -->
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
         <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
@@ -68,7 +66,6 @@
         </div>
     </div>
 
-    <!-- SISTEMA PRINCIPAL -->
     <div id="interfacePrincipal" class="hidden flex w-full h-full">
         <aside class="w-72 h-full flex flex-col p-6 bg-black/40 border-r border-zinc-900">
             <div class="mb-10 text-center">
@@ -294,16 +291,23 @@
             }
         }
 
+        // FUNÇÃO CORRIGIDA PARA COPIAR O TELEFONE COM DDD E TRACINHO (EX: (41) 99999-9999)
         window.copiarTelefoneLimpo = (numeroRaw) => {
             if (!numeroRaw) return;
-            let apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
-            if (apenasNumeros.length >= 9) {
-                apenasNumeros = apenasNumeros.slice(-9);
+            let val = String(numeroRaw).replace(/\D/g, ''); 
+            
+            let formatado = val;
+            if (val.length === 11) {
+                formatado = `(${val.substring(0,2)}) ${val.substring(2,7)}-${val.substring(7,11)}`;
+            } else if (val.length === 10) {
+                formatado = `(${val.substring(0,2)}) ${val.substring(2,6)}-${val.substring(6,10)}`;
             }
-            if (apenasNumeros.length === 0) return;
+
+            if (formatado.length === 0) return;
+
             if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(apenasNumeros).then(() => { mostrarAviso("Telefone copiado!", true); }).catch(() => fallbackCopia(apenasNumeros));
-            } else { fallbackCopia(apenasNumeros); }
+                navigator.clipboard.writeText(formatado).then(() => { mostrarAviso("Telefone copiado!", true); }).catch(() => fallbackCopia(formatado));
+            } else { fallbackCopia(formatado); }
         };
 
         function fallbackCopia(texto) {
@@ -410,7 +414,7 @@
                 if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
                 
                 const numTel = c.tel || c.telefone || '';
-                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os números">📋 COPIAR</button>` : '';
+                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar número formatado">📋 COPIAR</button>` : '';
 
                 cont.innerHTML += `
                 <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
@@ -446,19 +450,26 @@
             });
         };
 
+        // FUNÇÃO CORRIGIDA PARA COPIAR O TELEFONE AO FAZER CHECKIN (EX: (41) 99999-9999)
         window.confirmarCheckin = async (id, telefone) => {
             try {
                 let copiouSucesso = false;
                 if (telefone) {
-                    let apenasNumeros = String(telefone).replace(/\D/g, '');
-                    if (apenasNumeros.length >= 9) {
-                        apenasNumeros = apenasNumeros.slice(-9);
+                    let val = String(telefone).replace(/\D/g, '');
+                    let formatado = val;
+                    if (val.length === 11) {
+                        formatado = `(${val.substring(0,2)}) ${val.substring(2,7)}-${val.substring(7,11)}`;
+                    } else if (val.length === 10) {
+                        formatado = `(${val.substring(0,2)}) ${val.substring(2,6)}-${val.substring(6,10)}`;
                     }
-                    if (apenasNumeros.length > 0) {
+                    
+                    if (formatado.length > 0) {
                         try {
-                            if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(apenasNumeros); copiouSucesso = true; } 
-                            else {
-                                const textArea = document.createElement("textarea"); textArea.value = apenasNumeros; textArea.style.position = "fixed"; document.body.appendChild(textArea);
+                            if (navigator.clipboard && window.isSecureContext) { 
+                                await navigator.clipboard.writeText(formatado); 
+                                copiouSucesso = true; 
+                            } else {
+                                const textArea = document.createElement("textarea"); textArea.value = formatado; textArea.style.position = "fixed"; document.body.appendChild(textArea);
                                 textArea.focus(); textArea.select(); document.execCommand('copy'); document.body.removeChild(textArea); copiouSucesso = true;
                             }
                         } catch (err) {}
