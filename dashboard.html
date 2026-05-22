@@ -101,7 +101,7 @@
                         <option value="pix_aguardando">🟡 PIX - Aguardando (Pago)</option>
                         <option value="pix_cancelado">🔴 PIX - Pendente/Cancelado</option>
                     </select>
-                    <button onclick="exportarAuditoriaExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[10px] px-8 py-5 rounded-2xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] whitespace-nowrap flex items-center gap-2">
+                    <button onclick="exportarAuditoriaExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[10px] px-8 py-5 rounded-2xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] whitespace-nowrap flex items-center justify-center gap-2">
                         <span class="text-sm">📥</span> Exportar Excel
                     </button>
                 </div>
@@ -128,7 +128,7 @@
         <section id="aba-solteiras" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-pink-500 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <h2 class="text-pink-500 font-black uppercase italic text-2xl tracking-tighter">Gestão de Caronas</h2>
+                    <h2 class="text-pink-500 font-black uppercase italic text-2xl tracking-tighter">Gestão de Caronas e Base VIP</h2>
                     <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Base imune à limpeza de eventos (Retenção de 90 dias)</p>
                 </div>
                 <div class="bg-[#0a0a0f] border border-pink-500/30 px-10 py-5 rounded-3xl text-center shadow-[0_0_30px_rgba(219,39,119,0.15)] min-w-[200px]">
@@ -138,35 +138,50 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="glass-card p-8 border-t-4 border-t-purple-500 flex flex-col">
-                    <h2 class="text-purple-500 font-black uppercase italic text-xl tracking-tighter mb-2">🚗 Configurar Caronas VIP</h2>
-                    <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Defina as regras para a página das solteiras.</p>
-                    
-                    <div class="space-y-6 flex-grow">
-                        <div>
-                            <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">⏰ Horário Limite (Dia do Evento)</label>
-                            <input type="time" id="config_hora_carona" class="w-full p-4 rounded-2xl font-bold text-xs" required>
+                <div class="flex flex-col gap-8">
+                    <div class="glass-card p-8 border-t-4 border-t-purple-500 flex flex-col h-full">
+                        <h2 class="text-purple-500 font-black uppercase italic text-xl tracking-tighter mb-2">🚗 Configurar Caronas VIP</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Defina as regras para a página das solteiras.</p>
+                        
+                        <div class="space-y-6 flex-grow">
+                            <div>
+                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">⏰ Horário Limite (Dia do Evento)</label>
+                                <input type="time" id="config_hora_carona" class="w-full p-4 rounded-2xl font-bold text-xs" required>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">🗺️ Bairros Atendidos (Separados por vírgula)</label>
+                                <textarea id="config_bairros_carona" placeholder="Ex: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-xs h-32 resize-none uppercase"></textarea>
+                            </div>
                         </div>
-                        <div>
-                            <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">🗺️ Bairros Atendidos (Separados por vírgula)</label>
-                            <textarea id="config_bairros_carona" placeholder="Ex: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-xs h-32 resize-none uppercase"></textarea>
-                        </div>
+                        <button onclick="salvarConfigCaronas()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg mt-6">💾 Salvar Regras de Logística</button>
                     </div>
-                    <button onclick="salvarConfigCaronas()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg mt-6">💾 Salvar Regras de Logística</button>
                 </div>
 
-                <div class="glass-card p-8 border-t-4 border-t-blue-500 flex flex-col">
-                    <h2 class="text-blue-500 font-black uppercase italic text-xl tracking-tighter mb-2">🗺️ Gerador de Rotas</h2>
-                    <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Exporte a lista ordenada por bairros para o motorista.</p>
-                    
-                    <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full bg-[#0a0a0f] border border-zinc-800 p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none">
-                        <option value="">Selecione o Evento...</option>
-                    </select>
-                    
-                    <textarea id="output-rotas-carona" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800 border" placeholder="Aguardando seleção do evento..."></textarea>
-                    
-                    <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para o Motorista</button>
+                <div class="flex flex-col gap-8">
+                    <div class="glass-card p-8 border-t-4 border-t-blue-500 flex flex-col">
+                        <h2 class="text-blue-500 font-black uppercase italic text-xl tracking-tighter mb-2">🗺️ Gerador de Rotas</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Exporte a lista ordenada por bairros para o motorista.</p>
+                        
+                        <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full bg-[#0a0a0f] border border-zinc-800 p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none">
+                            <option value="">Selecione o Evento...</option>
+                        </select>
+                        
+                        <textarea id="output-rotas-carona" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-40 bg-[#0a0a0f] border-zinc-800 border resize-none" placeholder="Aguardando seleção do evento..."></textarea>
+                        
+                        <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para o Motorista</button>
+                    </div>
                 </div>
+            </div>
+
+            <div class="glass-card p-8 border-t-4 border-t-pink-500 flex flex-col mt-4">
+                <h2 class="text-pink-500 font-black uppercase italic text-xl tracking-tighter mb-2">📲 Base de Clientes (Transmissão)</h2>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Gere a lista de todas as solteiras cadastradas, ordenadas da visita mais recente para a mais antiga.</p>
+                
+                <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="w-full bg-pink-900/40 hover:bg-pink-800/60 border border-pink-500/50 text-pink-300 font-black uppercase text-[10px] py-4 rounded-xl transition-colors mb-4">🔄 Carregar Cadastradas</button>
+                
+                <textarea id="output-marketing" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-48 bg-[#0a0a0f] border-zinc-800 border resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
+                
+                <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para WhatsApp</button>
             </div>
         </section>
 
@@ -463,7 +478,7 @@
 
         window.copiarRotasCarona = () => { document.getElementById('output-rotas-carona').select(); document.execCommand('copy'); mostrarAviso("Rotas copiadas!", true); };
 
-        // ADICIONADO: Exportar p/ Excel na Auditoria
+        // Exportar p/ Excel na Auditoria
         window.exportarAuditoriaExcel = () => {
             const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
             const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
@@ -524,6 +539,42 @@
             mostrarAviso("Excel baixado com sucesso!", true);
         };
 
+        // Geração da Base de Marketing via Dashboard
+        window.gerarListaMarketing = () => {
+            const btn = document.getElementById('btn-gerar-lista');
+            const textarea = document.getElementById('output-marketing');
+            
+            if (dadosSolteiras.length === 0) {
+                textarea.value = "Nenhuma solteira encontrada na base.";
+                return;
+            }
+            
+            // Ordenar da visita mais recente para a mais antiga usando a mesma lógica que já tínhamos na portaria
+            const ordenadas = [...dadosSolteiras].sort((a, b) => {
+                const valA = parseVisita(a.ultima_visita) || parseVisita(a.data_cadastro) || 0;
+                const valB = parseVisita(b.ultima_visita) || parseVisita(b.data_cadastro) || 0;
+                return valB - valA;
+            });
+
+            let txt = "";
+            ordenadas.forEach(c => {
+                const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
+                if (tel.length >= 8) {
+                    txt += `${c.nome} - ${tel}\n`; 
+                }
+            });
+            
+            textarea.value = txt.trim();
+            mostrarAviso("Lista gerada com sucesso!", true);
+        };
+
+        window.copiarMarketing = () => {
+            const t = document.getElementById('output-marketing');
+            if(!t.value || t.value.includes("Clique no botão")) return mostrarAviso("Gere a lista primeiro!");
+            t.select(); document.execCommand('copy');
+            mostrarAviso("Lista copiada! Pronta para colar no WhatsApp.", true);
+        };
+
         onSnapshot(collection(db, "solteiras"), snap => {
             const agora = new Date(); const batch = writeBatch(db); let del = false;
             dadosSolteiras = snap.docs.map(d => {
@@ -575,7 +626,6 @@
             const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
             
             let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP').sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
-            
             if (fStat === 'entrou') res = res.filter(r => r.entrou === true); 
             else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true);
             else if (fStat === 'pix_entrou') res = res.filter(r => r.metodo === 'pix_antecipado' && r.entrou === true);
