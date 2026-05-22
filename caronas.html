@@ -3,654 +3,888 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>E-CLUB MASTER | Command Center</title>
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <title>E-CLUB | Lounge das Solteiras 🌹</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #050305; color: #fff; min-height: 100vh; background-image: radial-gradient(circle at top center, #2e081c 0%, #050305 100%); }
-        .glass { background: rgba(20, 5, 15, 0.7); backdrop-filter: blur(15px); border: 1px solid rgba(219, 39, 119, 0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .site-input { background: #0f0a0d !important; border: 1px solid #3d142b !important; color: #fff !important; outline: none; transition: 0.3s; }
-        .site-input:focus { border-color: #db2777 !important; box-shadow: 0 0 15px rgba(219, 39, 119, 0.3); }
-        
-        .banner-img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 2.5rem 2.5rem 0 0; opacity: 0.95; }
-        
-        .btn-rosa { background: linear-gradient(135deg, #db2777 0%, #be185d 100%); color: #fff; font-weight: 900; transition: all 0.3s; }
-        .btn-rosa:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(219, 39, 119, 0.4); }
-        
-        /* NOVO BOTÃO AMARELO PARA VIP SEM CARONA */
-        .btn-amarelo { background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); color: #000; font-weight: 900; transition: all 0.3s; }
-        .btn-amarelo:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(234, 179, 8, 0.4); }
-
-        .btn-disabled { filter: grayscale(1); opacity: 0.4; cursor: not-allowed !important; }
-        
-        @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .anim-fade { animation: fadeUp 0.5s ease-out forwards; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e4e4e7; overflow-x: hidden; }
+        .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; }
+        .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
+        .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
+        .btn-menu.active-danger { background: #ef4444; color: #fff; font-weight: 800; border-color: #f87171; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+        .btn-menu.active-success { background: #10b981; color: #000; font-weight: 800; border-color: #34d399; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+        .btn-menu.active-pink { background: #db2777; color: #fff; font-weight: 800; border-color: #f472b6; box-shadow: 0 0 20px rgba(219, 39, 119, 0.4); }
+        .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
+        .scroll-x::-webkit-scrollbar { height: 6px; }
+        .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
+        .event-bubble { flex: 0 0 auto; width: 360px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
+        input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; cursor: pointer; }
+        input:focus, select:focus, textarea:focus { border-color: #eab308 !important; }
+        .mini-capa { width: 100%; height: 100px; object-fit: cover; border-bottom: 1px solid #1a1a1c; border-radius: 1.5rem; opacity: 0.8; margin-bottom: 1rem; }
+        .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #22d3ee; cursor: pointer; }
+        input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; padding: 5px; }
     </style>
 </head>
-<body class="p-4 flex flex-col items-center pb-20">
+<body class="p-4 md:p-8 relative">
 
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
         <span id="toast-icon" class="text-lg">⚠️</span>
-        <span id="toast-msg">Mensagem</span>
+        <span id="toast-msg">Mensagem de erro</span>
     </div>
 
-    <div id="tela-principal" class="max-w-md w-full mt-6">
-        <header class="flex flex-col items-center justify-center mb-8">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-20 mb-4 drop-shadow-[0_0_15px_rgba(219,39,119,0.3)]">
-            <h1 class="text-pink-500 font-black uppercase italic text-2xl tracking-tighter text-center leading-none">Lounge VIP</h1>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-pink-200 mt-2">Página Exclusiva para Solteiras</p>
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+            <div class="flex items-center gap-4">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 w-auto">
+                <div>
+                    <h1 class="text-2xl font-black uppercase italic tracking-tighter text-yellow-500 leading-none">Command Center</h1>
+                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 italic">E-CLUB MANAGEMENT</p>
+                </div>
+            </div>
+            <nav class="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 overflow-x-auto">
+                <button onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu active px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Relatórios</button>
+                <button onclick="trocarAba('aba-auditoria', this, 'success')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-emerald-400">Auditoria</button>
+                <button onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Eventos</button>
+                <button onclick="trocarAba('aba-solteiras', this, 'pink')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-pink-500">Carona</button>
+                <button onclick="trocarAba('aba-equipe', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Equipe</button>
+                <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-cyan-400">Listas/Cams</button>
+                <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
+            </nav>
         </header>
 
-        <div class="glass rounded-[2.5rem] p-6 md:p-8 mb-10 anim-fade border-pink-500/30">
-            <h2 class="text-xs font-black uppercase text-pink-400 mb-6 tracking-widest text-center border-b border-pink-900/30 pb-4">📜 Regulamento: Entrada Free</h2>
-            
-            <p class="text-[10px] text-zinc-400 mb-4 leading-relaxed">Para garantir sua entrada VIP e aproveitar os benefícios da noite, observe as regras do nosso clube:</p>
+        <section id="aba-relatorios" class="space-y-8">
+            <div class="glass-card p-8">
+                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance e Financeiro</h2>
+                <div id="container-bolhas" class="scroll-x"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-card p-8 border-t-4 border-t-yellow-500 text-center">
+                    <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest">🏆 Pódio de Reservas</h2>
+                    <div id="lista-ranking-reservas" class="space-y-4 text-left"></div>
+                </div>
+                <div class="glass-card p-8 border-t-4 border-t-green-500 text-center">
+                    <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest">🔥 Pódio de Check-ins</h2>
+                    <div id="lista-ranking-checkins" class="space-y-4 text-left"></div>
+                </div>
+                <div class="glass-card p-8 border-t-4 border-t-blue-600 flex flex-col">
+                    <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Exportar Dados</h2>
+                    <select id="filtro-promoter-excel" class="w-full bg-[#0a0a0f] border border-zinc-800 p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white outline-none"></select>
+                    <div class="flex flex-col gap-2 mb-4">
+                        <button onclick="gerarRelatorioGerencial()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">Resumo Gerencial</button>
+                        <button onclick="gerarApenasCheckins()" class="w-full bg-green-600/20 text-green-400 border border-green-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-green-600 hover:text-white transition-all">Extrair Check-ins Pagantes</button>
+                        <button onclick="gerarApenasSolteiras()" class="w-full bg-pink-600/20 text-pink-400 border border-pink-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-pink-600 hover:text-white transition-all">Extrair Solteiras Presentes</button>
+                    </div>
+                    <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800" placeholder="Selecione a opção desejada..."></textarea>
+                    <button onclick="copiarOutput()" class="w-full bg-blue-600 text-[11px] text-white font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">📋 Copiar p/ WhatsApp</button>
+                </div>
+            </div>
+        </section>
 
-            <div class="space-y-5 text-[11px] font-medium text-zinc-300">
+        <section id="aba-auditoria" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-emerald-500">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-emerald-500 font-black uppercase italic text-xl tracking-tighter">Conferência & Auditoria Live</h2>
+                    <span class="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-emerald-500 uppercase animate-pulse">● Tempo Real</span>
+                </div>
                 
+                <div class="flex flex-col md:flex-row gap-4 mb-8">
+                    <div class="relative flex-grow">
+                        <span class="absolute left-5 top-5 text-lg text-zinc-500">🔍</span>
+                        <input type="text" id="busca-auditoria" oninput="renderAuditoria()" placeholder="BUSQUE POR NOME, EVENTO, PROMOTER, DATA OU OPERADOR..." class="w-full p-5 pl-14 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-sm font-bold uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg">
+                    </div>
+                    <select id="filtro-status-auditoria" onchange="renderAuditoria()" class="p-5 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-[11px] font-black uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg min-w-[180px]">
+                        <option value="todos">Todos os Status</option>
+                        <option value="entrou">✓ Fizeram Check-in</option>
+                        <option value="aguardando">○ Aguardando Entrada</option>
+                        <option value="pix_entrou">🟢 PIX - Fizeram Check-in</option>
+                        <option value="pix_aguardando">🟡 PIX - Aguardando (Pago)</option>
+                        <option value="pix_cancelado">🔴 PIX - Pendente/Cancelado</option>
+                    </select>
+                    <button onclick="exportarAuditoriaExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[10px] px-8 py-5 rounded-2xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] whitespace-nowrap flex items-center justify-center gap-2">
+                        <span class="text-sm">📥</span> Exportar Excel
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-zinc-800/50">
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Data/Hora (Reserva)</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Cliente</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Evento</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Promoter / Origem</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Tipo</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Status / Check-in</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-auditoria-body" class="divide-y divide-zinc-800">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-solteiras" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-pink-500 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <h3 class="text-pink-500 font-black uppercase tracking-widest text-[10px] border-l-2 border-pink-500 pl-2 mb-2">👠 Acesso e Vestimenta</h3>
-                    <p class="pl-3 mb-1"> • <strong class="text-white">Dress Code:</strong> Traje de balada e uso obrigatório de salto alto.</p>
-                    <p class="pl-3 mb-2"> • <strong class="text-white">Documentação:</strong> +18 anos. Obrigatório doc. original com foto.</p>
-                    <div class="bg-zinc-900/50 border border-zinc-700/50 p-2 rounded-lg ml-3 mt-2 text-[9px] text-zinc-400 italic">
-                        ⚠️ <b>Aviso:</b> O não cumprimento das regras (como a falta do salto) suspende os benefícios da lista free e o valor da portaria será cobrado.
+                    <h2 class="text-pink-500 font-black uppercase italic text-2xl tracking-tighter">Gestão de Caronas e Base VIP</h2>
+                    <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Base imune à limpeza de eventos (Retenção de 90 dias)</p>
+                </div>
+                <div class="bg-[#0a0a0f] border border-pink-500/30 px-10 py-5 rounded-3xl text-center shadow-[0_0_30px_rgba(219,39,119,0.15)] min-w-[200px]">
+                    <p class="text-[10px] font-black text-pink-500 uppercase tracking-widest mb-1">Cadastradas no Sistema</p>
+                    <p id="total-solteiras-badge" class="text-4xl font-black text-white leading-none">0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="flex flex-col gap-8">
+                    <div class="glass-card p-8 border-t-4 border-t-purple-500 flex flex-col h-full">
+                        <h2 class="text-purple-500 font-black uppercase italic text-xl tracking-tighter mb-2">🚗 Configurar Caronas VIP</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Defina as regras para a página das solteiras.</p>
+                        
+                        <div class="space-y-6 flex-grow">
+                            <div>
+                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">⏰ Horário Limite (Dia do Evento)</label>
+                                <input type="time" id="config_hora_carona" class="w-full p-4 rounded-2xl font-bold text-xs" required>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">🗺️ Bairros Atendidos (Separados por vírgula)</label>
+                                <textarea id="config_bairros_carona" placeholder="Ex: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-xs h-32 resize-none uppercase"></textarea>
+                            </div>
+                        </div>
+                        <button onclick="salvarConfigCaronas()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg mt-6">💾 Salvar Regras de Logística</button>
                     </div>
                 </div>
 
-                <div>
-                    <h3 class="text-pink-500 font-black uppercase tracking-widest text-[10px] border-l-2 border-pink-500 pl-2 mb-2">🛡️ Ambiente e Segurança</h3>
-                    <p class="pl-3 mb-1"> • Respeite rigorosamente o limite e o espaço de cada casal.</p>
-                    <p class="pl-3 mb-1"> • Quem não obedecer às regras de convivência será retirado do local.</p>
-                    <p class="pl-3"> • <b>Sua segurança é prioridade:</b> Se for importunada, avise nossa equipe imediatamente!</p>
-                </div>
-
-            </div>
-
-            <div class="mt-8 bg-pink-500/10 p-5 rounded-2xl border border-pink-500/20">
-                <h3 class="text-[11px] font-black text-pink-400 uppercase mb-3 tracking-tighter">✨ Benefícios Exclusivos:</h3>
-                <ul class="text-[10px] text-zinc-300 space-y-3">
-                    <li class="flex items-start gap-2">
-                        <span class="text-pink-500">🥂</span> 
-                        <span><b>Doses Cortesia:</b> Válidas exclusivamente para quem acessar o clube até a <b>01h00</b> da manhã.</span>
-                    </li>
-                    <li class="flex items-start gap-2">
-                        <span class="text-pink-500">🚗</span> 
-                        <span><b>Carona "Leva e Traz":</b> Disponível para regiões atendidas. Se seu bairro não constar, chame no WhatsApp para analisarmos a inclusão.</span>
-                    </li>
-                </ul>
-                
-                <div class="mt-6 bg-red-950/40 border border-red-500/50 p-4 rounded-xl text-center shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                    <p class="text-[11px] font-black text-red-400 uppercase tracking-widest mb-1">⏳ Atenção aos Horários</p>
-                    <p class="text-[9px] font-bold text-zinc-300 leading-relaxed">
-                        As solicitações de carona se encerram pontualmente às <span id="display-hora-limite" class="bg-red-600 text-white px-2 py-0.5 rounded-md font-black text-[11px] ml-1 mr-1">--:--</span> no dia do evento.
-                    </p>
-                </div>
-            </div>
-            
-            <p class="text-[11px] font-black uppercase text-pink-500 text-center mt-8 italic tracking-widest">Aqui o limite é você quem faz! 💋</p>
-        </div>
-
-        <h3 class="text-center text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-6">Escolha o Evento para Agendar Carona</h3>
-        
-        <div id="listaEventos" class="space-y-8">
-            <p class="text-center text-xs text-zinc-500 italic">Buscando programações...</p>
-        </div>
-
-        <div class="mt-10 mb-4 w-full anim-fade" style="animation-delay: 0.2s;">
-            <a href="https://api.whatsapp.com/send?phone=554196280156" target="_blank" class="glass w-full flex items-center justify-center gap-4 px-6 py-5 rounded-2xl border-pink-500/30 hover:border-pink-500/80 hover:bg-pink-900/20 transition-all shadow-[0_0_20px_rgba(219,39,119,0.1)]">
-                <span class="text-3xl drop-shadow-[0_0_10px_rgba(219,39,119,0.5)]">💬</span>
-                <div class="text-left">
-                    <p class="text-[9px] font-black uppercase text-pink-400 tracking-widest mb-0.5">Atendimento Exclusivo Solteiras</p>
-                    <p class="text-sm font-bold text-white tracking-widest">+55 41 9628-0156</p>
-                </div>
-            </a>
-        </div>
-
-        <footer class="mt-12 text-center opacity-40 flex flex-col items-center gap-3">
-            <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1">
-                <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
-            </a>
-            <button onclick="abrirModalLogin()" class="text-[9px] font-bold text-zinc-600 hover:text-white transition-colors tracking-widest uppercase">🔐 Restrito</button>
-        </footer>
-    </div>
-
-    <div id="tela-rotas" class="hidden max-w-md w-full mt-6 anim-fade pb-10">
-        <header class="flex flex-col items-center justify-center mb-8 relative">
-            <button onclick="sairPainelRotas()" class="absolute left-0 top-0 text-pink-500 font-black text-xs uppercase hover:text-white transition-colors">◀ Sair</button>
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mb-4 drop-shadow-[0_0_15px_rgba(219,39,119,0.3)]">
-            <h1 class="text-blue-500 font-black uppercase italic text-2xl tracking-tighter text-center leading-none">Painel Logística</h1>
-            <p id="label-logado" class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-2">Acesso Promoter</p>
-        </header>
-
-        <div class="glass p-6 md:p-8 rounded-[2.5rem] flex flex-col border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.1)] mb-8">
-            <h2 class="text-[10px] font-black uppercase text-blue-400 mb-2 tracking-widest">🗺️ Gerador de Rotas (Motorista)</h2>
-            <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full site-input p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none mt-2">
-                <option value="">Aguardando reservas...</option>
-            </select>
-            
-            <textarea id="output-rotas-carona" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[250px] resize-none whitespace-pre" placeholder="Aguardando seleção do evento..."></textarea>
-            
-            <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(59,130,246,0.4)]">📋 Copiar Rotas</button>
-        </div>
-
-        <div class="glass p-6 md:p-8 rounded-[2.5rem] flex flex-col border-pink-500/30 shadow-[0_0_30px_rgba(219,39,119,0.1)]">
-            <h2 class="text-[10px] font-black uppercase text-pink-400 mb-2 tracking-widest">📲 Base de Clientes (Transmissão)</h2>
-            <p class="text-[9px] text-zinc-400 mb-4 leading-relaxed">Gere a lista de todas as solteiras cadastradas, ordenadas da visita mais recente para a mais antiga.</p>
-            
-            <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="w-full bg-pink-900/40 hover:bg-pink-800/60 border border-pink-500/50 text-pink-300 font-black uppercase text-[10px] py-4 rounded-xl transition-colors mb-4">🔄 Carregar Cadastradas</button>
-            
-            <textarea id="output-marketing" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[250px] resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
-            
-            <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(219,39,119,0.4)]">📋 Copiar para WhatsApp</button>
-        </div>
-    </div>
-
-    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
-        <div class="w-full max-w-sm glass p-6 md:p-8 rounded-[2.5rem] relative my-auto mt-10 mb-10 shadow-[0_0_50px_rgba(219,39,119,0.15)]">
-            <button onclick="fecharModal()" class="absolute top-6 right-6 text-pink-500 font-black text-xl hover:text-white transition-colors">✕</button>
-            
-            <div class="text-center mb-8">
-                <h2 id="modal-titulo" class="font-black uppercase italic tracking-tighter text-xl text-pink-400">Solicitar Carona VIP</h2>
-                <p id="modal-evento-nome" class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-1">---</p>
-            </div>
-
-            <div class="space-y-3">
-                <label class="text-[9px] font-black text-pink-400 uppercase tracking-widest ml-2">Dados Pessoais</label>
-                <input type="text" id="nome-cliente" placeholder="SEU NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
-                <input type="tel" id="tel-cliente" oninput="maskTel(this)" placeholder="SEU WHATSAPP (41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
-                
-                <div class="pt-4">
-                    <label class="text-[9px] font-black text-pink-400 uppercase tracking-widest ml-2">Endereço para Busca</label>
-                    
-                    <div id="aviso-bairro" class="hidden bg-yellow-950/80 border-2 border-yellow-500 p-5 rounded-2xl mb-4 mt-2 shadow-[0_0_20px_rgba(234,179,8,0.3)] text-center transition-all animate-pulse">
-                        <span class="text-3xl block mb-2">🚫🚗</span>
-                        <p class="text-[12px] font-black text-yellow-400 uppercase tracking-widest mb-1">Região Fora da Rota</p>
-                        <p class="text-[10px] font-bold text-zinc-300 leading-relaxed mb-3">Nosso motorista <span class="text-yellow-400 underline">não atende</span> este bairro.</p>
-                        <p class="text-[10px] font-black text-yellow-500 uppercase border-t border-yellow-500/30 pt-3">Se você confirmar agora, garantirá APENAS sua entrada VIP na lista (sem a carona).</p>
+                <div class="flex flex-col gap-8">
+                    <div class="glass-card p-8 border-t-4 border-t-blue-500 flex flex-col">
+                        <h2 class="text-blue-500 font-black uppercase italic text-xl tracking-tighter mb-2">🗺️ Gerador de Rotas</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Exporte a lista ordenada por bairros para o motorista.</p>
+                        
+                        <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full bg-[#0a0a0f] border border-zinc-800 p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none">
+                            <option value="">Selecione o Evento...</option>
+                        </select>
+                        
+                        <textarea id="output-rotas-carona" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-40 bg-[#0a0a0f] border-zinc-800 border resize-none" placeholder="Aguardando seleção do evento..."></textarea>
+                        
+                        <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para o Motorista</button>
                     </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 border-t-4 border-t-pink-500 flex flex-col mt-4">
+                <h2 class="text-pink-500 font-black uppercase italic text-xl tracking-tighter mb-2">📲 Base de Clientes (Transmissão)</h2>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Gere a lista de todas as solteiras cadastradas, ordenadas da visita mais recente para a mais antiga.</p>
+                
+                <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="w-full bg-pink-900/40 hover:bg-pink-800/60 border border-pink-500/50 text-pink-300 font-black uppercase text-[10px] py-4 rounded-xl transition-colors mb-4">🔄 Carregar Cadastradas</button>
+                
+                <textarea id="output-marketing" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-48 bg-[#0a0a0f] border-zinc-800 border resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
+                
+                <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para WhatsApp</button>
+            </div>
+        </section>
+
+        <section id="aba-festas" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento & Camarotes</h2>
+                <form id="formEvento" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <input type="hidden" id="edit_evento_id">
+                    <input type="hidden" id="url_imagem_atual">
                     
-                    <div class="space-y-3 mt-2">
-                        <div class="grid grid-cols-2 gap-3">
-                            <input type="tel" id="cep-cliente" oninput="maskCEP(this); buscarCEP(this.value)" placeholder="SEU CEP" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white" maxlength="9">
-                            <select id="qtd-cliente" class="w-full site-input p-4 rounded-2xl font-bold text-[10px] uppercase text-white outline-none cursor-pointer">
-                                <option value="1">1 Passageira</option>
-                                <option value="2">2 Passageiras</option>
-                                <option value="3">3 Passageiras</option>
-                                <option value="4">4 Passageiras</option>
+                    <input type="text" id="nome_festa" placeholder="NOME DO EVENTO" class="p-4 rounded-2xl font-bold md:col-span-3" required>
+                    
+                    <div class="md:col-span-2 flex flex-col gap-1">
+                        <label class="text-[8px] font-black text-zinc-500 ml-2 uppercase">Data da Festa</label>
+                        <input type="date" id="data_festa" onclick="this.showPicker()" class="p-4 rounded-2xl font-bold uppercase text-xs w-full" required>
+                    </div>
+
+                    <div class="md:col-span-1 flex flex-col gap-1">
+                        <label class="text-[8px] font-black text-blue-400 ml-2 uppercase">Horário</label>
+                        <input type="time" id="hora_inicio" onclick="this.showPicker()" class="p-4 rounded-2xl font-bold uppercase text-xs w-full" required>
+                    </div>
+
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="valor_casal" placeholder="CASAL PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
+                        <input type="text" id="valor_solteiro" placeholder="SOLTEIRO PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
+                    </div>
+
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="desc_casal" placeholder="CASAL ANIV. R$" class="p-4 rounded-2xl font-bold text-cyan-400 border-cyan-900/30 text-[10px]">
+                        <input type="text" id="desc_solteiro" placeholder="SOLTEIRO ANIV. R$" class="p-4 rounded-2xl font-bold text-cyan-400 border-cyan-900/30 text-[10px]">
+                    </div>
+
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-green-500/5 p-4 rounded-3xl border border-green-500/10 mb-4">
+                        <div class="md:col-span-3 text-[10px] font-black text-green-500 uppercase tracking-widest ml-2 mb-2">Valores Pix Antecipado (Pista)</div>
+                        <input type="text" id="ant_casal" placeholder="CASAL SECO PIX R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30 text-[10px]">
+                        <input type="text" id="ant_casal_cons" placeholder="CASAL CONSUMA PIX R$" class="p-4 rounded-2xl font-bold text-fuchsia-400 border-fuchsia-900/50 text-[10px]">
+                        <input type="text" id="ant_solteiro" placeholder="SOLTEIRO PIX R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30 text-[10px]">
+                    </div>
+
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-yellow-500/5 p-4 rounded-3xl border border-yellow-500/10 mb-4">
+                        <div class="md:col-span-2 text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 mb-2">Valores Fidelidade (Desconto Sábado)</div>
+                        <input type="text" id="valor_recorrente_casal" placeholder="CASAL FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
+                        <input type="text" id="valor_recorrente_solteiro" placeholder="SOLTEIRO FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
+                    </div>
+
+                    <div class="md:col-span-6 bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5 mb-4">
+                        <label class="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-4 block ml-2">🖼️ Capa do Evento (Upload Seguro)</label>
+                        <input type="file" id="upload_capa" accept="image/*" class="w-full text-xs text-zinc-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-yellow-600 file:text-black hover:file:bg-yellow-500 cursor-pointer">
+                    </div>
+
+                    <div class="md:col-span-6 bg-cyan-900/10 p-6 rounded-[2rem] border border-cyan-500/20 mb-4">
+                        <div class="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4 ml-2">💎 Configuração de Camarotes (Selecione para Ativar)</div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="grid-camarotes-inputs"></div>
+                    </div>
+
+                    <button type="submit" id="btnSalvarEvento" class="md:col-span-6 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
+                </form>
+            </div>
+            <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <section id="aba-equipe" class="hidden space-y-12">
+            <div class="glass-card p-8 border-l-4 border-l-yellow-500">
+                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Promoters</h2>
+                <form id="formPromoter" class="flex flex-col md:flex-row gap-3 mb-10">
+                    <input type="text" id="nome_promoter" placeholder="NOME DO PROMOTER" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
+                    <select id="tipo_promoter" class="p-4 rounded-2xl font-bold text-xs">
+                        <option value="padrao">LISTA PADRÃO</option>
+                        <option value="aniversario">LISTA ANIVERSÁRIO</option>
+                        <option value="visualizar">APENAS VISUALIZAR</option>
+                    </select>
+                    <button type="submit" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black transition-all hover:bg-yellow-500">Adicionar</button>
+                </form>
+                <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+            <div class="glass-card p-8 border-l-4 border-l-green-500">
+                <h2 class="text-green-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Portaria</h2>
+                <form id="formPortaria" class="flex flex-col md:flex-row gap-3 mb-10">
+                    <input type="text" id="login_portaria" placeholder="NOME DO OPERADOR" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
+                    <button type="submit" class="bg-green-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-green-500 transition-all">Cadastrar</button>
+                </form>
+                <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </section>
+
+        <section id="aba-aniversarios" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-cyan-500">
+                <h2 class="text-cyan-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Listas de Aniversariantes</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Data</th><th class="pb-4">Promoter</th><th class="pb-4">Aniversariante</th><th class="pb-4 text-center">Reservas</th><th class="pb-4 text-right pr-4">Ações</th></tr></thead>
+                        <tbody id="tabela-aniversarios-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Gestão de Camarotes (Ativos/Ocupados)</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Evento</th><th class="pb-4">Camarote</th><th class="pb-4">Cliente / Info</th><th class="pb-4 text-center">Status</th><th class="pb-4 text-right pr-4">Ação</th></tr></thead>
+                        <tbody id="tabela-camarotes-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-config" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-red-500">
+                <h2 class="text-red-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurações</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                    <div class="bg-blue-500/10 border border-blue-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-blue-400 font-black uppercase tracking-widest text-[11px] mb-2">Modo Teste</h3>
+                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto">🔓 LIBERAR TESTE</button>
+                    </div>
+                    <div class="bg-red-500/5 border border-red-500/20 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-red-400 font-black uppercase tracking-widest text-[11px] mb-2">Limpar Clientes</h3>
+                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto" title="Não apaga as Solteiras cadastradas.">Limpar Base</button>
+                    </div>
+                    <div class="bg-red-500/10 border border-red-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-red-500 font-black uppercase tracking-widest text-[11px] mb-2">Zerar Sistema</h3>
+                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto" title="Não apaga as Solteiras cadastradas.">⚠️ ZERAR TUDO</button>
+                    </div>
+                    <div class="bg-yellow-500/10 border border-yellow-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
+                        <h3 class="text-yellow-500 font-black uppercase tracking-widest text-[11px] mb-4">Taxa de Serviço PIX</h3>
+                        <div class="flex gap-2 mb-4">
+                            <select id="tipo_taxa" class="flex-1 bg-[#0a0a0f] border border-yellow-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
+                                <option value="desativado">Sem Taxa</option>
+                                <option value="fixo">Fixo (R$)</option>
+                                <option value="porcentagem">Porcentagem (%)</option>
                             </select>
+                            <input type="number" id="valor_taxa" placeholder="VALOR/PORC." class="flex-1 bg-[#0a0a0f] border border-yellow-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
                         </div>
-                        <input type="text" id="bairro-cliente" placeholder="BAIRRO (Automático)" readonly class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-zinc-400">
-                        <input type="text" id="rua-cliente" placeholder="RUA (Automático)" readonly class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-zinc-400">
-                        <div class="grid grid-cols-2 gap-3">
-                            <input type="text" id="num-cliente" placeholder="NÚMERO" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
-                            <input type="text" id="comp-cliente" placeholder="COMPLEMENTO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
+                        <button onclick="salvarTaxaPix()" class="w-full bg-yellow-600 text-black text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-yellow-500 transition-all">Salvar Taxa</button>
+                    </div>
+                    
+                    <div class="bg-indigo-500/10 border border-indigo-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
+                        <h3 class="text-indigo-400 font-black uppercase tracking-widest text-[11px] mb-4">Custo Fixo do Sistema</h3>
+                        <div class="flex gap-2 mb-4">
+                            <span class="bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-zinc-500">R$</span>
+                            <input type="number" id="custo_sistema" placeholder="VALOR MENSALIDADE" class="flex-1 bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
                         </div>
+                        <button onclick="salvarCustoSistema()" class="w-full bg-indigo-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-indigo-500 transition-all">Salvar Custo</button>
                     </div>
                 </div>
-
-                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full btn-rosa py-5 rounded-2xl uppercase text-xs mt-6 transition-all">Confirmar Solicitação 🚗</button>
-                <p class="text-[8px] text-zinc-500 text-center mt-4">Sua carona passará para te buscar no endereço informado.</p>
             </div>
-        </div>
-    </div>
-
-    <div id="modalLogin" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
-        <div class="w-full max-w-sm glass p-8 rounded-[2.5rem] relative shadow-[0_0_50px_rgba(59,130,246,0.15)] text-center border-blue-500/30">
-            <button onclick="fecharModalLogin()" class="absolute top-6 right-6 text-blue-500 font-black text-xl hover:text-white transition-colors">✕</button>
-            <span class="text-4xl block mb-4">🔐</span>
-            <h2 class="font-black uppercase italic tracking-tighter text-xl text-blue-400 mb-6">Acesso Restrito</h2>
-            
-            <div class="space-y-3">
-                <input type="text" id="login-user" placeholder="USUÁRIO (PROMOTER)" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
-                <input type="password" id="login-senha" placeholder="SENHA" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
-                <button onclick="fazerLoginGerador()" id="btn-login" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-lg mt-4">Acessar Painel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modalSucesso" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
-        <div id="modal-sucesso-inner" class="w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-pink-500/50">
-            <span id="sucesso-icone" class="text-6xl mb-6 block drop-shadow-[0_0_20px_rgba(219,39,119,0.8)]">💖</span>
-            <h2 id="sucesso-titulo" class="text-pink-500 font-black uppercase italic mb-2 text-2xl tracking-tighter">Agendado!</h2>
-            <p id="sucesso-texto" class="text-zinc-300 text-[10px] font-bold uppercase mb-8 leading-relaxed whitespace-pre-line">
-                Tudo pronto! Seu VIP está garantido e o motorista te chamará no WhatsApp para confirmar o horário.
-            </p>
-            <button id="btn-sucesso-ok" onclick="location.reload()" class="w-full bg-pink-600 hover:bg-pink-500 text-white py-5 rounded-2xl uppercase text-xs font-black transition-colors shadow-lg">Entendido</button>
-        </div>
+        </section>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
+        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app);
+        
+        let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
+        let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
 
-        let eventosCache = [];
-        let eventoAtivo = null;
-        let regrasLogistica = { hora: '18:00', bairros: [] };
-        let bloqueioBairro = false;
-        let reservasCaronaMemoria = []; 
+        const getPromoterName = (p) => {
+            if (!p) return 'SITE DIRETO';
+            const clean = String(p).toUpperCase().trim();
+            if (clean === 'UNDEFINED' || clean === 'NULL' || clean === '') return 'SITE DIRETO';
+            return clean;
+        };
 
-        let controleNavegacao = false;
-        window.addEventListener('popstate', function() {
-            controleNavegacao = false;
-            document.getElementById('modalForm').classList.add('hidden');
-            document.getElementById('modalLogin').classList.add('hidden');
-            document.getElementById('modalSucesso').classList.add('hidden');
-            document.getElementById('tela-rotas').classList.add('hidden');
-            document.getElementById('tela-principal').classList.remove('hidden');
-        });
-
-        function adicionarHistorico() {
-            if (!controleNavegacao) {
-                history.pushState({ aberto: true }, "");
-                controleNavegacao = true;
+        const parseVisita = (val) => {
+            if (!val) return null;
+            if (typeof val.toDate === 'function') return val.toDate();
+            if (typeof val === 'string') {
+                if (val.includes('/')) {
+                    const p = val.split(/[/\s:]+/);
+                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]);
+                }
+                return new Date(val);
             }
-        }
+            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
+            return null;
+        };
+
+        const getSolteirasParaEvento = (ev) => {
+            if (!ev || !ev.data) return [];
+            const partesData = ev.data.split('-');
+            const inicioEvento = new Date(partesData[0], partesData[1] - 1, partesData[2], 12, 0, 0);
+            const fimEvento = new Date(inicioEvento);
+            fimEvento.setDate(fimEvento.getDate() + 1);
+            fimEvento.setHours(6, 0, 0, 0);
+
+            const presPortaria = dadosSolteiras.filter(s => {
+                let d = parseVisita(s.ultima_visita);
+                return d && !isNaN(d) && d >= inicioEvento && d <= fimEvento;
+            });
+
+            const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
+            const presSite = dadosReservas.filter(r => {
+                if (!r.entrou) return false;
+                if (String(r.evento || '').trim().toUpperCase() !== evNomeLimpo) return false;
+                return String(r.tipo_entrada).toUpperCase().includes('SOLTEIRA');
+            });
+
+            const unicas = []; const map = new Map();
+            for (const c of [...presPortaria, ...presSite]) {
+                const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
+                if (!map.has(tel) && tel.length > 5) { map.set(tel, true); unicas.push(c); }
+            }
+            return unicas;
+        };
 
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${isSucesso ? 'bg-pink-600 shadow-[0_0_20px_rgba(219,39,119,0.5)]' : 'bg-red-600 shadow-[0_0_20px_rgba(220,38,38,0.5)]'}`;
-            document.getElementById('toast-icon').innerText = isSucesso ? '💖' : '⚠️';
-            document.getElementById('toast-msg').innerText = msg;
+            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            const icon = isSucesso ? '✅' : '⚠️';
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            document.getElementById('toast-icon').innerText = icon; document.getElementById('toast-msg').innerText = msg;
             setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
             setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
         window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
-        window.maskCEP = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 8); if (v.length > 5) v = v.substring(0, 5) + "-" + v.substring(5); i.value = v; };
 
-        // Função de Parser de Data Universal (Ajuda a ordenar visitas)
-        const parseVisitaUniversal = (val) => {
-            if (!val) return 0;
-            if (typeof val.toDate === 'function') return val.toDate().getTime();
-            if (typeof val === 'string') {
-                const d = new Date(val);
-                if (!isNaN(d)) return d.getTime();
-                if (val.includes('/')) {
-                    const p = val.split(/[/\s:]+/);
-                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]).getTime();
-                }
-            }
-            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000)).getTime();
-            return 0;
-        };
-
-        function salvarMemoria(dados) { localStorage.setItem('eclub_solteira_perfil', JSON.stringify(dados)); }
-        function recuperarMemoria() { const p = localStorage.getItem('eclub_solteira_perfil'); return p ? JSON.parse(p) : null; }
-
-        async function carregarPagina() {
-            try {
-                const sysSnap = await getDoc(doc(db, "configuracoes", "sistema"));
-                if (sysSnap.exists()) {
-                    const d = sysSnap.data();
-                    if(d.carona_hora_limite) regrasLogistica.hora = d.carona_hora_limite;
-                    if(d.carona_bairros) regrasLogistica.bairros = d.carona_bairros.toUpperCase().split(',').map(b => b.trim());
-                }
-            } catch(e) {}
-
-            const displayHora = document.getElementById('display-hora-limite');
-            if (displayHora) displayHora.innerText = regrasLogistica.hora;
-
-            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            const hojeStr = new Date().toLocaleDateString('en-CA');
-            const agora = new Date();
-            const horaAtual = String(agora.getHours()).padStart(2, '0') + ':' + String(agora.getMinutes()).padStart(2, '0');
-
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= hojeStr).sort((a, b) => a.data.localeCompare(b.data));
-
-            const container = document.getElementById('listaEventos');
-            if(eventosCache.length === 0) {
-                container.innerHTML = `<p class="text-center text-[10px] text-pink-300 uppercase tracking-widest p-8 glass rounded-3xl">Nenhuma festa programada para carona no momento.</p>`;
-                return;
-            }
-
-            container.innerHTML = eventosCache.map(ev => {
-                const isHoje = ev.data === hojeStr;
-                const passouLimite = isHoje && horaAtual >= regrasLogistica.hora;
-                const btnTexto = passouLimite ? "CARONAS ENCERRADAS PARA HOJE" : "SOLICITAR CARONA VIP 🚗";
-                const btnClasse = passouLimite ? "btn-disabled" : "";
-
-                return `
-                <div class="glass overflow-hidden rounded-[2.5rem] transition-all hover:border-pink-500/50">
-                    ${ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-64 bg-pink-900/10 flex items-center justify-center text-pink-500/30 font-black italic text-2xl border-b border-pink-500/10">E-CLUB</div>`}
-                    <div class="p-6 md:p-8 text-center">
-                        <h3 class="text-2xl font-black uppercase italic mb-1 tracking-tighter text-white">${ev.nome}</h3>
-                        <p class="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-6">${ev.data.split('-').reverse().join('/')}</p>
-                        <button onclick="abrirReserva('${ev.id}', ${passouLimite})" class="w-full btn-rosa py-5 rounded-2xl text-[11px] uppercase tracking-widest shadow-lg ${btnClasse}">${btnTexto}</button>
-                    </div>
-                </div>`;
-            }).join('');
+        const gridCamarotes = document.getElementById('grid-camarotes-inputs');
+        for(let i=1; i<=8; i++) {
+            let nFil = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `Cam 0${i}`;
+            gridCamarotes.innerHTML += `<div class="bg-black/30 p-3 rounded-2xl border border-white/5 flex flex-col items-center gap-2"><label class="flex items-center gap-2 w-full cursor-pointer justify-center"><input type="checkbox" id="cam${i}_ativo" class="check-camarote"><span class="text-[10px] font-black uppercase text-zinc-400">${nFil}</span></label><input type="text" id="v_cam${i}" placeholder="Valor (R$)" class="w-full p-2 rounded-xl text-center text-xs font-bold bg-[#0c0c0e] border border-zinc-800 text-cyan-400 outline-none"><input type="text" id="obs_cam${i}" placeholder="Benefícios" class="w-full p-2 rounded-xl text-center text-[9px] font-bold bg-[#0c0c0e] border border-zinc-800 text-zinc-400 outline-none"></div>`;
         }
 
-        window.abrirReserva = (id, bloqueado) => {
-            if (bloqueado) return mostrarAviso("As solicitações de carona para o evento de hoje já foram encerradas.");
-            
-            adicionarHistorico(); 
+        window.trocarAba = (id, btn, type) => { 
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
+            document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active', 'active-danger', 'active-success', 'active-pink')); 
+            document.getElementById(id).classList.remove('hidden'); 
+            if (type === 'danger') btn.classList.add('active-danger'); 
+            else if (type === 'success') btn.classList.add('active-success');
+            else if (type === 'pink') btn.classList.add('active-pink');
+            else btn.classList.add('active'); 
+        };
 
-            eventoAtivo = eventosCache.find(e => e.id === id); 
-            document.getElementById('modal-evento-nome').innerText = eventoAtivo.nome;
-            
-            document.getElementById('aviso-bairro').classList.add('hidden');
-            bloqueioBairro = false;
-            
-            const btnFinal = document.getElementById('btn-final-acao');
-            btnFinal.innerText = "Confirmar Solicitação 🚗";
-            btnFinal.className = "w-full btn-rosa py-5 rounded-2xl uppercase text-xs mt-6 transition-all";
-
-            const perfil = recuperarMemoria();
-            if (perfil) {
-                document.getElementById('nome-cliente').value = perfil.nome || '';
-                document.getElementById('tel-cliente').value = perfil.tel || '';
-                document.getElementById('cep-cliente').value = perfil.cep || '';
-                document.getElementById('bairro-cliente').value = perfil.bairro || '';
-                document.getElementById('rua-cliente').value = perfil.rua || '';
-                document.getElementById('num-cliente').value = perfil.num || '';
-                document.getElementById('comp-cliente').value = perfil.comp || '';
-                document.getElementById('qtd-cliente').value = perfil.qtd || '1';
+        onSnapshot(collection(db, "configuracoes"), snap => {
+            const sys = snap.docs.find(d => d.id === "sistema");
+            if (sys) {
+                const data = sys.data() || {};
+                modoTesteAtivo = data.modo_teste === true;
+                const btn = document.getElementById('btnModoTeste');
+                if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
+                if (document.getElementById('tipo_taxa')) { document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado'; document.getElementById('valor_taxa').value = data.taxa_valor || ''; }
+                if (document.getElementById('config_hora_carona')) { document.getElementById('config_hora_carona').value = data.carona_hora_limite || '18:00'; document.getElementById('config_bairros_carona').value = data.carona_bairros || ''; }
                 
-                if(perfil.bairro && regrasLogistica.bairros.length > 0) {
-                    if(!regrasLogistica.bairros.includes(perfil.bairro.toUpperCase())) {
-                        document.getElementById('aviso-bairro').classList.remove('hidden');
-                        bloqueioBairro = true;
-                        btnFinal.innerText = "Confirmar Apenas VIP ✨";
-                        btnFinal.className = "w-full btn-amarelo py-5 rounded-2xl uppercase text-xs mt-6 transition-all";
-                    }
-                }
+                if (document.getElementById('custo_sistema')) { document.getElementById('custo_sistema').value = data.custo_sistema !== undefined ? data.custo_sistema : 125; }
+                custoSistemaGlobal = data.custo_sistema !== undefined ? parseFloat(data.custo_sistema) : 125.00;
             }
+            dadosOperadores = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.id !== "sistema");
+            renderEquipe();
+        });
 
-            document.getElementById('modalForm').classList.remove('hidden');
+        window.salvarTaxaPix = async () => {
+            const tipo = document.getElementById('tipo_taxa').value;
+            const valor = parseFloat(document.getElementById('valor_taxa').value) || 0;
+            try { await setDoc(doc(db, "configuracoes", "sistema"), { taxa_tipo: tipo, taxa_valor: valor }, { merge: true }); mostrarAviso("Taxa atualizada com sucesso!", true); } 
+            catch(e) { mostrarAviso("Erro ao salvar taxa."); }
         };
 
-        window.fecharModal = () => {
-            if(controleNavegacao) history.back();
-            else document.getElementById('modalForm').classList.add('hidden');
+        window.salvarCustoSistema = async () => {
+            const valor = parseFloat(document.getElementById('custo_sistema').value) || 0;
+            try { await setDoc(doc(db, "configuracoes", "sistema"), { custo_sistema: valor }, { merge: true }); mostrarAviso("Custo do sistema salvo com sucesso!", true); } 
+            catch(e) { mostrarAviso("Erro ao salvar custo."); }
         };
 
-        window.buscarCEP = async (val) => {
-            const cep = val.replace(/\D/g, '');
-            if(cep.length === 8) {
-                try {
-                    const resp = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                    const data = await resp.json();
-                    if(!data.erro) {
-                        const b = data.bairro.toUpperCase();
-                        document.getElementById('bairro-cliente').value = b;
-                        document.getElementById('rua-cliente').value = data.logradouro.toUpperCase();
-                        
-                        const avisoBairro = document.getElementById('aviso-bairro');
-                        const btnFinal = document.getElementById('btn-final-acao');
-                        
-                        if (regrasLogistica.bairros.length > 0 && !regrasLogistica.bairros.includes(b)) {
-                            avisoBairro.classList.remove('hidden');
-                            bloqueioBairro = true;
-                            btnFinal.innerText = "Confirmar Apenas VIP ✨";
-                            btnFinal.className = "w-full btn-amarelo py-5 rounded-2xl uppercase text-xs mt-6 transition-all";
-                        } else {
-                            avisoBairro.classList.add('hidden');
-                            bloqueioBairro = false;
-                            btnFinal.innerText = "Confirmar Solicitação 🚗";
-                            btnFinal.className = "w-full btn-rosa py-5 rounded-2xl uppercase text-xs mt-6 transition-all";
-                            document.getElementById('num-cliente').focus();
-                        }
-                    }
-                } catch(e) {}
-            }
+        window.salvarConfigCaronas = async () => {
+            const h = document.getElementById('config_hora_carona').value;
+            const b = document.getElementById('config_bairros_carona').value.toUpperCase();
+            try { await setDoc(doc(db, "configuracoes", "sistema"), { carona_hora_limite: h, carona_bairros: b }, { merge: true }); mostrarAviso("Regras salvas!", true); } 
+            catch(e) { mostrarAviso("Erro ao salvar configurações."); }
         };
-
-        window.processarFinalizacao = async () => {
-            const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
-            const t = document.getElementById('tel-cliente').value.trim();
-            const cep = document.getElementById('cep-cliente').value.replace(/\D/g, '');
-            const bairro = document.getElementById('bairro-cliente').value;
-            const rua = document.getElementById('rua-cliente').value;
-            const num = document.getElementById('num-cliente').value.trim();
-            const comp = document.getElementById('comp-cliente').value.trim().toUpperCase();
-            const qtdPass = document.getElementById('qtd-cliente').value;
-
-            if (!n || !t || !num || cep.length < 8) return mostrarAviso("Por favor, preencha todos os campos do endereço!");
-
-            const btn = document.getElementById('btn-final-acao'); 
-            btn.disabled = true; btn.innerText = "AGENDANDO...";
-            
-            try {
-                const qBusca = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome), where("tel", "==", t));
-                const snapBusca = await getDocs(qBusca);
-                if (!snapBusca.empty) {
-                    throw new Error("Você já possui um VIP ou Carona agendada para este evento com este número!");
-                }
-
-                salvarMemoria({ nome: n, tel: t, cep: cep, bairro: bairro, rua: rua, num: num, comp: comp, qtd: qtdPass });
-
-                let vaiTerCarona = !bloqueioBairro;
-
-                await addDoc(collection(db, "lista_eventos"), { 
-                    nome: n, 
-                    tel: t, 
-                    evento: eventoAtivo.nome, 
-                    tipo_entrada: "SOLTEIRA VIP", 
-                    promoter: vaiTerCarona ? "CARONA VIP" : "LOUNGE VIP", 
-                    data_reserva: new Date().toISOString(), 
-                    entrou: false, 
-                    pago: false, 
-                    metodo: 'portaria', 
-                    valor_pago: "FREE", 
-                    carona: vaiTerCarona,
-                    qtd_solteiras: vaiTerCarona ? parseInt(qtdPass) : 1,
-                    bairro: vaiTerCarona ? bairro : "", 
-                    cep: vaiTerCarona ? cep : "", 
-                    endereco: vaiTerCarona ? `${rua}, ${num} ${comp ? '('+comp+')' : ''}` : ""
-                });
-                
-                document.getElementById('modalForm').classList.add('hidden');
-
-                const modalInner = document.getElementById('modal-sucesso-inner');
-                
-                if (vaiTerCarona) {
-                    document.getElementById('sucesso-icone').innerText = "💖";
-                    document.getElementById('sucesso-titulo').innerText = "Agendado!";
-                    document.getElementById('sucesso-titulo').className = "text-pink-500 font-black uppercase italic mb-2 text-2xl tracking-tighter";
-                    document.getElementById('sucesso-texto').innerText = "Tudo pronto! Seu VIP está garantido e o motorista te chamará no WhatsApp para confirmar o horário.";
-                    document.getElementById('btn-sucesso-ok').className = "w-full bg-pink-600 hover:bg-pink-500 text-white py-5 rounded-2xl uppercase text-xs font-black transition-colors shadow-lg";
-                    modalInner.className = "w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-pink-500/50";
-                } else {
-                    document.getElementById('sucesso-icone').innerText = "✨";
-                    document.getElementById('sucesso-titulo').innerText = "VIP Confirmado\n(Carona não atendida)";
-                    document.getElementById('sucesso-titulo').className = "text-yellow-500 font-black uppercase italic mb-2 text-xl tracking-tighter whitespace-pre-line";
-                    document.getElementById('sucesso-texto').innerText = "Seu nome está na Lista VIP na recepção. O motorista não atende sua região, então a carona não foi agendada.";
-                    document.getElementById('btn-sucesso-ok').className = "w-full bg-yellow-500 hover:bg-yellow-400 text-black py-5 rounded-2xl uppercase text-xs font-black transition-colors shadow-[0_0_20px_rgba(234,179,8,0.4)]";
-                    modalInner.className = "w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-yellow-500/50";
-                }
-
-                document.getElementById('modalSucesso').classList.remove('hidden');
-            } catch (e) { 
-                mostrarAviso(e.message); 
-                btn.disabled = false; 
-                btn.innerText = bloqueioBairro ? "Confirmar Apenas VIP ✨" : "Confirmar Solicitação 🚗";
-            }
-        };
-
-        // ==========================================
-        // SISTEMA OCULTO DO GERADOR DE ROTAS & MARKETING
-        // ==========================================
-        
-        window.abrirModalLogin = () => {
-            adicionarHistorico();
-            document.getElementById('login-user').value = '';
-            document.getElementById('login-senha').value = '';
-            document.getElementById('modalLogin').classList.remove('hidden');
-        };
-
-        window.fecharModalLogin = () => {
-            if(controleNavegacao) history.back();
-            else document.getElementById('modalLogin').classList.add('hidden');
-        };
-
-        window.fazerLoginGerador = async () => {
-            const u = document.getElementById('login-user').value.trim().toLowerCase();
-            const s = document.getElementById('login-senha').value.trim();
-            
-            if(!u || !s) return mostrarAviso("Preencha usuário e senha!");
-
-            const btn = document.getElementById('btn-login'); 
-            btn.innerText = "VERIFICANDO..."; btn.disabled = true;
-
-            try {
-                let acessoLiberado = false;
-                
-                let snap = await getDoc(doc(db, "promoters", u));
-                if(snap.exists() && snap.data().senha === s) acessoLiberado = true;
-
-                if(acessoLiberado) {
-                    document.getElementById('label-logado').innerText = "PROMOTER: " + u.toUpperCase();
-                    
-                    document.getElementById('modalLogin').classList.add('hidden');
-                    document.getElementById('tela-principal').classList.add('hidden');
-                    document.getElementById('tela-rotas').classList.remove('hidden');
-                    
-                    iniciarSistemaRotas();
-                } else {
-                    mostrarAviso("Acesso negado. Senha incorreta ou usuário não é promoter.");
-                }
-            } catch (e) {
-                mostrarAviso("Erro de conexão.");
-            }
-            
-            btn.innerText = "Acessar Painel"; btn.disabled = false;
-        };
-
-        window.sairPainelRotas = () => {
-            if(controleNavegacao) history.back();
-            else {
-                document.getElementById('tela-rotas').classList.add('hidden');
-                document.getElementById('tela-principal').classList.remove('hidden');
-            }
-        };
-
-        function iniciarSistemaRotas() {
-            onSnapshot(query(collection(db, "lista_eventos"), where("carona", "==", true)), (snap) => {
-                reservasCaronaMemoria = snap.docs.map(d => d.data());
-                
-                const selectCarona = document.getElementById('filtro-evento-carona');
-                const valAtual = selectCarona.value;
-                
-                const eventosComCarona = [...new Set(reservasCaronaMemoria.map(r => r.evento))];
-                selectCarona.innerHTML = '<option value="">Selecione o Evento com Caronas...</option>' + 
-                    eventosComCarona.map(e => `<option value="${e}">${e}</option>`).join('');
-                
-                if(eventosComCarona.includes(valAtual)) selectCarona.value = valAtual;
-                if(valAtual) window.gerarRelatorioCaronas();
-            });
-        }
 
         window.gerarRelatorioCaronas = () => {
             const eventoNome = document.getElementById('filtro-evento-carona').value;
             const textarea = document.getElementById('output-rotas-carona');
-            
             if(!eventoNome) { textarea.value = "Aguardando seleção do evento..."; return; }
-            
-            const passageiras = reservasCaronaMemoria.filter(r => r.evento === eventoNome);
-            
-            if(passageiras.length === 0) {
-                textarea.value = `Nenhuma solicitação de carona registrada para o evento ${eventoNome}.`;
-                return;
-            }
-
-            passageiras.sort((a,b) => new Date(a.data_reserva || 0) - new Date(b.data_reserva || 0));
-
+            const passageiras = dadosReservas.filter(r => r.evento === eventoNome && r.carona === true);
+            if(passageiras.length === 0) { textarea.value = `Nenhuma solicitação de carona para ${eventoNome}.`; return; }
             const grupos = {};
-            passageiras.forEach(p => {
-                const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase();
-                if(!grupos[b]) grupos[b] = [];
-                grupos[b].push(p);
-            });
-
-            let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`;
-            let cont = 1;
-            
+            passageiras.forEach(p => { const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase(); if(!grupos[b]) grupos[b] = []; grupos[b].push(p); });
+            let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`; let cont = 1;
             Object.keys(grupos).sort().forEach(bairro => {
                 texto += `🛑 BAIRRO: ${bairro}\n`;
-                grupos[bairro].forEach(p => {
-                    const qtdPass = p.qtd_solteiras || 1;
-                    const labelVagas = qtdPass > 1 ? 'VAGAS' : 'VAGA';
-                    
-                    const enderecoBusca = `${p.endereco || ''}, ${p.bairro || ''}, Curitiba - PR`;
-                    const linkMaps = `http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(enderecoBusca)}`;
-                    
-                    texto += `\n${cont}. ${p.nome} - ${p.tel || 'Sem número'} [${qtdPass} ${labelVagas}]\n`;
-                    texto += `Endereço: ${p.endereco || 'Sem endereço'} - CEP: ${p.cep || '---'}\n`;
-                    texto += `📍 Mapa: ${linkMaps}\n`;
-                    cont++;
-                });
-                texto += `\n------------------------------------\n\n`;
+                grupos[bairro].forEach(p => { texto += `${cont}. ${p.nome} - ${p.tel || 'S/N'}\nEndereço: ${p.endereco || 'S/E'} - CEP: ${p.cep || '---'}\n`; cont++; });
+                texto += `\n`;
             });
-            
             textarea.value = texto.trim();
         };
 
-        window.copiarRotasCarona = () => {
-            const t = document.getElementById('output-rotas-carona');
-            t.select(); document.execCommand('copy');
-            mostrarAviso("Rotas copiadas para o motorista!", true);
+        window.copiarRotasCarona = () => { document.getElementById('output-rotas-carona').select(); document.execCommand('copy'); mostrarAviso("Rotas copiadas!", true); };
+
+        // Exportar p/ Excel na Auditoria
+        window.exportarAuditoriaExcel = () => {
+            const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
+            const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
+            
+            let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP').sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
+            
+            if (fStat === 'entrou') res = res.filter(r => r.entrou === true); 
+            else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true);
+            else if (fStat === 'pix_entrou') res = res.filter(r => r.metodo === 'pix_antecipado' && r.entrou === true);
+            else if (fStat === 'pix_aguardando') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && r.entrou !== true);
+            else if (fStat === 'pix_cancelado') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago !== true);
+            
+            if (termo.length > 1) {
+                const terms = termo.split(/\s+/);
+                res = res.filter(r => {
+                    const dF = isNaN(new Date(r.data_reserva)) ? '' : new Date(r.data_reserva).toLocaleDateString('pt-BR');
+                    const str = `${r.nome || ''} ${r.tel || ''} ${getPromoterName(r.promoter)} ${r.evento || ''} ${r.cpf || ''} ${dF} ${r.porteiro || ''}`.toUpperCase();
+                    return terms.every(t => str.includes(t));
+                });
+            }
+            
+            if (res.length === 0) {
+                mostrarAviso("Nenhum dado na tela para exportar.");
+                return;
+            }
+
+            let csvContent = "DATA RESERVA;CLIENTE;TELEFONE;EVENTO;PROMOTER;TIPO;STATUS;HORA CHECK-IN;OPERADOR\n";
+            
+            res.forEach(r => {
+                const dtRes = isNaN(new Date(r.data_reserva)) ? '---' : new Date(r.data_reserva).toLocaleDateString('pt-BR') + ' ' + new Date(r.data_reserva).toLocaleTimeString('pt-BR');
+                const cliente = (r.nome || '---').replace(/;/g, '');
+                const tel = (r.tel || '---').replace(/;/g, '');
+                const evento = (r.evento || '---').replace(/;/g, '');
+                const promoter = getPromoterName(r.promoter).replace(/;/g, '');
+                const tipo = (r.tipo_entrada || '---').replace(/;/g, '');
+                const status = r.entrou ? 'ENTROU' : 'AGUARDANDO';
+                let dtEntrada = '---';
+                let op = '---';
+                
+                if (r.entrou) {
+                    dtEntrada = r.data_entrada && !isNaN(new Date(r.data_entrada)) ? new Date(r.data_entrada).toLocaleDateString('pt-BR') + ' ' + new Date(r.data_entrada).toLocaleTimeString('pt-BR') : '---';
+                    op = (r.porteiro || 'Sistema').replace(/;/g, '');
+                }
+                
+                csvContent += `${dtRes};${cliente};${tel};${evento};${promoter};${tipo};${status};${dtEntrada};${op}\n`;
+            });
+
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Auditoria_E-Club_${fStat}_${new Date().getTime()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            mostrarAviso("Excel baixado com sucesso!", true);
         };
 
-        // ==========================================
-        // GERADOR DA BASE DE MARKETING (TRANSMISSÃO)
-        // ==========================================
-        window.gerarListaMarketing = async () => {
+        // Geração da Base de Marketing via Dashboard
+        window.gerarListaMarketing = () => {
             const btn = document.getElementById('btn-gerar-lista');
             const textarea = document.getElementById('output-marketing');
             
-            btn.innerText = "CARREGANDO...";
-            btn.disabled = true;
-            textarea.value = "Buscando dados no servidor, aguarde...";
-            
-            try {
-                const snap = await getDocs(collection(db, "solteiras"));
-                let cadastradas = snap.docs.map(d => d.data());
-
-                // Ordena da visita mais recente para a mais antiga
-                cadastradas.sort((a, b) => {
-                    let valA = parseVisitaUniversal(a.ultima_visita);
-                    let valB = parseVisitaUniversal(b.ultima_visita);
-                    return valB - valA;
-                });
-
-                if(cadastradas.length === 0) {
-                    textarea.value = "Nenhuma solteira encontrada na base.";
-                } else {
-                    let txt = "";
-                    cadastradas.forEach(c => {
-                        const tel = (c.tel || c.telefone || '').replace(/\D/g, '');
-                        if (tel.length >= 8) {
-                            // Separado por espaço/hífen para facilitar a cópia
-                            txt += `${c.nome} - ${tel}\n`; 
-                        }
-                    });
-                    textarea.value = txt.trim();
-                    mostrarAviso("Lista gerada com sucesso!", true);
-                }
-            } catch(e) {
-                mostrarAviso("Erro ao buscar a base de clientes.");
-                textarea.value = "";
+            if (dadosSolteiras.length === 0) {
+                textarea.value = "Nenhuma solteira encontrada na base.";
+                return;
             }
             
-            btn.innerText = "🔄 Carregar Cadastradas";
-            btn.disabled = false;
+            // Ordenar da visita mais recente para a mais antiga usando a mesma lógica que já tínhamos na portaria
+            const ordenadas = [...dadosSolteiras].sort((a, b) => {
+                const valA = parseVisita(a.ultima_visita) || parseVisita(a.data_cadastro) || 0;
+                const valB = parseVisita(b.ultima_visita) || parseVisita(b.data_cadastro) || 0;
+                return valB - valA;
+            });
+
+            let txt = "";
+            ordenadas.forEach(c => {
+                const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
+                if (tel.length >= 8) {
+                    txt += `${c.nome} - ${tel}\n`; 
+                }
+            });
+            
+            textarea.value = txt.trim();
+            mostrarAviso("Lista gerada com sucesso!", true);
         };
 
         window.copiarMarketing = () => {
             const t = document.getElementById('output-marketing');
             if(!t.value || t.value.includes("Clique no botão")) return mostrarAviso("Gere a lista primeiro!");
             t.select(); document.execCommand('copy');
-            mostrarAviso("Lista copiada! Pronta para colar no Excel ou WhatsApp.", true);
+            mostrarAviso("Lista copiada! Pronta para colar no WhatsApp.", true);
         };
 
-        carregarPagina();
+        onSnapshot(collection(db, "solteiras"), snap => {
+            const agora = new Date(); const batch = writeBatch(db); let del = false;
+            dadosSolteiras = snap.docs.map(d => {
+                const data = d.data(); 
+                let ref = parseVisita(data.ultima_visita) || parseVisita(data.data_cadastro);
+                if (ref && !isNaN(ref) && (agora - ref) / (1000 * 60 * 60 * 24) > 90) { batch.delete(d.ref); del = true; return null; }
+                return { id: d.id, ...data };
+            }).filter(s => s !== null);
+            if(del) batch.commit(); 
+            renderSolteiras();
+        });
+
+        onSnapshot(collection(db, "lista_eventos"), snap => { 
+            dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderAuditoria(); renderSolteiras();
+            const sCarona = document.getElementById('filtro-evento-carona');
+            const evtAtuais = [...new Set(dadosReservas.filter(r=>r.carona===true).map(r=>r.evento))];
+            if(sCarona) {
+                const vAtual = sCarona.value;
+                sCarona.innerHTML = '<option value="">Selecione o Evento com Caronas...</option>' + evtAtuais.map(e => `<option value="${e}">${e}</option>`).join('');
+                if(evtAtuais.includes(vAtual)) sCarona.value = vAtual;
+            }
+        });
+
+        onSnapshot(collection(db, "eventos"), snap => { 
+            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderSolteiras();
+        });
+
+        onSnapshot(collection(db, "promoters"), snap => { 
+            dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
+            document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Por Promoter (Todos)</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
+            renderEquipe();
+        });
+
+        onSnapshot(collection(db, "links_aniversario"), snap => {
+            dadosAniv = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderAniversarios();
+        });
+
+        window.renderSolteiras = () => {
+            const bCount = document.getElementById('total-solteiras-badge');
+            if(bCount) bCount.innerText = `${dadosSolteiras.length}`;
+        };
+
+        window.renderAuditoria = () => {
+            const tbody = document.getElementById('tabela-auditoria-body'); if(!tbody) return;
+            const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
+            const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
+            
+            let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP').sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
+            if (fStat === 'entrou') res = res.filter(r => r.entrou === true); 
+            else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true);
+            else if (fStat === 'pix_entrou') res = res.filter(r => r.metodo === 'pix_antecipado' && r.entrou === true);
+            else if (fStat === 'pix_aguardando') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && r.entrou !== true);
+            else if (fStat === 'pix_cancelado') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago !== true);
+
+            if (termo.length > 1) {
+                const terms = termo.split(/\s+/);
+                res = res.filter(r => {
+                    const dF = isNaN(new Date(r.data_reserva)) ? '' : new Date(r.data_reserva).toLocaleDateString('pt-BR');
+                    const str = `${r.nome || ''} ${r.tel || ''} ${getPromoterName(r.promoter)} ${r.evento || ''} ${r.cpf || ''} ${dF} ${r.porteiro || ''}`.toUpperCase();
+                    return terms.every(t => str.includes(t));
+                });
+            } else { res = res.slice(0, 100); }
+
+            if (res.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr>`; return; }
+            tbody.innerHTML = res.map(r => {
+                const df = isNaN(new Date(r.data_reserva)) ? '---' : new Date(r.data_reserva).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' - ' + new Date(r.data_reserva).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                let st = `<span class="text-[9px] font-black uppercase text-zinc-500 flex items-center justify-end gap-1">○ Aguardando</span>`;
+                if (r.metodo === 'pix_antecipado' && r.pago !== true) { st = `<div class="flex flex-col items-end gap-1"><span class="text-[9px] font-black uppercase text-red-500">🚫 PIX PENDENTE</span><span class="text-[7px] text-zinc-500">(ABANDONADO)</span></div>`; } 
+                else if (r.entrou) {
+                    let dent = '---'; if (r.data_entrada && !isNaN(new Date(r.data_entrada))) dent = new Date(r.data_entrada).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + new Date(r.data_entrada).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    st = `<div class="flex flex-col items-end gap-1"><span class="text-[10px] font-black uppercase text-green-500">✓ Entrou</span><span class="text-[8px] text-yellow-500 font-black uppercase tracking-widest">👤 ${r.porteiro || 'Sistema'}</span><span class="text-[8px] text-zinc-500 font-mono">🕒 ${dent}</span></div>`;
+                }
+                const nomePromoter = getPromoterName(r.promoter);
+                return `<tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500"><td class="p-4 font-mono text-[10px] text-zinc-400">${df}</td><td class="p-4"><p class="text-xs font-black text-white uppercase">${r.nome}</p><p class="text-[9px] text-zinc-500 font-bold">${r.tel || '---'}</p></td><td class="p-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${r.evento}</span></td><td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${nomePromoter}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${r.aniversariante}</span>` : ''}</div></td><td class="p-4"><span class="text-[9px] font-black uppercase text-cyan-400">${r.tipo_entrada || '---'}</span></td><td class="p-4 text-right">${st}</td></tr>`;
+            }).join('');
+        };
+
+        window.renderRelatorios = () => {
+            const container = document.getElementById('container-bolhas'); if(!container) return;
+            const ativos = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data));
+            container.innerHTML = ativos.map(ev => {
+                const evN = (ev.nome || '').trim().toLowerCase();
+                const solteirasDoEvento = getSolteirasParaEvento(ev);
+                const todas = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.evento || '').trim().toLowerCase() === evN);
+                const val = todas.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
+                const pM = (v) => Number(String(v || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                
+                const px = val.filter(r => r.metodo === 'pix_antecipado' && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP'));
+                const pCQ = px.filter(r => r.tipo_entrada === 'CASAL').length; const pCCQ = px.filter(r => r.tipo_entrada === 'CASAL CONSUMAÇÃO').length; const pSQ = px.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
+                
+                const recCam = val.filter(r => (r.tipo_entrada?.toUpperCase().includes('CAMAROTE') || r.tipo_entrada?.toUpperCase().includes('VIP')) && r.pago === true && !r.cortesia).reduce((tot, r) => tot + pM(r.valor_pago), 0);
+                const totPis = val.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP')).reduce((tot, r) => tot + pM(r.valor_pago), 0);
+                const totGer = (totPis + recCam).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                
+                let lCam = '';
+                for(let n=1; n<=8; n++) {
+                    if (!ev[`cam${n}_ativo`]) { lCam += `<div class="w-full h-2 rounded-full bg-zinc-800 border border-white/5"></div>`; continue; }
+                    const nBusca = (n === 7) ? "VIP 1" : (n === 8) ? "VIP 2" : `CAMAROTE ${n}`;
+                    const resCam = todas.filter(r => r.tipo_entrada?.toUpperCase() === nBusca || r.tipo_entrada?.toUpperCase() === `CAMAROTE 0${n}`);
+                    let st = 'livre';
+                    if (resCam.some(r => r.cortesia === true)) st = 'cortesia'; else if (resCam.some(r => r.pago === true)) st = 'vendido'; else if (resCam.filter(r => !r.pago && !r.cortesia).some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 5)) st = 'aguardando';
+                    if (st === 'cortesia') lCam += `<div class="w-full h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div>`; else if (st === 'vendido') lCam += `<div class="w-full h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></div>`; else if (st === 'aguardando') lCam += `<div class="w-full h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_#eab308] animate-pulse"></div>`; else lCam += `<div class="w-full h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
+                }
+                
+                return `<div class="event-bubble p-6 flex flex-col justify-between"><div><div class="flex justify-between items-start mb-4"><p class="text-[9px] font-black text-yellow-500 uppercase italic mt-1">${ev.data.split('-').reverse().join('/')}</p><div class="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg flex flex-col items-end"><span class="text-[7px] font-black text-green-500 uppercase tracking-widest">💰 Total Arrecadado</span><span class="text-sm font-black text-white">${totGer}</span></div></div><h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4></div><div class="bg-cyan-900/10 border border-cyan-500/20 p-4 rounded-2xl mb-4"><div class="flex flex-col gap-2 text-[10px]"><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Seco Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCCQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2 text-fuchsia-400">Casais Consuma Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div></div><div class="grid grid-cols-8 gap-1.5 mt-4">${lCam}</div></div><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista VIP/Pagante</p><p class="text-lg font-black text-white">${val.length}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins Pagantes</p><p class="text-lg font-black text-green-500">${val.filter(r => r.entrou === true).length}</p></div><div class="text-center border-l border-white/5 pl-4"><p class="text-[7px] text-pink-500 uppercase font-black">Solteiras</p><p class="text-lg font-black text-pink-400">${solteirasDoEvento.length}</p></div></div></div>`;
+            }).join('');
+            window.renderPodios();
+        };
+
+        window.renderPodios = () => {
+            const st = {};
+            dadosReservas.forEach(r => { 
+                if (r.tipo_entrada === 'SOLTEIRA VIP' || (r.metodo === 'pix_antecipado' && r.pago !== true)) return; 
+                const p = getPromoterName(r.promoter); 
+                if(!st[p]) st[p] = { r: 0, c: 0 }; st[p].r++; if(r.entrou === true) st[p].c++; 
+            });
+            const med = ['🥇', '🥈', '🥉'];
+            const rR = Object.entries(st).sort((a,b) => b[1].r - a[1].r).slice(0,5); const rC = Object.entries(st).sort((a,b) => b[1].c - a[1].c).slice(0,5);
+            document.getElementById('lista-ranking-reservas').innerHTML = rR.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.r}</p></div>`).join('');
+            document.getElementById('lista-ranking-checkins').innerHTML = rC.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.c}</p></div>`).join('');
+        };
+
+        window.gerarRelatorioGerencial = () => {
+            const tA = document.getElementById('output-excel');
+            const val = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.metodo !== 'pix_antecipado' || r.pago === true));
+            if (val.length === 0) { tA.value = "Sem reservas de pagantes."; return; }
+            const at = dadosEventos.sort((a,b) => a.data.localeCompare(b.data)); let cab = "";
+            if (at.length > 0) {
+                const mes = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+                const dI = new Date(at[0].data + "T12:00:00Z"); const dF = new Date(at[at.length-1].data + "T12:00:00Z");
+                cab = `**De ${String(dI.getDate()).padStart(2, '0')} de ${mes[dI.getMonth()]} a ${String(dF.getDate()).padStart(2, '0')} de ${mes[dF.getMonth()]} de ${dF.getFullYear()}**\n\n`;
+            }
+            const ck = val.filter(r => r.entrou === true).length; const perc = val.length > 0 ? ((ck / val.length) * 100).toFixed(2).replace('.', ',') : "0,00";
+            let txt = cab + `*FEITO ${val.length} RESERVAS DE PAGANTES*\n-> *ENTROU ${perc}%* <-\n\n`;
+            const pst = {}; val.filter(r => r.entrou === true).forEach(r => { const p = getPromoterName(r.promoter); pst[p] = (pst[p] || 0) + 1; });
+            Object.keys(pst).sort().forEach(p => { txt += `${p} - ${pst[p]}\n`; });
+            const pM = (v) => Number(String(v || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
+            const tPx = val.filter(r => r.metodo === 'pix_antecipado' && r.pago === true).reduce((acc, r) => acc + pM(r.valor_pago), 0);
+            
+            const taxaSistema = custoSistemaGlobal || 0;
+            const saldoLiquido = tPx - taxaSistema;
+            
+            txt += `\n--------------------------------\n\n**Enviado pra conta PAGSEGURO**\n`;
+            txt += `Entradas PIX: R$ ${tPx.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
+            txt += `Desconto Sistema: - R$ ${taxaSistema.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
+            txt += `> Saldo Final Enviado: R$ ${saldoLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n\n`;
+            
+            txt += `Ingressos vendidos (E Solteiras)\n\n`;
+            
+            const dS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+            
+            at.forEach(ev => {
+                const rE = val.filter(r => (r.evento || '').trim().toUpperCase() === (ev.nome||'').trim().toUpperCase());
+                const px = rE.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP'));
+                const cQ = px.filter(r => r.tipo_entrada === 'CASAL').length; const ccQ = px.filter(r => r.tipo_entrada === 'CASAL CONSUMAÇÃO').length; const sQ = px.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
+                const solts = getSolteirasParaEvento(ev);
+                
+                if (cQ > 0 || ccQ > 0 || sQ > 0 || solts.length > 0) { 
+                    txt += `*${dS[new Date(ev.data + "T12:00:00Z").getDay()]}*\n`;
+                    if(cQ > 0) txt += `Casal Seco - ${cQ}\n`;
+                    if(ccQ > 0) txt += `Casal Consumação - ${ccQ}\n`;
+                    if(sQ > 0) txt += `Solteiro Seco - ${sQ}\n`;
+                    if(solts.length > 0) txt += `Solteiras - ${solts.length}\n`;
+                    txt += `\n`; 
+                }
+            });
+            txt += `> Camarotes Antecipados\n\n`;
+            at.forEach(ev => {
+                const cA = val.filter(r => (r.evento || '').trim().toUpperCase() === (ev.nome||'').trim().toUpperCase() && (r.tipo_entrada?.toUpperCase().includes('CAMAROTE') || r.tipo_entrada?.toUpperCase().includes('VIP')) && (r.pago === true || r.cortesia === true));
+                if (cA.length > 0) { 
+                    txt += `*${dS[new Date(ev.data + "T12:00:00Z").getDay()]}*\n`; 
+                    cA.sort((a,b) => a.tipo_entrada.localeCompare(b.tipo_entrada)).forEach(c => { 
+                        if (c.cortesia) {
+                            txt += `${c.tipo_entrada} - Cortesia (${getPromoterName(c.promoter)})\n`;
+                        } else {
+                            txt += `${c.tipo_entrada} - Vendido (${c.nome})\n`;
+                        }
+                    }); 
+                    txt += `\n`; 
+                }
+            });
+            tA.value = txt.trim();
+        };
+
+        window.gerarApenasCheckins = () => {
+            const f = document.getElementById('filtro-promoter-excel').value; const tA = document.getElementById('output-excel');
+            let res = dadosReservas.filter(r => r.entrou === true && r.tipo_entrada !== 'SOLTEIRA VIP');
+            if (f) res = res.filter(r => getPromoterName(r.promoter) === f);
+            if (res.length === 0) { tA.value = "Nenhum check-in."; return; }
+            tA.value = "NOME\tTELEFONE\n" + res.map(r => `${r.nome}\t${r.tel || '---'}`).join('\n');
+        };
+
+        window.gerarApenasSolteiras = () => {
+            const tA = document.getElementById('output-excel');
+            const ativos = dadosEventos.filter(e => e.ativo);
+            if (ativos.length === 0) { tA.value = "Nenhum evento ativo no momento."; return; }
+            let unicas = []; let mapa = new Map();
+            ativos.forEach(ev => {
+                const solts = getSolteirasParaEvento(ev);
+                solts.forEach(s => {
+                    const t = String(s.tel || s.telefone || '').replace(/\D/g, '');
+                    if(!mapa.has(t) && t.length > 5) { mapa.set(t, true); unicas.push(s); }
+                });
+            });
+            if (unicas.length === 0) { tA.value = "Nenhuma solteira detectada nos eventos ativos."; return; }
+            tA.value = "NOME\tTELEFONE\n" + unicas.map(r => `${r.nome}\t${r.tel || '---'}`).join('\n');
+        };
+
+        window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); mostrarAviso("Copiado!", true); };
+
+        document.getElementById('formPromoter').addEventListener('submit', async e => {
+            e.preventDefault(); const n = document.getElementById('nome_promoter').value.trim(); const t = document.getElementById('tipo_promoter').value;
+            if(!n) return; 
+            try { await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true }); e.target.reset(); mostrarAviso("Salvo!", true); } 
+            catch(err) { mostrarAviso("Erro."); }
+        });
+
+        document.getElementById('formPortaria').addEventListener('submit', async e => {
+            e.preventDefault(); const n = document.getElementById('login_portaria').value.trim().toLowerCase();
+            if(!n) return; 
+            try { await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true }); e.target.reset(); mostrarAviso("Salvo!", true); } 
+            catch(err) { mostrarAviso("Erro."); }
+        });
+
+        window.editarPromoter = async (id) => { const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`); if (!op) return; let up = {}; if (op === '1') up.tipo = 'padrao'; if (op === '2') up.tipo = 'aniversario'; if (op === '3') up.tipo = 'visualizar'; if (op === '4') { const ns = prompt("Nova senha:"); if(ns) up.senha = ns.trim(); } if (Object.keys(up).length > 0) { await updateDoc(doc(db, "promoters", id), up); mostrarAviso("Atualizado!", true); } };
+        window.editarOperador = async (id) => { const ns = prompt("Nova senha:"); if(ns) { await updateDoc(doc(db, "configuracoes", id), {senha: ns.trim()}); mostrarAviso("Senha atualizada!", true); } };
+
+        function renderEquipe() {
+            const fT = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') + ' ' + new Date(iso).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : 'NUNCA';
+            if (document.getElementById('lista-promoters')) document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `<div class="glass-card p-6 border-l-4 border-l-yellow-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${p.tipo==='aniversario'?'ANIV':p.tipo==='visualizar'?'VIS':'PADRÃO'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(p.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarPromoter('${p.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
+            if (document.getElementById('lista-portaria')) document.getElementById('lista-portaria').innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(op.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
+        }
+
+        window.gerarCopyMeta = (dadosEvento) => {
+            const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
+            const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+            const diaDaSemana = diasSemana[dataObj.getDay()];
+            const dataBr = dataObj.toLocaleDateString('pt-BR');
+            const nomeFestaHashtag = dadosEvento.nome.replace(/\s+/g, '');
+            const diaSemanaHashtag = diaDaSemana.split('-')[0]; 
+            let dptoInfo = ""; if (dadosEvento.diferenciais_noite && dadosEvento.diferenciais_noite.trim() !== '') { dptoInfo = `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}`; }
+            const copyText = `👑 ${dadosEvento.nome.toUpperCase()} — A noite onde você dita as regras na E-Club! 🌹✨\n\nNeste(a) ${diaDaSemana.toLowerCase()}, a nossa festa ganha um tom mais ousado e sofisticado. O evento ${dadosEvento.nome} é um convite especial para celebrar a sua essência em sua forma mais livre e envolvente. Porque você merece um momento para se desconectar da rotina e despertar o seu lado mais magnético.\n\nPrepare-se para uma atmosfera de reverência à liberdade, atitude e beleza. Um ambiente de total entrega e respeito, onde a única regra é se sentir incrível. Afinal, o que acontece na eclub, fica na eclub.\n\n🎧 No comando da trilha sonora:\nNosso residente DJ Neto e o convidado especial DJ Andrezinho assumem a cabine com aquele set feito sob medida para dominar a pista, elevar a energia lá no alto e não deixar ninguém parado!${dptoInfo}\n\n🔥 Uma noite desenhada para exaltar a liberdade de ser a sua melhor e mais sedutora versão. Deixe o seu brilho guiar a festa.\n\n🗓️ Programe-se:\nQuando: ${diaDaSemana} (${dataBr})\nHorário: Abertura da casa às ${dadosEvento.hora || '22h'}\nLocal: Rua Aníbal Goulart Maia Filho, 81 — Bairro Alto.\n\nViva a sua essência. Viva a E-Club.\n\n👉 Siga-nos no Instagram: @eclubswingdance\n📞 Reservas VIPs e Infos (WhatsApp): (41) 99504-0506\n🌐 Garanta seu nome na lista e PIX Antecipado pelo link na bio!\n\n🔞 Aviso Importante: Evento exclusivo para maiores de 18 anos. Indispensável a apresentação de documento oficial com foto.\n\n#${nomeFestaHashtag} #eclub #${diaSemanaHashtag}Curitiba #Lifestyle #MundoLiberal #andrezinhoeclub #DJNeto #CuritibaNight #BairroAlto #eclubswingdance #Liberdade #NoiteCuritibana`;
+            const painel = document.getElementById('painel-copy-marketing'); const textArea = document.getElementById('texto-copy-gerado');
+            if(textArea) { textArea.value = copyText; if(painel) painel.classList.remove('hidden'); }
+        };
+
+        window.copiarTextoMarketing = () => { document.getElementById('texto-copy-gerado').select(); document.execCommand('copy'); mostrarAviso("Copy de vendas copiado!", true); };
+
+        document.getElementById('formEvento').addEventListener('submit', async e => {
+            e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
+            try {
+                const id = document.getElementById('edit_evento_id').value; const arq = document.getElementById('upload_capa').files[0]; let url = document.getElementById('url_imagem_atual').value;
+                if (arq) { const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); await uploadBytes(sr, arq); url = await getDownloadURL(sr); }
+                const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, hora: document.getElementById('hora_inicio').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value, diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '', imagem: url, ativo: true };
+                for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
+                if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
+                e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; mostrarAviso("Evento salvo com sucesso!", true);
+                if (document.getElementById('diferenciais_noite')) gerarCopyMeta(d);
+                document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
+            } catch(err) { mostrarAviso("Erro ao salvar evento."); } finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
+        });
+
+        window.prepararEdicaoEvento = (id) => {
+            const ev = dadosEventos.find(e => e.id === id); document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
+            for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
+            document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.renderGridConfig = () => {
+            if(!document.getElementById('grid-eventos-config')) return;
+            document.getElementById('grid-eventos-config').innerHTML = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).map(ev => `<div class="glass-card overflow-hidden border border-white/5 p-5"><img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4"><div class="flex justify-between mb-2"><p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')} - ${ev.hora || '--:--'}</p><span class="${ev.ativo ? 'text-green-500' : 'text-red-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span></div><h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4><div class="flex justify-between"><button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase">Editar</button><button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase">Excluir Tudo</button></div></div>`).join('');
+        };
+
+        window.removerItem = async (colecao, id) => { 
+            if(!confirm("TEM CERTEZA? Isso vai apagar permanentemente o item.")) return; 
+            try { 
+                if(colecao === 'eventos') { const ev = dadosEventos.find(e => e.id === id); if(ev && ev.imagem && ev.imagem.includes('firebasestorage')) { await deleteObject(ref(storage, ev.imagem)).catch(()=>{}); } }
+                const batch = writeBatch(db); const docRef = doc(db, colecao, id); const snap = await getDoc(docRef); 
+                if (!snap.exists()) return; const d = snap.data(); 
+                if (colecao === 'eventos') { const qR = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", d.nome))); qR.forEach(x => batch.delete(x.ref)); const qA = await getDocs(query(collection(db, "links_aniversario"), where("festa", "==", d.nome))); qA.forEach(x => batch.delete(x.ref)); } 
+                if (colecao === 'links_aniversario') { const qC = await getDocs(query(collection(db, "lista_eventos"), where("aniversariante", "==", d.aniversariante), where("evento", "==", d.festa))); qC.forEach(x => batch.delete(x.ref)); } 
+                batch.delete(docRef); await batch.commit(); mostrarAviso("Excluído com sucesso!", true); 
+            } catch (e) { mostrarAviso("Erro ao excluir."); } 
+        };
+
+        window.renderCamarotesVendidos = () => {
+            const tb = document.getElementById('tabela-camarotes-body'); if(!tb) return;
+            const res = dadosReservas.filter(r => (r.tipo_entrada?.toUpperCase().includes('CAMAROTE') || r.tipo_entrada?.toUpperCase().includes('VIP')) && (r.pago === true || r.cortesia === true)).sort((a,b) => a.evento.localeCompare(b.evento));
+            if (res.length === 0) { tb.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-[10px] text-zinc-600 font-bold uppercase tracking-widest italic">Nenhum camarote/VIP ocupado no momento</td></tr>`; return; }
+            tb.innerHTML = res.map(r => `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4 uppercase font-bold text-zinc-300">${r.evento}</td><td class="py-4 font-black text-cyan-400 uppercase">${r.tipo_entrada}</td><td class="py-4 uppercase font-bold text-white">${r.nome} <br><span class="text-[9px] text-zinc-500 font-mono">${r.tel}</span></td><td class="py-4 text-center">${r.cortesia ? `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Cortesia</span>` : `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Vendido</span>`}</td><td class="py-4 text-right pr-4"><button onclick="liberarCamarote('${r.id}')" class="bg-red-500/10 text-red-500 border border-red-500/30 px-4 py-2 rounded-lg text-[8px] font-black uppercase">Liberar</button></td></tr>`).join('');
+        };
+
+        window.liberarCamarote = async (id) => { if(confirm("Liberar o camarote?")) { try { await deleteDoc(doc(db, "lista_eventos", id)); mostrarAviso("Camarote liberado!", true); } catch(e) { mostrarAviso("Erro ao liberar."); } } };
+
+        window.renderAniversarios = () => {
+            if(!document.getElementById('tabela-aniversarios-body')) return;
+            document.getElementById('tabela-aniversarios-body').innerHTML = dadosAniv.map(l => {
+                const ev = dadosEventos.find(e => (e.nome || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase()); const dt = ev ? ev.data.split('-').reverse().join('/') : '---';
+                const q = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase() && (r.aniversariante || '').trim().toLowerCase() === (l.aniversariante || '').trim().toLowerCase()).length;
+                return `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4">${dt}</td><td class="py-4 uppercase">${l.promoter}</td><td class="py-4 font-black text-cyan-400 uppercase">${l.aniversariante}</td><td class="py-4 text-center font-black text-white">${q}</td><td class="py-4 text-right pr-4"><button onclick="removerItem('links_aniversario', '${l.id}')" class="text-red-500">Remover</button></td></tr>`;
+            }).join('');
+        };
+
+        window.toggleModoTeste = async () => { await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true }); };
+        window.limparBaseDeDados = async () => { if (confirm("Limpar clientes das listas?\n\nIsso apagará as reservas dos eventos, MAS MANTERÁ SALVA as Solteiras VIP e a Pontuação de Fidelidade dos clientes.")) { const b = writeBatch(db); const q = await getDocs(collection(db, "lista_eventos")); q.forEach(d => b.delete(d.ref)); await b.commit(); mostrarAviso("Base de reservas limpa com sucesso!", true); } };
+        window.zerarSistemaCompleto = async () => { if (confirm("⚠️ TEM CERTEZA QUE DESEJA ZERAR EVENTOS E LISTAS?\n\nAs Solteiras Cadastradas e os Pontos de Fidelidade NÃO serão afetados.")) { for (const col of ["lista_eventos", "eventos", "links_aniversario"]) { const b = writeBatch(db); const q = await getDocs(collection(db, col)); q.forEach(d => b.delete(d.ref)); await b.commit(); } location.reload(); } };
     </script>
 </body>
 </html>
