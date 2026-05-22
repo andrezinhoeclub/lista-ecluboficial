@@ -116,24 +116,34 @@
         </footer>
     </div>
 
-    <div id="tela-rotas" class="hidden max-w-md w-full mt-6 anim-fade">
+    <div id="tela-rotas" class="hidden max-w-md w-full mt-6 anim-fade pb-10">
         <header class="flex flex-col items-center justify-center mb-8 relative">
             <button onclick="sairPainelRotas()" class="absolute left-0 top-0 text-pink-500 font-black text-xs uppercase hover:text-white transition-colors">◀ Sair</button>
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mb-4 drop-shadow-[0_0_15px_rgba(219,39,119,0.3)]">
-            <h1 class="text-blue-500 font-black uppercase italic text-2xl tracking-tighter text-center leading-none">Gerador de Rotas</h1>
-            <p id="label-logado" class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-2">Acesso Logística</p>
+            <h1 class="text-blue-500 font-black uppercase italic text-2xl tracking-tighter text-center leading-none">Painel Logística</h1>
+            <p id="label-logado" class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-2">Acesso Promoter</p>
         </header>
 
-        <div class="glass p-6 md:p-8 rounded-[2.5rem] flex flex-col border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
-            <h2 class="text-[10px] font-black uppercase text-blue-400 mb-2 tracking-widest">Selecione o Evento</h2>
-            <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full site-input p-4 rounded-2xl text-xs font-black uppercase mb-6 text-white outline-none">
+        <div class="glass p-6 md:p-8 rounded-[2.5rem] flex flex-col border-blue-500/30 shadow-[0_0_30px_rgba(59,130,246,0.1)] mb-8">
+            <h2 class="text-[10px] font-black uppercase text-blue-400 mb-2 tracking-widest">🗺️ Gerador de Rotas (Motorista)</h2>
+            <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full site-input p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none mt-2">
                 <option value="">Aguardando reservas...</option>
             </select>
             
-            <h2 class="text-[10px] font-black uppercase text-blue-400 mb-2 tracking-widest">Rotas Geradas (Automático)</h2>
-            <textarea id="output-rotas-carona" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[400px] resize-none whitespace-pre" placeholder="Aguardando seleção do evento..."></textarea>
+            <textarea id="output-rotas-carona" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[250px] resize-none whitespace-pre" placeholder="Aguardando seleção do evento..."></textarea>
             
-            <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(59,130,246,0.4)]">📋 Copiar para o Motorista</button>
+            <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(59,130,246,0.4)]">📋 Copiar Rotas</button>
+        </div>
+
+        <div class="glass p-6 md:p-8 rounded-[2.5rem] flex flex-col border-pink-500/30 shadow-[0_0_30px_rgba(219,39,119,0.1)]">
+            <h2 class="text-[10px] font-black uppercase text-pink-400 mb-2 tracking-widest">📲 Base de Clientes (Transmissão)</h2>
+            <p class="text-[9px] text-zinc-400 mb-4 leading-relaxed">Gere a lista de todas as solteiras cadastradas, ordenadas da visita mais recente para a mais antiga.</p>
+            
+            <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="w-full bg-pink-900/40 hover:bg-pink-800/60 border border-pink-500/50 text-pink-300 font-black uppercase text-[10px] py-4 rounded-xl transition-colors mb-4">🔄 Carregar Cadastradas</button>
+            
+            <textarea id="output-marketing" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[250px] resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
+            
+            <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(219,39,119,0.4)]">📋 Copiar para WhatsApp</button>
         </div>
     </div>
 
@@ -253,6 +263,22 @@
 
         window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
         window.maskCEP = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 8); if (v.length > 5) v = v.substring(0, 5) + "-" + v.substring(5); i.value = v; };
+
+        // Função de Parser de Data Universal (Ajuda a ordenar visitas)
+        const parseVisitaUniversal = (val) => {
+            if (!val) return 0;
+            if (typeof val.toDate === 'function') return val.toDate().getTime();
+            if (typeof val === 'string') {
+                const d = new Date(val);
+                if (!isNaN(d)) return d.getTime();
+                if (val.includes('/')) {
+                    const p = val.split(/[/\s:]+/);
+                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]).getTime();
+                }
+            }
+            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000)).getTime();
+            return 0;
+        };
 
         function salvarMemoria(dados) { localStorage.setItem('eclub_solteira_perfil', JSON.stringify(dados)); }
         function recuperarMemoria() { const p = localStorage.getItem('eclub_solteira_perfil'); return p ? JSON.parse(p) : null; }
@@ -449,7 +475,7 @@
         };
 
         // ==========================================
-        // SISTEMA OCULTO DO GERADOR DE ROTAS
+        // SISTEMA OCULTO DO GERADOR DE ROTAS & MARKETING
         // ==========================================
         
         window.abrirModalLogin = () => {
@@ -570,6 +596,58 @@
             const t = document.getElementById('output-rotas-carona');
             t.select(); document.execCommand('copy');
             mostrarAviso("Rotas copiadas para o motorista!", true);
+        };
+
+        // ==========================================
+        // GERADOR DA BASE DE MARKETING (TRANSMISSÃO)
+        // ==========================================
+        window.gerarListaMarketing = async () => {
+            const btn = document.getElementById('btn-gerar-lista');
+            const textarea = document.getElementById('output-marketing');
+            
+            btn.innerText = "CARREGANDO...";
+            btn.disabled = true;
+            textarea.value = "Buscando dados no servidor, aguarde...";
+            
+            try {
+                const snap = await getDocs(collection(db, "solteiras"));
+                let cadastradas = snap.docs.map(d => d.data());
+
+                // Ordena da visita mais recente para a mais antiga
+                cadastradas.sort((a, b) => {
+                    let valA = parseVisitaUniversal(a.ultima_visita);
+                    let valB = parseVisitaUniversal(b.ultima_visita);
+                    return valB - valA;
+                });
+
+                if(cadastradas.length === 0) {
+                    textarea.value = "Nenhuma solteira encontrada na base.";
+                } else {
+                    let txt = "";
+                    cadastradas.forEach(c => {
+                        const tel = (c.tel || c.telefone || '').replace(/\D/g, '');
+                        if (tel.length >= 8) {
+                            // Separado por espaço/hífen para facilitar a cópia
+                            txt += `${c.nome} - ${tel}\n`; 
+                        }
+                    });
+                    textarea.value = txt.trim();
+                    mostrarAviso("Lista gerada com sucesso!", true);
+                }
+            } catch(e) {
+                mostrarAviso("Erro ao buscar a base de clientes.");
+                textarea.value = "";
+            }
+            
+            btn.innerText = "🔄 Carregar Cadastradas";
+            btn.disabled = false;
+        };
+
+        window.copiarMarketing = () => {
+            const t = document.getElementById('output-marketing');
+            if(!t.value || t.value.includes("Clique no botão")) return mostrarAviso("Gere a lista primeiro!");
+            t.select(); document.execCommand('copy');
+            mostrarAviso("Lista copiada! Pronta para colar no Excel ou WhatsApp.", true);
         };
 
         carregarPagina();
