@@ -189,6 +189,18 @@
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
                 <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento & Camarotes</h2>
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    
+                    <div class="md:col-span-6 bg-purple-500/10 border border-purple-500/20 p-5 rounded-3xl mb-6 flex flex-col md:flex-row gap-4 items-center justify-between shadow-lg">
+                        <div class="flex-grow flex items-center gap-2 w-full">
+                            <select id="select_modelo_evento" class="p-4 rounded-2xl font-bold text-[10px] md:text-xs bg-[#0a0a0f] border border-purple-500/30 text-white outline-none w-full focus:border-purple-500 transition-all uppercase tracking-widest">
+                                <option value="">Nenhum modelo selecionado...</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <button type="button" onclick="carregarModelo()" class="bg-purple-600 hover:bg-purple-500 text-white font-black py-4 px-6 rounded-2xl uppercase text-[10px] transition-all w-full md:w-auto shadow-lg shadow-purple-500/20">📥 Carregar</button>
+                            <button type="button" onclick="salvarModelo()" class="bg-zinc-800 hover:bg-zinc-700 text-purple-400 border border-purple-500/30 font-black py-4 px-6 rounded-2xl uppercase text-[10px] transition-all w-full md:w-auto whitespace-nowrap shadow-lg">💾 Salvar Padrão</button>
+                        </div>
+                    </div>
                     <input type="hidden" id="edit_evento_id">
                     <input type="hidden" id="url_imagem_atual">
                     
@@ -204,7 +216,7 @@
                         <input type="time" id="hora_inicio" onclick="this.showPicker()" class="p-4 rounded-2xl font-bold uppercase text-xs w-full" required>
                     </div>
 
-                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <input type="text" id="valor_casal" placeholder="CASAL PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
                         <input type="text" id="valor_solteiro" placeholder="SOLTEIRO PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
                     </div>
@@ -342,7 +354,7 @@
         const storage = getStorage(app);
         
         let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
-        let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
+        let dadosSolteiras = []; let dadosModelos = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
 
         const getPromoterName = (p) => {
             if (!p) return 'SITE DIRETO';
@@ -422,6 +434,16 @@
             else btn.classList.add('active'); 
         };
 
+        onSnapshot(collection(db, "modelos_eventos"), snap => {
+            dadosModelos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            const sel = document.getElementById('select_modelo_evento');
+            if (sel) {
+                const atual = sel.value;
+                sel.innerHTML = '<option value="">Selecione um modelo padrão...</option>' + dadosModelos.map(m => `<option value="${m.id}">${m.nome_modelo}</option>`).join('');
+                if (dadosModelos.find(m => m.id === atual)) sel.value = atual;
+            }
+        });
+
         onSnapshot(collection(db, "configuracoes"), snap => {
             const sys = snap.docs.find(d => d.id === "sistema");
             if (sys) {
@@ -459,6 +481,75 @@
             catch(e) { mostrarAviso("Erro ao salvar configurações."); }
         };
 
+        window.salvarModelo = async () => {
+            const nomeModelo = prompt("Digite o nome deste modelo (Ex: Festa Sábado, Sexta Sertaneja):");
+            if (!nomeModelo) return;
+
+            const btn = document.querySelector('button[onclick="salvarModelo()"]');
+            const oldText = btn.innerText;
+            btn.innerText = "SALVANDO...";
+
+            try {
+                const modeloData = {
+                    nome_modelo: nomeModelo.toUpperCase(),
+                    valor_casal: document.getElementById('valor_casal').value,
+                    valor_solteiro: document.getElementById('valor_solteiro').value,
+                    desc_casal: document.getElementById('desc_casal').value,
+                    desc_solteiro: document.getElementById('desc_solteiro').value,
+                    ant_casal: document.getElementById('ant_casal').value,
+                    ant_casal_cons: document.getElementById('ant_casal_cons').value,
+                    ant_solteiro: document.getElementById('ant_solteiro').value,
+                    valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value,
+                    valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value
+                };
+
+                for(let i=1; i<=8; i++) {
+                    modeloData[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked;
+                    modeloData[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value;
+                    modeloData[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value;
+                }
+
+                const existing = dadosModelos.find(m => m.nome_modelo === modeloData.nome_modelo);
+                if (existing) {
+                    await updateDoc(doc(db, "modelos_eventos", existing.id), modeloData);
+                } else {
+                    await addDoc(collection(db, "modelos_eventos"), modeloData);
+                }
+                mostrarAviso("Modelo salvo com sucesso!", true);
+            } catch (error) {
+                mostrarAviso("Erro ao salvar modelo.");
+                console.error(error);
+            } finally {
+                btn.innerText = oldText;
+            }
+        };
+
+        window.carregarModelo = () => {
+            const sel = document.getElementById('select_modelo_evento').value;
+            if (!sel) return mostrarAviso("Selecione um modelo primeiro.");
+
+            const modelo = dadosModelos.find(m => m.id === sel);
+            if (!modelo) return mostrarAviso("Modelo não encontrado.");
+
+            document.getElementById('valor_casal').value = modelo.valor_casal || "";
+            document.getElementById('valor_solteiro').value = modelo.valor_solteiro || "";
+            document.getElementById('desc_casal').value = modelo.desc_casal || "";
+            document.getElementById('desc_solteiro').value = modelo.desc_solteiro || "";
+            document.getElementById('ant_casal').value = modelo.ant_casal || "";
+            document.getElementById('ant_casal_cons').value = modelo.ant_casal_cons || "";
+            document.getElementById('ant_solteiro').value = modelo.ant_solteiro || "";
+            document.getElementById('valor_recorrente_casal').value = modelo.valor_recorrente_casal || "";
+            document.getElementById('valor_recorrente_solteiro').value = modelo.valor_recorrente_solteiro || "";
+
+            for(let i=1; i<=8; i++) {
+                document.getElementById(`cam${i}_ativo`).checked = modelo[`cam${i}_ativo`] || false;
+                document.getElementById(`v_cam${i}`).value = modelo[`v_cam${i}`] || "";
+                document.getElementById(`obs_cam${i}`).value = modelo[`obs_cam${i}`] || "";
+            }
+
+            mostrarAviso("Modelo carregado com sucesso!", true);
+        };
+
         window.gerarRelatorioCaronas = () => {
             const eventoNome = document.getElementById('filtro-evento-carona').value;
             const textarea = document.getElementById('output-rotas-carona');
@@ -478,7 +569,6 @@
 
         window.copiarRotasCarona = () => { document.getElementById('output-rotas-carona').select(); document.execCommand('copy'); mostrarAviso("Rotas copiadas!", true); };
 
-        // Exportar p/ Excel na Auditoria
         window.exportarAuditoriaExcel = () => {
             const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
             const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
@@ -539,7 +629,6 @@
             mostrarAviso("Excel baixado com sucesso!", true);
         };
 
-        // Geração da Base de Marketing via Dashboard
         window.gerarListaMarketing = () => {
             const btn = document.getElementById('btn-gerar-lista');
             const textarea = document.getElementById('output-marketing');
@@ -549,7 +638,6 @@
                 return;
             }
             
-            // Ordenar da visita mais recente para a mais antiga usando a mesma lógica que já tínhamos na portaria
             const ordenadas = [...dadosSolteiras].sort((a, b) => {
                 const valA = parseVisita(a.ultima_visita) || parseVisita(a.data_cadastro) || 0;
                 const valB = parseVisita(b.ultima_visita) || parseVisita(b.data_cadastro) || 0;
