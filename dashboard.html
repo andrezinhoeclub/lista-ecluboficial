@@ -189,9 +189,6 @@
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
                 <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento & Camarotes</h2>
                 <form id="formEvento" class="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <input type="hidden" id="edit_evento_id">
-                    <input type="hidden" id="url_imagem_atual">
-                    
                     
                     <div class="md:col-span-6 bg-yellow-500/10 border border-yellow-500/20 p-5 rounded-[2rem] mb-2">
                         <div class="flex flex-col lg:flex-row justify-between gap-4 mb-4">
@@ -207,16 +204,19 @@
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
-                            <select id="modelo_evento_select" class="md:col-span-2 p-4 rounded-2xl font-bold text-[10px] uppercase">
+                            <select id="modelo_evento_select" class="md:col-span-2 p-4 rounded-2xl font-bold text-[10px] uppercase bg-[#0c0c0e] border border-yellow-500/30 text-white outline-none">
                                 <option value="">Carregando modelos...</option>
                             </select>
-                            <input type="text" id="modelo_evento_nome" placeholder="NOME DO MODELO. EX: SEXTA PADRÃO" class="md:col-span-2 p-4 rounded-2xl font-bold text-[10px] uppercase">
+                            <input type="text" id="modelo_evento_nome" placeholder="NOME DO MODELO. EX: SEXTA PADRÃO" class="md:col-span-2 p-4 rounded-2xl font-bold text-[10px] uppercase bg-[#0c0c0e] border border-zinc-800 text-white outline-none">
                             <button type="button" onclick="aplicarModeloEvento()" class="bg-yellow-500 hover:bg-white text-black font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all">Aplicar Modelo</button>
                             <button type="button" onclick="salvarModeloEvento()" class="bg-white hover:bg-yellow-500 text-black font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest transition-all">Salvar Modelo</button>
                             <button type="button" onclick="excluirModeloEvento()" class="md:col-span-6 bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 font-black py-3 rounded-2xl uppercase text-[10px] tracking-widest transition-all">Excluir Modelo Selecionado</button>
                         </div>
                     </div>
 
+                    <input type="hidden" id="edit_evento_id">
+                    <input type="hidden" id="url_imagem_atual">
+                    
                     <input type="text" id="nome_festa" placeholder="NOME DO EVENTO" class="p-4 rounded-2xl font-bold md:col-span-3" required>
                     
                     <div class="md:col-span-2 flex flex-col gap-1">
@@ -229,7 +229,7 @@
                         <input type="time" id="hora_inicio" onclick="this.showPicker()" class="p-4 rounded-2xl font-bold uppercase text-xs w-full" required>
                     </div>
 
-                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <input type="text" id="valor_casal" placeholder="CASAL PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
                         <input type="text" id="valor_solteiro" placeholder="SOLTEIRO PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
                     </div>
@@ -446,6 +446,147 @@
             else if (type === 'pink') btn.classList.add('active-pink');
             else btn.classList.add('active'); 
         };
+
+        // ==========================================
+        // LÓGICA DE MODELOS DE EVENTOS
+        // ==========================================
+        function limparTextoModeloEvento(valor) { return String(valor || '').trim(); }
+
+        function gerarIdModeloEvento(nome) {
+            return limparTextoModeloEvento(nome).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 70) || `modelo-${Date.now()}`;
+        }
+
+        function coletarDadosModeloEventoAtual() {
+            const modelo = {
+                nome_modelo: limparTextoModeloEvento(document.getElementById('modelo_evento_nome')?.value),
+                hora: document.getElementById('hora_inicio')?.value || '22:00',
+                valor_casal: document.getElementById('valor_casal')?.value || '',
+                valor_solteiro: document.getElementById('valor_solteiro')?.value || '',
+                desc_casal: document.getElementById('desc_casal')?.value || '',
+                desc_solteiro: document.getElementById('desc_solteiro')?.value || '',
+                ant_casal: document.getElementById('ant_casal')?.value || '',
+                ant_casal_cons: document.getElementById('ant_casal_cons')?.value || '',
+                ant_solteiro: document.getElementById('ant_solteiro')?.value || '',
+                valor_recorrente_casal: document.getElementById('valor_recorrente_casal')?.value || '',
+                valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro')?.value || '',
+                ativo: true,
+                atualizado_em: new Date().toISOString()
+            };
+
+            for (let i = 1; i <= 8; i++) {
+                modelo[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`)?.checked === true;
+                modelo[`v_cam${i}`] = document.getElementById(`v_cam${i}`)?.value || '';
+                modelo[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`)?.value || '';
+            }
+            return modelo;
+        }
+
+        function aplicarDadosModeloEvento(modelo = {}) {
+            if (document.getElementById('hora_inicio')) document.getElementById('hora_inicio').value = modelo.hora || '22:00';
+            const campos = ['valor_casal', 'valor_solteiro', 'desc_casal', 'desc_solteiro', 'ant_casal', 'ant_casal_cons', 'ant_solteiro', 'valor_recorrente_casal', 'valor_recorrente_solteiro'];
+            
+            campos.forEach(campo => {
+                const el = document.getElementById(campo);
+                if (el) el.value = modelo[campo] || '';
+            });
+
+            for (let i = 1; i <= 8; i++) {
+                const ativo = document.getElementById(`cam${i}_ativo`);
+                const valor = document.getElementById(`v_cam${i}`);
+                const obs = document.getElementById(`obs_cam${i}`);
+                if (ativo) ativo.checked = modelo[`cam${i}_ativo`] === true;
+                if (valor) valor.value = modelo[`v_cam${i}`] || '';
+                if (obs) obs.value = modelo[`obs_cam${i}`] || '';
+            }
+
+            if (document.getElementById('modelo_evento_nome')) {
+                document.getElementById('modelo_evento_nome').value = modelo.nome_modelo || '';
+            }
+        }
+
+        window.renderModelosEvento = () => {
+            const select = document.getElementById('modelo_evento_select');
+            if (!select) return;
+
+            const valorAtual = select.value;
+            const modelosAtivos = [...dadosModelosEventos].filter(m => m.ativo !== false).sort((a, b) => String(a.nome_modelo || '').localeCompare(String(b.nome_modelo || '')));
+
+            if (!modelosAtivos.length) {
+                select.innerHTML = '<option value="">Nenhum modelo salvo ainda</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="">Selecionar modelo salvo...</option>' + modelosAtivos.map(m => `<option value="${m.id}">${m.nome_modelo || 'Modelo sem nome'}</option>`).join('');
+
+            if (modelosAtivos.some(m => m.id === valorAtual)) select.value = valorAtual;
+        };
+
+        window.aplicarModeloEvento = () => {
+            const idModelo = document.getElementById('modelo_evento_select')?.value;
+            if (!idModelo) { mostrarAviso("Selecione um modelo para aplicar."); return; }
+
+            const modelo = dadosModelosEventos.find(m => m.id === idModelo);
+            if (!modelo) { mostrarAviso("Modelo não encontrado."); return; }
+
+            aplicarDadosModeloEvento(modelo);
+            mostrarAviso("Modelo aplicado. Confira as informações antes de salvar.", true);
+        };
+
+        window.salvarModeloEvento = async () => {
+            const modelo = coletarDadosModeloEventoAtual();
+            if (!modelo.nome_modelo) {
+                const nomeDigitado = prompt("Digite um nome para este modelo. Ex: Sexta padrão, Sábado VIP");
+                modelo.nome_modelo = limparTextoModeloEvento(nomeDigitado);
+            }
+
+            if (!modelo.nome_modelo) { mostrarAviso("Informe um nome para salvar o modelo."); return; }
+
+            try {
+                const idModelo = gerarIdModeloEvento(modelo.nome_modelo);
+                await setDoc(doc(db, "modelos_eventos", idModelo), {
+                    ...modelo,
+                    id: idModelo,
+                    criado_ou_atualizado_em: new Date().toISOString()
+                }, { merge: true });
+
+                if (document.getElementById('modelo_evento_select')) {
+                    document.getElementById('modelo_evento_select').value = idModelo;
+                }
+                mostrarAviso("Modelo salvo com sucesso!", true);
+            } catch (erro) {
+                console.error(erro);
+                mostrarAviso("Erro ao salvar modelo.");
+            }
+        };
+
+        window.excluirModeloEvento = async () => {
+            const idModelo = document.getElementById('modelo_evento_select')?.value;
+            const modelo = dadosModelosEventos.find(m => m.id === idModelo);
+
+            if (!modelo) { mostrarAviso("Selecione um modelo para excluir."); return; }
+            if (!confirm(`Excluir o modelo "${modelo.nome_modelo || idModelo}"?`)) return;
+
+            try {
+                await deleteDoc(doc(db, "modelos_eventos", idModelo));
+                document.getElementById('modelo_evento_nome').value = '';
+                mostrarAviso("Modelo excluído com sucesso!", true);
+            } catch (erro) {
+                console.error(erro);
+                mostrarAviso("Erro ao excluir modelo.");
+            }
+        };
+
+        document.getElementById('modelo_evento_select')?.addEventListener('change', () => {
+            const idModelo = document.getElementById('modelo_evento_select')?.value;
+            const modelo = dadosModelosEventos.find(m => m.id === idModelo);
+            document.getElementById('modelo_evento_nome').value = modelo?.nome_modelo || '';
+        });
+
+        onSnapshot(collection(db, "modelos_eventos"), snap => {
+            dadosModelosEventos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            window.renderModelosEvento();
+        });
+        // ==========================================
 
         onSnapshot(collection(db, "configuracoes"), snap => {
             const sys = snap.docs.find(d => d.id === "sistema");
@@ -836,197 +977,6 @@
             if (document.getElementById('lista-portaria')) document.getElementById('lista-portaria').innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(op.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
         }
 
-        function limparTextoModeloEvento(valor) {
-            return String(valor || '').trim();
-        }
-
-        function gerarIdModeloEvento(nome) {
-            return limparTextoModeloEvento(nome)
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '')
-                .substring(0, 70) || `modelo-${Date.now()}`;
-        }
-
-        function coletarDadosModeloEventoAtual() {
-            const modelo = {
-                nome_modelo: limparTextoModeloEvento(document.getElementById('modelo_evento_nome')?.value),
-                hora: document.getElementById('hora_inicio')?.value || '22:00',
-
-                valor_casal: document.getElementById('valor_casal')?.value || '',
-                valor_solteiro: document.getElementById('valor_solteiro')?.value || '',
-
-                desc_casal: document.getElementById('desc_casal')?.value || '',
-                desc_solteiro: document.getElementById('desc_solteiro')?.value || '',
-
-                ant_casal: document.getElementById('ant_casal')?.value || '',
-                ant_casal_cons: document.getElementById('ant_casal_cons')?.value || '',
-                ant_solteiro: document.getElementById('ant_solteiro')?.value || '',
-
-                valor_recorrente_casal: document.getElementById('valor_recorrente_casal')?.value || '',
-                valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro')?.value || '',
-
-                diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '',
-                ativo: true,
-                atualizado_em: new Date().toISOString()
-            };
-
-            for (let i = 1; i <= 8; i++) {
-                modelo[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`)?.checked === true;
-                modelo[`v_cam${i}`] = document.getElementById(`v_cam${i}`)?.value || '';
-                modelo[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`)?.value || '';
-            }
-
-            return modelo;
-        }
-
-        function aplicarDadosModeloEvento(modelo = {}) {
-            // Segurança: modelo não mexe em nome, data nem capa/imagem.
-            if (document.getElementById('hora_inicio')) document.getElementById('hora_inicio').value = modelo.hora || '22:00';
-
-            const campos = [
-                'valor_casal',
-                'valor_solteiro',
-                'desc_casal',
-                'desc_solteiro',
-                'ant_casal',
-                'ant_casal_cons',
-                'ant_solteiro',
-                'valor_recorrente_casal',
-                'valor_recorrente_solteiro',
-                'diferenciais_noite'
-            ];
-
-            campos.forEach(campo => {
-                const el = document.getElementById(campo);
-                if (el) el.value = modelo[campo] || '';
-            });
-
-            for (let i = 1; i <= 8; i++) {
-                const ativo = document.getElementById(`cam${i}_ativo`);
-                const valor = document.getElementById(`v_cam${i}`);
-                const obs = document.getElementById(`obs_cam${i}`);
-
-                if (ativo) ativo.checked = modelo[`cam${i}_ativo`] === true;
-                if (valor) valor.value = modelo[`v_cam${i}`] || '';
-                if (obs) obs.value = modelo[`obs_cam${i}`] || '';
-            }
-
-            if (document.getElementById('modelo_evento_nome')) {
-                document.getElementById('modelo_evento_nome').value = modelo.nome_modelo || '';
-            }
-        }
-
-        function renderModelosEvento() {
-            const select = document.getElementById('modelo_evento_select');
-            if (!select) return;
-
-            const valorAtual = select.value;
-
-            const modelosAtivos = [...dadosModelosEventos]
-                .filter(m => m.ativo !== false)
-                .sort((a, b) => String(a.nome_modelo || '').localeCompare(String(b.nome_modelo || '')));
-
-            if (!modelosAtivos.length) {
-                select.innerHTML = '<option value="">Nenhum modelo salvo ainda</option>';
-                return;
-            }
-
-            select.innerHTML = '<option value="">Selecionar modelo salvo...</option>' + modelosAtivos
-                .map(m => `<option value="${m.id}">${m.nome_modelo || 'Modelo sem nome'}</option>`)
-                .join('');
-
-            if (modelosAtivos.some(m => m.id === valorAtual)) {
-                select.value = valorAtual;
-            }
-        }
-
-        window.aplicarModeloEvento = () => {
-            const idModelo = document.getElementById('modelo_evento_select')?.value;
-
-            if (!idModelo) {
-                mostrarAviso("Selecione um modelo para aplicar.");
-                return;
-            }
-
-            const modelo = dadosModelosEventos.find(m => m.id === idModelo);
-
-            if (!modelo) {
-                mostrarAviso("Modelo não encontrado.");
-                return;
-            }
-
-            aplicarDadosModeloEvento(modelo);
-            mostrarAviso("Modelo aplicado. Confira nome, data e capa antes de salvar.", true);
-        };
-
-        window.salvarModeloEvento = async () => {
-            const modelo = coletarDadosModeloEventoAtual();
-
-            if (!modelo.nome_modelo) {
-                const nomeDigitado = prompt("Digite um nome para este modelo. Ex: Sexta padrão, Sábado VIP, Open Bar");
-                modelo.nome_modelo = limparTextoModeloEvento(nomeDigitado);
-            }
-
-            if (!modelo.nome_modelo) {
-                mostrarAviso("Informe um nome para salvar o modelo.");
-                return;
-            }
-
-            try {
-                const idModelo = gerarIdModeloEvento(modelo.nome_modelo);
-
-                await setDoc(doc(db, "modelos_eventos", idModelo), {
-                    ...modelo,
-                    id: idModelo,
-                    criado_ou_atualizado_em: new Date().toISOString()
-                }, { merge: true });
-
-                if (document.getElementById('modelo_evento_select')) {
-                    document.getElementById('modelo_evento_select').value = idModelo;
-                }
-
-                mostrarAviso("Modelo salvo com sucesso!", true);
-            } catch (erro) {
-                console.error(erro);
-                mostrarAviso("Erro ao salvar modelo.");
-            }
-        };
-
-        window.excluirModeloEvento = async () => {
-            const idModelo = document.getElementById('modelo_evento_select')?.value;
-            const modelo = dadosModelosEventos.find(m => m.id === idModelo);
-
-            if (!modelo) {
-                mostrarAviso("Selecione um modelo para excluir.");
-                return;
-            }
-
-            if (!confirm(`Excluir o modelo "${modelo.nome_modelo || idModelo}"?`)) return;
-
-            try {
-                await deleteDoc(doc(db, "modelos_eventos", idModelo));
-                document.getElementById('modelo_evento_nome').value = '';
-                mostrarAviso("Modelo excluído com sucesso!", true);
-            } catch (erro) {
-                console.error(erro);
-                mostrarAviso("Erro ao excluir modelo.");
-            }
-        };
-
-        document.getElementById('modelo_evento_select')?.addEventListener('change', () => {
-            const idModelo = document.getElementById('modelo_evento_select')?.value;
-            const modelo = dadosModelosEventos.find(m => m.id === idModelo);
-            document.getElementById('modelo_evento_nome').value = modelo?.nome_modelo || '';
-        });
-
-        onSnapshot(collection(db, "modelos_eventos"), snap => {
-            dadosModelosEventos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            renderModelosEvento();
-        });
-
         window.gerarCopyMeta = (dadosEvento) => {
             const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
             const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -1043,23 +993,97 @@
         window.copiarTextoMarketing = () => { document.getElementById('texto-copy-gerado').select(); document.execCommand('copy'); mostrarAviso("Copy de vendas copiado!", true); };
 
         document.getElementById('formEvento').addEventListener('submit', async e => {
-            e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
+            e.preventDefault(); 
+            const btn = document.getElementById('btnSalvarEvento'); 
+            btn.innerText = "SALVANDO..."; 
+            btn.disabled = true;
+            
             try {
-                const id = document.getElementById('edit_evento_id').value; const arq = document.getElementById('upload_capa').files[0]; let url = document.getElementById('url_imagem_atual').value;
-                if (arq) { const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); await uploadBytes(sr, arq); url = await getDownloadURL(sr); }
-                const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, hora: document.getElementById('hora_inicio').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value, diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '', imagem: url, ativo: true };
-                for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
-                if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
-                e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; renderModelosEvento(); mostrarAviso("Evento salvo com sucesso!", true);
+                const id = document.getElementById('edit_evento_id').value; 
+                const arq = document.getElementById('upload_capa').files[0]; 
+                let url = document.getElementById('url_imagem_atual').value;
+                
+                if (arq) { 
+                    const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); 
+                    await uploadBytes(sr, arq); 
+                    url = await getDownloadURL(sr); 
+                }
+                
+                const d = { 
+                    nome: document.getElementById('nome_festa').value, 
+                    data: document.getElementById('data_festa').value, 
+                    hora: document.getElementById('hora_inicio').value, 
+                    valor_casal: document.getElementById('valor_casal').value, 
+                    valor_solteiro: document.getElementById('valor_solteiro').value, 
+                    desc_casal: document.getElementById('desc_casal').value, 
+                    desc_solteiro: document.getElementById('desc_solteiro').value, 
+                    ant_casal: document.getElementById('ant_casal').value, 
+                    ant_casal_cons: document.getElementById('ant_casal_cons').value, 
+                    ant_solteiro: document.getElementById('ant_solteiro').value, 
+                    valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, 
+                    valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value, 
+                    diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '', 
+                    imagem: url, 
+                    ativo: true 
+                };
+                
+                for(let i=1; i<=8; i++) { 
+                    d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; 
+                    d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; 
+                    d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; 
+                }
+                
+                if(id) await updateDoc(doc(db, "eventos", id), d); 
+                else await addDoc(collection(db, "eventos"), d);
+                
+                e.target.reset(); 
+                document.getElementById('edit_evento_id').value = ""; 
+                document.getElementById('url_imagem_atual').value = ""; 
+                
+                // Força a UI a voltar ao normal
+                document.getElementById('modelo_evento_select').value = "";
+                document.getElementById('modelo_evento_nome').value = "";
+                
+                mostrarAviso("Evento salvo com sucesso!", true);
+                
                 if (document.getElementById('diferenciais_noite')) gerarCopyMeta(d);
                 document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
-            } catch(err) { mostrarAviso("Erro ao salvar evento."); } finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
+                
+            } catch(err) { 
+                console.error("ERRO COMPLETO:", err);
+                mostrarAviso("Erro: " + err.message); 
+            } finally { 
+                btn.innerText = "Salvar Evento Completo"; 
+                btn.disabled = false; 
+            }
         });
 
         window.prepararEdicaoEvento = (id) => {
-            const ev = dadosEventos.find(e => e.id === id); if(document.getElementById('modelo_evento_select')) document.getElementById('modelo_evento_select').value = ''; if(document.getElementById('modelo_evento_nome')) document.getElementById('modelo_evento_nome').value = ''; document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            const ev = dadosEventos.find(e => e.id === id); 
+            if(document.getElementById('modelo_evento_select')) document.getElementById('modelo_evento_select').value = ''; 
+            if(document.getElementById('modelo_evento_nome')) document.getElementById('modelo_evento_nome').value = ''; 
+            document.getElementById('edit_evento_id').value = ev.id; 
+            document.getElementById('nome_festa').value = ev.nome; 
+            document.getElementById('data_festa').value = ev.data; 
+            document.getElementById('hora_inicio').value = ev.hora || ""; 
+            document.getElementById('valor_casal').value = ev.valor_casal || ""; 
+            document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; 
+            document.getElementById('desc_casal').value = ev.desc_casal || ""; 
+            document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; 
+            document.getElementById('ant_casal').value = ev.ant_casal || ""; 
+            document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; 
+            document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; 
+            document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; 
+            document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; 
+            document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            
             if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
-            for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
+            
+            for(let i=1; i<=8; i++) { 
+                document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; 
+                document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; 
+                document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; 
+            }
             document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
         };
 
