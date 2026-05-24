@@ -7,8 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .card-glass { background: #111113; border: 1px solid #27272a; }
-        input, select { background: #000 !important; border: 1px solid #27272a !important; color: white !important; }
-        input:focus { border-color: #eab308 !important; }
+        input, select, textarea { background: #000 !important; border: 1px solid #27272a !important; color: white !important; }
+        input:focus, select:focus, textarea:focus { border-color: #eab308 !important; }
+        .btn-mini { transition: all .2s ease; }
+        .btn-mini:disabled { opacity: .45; cursor: not-allowed; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white font-sans min-h-screen p-4">
@@ -22,6 +24,38 @@
         </header>
 
         <form id="formEvento" class="card-glass p-8 rounded-[2.5rem] space-y-6">
+            <div class="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl space-y-4">
+                <div>
+                    <p class="text-yellow-500 text-[11px] font-black uppercase tracking-widest">
+                        <i class="fas fa-layer-group"></i> Modelos de evento
+                    </p>
+                    <p class="text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                        Use modelos para reaproveitar valores e horários. Nome, data e imagem do evento não são alterados pelo modelo.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black uppercase text-zinc-500 ml-2">Escolher modelo salvo</label>
+                    <select id="selectModeloEvento" class="w-full p-4 rounded-2xl mt-1 outline-none font-bold">
+                        <option value="">Carregando modelos...</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <button type="button" id="btnAplicarModelo" onclick="aplicarModeloEvento()" class="btn-mini bg-yellow-500 text-black font-black py-3 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-white">
+                        Aplicar
+                    </button>
+                    <button type="button" id="btnSalvarModelo" onclick="salvarModeloEvento()" class="btn-mini bg-white text-black font-black py-3 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-yellow-500">
+                        Salvar modelo
+                    </button>
+                    <button type="button" id="btnExcluirModelo" onclick="excluirModeloEvento()" class="btn-mini bg-red-500/20 text-red-300 border border-red-500/30 font-black py-3 rounded-2xl uppercase text-[10px] tracking-widest hover:bg-red-500 hover:text-white">
+                        Excluir
+                    </button>
+                </div>
+
+                <input type="text" id="nomeModelo" class="w-full p-4 rounded-2xl outline-none font-bold" placeholder="Nome do modelo. Ex: Sexta padrão, Open Bar, Vip">
+            </div>
+
             <div>
                 <label class="text-[10px] font-black uppercase text-zinc-500 ml-2">Nome da Festa</label>
                 <input type="text" id="nome" class="w-full p-4 rounded-2xl mt-1 outline-none font-bold" placeholder="Ex: Noite do Champagne" required>
@@ -71,7 +105,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
@@ -84,6 +118,194 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
+        let modelosEventosCache = [];
+
+        function limparTexto(valor) {
+            return String(valor || '').trim();
+        }
+
+        function gerarIdModelo(nome) {
+            return limparTexto(nome)
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .substring(0, 60) || `modelo-${Date.now()}`;
+        }
+
+        function coletarDadosModeloAtual() {
+            return {
+                nome_modelo: limparTexto(document.getElementById('nomeModelo').value),
+                hora: document.getElementById('hora').value || '22:00',
+                hora_fim: document.getElementById('hora_fim').value || '23:59',
+                valor_casal: limparTexto(document.getElementById('v_casal').value),
+                valor_solteiro: limparTexto(document.getElementById('v_solteiro').value),
+                atualizado_em: serverTimestamp(),
+                ativo: true
+            };
+        }
+
+        function preencherSelectModelos() {
+            const select = document.getElementById('selectModeloEvento');
+
+            if (!select) return;
+
+            if (!modelosEventosCache.length) {
+                select.innerHTML = '<option value="">Nenhum modelo salvo ainda</option>';
+                return;
+            }
+
+            select.innerHTML = '<option value="">Selecione um modelo...</option>' + modelosEventosCache
+                .map(modelo => `<option value="${modelo.id}">${modelo.nome_modelo || 'Modelo sem nome'}</option>`)
+                .join('');
+        }
+
+        async function carregarModelosEventos() {
+            const select = document.getElementById('selectModeloEvento');
+
+            try {
+                if (select) select.innerHTML = '<option value="">Carregando modelos...</option>';
+
+                const q = query(collection(db, 'modelos_eventos'), orderBy('nome_modelo'));
+                const snap = await getDocs(q);
+
+                modelosEventosCache = [];
+                snap.forEach(documento => {
+                    const dados = documento.data() || {};
+                    if (dados.ativo === false) return;
+
+                    modelosEventosCache.push({
+                        id: documento.id,
+                        ...dados
+                    });
+                });
+
+                preencherSelectModelos();
+            } catch (erro) {
+                console.warn('Não foi possível carregar modelos ordenados. Tentando carregamento simples...', erro);
+
+                try {
+                    const snap = await getDocs(collection(db, 'modelos_eventos'));
+
+                    modelosEventosCache = [];
+                    snap.forEach(documento => {
+                        const dados = documento.data() || {};
+                        if (dados.ativo === false) return;
+
+                        modelosEventosCache.push({
+                            id: documento.id,
+                            ...dados
+                        });
+                    });
+
+                    modelosEventosCache.sort((a, b) => String(a.nome_modelo || '').localeCompare(String(b.nome_modelo || '')));
+                    preencherSelectModelos();
+                } catch (erroSimples) {
+                    console.error('Erro ao carregar modelos:', erroSimples);
+                    if (select) select.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+                }
+            }
+        }
+
+        window.aplicarModeloEvento = () => {
+            const idModelo = document.getElementById('selectModeloEvento').value;
+            const modelo = modelosEventosCache.find(item => item.id === idModelo);
+
+            if (!modelo) {
+                alert('Selecione um modelo para aplicar.');
+                return;
+            }
+
+            // Não altera nome, data nem imagem. Isso evita publicar flyer/data errados.
+            document.getElementById('hora').value = modelo.hora || '22:00';
+            document.getElementById('hora_fim').value = modelo.hora_fim || '23:59';
+            document.getElementById('v_casal').value = modelo.valor_casal || '';
+            document.getElementById('v_solteiro').value = modelo.valor_solteiro || '';
+            document.getElementById('nomeModelo').value = modelo.nome_modelo || '';
+
+            const dataFesta = document.getElementById('data').value;
+            if (dataFesta) document.getElementById('data_fim').value = dataFesta;
+
+            alert('Modelo aplicado. Confira nome, data e imagem antes de publicar.');
+        };
+
+        window.salvarModeloEvento = async () => {
+            const dados = coletarDadosModeloAtual();
+
+            if (!dados.nome_modelo) {
+                const nome = prompt('Digite um nome para o modelo. Ex: Sexta padrão, Open Bar, Vip');
+                dados.nome_modelo = limparTexto(nome);
+            }
+
+            if (!dados.nome_modelo) {
+                alert('Informe um nome para salvar o modelo.');
+                return;
+            }
+
+            const btn = document.getElementById('btnSalvarModelo');
+            btn.disabled = true;
+            btn.innerText = 'SALVANDO...';
+
+            try {
+                const id = gerarIdModelo(dados.nome_modelo);
+
+                await setDoc(doc(db, 'modelos_eventos', id), {
+                    ...dados,
+                    criado_ou_atualizado_em: new Date().toISOString()
+                }, { merge: true });
+
+                alert('Modelo salvo com sucesso!');
+                document.getElementById('nomeModelo').value = '';
+                await carregarModelosEventos();
+                document.getElementById('selectModeloEvento').value = id;
+            } catch (erro) {
+                console.error(erro);
+                alert('Erro ao salvar modelo.');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Salvar modelo';
+            }
+        };
+
+        window.excluirModeloEvento = async () => {
+            const idModelo = document.getElementById('selectModeloEvento').value;
+            const modelo = modelosEventosCache.find(item => item.id === idModelo);
+
+            if (!modelo) {
+                alert('Selecione um modelo para excluir.');
+                return;
+            }
+
+            if (!confirm(`Excluir o modelo "${modelo.nome_modelo}"?`)) return;
+
+            const btn = document.getElementById('btnExcluirModelo');
+            btn.disabled = true;
+            btn.innerText = 'EXCLUINDO...';
+
+            try {
+                await deleteDoc(doc(db, 'modelos_eventos', idModelo));
+                alert('Modelo excluído.');
+                document.getElementById('nomeModelo').value = '';
+                await carregarModelosEventos();
+            } catch (erro) {
+                console.error(erro);
+                alert('Erro ao excluir modelo.');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Excluir';
+            }
+        };
+
+        document.getElementById('selectModeloEvento')?.addEventListener('change', () => {
+            const idModelo = document.getElementById('selectModeloEvento').value;
+            const modelo = modelosEventosCache.find(item => item.id === idModelo);
+
+            document.getElementById('nomeModelo').value = modelo?.nome_modelo || '';
+        });
+
+        carregarModelosEventos();
 
         // Função para preencher automaticamente o fim da lista ao escolher a data da festa
         window.sugerirFechamento = () => {
@@ -110,7 +332,8 @@
                     valor_solteiro: document.getElementById('v_solteiro').value,
                     data_encerramento: dataFechamentoStr, // Campo novo para controle
                     ativo: true,
-                    criado_em: new Date()
+                    criado_em: new Date(),
+                    criado_em_timestamp: serverTimestamp()
                 });
 
                 alert("Evento publicado com sucesso!");
