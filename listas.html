@@ -65,11 +65,15 @@
         </footer>
     </div>
 
-    <!-- MODAL LISTA / PIX -->
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
-            <h2 id="modal-titulo" class="font-black uppercase italic mb-6 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
+            <h2 id="modal-titulo" class="font-black uppercase italic mb-2 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
+            
+            <div id="aviso-consumacao" class="bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-xl mb-6 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400">🍹 100% Consumação</p>
+                <p class="text-[8px] font-bold text-zinc-400 mt-1">O valor da portaria é revertido em consumo interno.</p>
+            </div>
             
             <div id="grid-botoes-tipo" class="grid grid-cols-2 gap-2 mb-2">
                 <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-3 rounded-2xl flex flex-col items-center justify-center text-center">
@@ -86,7 +90,6 @@
                 </button>
             </div>
             
-            <!-- AVISO DA TAXA (SÓ APARECE NO PIX) -->
             <p id="aviso-taxa-pista" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-6 hidden">* Valores já incluem taxa de conveniência</p>
 
             <div class="space-y-3 text-left">
@@ -113,7 +116,6 @@
         </div>
     </div>
 
-    <!-- MODAL CAMAROTES / VIPs -->
     <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl overflow-y-auto">
         <div class="min-h-screen px-4 py-10 flex items-start justify-center">
             <div class="w-full max-w-4xl bg-[#0d0d14] border border-purple-500/30 p-6 md:p-10 rounded-[2.5rem] shadow-2xl relative text-white">
@@ -143,7 +145,6 @@
         </div>
     </div>
 
-    <!-- MODAL QR CODE E SUCESSO -->
     <div id="modalQrCode" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
         <div id="box-qrcode" class="w-full max-w-sm bg-[#0d0d14] border border-[#00f5d4]/30 p-8 rounded-[2.5rem] text-center">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -322,21 +323,17 @@
         window.aplicarDescontoFidelidade = (aplicar) => {
             aplicouDescontoFidelidade = aplicar;
             
-            // INDEPENDENTE DE 'SIM' OU 'NÃO', ESCONDE O ALERTA
             document.getElementById('alerta-fidelidade').classList.add('hidden');
 
             if (aplicar) {
-                // SE CLICOU EM 'SIM', ATUALIZA OS VALORES VISUALMENTE
                 let valCasalFid = eventoAtivo.valor_recorrente_casal || "FREE";
                 let valSoltFid = eventoAtivo.valor_recorrente_solteiro || "FREE";
                 document.getElementById('v-modal-casal').innerText = String(valCasalFid).toUpperCase();
                 document.getElementById('v-modal-solteiro').innerText = String(valSoltFid).toUpperCase();
                 
-                // MÁGICA: DISPARA A FINALIZAÇÃO AUTOMATICAMENTE SEM PRECISAR CLICAR NO BOTÃO DE BAIXO
                 mostrarAviso("Desconto Fidelidade Aplicado! Finalizando...", true);
-                setTimeout(() => { processarFinalizacao(); }, 800); // Dá um tempinho pro usuário ver o valor mudar
+                setTimeout(() => { processarFinalizacao(); }, 800); 
             } else {
-                // SE CLICOU EM 'NÃO', VOLTA A MOSTRAR O BOTÃO DE FINALIZAR E MANTÉM OS VALORES NORMAIS
                 document.getElementById('btn-final-acao').classList.remove('hidden');
                 const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
                 const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
@@ -449,6 +446,15 @@
             document.getElementById('btn-final-acao').classList.remove('hidden');
 
             document.getElementById('modal-titulo').innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
+            
+            // EXIBIR OU ESCONDER AVISO DE CONSUMAÇÃO (Lista / Porta)
+            const avisoConsumacao = document.getElementById('aviso-consumacao');
+            if(!isPix) {
+                avisoConsumacao.classList.remove('hidden');
+            } else {
+                avisoConsumacao.classList.add('hidden');
+            }
+            
             document.getElementById('tel-cliente').value = '';
             
             const gridBotoes = document.getElementById('grid-botoes-tipo');
@@ -531,7 +537,6 @@
             const em = document.getElementById('email-cliente').value.trim();
             const cpf = document.getElementById('cpf-cliente').value.trim();
             
-            // Validação de tipo ativa apenas se não for finalização automática de fidelidade
             if (!tipoAtivo) return mostrarAviso("Selecione o tipo de ingresso (Casal ou Solteiro)!");
             if (!n) return mostrarAviso("Faltou preencher o Nome Completo!");
             if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto!");
@@ -545,7 +550,6 @@
             btn.disabled = true; btn.innerText = "PROCESSANDO...";
             
             try {
-                // Duplicidade checada apenas para PIX ou se não for finalização automática
                 if(eFluxoPix || !aplicouDescontoFidelidade) {
                    const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
                    if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
