@@ -71,6 +71,7 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
             <h2 id="modal-titulo" class="font-black uppercase italic mb-2 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
             
+            <!-- AVISO DE CONSUMAÇÃO -->
             <div id="aviso-consumacao" class="bg-emerald-500/10 border border-emerald-500/30 p-2 rounded-xl mb-6 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                 <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400">🍹 100% Consumação</p>
                 <p class="text-[8px] font-bold text-zinc-400 mt-1">O valor da portaria é revertido em consumo interno.</p>
@@ -232,8 +233,9 @@
             if (!snap.empty) {
                 const ativos = snap.docs.filter(d => {
                     const data = d.data();
-                    if (data.pago === true || data.metodo === 'portaria') return true;
-                    return ((new Date() - new Date(data.data_reserva)) / 60000) < 10;
+                    if (data.pago === true || data.cortesia === true || data.metodo === 'portaria') return true;
+                    // REGRA CORRIGIDA PARA 5 MINUTOS AQUI
+                    return data.data_reserva && ((new Date() - new Date(data.data_reserva)) / 60000) < 5;
                 });
                 return ativos.length > 0;
             }
@@ -368,9 +370,7 @@
 
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             const hojeStr = new Date().toLocaleDateString('en-CA');
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-                .filter(ev => ev.data >= hojeStr && !ev.nome.toUpperCase().includes('MODELO'))
-                .sort((a, b) => a.data.localeCompare(b.data));
+            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= hojeStr).sort((a, b) => a.data.localeCompare(b.data));
             if (eventoFixo) eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
 
             const container = document.getElementById('listaEventos');
@@ -617,10 +617,16 @@
                         const nomeAlternativo = `CAMAROTE 0${i}`; 
 
                         const resCam = reservas.filter(r => { const ent = String(r.tipo_entrada).toUpperCase().trim(); return ent === nomeDB || ent === nomeAlternativo; });
+                        
                         let status = 'livre', classCor = 'cam-livre', icone = '✅';
                         
-                        if (resCam.some(r => r.pago === true || r.cortesia === true)) { status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; }
-                        else if (resCam.some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 10)) { status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; }
+                        // LÓGICA CORRIGIDA: 5 MINUTOS E IGNORA OS JÁ PAGOS
+                        if (resCam.some(r => r.pago === true || r.cortesia === true)) { 
+                            status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; 
+                        } 
+                        else if (resCam.some(r => r.pago === false && r.cortesia !== true && r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 5)) { 
+                            status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; 
+                        }
                         
                         const observacao = eventoAtivo[`obs_cam${i}`] ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>` : '';
                         let nomeVisor = (i === 7) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 1</span>` : (i === 8) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 2</span>` : `CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span>`;
