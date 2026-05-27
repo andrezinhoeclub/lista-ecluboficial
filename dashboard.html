@@ -365,6 +365,21 @@
             return null;
         };
 
+        const parseVisitaUniversal = (val) => {
+            if (!val) return 0;
+            if (typeof val.toDate === 'function') return val.toDate().getTime();
+            if (typeof val === 'string') {
+                const d = new Date(val);
+                if (!isNaN(d)) return d.getTime();
+                if (val.includes('/')) {
+                    const p = val.split(/[/\s:]+/);
+                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]).getTime();
+                }
+            }
+            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000)).getTime();
+            return 0;
+        };
+
         const getSolteirasParaEvento = (ev) => {
             if (!ev || !ev.data) return [];
             const partesData = ev.data.split('-');
@@ -550,8 +565,8 @@
             
             // Ordenar da visita mais recente para a mais antiga
             const ordenadas = [...dadosSolteiras].sort((a, b) => {
-                const valA = parseVisita(a.ultima_visita) || parseVisita(a.data_cadastro) || 0;
-                const valB = parseVisita(b.ultima_visita) || parseVisita(b.data_cadastro) || 0;
+                const valA = parseVisitaUniversal(a.ultima_visita) || parseVisitaUniversal(a.data_cadastro) || 0;
+                const valB = parseVisitaUniversal(b.ultima_visita) || parseVisitaUniversal(b.data_cadastro) || 0;
                 return valB - valA;
             });
 
@@ -559,10 +574,13 @@
             ordenadas.forEach(c => {
                 const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
                 if (tel.length >= 8) {
-                    let d = parseVisita(c.ultima_visita) || parseVisita(c.data_cadastro);
+                    let d = parseVisitaUniversal(c.ultima_visita) || parseVisitaUniversal(c.data_cadastro);
                     let strData = 'Sem Data';
-                    if (d && !isNaN(d)) {
-                        strData = new Date(d).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'});
+                    if (d && !isNaN(d) && d > 0) {
+                        const dataObj = new Date(d);
+                        strData = String(dataObj.getDate()).padStart(2, '0') + '/' + 
+                                  String(dataObj.getMonth() + 1).padStart(2, '0') + '/' + 
+                                  dataObj.getFullYear();
                     }
                     txt += `${strData} - ${tel} - ${c.nome}\n`; 
                 }
@@ -577,6 +595,37 @@
             if(!t.value || t.value.includes("Clique no botão")) return mostrarAviso("Gere a lista primeiro!");
             t.select(); document.execCommand('copy');
             mostrarAviso("Lista copiada! Pronta para colar no WhatsApp.", true);
+        };
+
+        window.duplicarEvento = (id) => {
+            const ev = dadosEventos.find(e => e.id === id); 
+            // Zera o ID de edição para o sistema entender que é um evento NOVO
+            document.getElementById('edit_evento_id').value = ""; 
+            
+            document.getElementById('nome_festa').value = ev.nome + " (CÓPIA)"; 
+            document.getElementById('data_festa').value = ev.data; 
+            document.getElementById('hora_inicio').value = ev.hora || ""; 
+            document.getElementById('valor_casal').value = ev.valor_casal || ""; 
+            document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; 
+            document.getElementById('desc_casal').value = ev.desc_casal || ""; 
+            document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; 
+            document.getElementById('ant_casal').value = ev.ant_casal || ""; 
+            document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; 
+            document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; 
+            document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; 
+            document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; 
+            document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            
+            if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
+            
+            for(let i=1; i<=8; i++) { 
+                document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; 
+                document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; 
+                document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; 
+            }
+            
+            mostrarAviso("Modelo copiado! Altere a data e o nome e clique em Salvar.", true);
+            document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
         };
 
         onSnapshot(collection(db, "solteiras"), snap => {
@@ -853,7 +902,19 @@
 
         window.renderGridConfig = () => {
             if(!document.getElementById('grid-eventos-config')) return;
-            document.getElementById('grid-eventos-config').innerHTML = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).map(ev => `<div class="glass-card overflow-hidden border border-white/5 p-5"><img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4"><div class="flex justify-between mb-2"><p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')} - ${ev.hora || '--:--'}</p><span class="${ev.ativo ? 'text-green-500' : 'text-red-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span></div><h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4><div class="flex justify-between"><button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase">Editar</button><button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase">Excluir Tudo</button></div></div>`).join('');
+            document.getElementById('grid-eventos-config').innerHTML = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data)).map(ev => `<div class="glass-card overflow-hidden border border-white/5 p-5">
+            <img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4">
+            <div class="flex justify-between mb-2">
+                <p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data.split('-').reverse().join('/')} - ${ev.hora || '--:--'}</p>
+                <span class="${ev.ativo ? 'text-green-500' : 'text-zinc-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span>
+            </div>
+            <h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4>
+            <div class="flex justify-between gap-2 mt-4 border-t border-white/10 pt-4">
+                <button onclick="duplicarEvento('${ev.id}')" class="text-fuchsia-400 font-bold text-[9px] uppercase hover:text-white transition-colors">Copiar Modelo</button>
+                <button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase hover:text-white transition-colors">Editar</button>
+                <button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase hover:text-white transition-colors">Excluir</button>
+            </div>
+            </div>`).join('');
         };
 
         window.removerItem = async (colecao, id) => { 
