@@ -181,6 +181,7 @@
         let unsubscribeCamarotes = null; let numCamaroteSelecionado = null; let unsubscribePagamento = null;
         let promoterTipo = "padrao";
         let aplicouDescontoFidelidade = false;
+        let intervalCamarotes = null;
         
         let taxaPixTipo = 'desativado';
         let taxaPixValor = 0;
@@ -229,8 +230,10 @@
             if (!snap.empty) {
                 const ativos = snap.docs.filter(d => {
                     const data = d.data();
-                    if (data.pago === true || data.metodo === 'portaria') return true;
-                    return ((new Date() - new Date(data.data_reserva)) / 60000) < 10;
+                    if (data.pago === true || data.cortesia === true || data.metodo === 'portaria') return true;
+                    if (!data.data_reserva) return false;
+                    const diffMins = (new Date() - new Date(data.data_reserva)) / 60000;
+                    return diffMins >= 0 && diffMins < 5;
                 });
                 return ativos.length > 0;
             }
@@ -447,7 +450,6 @@
 
             document.getElementById('modal-titulo').innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
             
-            // EXIBIR OU ESCONDER AVISO DE CONSUMAÇÃO (Lista / Porta)
             const avisoConsumacao = document.getElementById('aviso-consumacao');
             if(!isPix) {
                 avisoConsumacao.classList.remove('hidden');
@@ -595,8 +597,9 @@
             eventoAtivo = eventosCache.find(e => e.id === id);
             const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
             
-            unsubscribeCamarotes = onSnapshot(q, (snap) => {
-                const reservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            let ultimasReservas = [];
+
+            const renderGrid = () => {
                 const grid = document.getElementById('grid-camarotes-venda'); 
                 grid.innerHTML = '';
                 
@@ -604,6 +607,8 @@
                 if (temTaxa) document.getElementById('aviso-taxa-camarote').classList.remove('hidden');
                 else document.getElementById('aviso-taxa-camarote').classList.add('hidden');
                 
+                const agora = new Date();
+
                 for(let i=1; i<=8; i++) {
                     let valCamCru = String(eventoAtivo[`v_cam${i}`] || '0');
                     let valBase = extrairValorNumerico(valCamCru);
@@ -612,11 +617,23 @@
                         const nomeDB = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `CAMAROTE ${i}`;
                         const nomeAlternativo = `CAMAROTE 0${i}`; 
 
-                        const resCam = reservas.filter(r => { const ent = String(r.tipo_entrada).toUpperCase().trim(); return ent === nomeDB || ent === nomeAlternativo; });
+                        const resCam = ultimasReservas.filter(r => { const ent = String(r.tipo_entrada).toUpperCase().trim(); return ent === nomeDB || ent === nomeAlternativo; });
+                        
                         let status = 'livre', classCor = 'cam-livre', icone = '✅';
                         
-                        if (resCam.some(r => r.pago === true || r.cortesia === true)) { status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; }
-                        else if (resCam.some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 10)) { status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; }
+                        // LÓGICA RIGOROSA: 5 MINUTOS E IGNORA OS JÁ PAGOS
+                        if (resCam.some(r => r.pago === true || r.cortesia === true)) { 
+                            status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; 
+                        } 
+                        else if (resCam.some(r => {
+                            if (r.pago === true || r.cortesia === true) return false;
+                            if (!r.data_reserva) return false;
+                            const tRes = new Date(r.data_reserva);
+                            const diffMins = (agora - tRes) / 60000;
+                            return diffMins >= 0 && diffMins < 5;
+                        })) { 
+                            status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; 
+                        }
                         
                         const observacao = eventoAtivo[`obs_cam${i}`] ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>` : '';
                         let nomeVisor = (i === 7) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 1</span>` : (i === 8) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 2</span>` : `CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span>`;
@@ -625,20 +642,37 @@
                         let txtDisplay = formatarNumeroMoeda(valBase);
                         if (taxa > 0) txtDisplay += `<br><span class="text-[7.5px] text-yellow-500 tracking-widest mt-1">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
 
-                        grid.innerHTML += `<button onclick="selecionarCamarote(${i}, '${status}', '${valCamCru}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all text-center"><span class="text-[9px] font-black uppercase text-zinc-300">${nomeVisor}</span><span class="text-xs font-bold mt-1 leading-tight">${txtDisplay}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
+                        // Alterado para evitar bugs de aspas no HTML
+                        grid.innerHTML += `<button onclick="selecionarCamarote(${i}, '${status}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all text-center"><span class="text-[9px] font-black uppercase text-zinc-300">${nomeVisor}</span><span class="text-xs font-bold mt-1 leading-tight">${txtDisplay}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
                     }
                 }
+            };
+
+            unsubscribeCamarotes = onSnapshot(q, (snap) => {
+                ultimasReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                renderGrid();
             });
+
+            if(intervalCamarotes) clearInterval(intervalCamarotes);
+            intervalCamarotes = setInterval(() => {
+                if(!document.getElementById('modalCamarote').classList.contains('hidden')) {
+                    renderGrid();
+                } else {
+                    clearInterval(intervalCamarotes);
+                }
+            }, 10000); // Atualiza a tela a cada 10s para limpar o "Aguardando" automaticamente
+
             document.getElementById('modalCamarote').classList.remove('hidden');
         };
 
-        window.selecionarCamarote = (num, status, valorRaw) => {
+        window.selecionarCamarote = (num, status) => {
             if(status !== 'livre') return; 
             numCamaroteSelecionado = num;
             
             let nomeCam = (num === 7) ? "VIP 1" : (num === 8) ? "VIP 2" : `CAMAROTE 0${num}`;
             document.getElementById('cam-selecionado-nome').innerText = nomeCam;
             
+            let valorRaw = eventoAtivo[`v_cam${num}`] || '0';
             let valBase = extrairValorNumerico(valorRaw);
             let taxa = calcularTaxaApenas(valorRaw);
             let txtDetalhe = formatarNumeroMoeda(valBase);
@@ -692,7 +726,11 @@
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
-        window.fecharModalCamarote = () => { if(unsubscribeCamarotes) unsubscribeCamarotes(); document.getElementById('modalCamarote').classList.add('hidden'); };
+        window.fecharModalCamarote = () => { 
+            if(unsubscribeCamarotes) unsubscribeCamarotes(); 
+            if(intervalCamarotes) clearInterval(intervalCamarotes);
+            document.getElementById('modalCamarote').classList.add('hidden'); 
+        };
         window.fecharModalQrCode = () => { location.reload(); };
         window.copiarChavePix = () => { const c = document.getElementById('chave-copia-cola'); c.select(); document.execCommand('copy'); mostrarAviso("Copiado com sucesso!", true); };
         window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
