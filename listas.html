@@ -65,6 +65,7 @@
         </footer>
     </div>
 
+    <!-- MODAL LISTA / PIX -->
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -116,6 +117,7 @@
         </div>
     </div>
 
+    <!-- MODAL CAMAROTES / VIPs -->
     <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl overflow-y-auto">
         <div class="min-h-screen px-4 py-10 flex items-start justify-center">
             <div class="w-full max-w-4xl bg-[#0d0d14] border border-purple-500/30 p-6 md:p-10 rounded-[2.5rem] shadow-2xl relative text-white">
@@ -145,6 +147,7 @@
         </div>
     </div>
 
+    <!-- MODAL QR CODE E SUCESSO -->
     <div id="modalQrCode" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
         <div id="box-qrcode" class="w-full max-w-sm bg-[#0d0d14] border border-[#00f5d4]/30 p-8 rounded-[2.5rem] text-center">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -621,7 +624,6 @@
                         
                         let status = 'livre', classCor = 'cam-livre', icone = '✅';
                         
-                        // LÓGICA RIGOROSA: 5 MINUTOS E IGNORA OS JÁ PAGOS
                         if (resCam.some(r => r.pago === true || r.cortesia === true)) { 
                             status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; 
                         } 
@@ -642,9 +644,13 @@
                         let txtDisplay = formatarNumeroMoeda(valBase);
                         if (taxa > 0) txtDisplay += `<br><span class="text-[7.5px] text-yellow-500 tracking-widest mt-1">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
 
-                        // Alterado para evitar bugs de aspas no HTML
-                        grid.innerHTML += `<button onclick="selecionarCamarote(${i}, '${status}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all text-center"><span class="text-[9px] font-black uppercase text-zinc-300">${nomeVisor}</span><span class="text-xs font-bold mt-1 leading-tight">${txtDisplay}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
+                        grid.innerHTML += `<button id="btn-cam-${i}" onclick="selecionarCamarote(${i}, '${status}', '${valCamCru}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all text-center"><span class="text-[9px] font-black uppercase text-zinc-300">${nomeVisor}</span><span class="text-xs font-bold mt-1 leading-tight">${txtDisplay}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
                     }
+                }
+
+                if(numCamaroteSelecionado !== null) {
+                    let btnAtivo = document.getElementById(`btn-cam-${numCamaroteSelecionado}`);
+                    if(btnAtivo) btnAtivo.classList.add('cam-selecionado');
                 }
             };
 
@@ -660,19 +666,25 @@
                 } else {
                     clearInterval(intervalCamarotes);
                 }
-            }, 10000); // Atualiza a tela a cada 10s para limpar o "Aguardando" automaticamente
+            }, 10000); 
 
             document.getElementById('modalCamarote').classList.remove('hidden');
         };
 
-        window.selecionarCamarote = (num, status) => {
+        window.selecionarCamarote = (num, status, valorRaw) => {
             if(status !== 'livre') return; 
             numCamaroteSelecionado = num;
+
+            for(let i=1; i<=8; i++) {
+                let btn = document.getElementById(`btn-cam-${i}`);
+                if(btn) btn.classList.remove('cam-selecionado');
+            }
+            let btnClicado = document.getElementById(`btn-cam-${num}`);
+            if(btnClicado) btnClicado.classList.add('cam-selecionado');
             
             let nomeCam = (num === 7) ? "VIP 1" : (num === 8) ? "VIP 2" : `CAMAROTE 0${num}`;
             document.getElementById('cam-selecionado-nome').innerText = nomeCam;
             
-            let valorRaw = eventoAtivo[`v_cam${num}`] || '0';
             let valBase = extrairValorNumerico(valorRaw);
             let taxa = calcularTaxaApenas(valorRaw);
             let txtDetalhe = formatarNumeroMoeda(valBase);
@@ -727,6 +739,7 @@
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
         window.fecharModalCamarote = () => { 
+            numCamaroteSelecionado = null;
             if(unsubscribeCamarotes) unsubscribeCamarotes(); 
             if(intervalCamarotes) clearInterval(intervalCamarotes);
             document.getElementById('modalCamarote').classList.add('hidden'); 
