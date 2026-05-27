@@ -65,6 +65,7 @@
         </footer>
     </div>
 
+    <!-- MODAL LISTA / PIX -->
     <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
         <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -116,6 +117,7 @@
         </div>
     </div>
 
+    <!-- MODAL CAMAROTES / VIPs -->
     <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl overflow-y-auto">
         <div class="min-h-screen px-4 py-10 flex items-start justify-center">
             <div class="w-full max-w-4xl bg-[#0d0d14] border border-purple-500/30 p-6 md:p-10 rounded-[2.5rem] shadow-2xl relative text-white">
@@ -145,6 +147,7 @@
         </div>
     </div>
 
+    <!-- MODAL QR CODE E SUCESSO -->
     <div id="modalQrCode" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
         <div id="box-qrcode" class="w-full max-w-sm bg-[#0d0d14] border border-[#00f5d4]/30 p-8 rounded-[2.5rem] text-center">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-6">
@@ -365,7 +368,9 @@
 
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
             const hojeStr = new Date().toLocaleDateString('en-CA');
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= hojeStr).sort((a, b) => a.data.localeCompare(b.data));
+            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                .filter(ev => ev.data >= hojeStr && !ev.nome.toUpperCase().includes('MODELO'))
+                .sort((a, b) => a.data.localeCompare(b.data));
             if (eventoFixo) eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
 
             const container = document.getElementById('listaEventos');
@@ -447,7 +452,6 @@
 
             document.getElementById('modal-titulo').innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
             
-            // EXIBIR OU ESCONDER AVISO DE CONSUMAÇÃO (Lista / Porta)
             const avisoConsumacao = document.getElementById('aviso-consumacao');
             if(!isPix) {
                 avisoConsumacao.classList.remove('hidden');
