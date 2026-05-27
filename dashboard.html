@@ -196,7 +196,7 @@
         <!-- ABA FESTAS -->
         <section id="aba-festas" class="hidden space-y-8">
             
-            <!-- MODELOS SALVOS (NOVO) -->
+            <!-- MODELOS SALVOS -->
             <div class="glass-card p-8 border-l-4 border-l-fuchsia-500 mb-8">
                 <h2 class="text-fuchsia-500 font-black uppercase italic text-xl mb-4 tracking-tighter">Meus Modelos de Festa</h2>
                 <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Qualquer evento criado com a palavra "MODELO" no nome aparecerá aqui.</p>
@@ -709,7 +709,8 @@
             const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
             const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
             
-            let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP').sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
+            // AQUI: Os eventos com a palavra MODELO não aparecem na auditoria
+            let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && !String(r.evento).toUpperCase().includes('MODELO')).sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
             if (fStat === 'entrou') res = res.filter(r => r.entrou === true); 
             else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true);
             else if (fStat === 'pix_entrou') res = res.filter(r => r.metodo === 'pix_antecipado' && r.entrou === true);
@@ -741,7 +742,8 @@
 
         window.renderRelatorios = () => {
             const container = document.getElementById('container-bolhas'); if(!container) return;
-            const ativos = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data));
+            // AQUI: Os eventos com a palavra MODELO não aparecem nos relatórios de performance
+            const ativos = dadosEventos.filter(e => !e.nome.toUpperCase().includes('MODELO')).sort((a,b) => new Date(a.data) - new Date(b.data));
             container.innerHTML = ativos.map(ev => {
                 const evN = (ev.nome || '').trim().toLowerCase();
                 const solteirasDoEvento = getSolteirasParaEvento(ev);
@@ -774,7 +776,7 @@
         window.renderPodios = () => {
             const st = {};
             dadosReservas.forEach(r => { 
-                if (r.tipo_entrada === 'SOLTEIRA VIP' || (r.metodo === 'pix_antecipado' && r.pago !== true)) return; 
+                if (r.tipo_entrada === 'SOLTEIRA VIP' || (r.metodo === 'pix_antecipado' && r.pago !== true) || String(r.evento).toUpperCase().includes('MODELO')) return; 
                 const p = getPromoterName(r.promoter); 
                 if(!st[p]) st[p] = { r: 0, c: 0 }; st[p].r++; if(r.entrou === true) st[p].c++; 
             });
@@ -786,9 +788,10 @@
 
         window.gerarRelatorioGerencial = () => {
             const tA = document.getElementById('output-excel');
-            const val = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.metodo !== 'pix_antecipado' || r.pago === true));
+            // AQUI: Modelos não entram no relatório gerencial exportado
+            const val = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.metodo !== 'pix_antecipado' || r.pago === true) && !String(r.evento).toUpperCase().includes('MODELO'));
             if (val.length === 0) { tA.value = "Sem reservas de pagantes."; return; }
-            const at = dadosEventos.sort((a,b) => a.data.localeCompare(b.data)); let cab = "";
+            const at = dadosEventos.filter(e => !e.nome.toUpperCase().includes('MODELO')).sort((a,b) => a.data.localeCompare(b.data)); let cab = "";
             if (at.length > 0) {
                 const mes = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
                 const dI = new Date(at[0].data + "T12:00:00Z"); const dF = new Date(at[at.length-1].data + "T12:00:00Z");
@@ -848,7 +851,7 @@
 
         window.gerarApenasCheckins = () => {
             const f = document.getElementById('filtro-promoter-excel').value; const tA = document.getElementById('output-excel');
-            let res = dadosReservas.filter(r => r.entrou === true && r.tipo_entrada !== 'SOLTEIRA VIP');
+            let res = dadosReservas.filter(r => r.entrou === true && r.tipo_entrada !== 'SOLTEIRA VIP' && !String(r.evento).toUpperCase().includes('MODELO'));
             if (f) res = res.filter(r => getPromoterName(r.promoter) === f);
             if (res.length === 0) { tA.value = "Nenhum check-in."; return; }
             tA.value = "NOME\tTELEFONE\n" + res.map(r => `${r.nome}\t${r.tel || '---'}`).join('\n');
@@ -856,7 +859,7 @@
 
         window.gerarApenasSolteiras = () => {
             const tA = document.getElementById('output-excel');
-            const ativos = dadosEventos.filter(e => e.ativo);
+            const ativos = dadosEventos.filter(e => e.ativo && !e.nome.toUpperCase().includes('MODELO'));
             if (ativos.length === 0) { tA.value = "Nenhum evento ativo no momento."; return; }
             let unicas = []; let mapa = new Map();
             ativos.forEach(ev => {
@@ -936,16 +939,14 @@
             const gridEventos = document.getElementById('grid-eventos-config');
             if(!gridEventos) return;
 
-            // Filtra os eventos baseados no nome
             const modelos = dadosEventos.filter(e => e.nome.toUpperCase().includes('MODELO'));
             const normais = dadosEventos.filter(e => !e.nome.toUpperCase().includes('MODELO')).sort((a,b) => new Date(a.data) - new Date(b.data));
 
-            // 1. Renderiza os Modelos Salvos na barra do topo
             if (modelos.length === 0) {
                 gridModelos.innerHTML = `<p class="text-zinc-500 text-xs italic uppercase font-bold">Nenhum modelo salvo. Crie um evento com a palavra "MODELO" no nome.</p>`;
             } else {
                 gridModelos.innerHTML = modelos.map(ev => `
-                    <div class="bg-fuchsia-900/20 border border-fuchsia-500/30 p-4 rounded-2xl min-w-[250px] flex-none flex flex-col justify-between">
+                    <div class="bg-fuchsia-900/20 border border-fuchsia-500/30 p-4 rounded-2xl min-w-[250px] flex-none flex flex-col justify-between shadow-lg">
                         <h4 class="text-sm font-black uppercase text-fuchsia-400 mb-4">${ev.nome}</h4>
                         <div class="flex gap-2">
                             <button onclick="duplicarEvento('${ev.id}')" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[9px] font-black uppercase py-2 rounded-xl transition-all shadow-md">Usar Modelo</button>
@@ -956,7 +957,6 @@
                 `).join('');
             }
 
-            // 2. Renderiza os Eventos Normais (da semana) na grade principal
             gridEventos.innerHTML = normais.map(ev => `
                 <div class="glass-card overflow-hidden border border-white/5 p-5 relative">
                     <img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4">
@@ -998,7 +998,7 @@
             if(!document.getElementById('tabela-aniversarios-body')) return;
             document.getElementById('tabela-aniversarios-body').innerHTML = dadosAniv.map(l => {
                 const ev = dadosEventos.find(e => (e.nome || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase()); const dt = ev ? (ev.data ? ev.data.split('-').reverse().join('/') : 'S/D') : '---';
-                const q = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase() && (r.aniversariante || '').trim().toLowerCase() === (l.aniversariante || '').trim().toLowerCase()).length;
+                const q = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase() && (r.aniversariante || '').trim().toLowerCase() === (l.aniversariante || '').trim().toLowerCase() && !String(r.evento).toUpperCase().includes('MODELO')).length;
                 return `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4">${dt}</td><td class="py-4 uppercase">${l.promoter}</td><td class="py-4 font-black text-cyan-400 uppercase">${l.aniversariante}</td><td class="py-4 text-center font-black text-white">${q}</td><td class="py-4 text-right pr-4"><button onclick="removerItem('links_aniversario', '${l.id}')" class="text-red-500">Remover</button></td></tr>`;
             }).join('');
         };
@@ -1024,7 +1024,6 @@
                     await b.commit(); 
                 } 
                 
-                // Apaga os eventos, exceto os que têm "MODELO" no nome
                 const bEv = writeBatch(db);
                 const qEv = await getDocs(collection(db, "eventos"));
                 qEv.forEach(d => {
