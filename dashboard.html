@@ -180,26 +180,8 @@
                 <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="w-full bg-pink-900/40 hover:bg-pink-800/60 border border-pink-500/50 text-pink-300 font-black uppercase text-[10px] py-4 rounded-xl transition-colors mb-4">🔄 Carregar Cadastradas</button>
                 
                 <textarea id="output-marketing" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-48 bg-[#0a0a0f] border-zinc-800 border resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
-
-                <div id="box-marketing-selecao" class="hidden bg-black/20 border border-pink-500/20 rounded-2xl p-4 mb-4">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
-                        <div>
-                            <p class="text-[10px] font-black uppercase text-pink-400 tracking-widest">Selecionar contatos para disparo</p>
-                            <p class="text-[8px] text-zinc-500 font-bold uppercase mt-1">Marque somente os números que deseja copiar.</p>
-                        </div>
-                        <span id="contador-marketing-selecao" class="text-[9px] font-black uppercase text-green-400 bg-green-500/10 border border-green-500/20 px-3 py-2 rounded-xl">0 selecionados</span>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-                        <button onclick="selecionarTodosMarketing(true)" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-black uppercase text-[9px] py-3 rounded-xl transition-colors">Marcar Todos</button>
-                        <button onclick="selecionarTodosMarketing(false)" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-black uppercase text-[9px] py-3 rounded-xl transition-colors">Limpar Seleção</button>
-                    </div>
-                    <div id="lista-marketing-selecao" class="max-h-64 overflow-y-auto space-y-2 pr-1"></div>
-                </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar Lista Completa</button>
-                    <button onclick="copiarMarketingTelefones()" class="w-full bg-green-600 hover:bg-green-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📲 Copiar Telefones Selecionados</button>
-                </div>
+                <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para WhatsApp</button>
             </div>
         </section>
 
@@ -370,7 +352,7 @@
         const storage = getStorage(app);
         
         let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
-        let dadosSolteiras = []; let listaMarketingAtual = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
+        let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
 
         const getPromoterName = (p) => {
             if (!p) return 'SITE DIRETO';
@@ -603,64 +585,20 @@
             mostrarAviso("Excel baixado com sucesso!", true);
         };
 
-        const getSolteirasMarketingOrdenadas = () => {
-            return [...dadosSolteiras].sort((a, b) => {
-                const valA = parseVisitaUniversal(a.ultima_visita) || parseVisitaUniversal(a.data_cadastro) || 0;
-                const valB = parseVisitaUniversal(b.ultima_visita) || parseVisitaUniversal(b.data_cadastro) || 0;
-                return valB - valA;
-            });
-        };
-
-        const copiarTextoParaAreaTransferencia = (texto) => {
-            const temp = document.createElement('textarea');
-            temp.value = texto;
-            temp.setAttribute('readonly', '');
-            temp.style.position = 'fixed';
-            temp.style.left = '-9999px';
-            temp.style.top = '-9999px';
-            document.body.appendChild(temp);
-            temp.select();
-            document.execCommand('copy');
-            document.body.removeChild(temp);
-        };
-
-        const escaparHtmlMarketing = (valor) => {
-            return String(valor || '').replace(/[&<>'"]/g, (c) => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-            }[c]));
-        };
-
-        window.atualizarContadorMarketingSelecao = () => {
-            const contador = document.getElementById('contador-marketing-selecao');
-            if(!contador) return;
-            const checks = Array.from(document.querySelectorAll('.check-marketing-telefone'));
-            const selecionados = checks.filter(c => c.checked).length;
-            contador.innerText = `${selecionados} selecionado${selecionados === 1 ? '' : 's'} de ${checks.length}`;
-        };
-
-        window.selecionarTodosMarketing = (marcar = true) => {
-            const checks = Array.from(document.querySelectorAll('.check-marketing-telefone'));
-            if(checks.length === 0) return mostrarAviso("Gere a lista primeiro!");
-            checks.forEach(c => c.checked = marcar);
-            window.atualizarContadorMarketingSelecao();
-        };
-
         window.gerarListaMarketing = () => {
             const btn = document.getElementById('btn-gerar-lista');
             const textarea = document.getElementById('output-marketing');
-            const boxSelecao = document.getElementById('box-marketing-selecao');
-            const listaSelecao = document.getElementById('lista-marketing-selecao');
-            listaMarketingAtual = [];
-            if(listaSelecao) listaSelecao.innerHTML = '';
-            if(boxSelecao) boxSelecao.classList.add('hidden');
-            window.atualizarContadorMarketingSelecao();
             
             if (dadosSolteiras.length === 0) {
                 textarea.value = "Nenhuma solteira encontrada na base.";
                 return;
             }
             
-            const ordenadas = getSolteirasMarketingOrdenadas();
+            const ordenadas = [...dadosSolteiras].sort((a, b) => {
+                const valA = parseVisitaUniversal(a.ultima_visita) || parseVisitaUniversal(a.data_cadastro) || 0;
+                const valB = parseVisitaUniversal(b.ultima_visita) || parseVisitaUniversal(b.data_cadastro) || 0;
+                return valB - valA;
+            });
 
             let txt = "";
             ordenadas.forEach(c => {
@@ -674,55 +612,19 @@
                                   String(dataObj.getMonth() + 1).padStart(2, '0') + '/' + 
                                   dataObj.getFullYear();
                     }
-                    const nome = c.nome || 'SEM NOME';
-                    txt += `${strData} - ${tel} - ${nome}\n`;
-                    listaMarketingAtual.push({ tel, nome, strData });
+                    txt += `${strData} - ${tel} - ${c.nome}\n`; 
                 }
             });
             
             textarea.value = txt.trim();
-
-            if (listaMarketingAtual.length > 0 && listaSelecao && boxSelecao) {
-                listaSelecao.innerHTML = listaMarketingAtual.map((item, index) => `
-                    <label class="flex items-center gap-3 bg-[#0a0a0f] border border-zinc-800 hover:border-pink-500 rounded-xl p-3 cursor-pointer transition-all">
-                        <input type="checkbox" class="check-marketing-telefone w-4 h-4 accent-pink-600" data-tel="${item.tel}" onchange="atualizarContadorMarketingSelecao()">
-                        <div class="flex-grow min-w-0">
-                            <p class="text-[9px] font-black uppercase text-zinc-300 truncate">${escaparHtmlMarketing(item.nome)}</p>
-                            <p class="text-[8px] font-bold uppercase text-zinc-500 mt-0.5">${item.strData} • ${item.tel}</p>
-                        </div>
-                    </label>
-                `).join('');
-                boxSelecao.classList.remove('hidden');
-                window.atualizarContadorMarketingSelecao();
-            }
-
-            mostrarAviso("Lista gerada com sucesso! Selecione os números para disparo.", true);
+            mostrarAviso("Lista gerada com sucesso!", true);
         };
 
         window.copiarMarketing = () => {
             const t = document.getElementById('output-marketing');
             if(!t.value || t.value.includes("Clique no botão")) return mostrarAviso("Gere a lista primeiro!");
             t.select(); document.execCommand('copy');
-            mostrarAviso("Lista completa copiada!", true);
-        };
-
-        window.copiarMarketingTelefones = () => {
-            const selecionados = Array.from(document.querySelectorAll('.check-marketing-telefone:checked'));
-            if (selecionados.length === 0) return mostrarAviso("Selecione pelo menos um contato para copiar.");
-
-            const usados = new Set();
-            const telefones = selecionados
-                .map(c => String(c.dataset.tel || '').replace(/\D/g, ''))
-                .filter(tel => {
-                    if (tel.length < 8 || usados.has(tel)) return false;
-                    usados.add(tel);
-                    return true;
-                });
-
-            if (telefones.length === 0) return mostrarAviso("Nenhum telefone válido selecionado.");
-
-            copiarTextoParaAreaTransferencia(telefones.join('\n'));
-            mostrarAviso(`${telefones.length} telefone${telefones.length === 1 ? '' : 's'} selecionado${telefones.length === 1 ? '' : 's'} copiado${telefones.length === 1 ? '' : 's'} para disparo!`, true);
+            mostrarAviso("Lista copiada! Pronta para colar no WhatsApp.", true);
         };
 
         window.duplicarEvento = (id, origem = 'modelos') => {
