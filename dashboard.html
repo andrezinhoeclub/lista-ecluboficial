@@ -3,1139 +3,569 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB MASTER | Command Center</title>
+    <title>E-CLUB | Portaria Solteiras</title>
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e4e4e7; overflow-x: hidden; }
-        .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; }
-        .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
-        .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
-        .btn-menu.active-danger { background: #ef4444; color: #fff; font-weight: 800; border-color: #f87171; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
-        .btn-menu.active-success { background: #10b981; color: #000; font-weight: 800; border-color: #34d399; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
-        .btn-menu.active-pink { background: #db2777; color: #fff; font-weight: 800; border-color: #f472b6; box-shadow: 0 0 20px rgba(219, 39, 119, 0.4); }
-        .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
-        .scroll-x::-webkit-scrollbar { height: 6px; }
-        .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
-        .event-bubble { flex: 0 0 auto; width: 360px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
-        input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; cursor: pointer; }
-        input:focus, select:focus, textarea:focus { border-color: #eab308 !important; }
-        .mini-capa { width: 100%; height: 100px; object-fit: cover; border-bottom: 1px solid #1a1a1c; border-radius: 1.5rem; opacity: 0.8; margin-bottom: 1rem; }
-        .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #22d3ee; cursor: pointer; }
-        input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; padding: 5px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f4f4f5; color: #18181b; overflow-x: hidden; }
+        
+        /* NOVO VISUAL DE ALTO CONTRASTE */
+        .glass-card { background: #ffffff; border: 1px solid #d4d4d8; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        .input-field { background: #ffffff !important; border: 2px solid #a1a1aa !important; color: #000 !important; font-weight: 900; }
+        .input-field:focus { border-color: #eab308 !important; outline: none; box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.3); }
+        .input-field::placeholder { color: #71717a; font-weight: bold; }
+        
+        .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; border: 2px solid #ca8a04; }
+        .btn-gold:hover { background: #facc15; }
+        
+        .card-aniversariante {
+            background: linear-gradient(90deg, #fff1a8 0%, #fff8d6 50%, #f3e8ff 100%) !important;
+            border-left: 12px solid #eab308 !important;
+            box-shadow: inset 0 0 0 2px rgba(234, 179, 8, 0.45), 0 8px 24px rgba(234, 179, 8, 0.25) !important;
+        }
+
+        .item-cliente { border-bottom: 1px solid #e4e4e7; transition: 0.3s; background: #ffffff; }
+        .item-cliente:hover { background: #f4f4f5; }
+        .cliente-bloqueada { background: #fef2f2 !important; border-left: 6px solid #ef4444 !important; }
+        .cliente-checkin-ok { background: #f0fdf4 !important; }
+        
+        /* TELA DE LOGIN MANTIDA ESCURA PARA ESTILO */
+        .login-bg { background: radial-gradient(circle at center, #27272a 0%, #09090b 100%); }
+        .login-card { background: #18181b; border: 1px solid #3f3f46; }
+        .login-input { background: #000 !important; border: 1px solid #52525b !important; color: #fff !important; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #a1a1aa; border-radius: 10px; }
     </style>
 </head>
-<body class="p-4 md:p-8 relative">
+<body class="p-4 md:p-8 flex flex-col min-h-screen relative">
 
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
+    <div id="status-conexao" class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.5)] hidden z-[9999] animate-pulse">
+        🔴 Sem Internet (Operando no Cache Local)
+    </div>
+
+    <div class="fixed inset-0 z-[99999] bg-[#050505] flex-col items-center justify-center p-8 text-center flex md:hidden">
+        <div class="login-card p-8 rounded-[2.5rem] border border-red-500/30 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.15)]">
+            <span class="text-6xl mb-6">🖥️</span>
+            <h1 class="text-xl font-black uppercase italic text-red-500 mb-3 tracking-tighter">Acesso Restrito</h1>
+            <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">O sistema de Portaria deve ser acessado <br><span class="text-white">exclusivamente por um computador</span>.</p>
+        </div>
+    </div>
+
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
 
-    <div class="max-w-7xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+    <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
+        <div class="w-full max-w-sm p-10 login-card rounded-[3rem] text-center border-yellow-500/30 shadow-2xl">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
+            <h1 class="text-2xl font-black mb-8 uppercase italic text-white">SOLTEIRAS <span class="text-yellow-500">ACCESS</span></h1>
+            <div class="space-y-4">
+                <input type="text" id="inputNomeUsuario" placeholder="USUÁRIO" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs login-input">
+                <div id="areaSenha" class="hidden">
+                    <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50 login-input focus:border-yellow-500">
+                </div>
+                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ACESSAR SISTEMA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="telaBloqueio" class="hidden fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex-col items-center justify-center p-8 text-center flex">
+        <div class="login-card p-8 rounded-[2.5rem] border border-red-500/50 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.3)]">
+            <span class="text-6xl mb-6 animate-pulse">🚨</span>
+            <h1 class="text-2xl font-black uppercase italic text-red-500 mb-3 tracking-tighter">CONEXÃO ENCERRADA</h1>
+            <p class="text-xs text-zinc-300 font-bold uppercase tracking-widest leading-relaxed">Sua conta foi acessada de outro dispositivo.</p>
+            <button onclick="location.reload()" class="mt-8 px-8 py-4 bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase rounded-2xl transition-colors">Voltar ao Login</button>
+        </div>
+    </div>
+
+    <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto flex-grow w-full">
+        <header class="flex justify-between items-center mb-8 gap-6 bg-white p-4 rounded-3xl border border-zinc-300 shadow-sm">
             <div class="flex items-center gap-4">
-                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 w-auto">
+                <div class="bg-black rounded-xl p-2"><img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-10"></div>
                 <div>
-                    <h1 class="text-2xl font-black uppercase italic tracking-tighter text-yellow-500 leading-none">Command Center</h1>
-                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 italic">E-CLUB MANAGEMENT</p>
+                    <h1 class="text-2xl font-black uppercase italic text-zinc-900 leading-none">VIP Single Ladies</h1>
+                    <p id="labelOperador" class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1">---</p>
                 </div>
             </div>
-            <nav class="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 overflow-x-auto">
-                <button onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu active px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Relatórios</button>
-                <button onclick="trocarAba('aba-auditoria', this, 'success')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-emerald-400">Auditoria</button>
-                <button onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Eventos</button>
-                <button onclick="trocarAba('aba-solteiras', this, 'pink')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-pink-500">Carona</button>
-                <button onclick="trocarAba('aba-equipe', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Equipe</button>
-                <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-cyan-400">Listas/Cams</button>
-                <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
-            </nav>
+            <div class="flex items-center gap-4">
+                <div class="bg-zinc-100 border border-zinc-300 p-3 rounded-2xl text-center min-w-[120px]">
+                    <p class="text-[9px] font-black text-zinc-600 uppercase">Check-ins Turno</p>
+                    <p id="contagemEvento" class="text-2xl font-black text-green-600 leading-none mt-1">0</p>
+                </div>
+                <button onclick="location.reload()" class="bg-red-100 border border-red-300 text-red-600 px-4 py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-red-200 transition-colors">Sair</button>
+            </div>
         </header>
 
-        <section id="aba-relatorios" class="space-y-8">
-            <div class="glass-card p-8">
-                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance e Financeiro</h2>
-                <div id="container-bolhas" class="scroll-x"></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="glass-card p-8 border-t-4 border-t-yellow-500 text-center">
-                    <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest">🏆 Pódio de Reservas</h2>
-                    <div id="lista-ranking-reservas" class="space-y-4 text-left"></div>
-                </div>
-                <div class="glass-card p-8 border-t-4 border-t-green-500 text-center">
-                    <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest">🔥 Pódio de Check-ins</h2>
-                    <div id="lista-ranking-checkins" class="space-y-4 text-left"></div>
-                </div>
-                <div class="glass-card p-8 border-t-4 border-t-blue-600 flex flex-col">
-                    <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Exportar Dados</h2>
-                    <select id="filtro-promoter-excel" class="w-full bg-[#0a0a0f] border border-zinc-800 p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white outline-none"></select>
-                    <div class="flex flex-col gap-2 mb-4">
-                        <button onclick="gerarRelatorioGerencial()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">Resumo Gerencial</button>
-                        <button onclick="gerarApenasCheckins()" class="w-full bg-green-600/20 text-green-400 border border-green-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-green-600 hover:text-white transition-all">Extrair Check-ins Pagantes</button>
-                        <button onclick="gerarApenasSolteiras()" class="w-full bg-pink-600/20 text-pink-400 border border-pink-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-pink-600 hover:text-white transition-all">Extrair Solteiras Presentes</button>
-                    </div>
-                    <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800" placeholder="Selecione a opção desejada..."></textarea>
-                    <button onclick="copiarOutput()" class="w-full bg-blue-600 text-[11px] text-white font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">📋 Copiar p/ WhatsApp</button>
-                </div>
-            </div>
-        </section>
-
-        <section id="aba-auditoria" class="hidden space-y-8">
-            <div class="glass-card p-8 border-l-4 border-l-emerald-500">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-emerald-500 font-black uppercase italic text-xl tracking-tighter">Conferência & Auditoria Live</h2>
-                    <span class="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-emerald-500 uppercase animate-pulse">● Tempo Real</span>
-                </div>
-                
-                <div class="flex flex-col md:flex-row gap-4 mb-8">
-                    <div class="relative flex-grow">
-                        <span class="absolute left-5 top-5 text-lg text-zinc-500">🔍</span>
-                        <input type="text" id="busca-auditoria" oninput="renderAuditoria()" placeholder="BUSQUE POR NOME, EVENTO, PROMOTER, DATA OU OPERADOR..." class="w-full p-5 pl-14 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-sm font-bold uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg">
-                    </div>
-                    <select id="filtro-status-auditoria" onchange="renderAuditoria()" class="p-5 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-[11px] font-black uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg min-w-[180px]">
-                        <option value="todos">Todos os Status</option>
-                        <option value="entrou">✓ Fizeram Check-in</option>
-                        <option value="aguardando">○ Aguardando Entrada</option>
-                        <option value="pix_entrou">🟢 PIX - Fizeram Check-in</option>
-                        <option value="pix_aguardando">🟡 PIX - Aguardando (Pago)</option>
-                        <option value="pix_cancelado">🔴 PIX - Pendente/Cancelado</option>
-                    </select>
-                    <button onclick="exportarAuditoriaExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[10px] px-8 py-5 rounded-2xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] whitespace-nowrap flex items-center justify-center gap-2">
-                        <span class="text-sm">📥</span> Exportar Excel
-                    </button>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-zinc-800/50">
-                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Data/Hora (Reserva)</th>
-                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Cliente</th>
-                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Evento</th>
-                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Promoter / Origem</th>
-                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Tipo</th>
-                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Status / Check-in</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabela-auditoria-body" class="divide-y divide-zinc-800">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <section id="aba-solteiras" class="hidden space-y-8">
-            <div class="glass-card p-8 border-l-4 border-l-pink-500 flex flex-col md:flex-row justify-between items-center gap-6">
-                <div>
-                    <h2 class="text-pink-500 font-black uppercase italic text-2xl tracking-tighter">Gestão de Caronas e Base VIP</h2>
-                    <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Base imune à limpeza de eventos (Retenção de 90 dias)</p>
-                </div>
-                <div class="bg-[#0a0a0f] border border-pink-500/30 px-10 py-5 rounded-3xl text-center shadow-[0_0_30px_rgba(219,39,119,0.15)] min-w-[200px]">
-                    <p class="text-[10px] font-black text-pink-500 uppercase tracking-widest mb-1">Cadastradas no Sistema</p>
-                    <p id="total-solteiras-badge" class="text-4xl font-black text-white leading-none">0</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="flex flex-col gap-8">
-                    <div class="glass-card p-8 border-t-4 border-t-purple-500 flex flex-col h-full">
-                        <h2 class="text-purple-500 font-black uppercase italic text-xl tracking-tighter mb-2">🚗 Configurar Caronas VIP</h2>
-                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Defina as regras para a página das solteiras.</p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <aside class="lg:col-span-1">
+                <div class="glass-card p-6 rounded-[2rem] sticky top-8">
+                    <h2 id="tituloForm" class="text-zinc-900 font-black uppercase italic text-sm mb-6 border-b border-zinc-200 pb-2">📋 Cadastro / Entrada</h2>
+                    <form id="formSolteira" class="space-y-4">
+                        <input type="hidden" id="editId">
+                        <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field text-sm" required>
+                        <input type="tel" id="tel" placeholder="WHATSAPP" class="w-full p-4 rounded-xl input-field text-sm" oninput="maskTel(this)" onblur="validarDuplicidade('tel')" required>
+                        <input type="text" id="cpf" placeholder="CPF COMPLETO" class="w-full p-4 rounded-xl input-field text-sm" oninput="maskCPF(this)" onblur="validarDuplicidade('cpf')" required>
                         
-                        <div class="space-y-6 flex-grow">
-                            <div>
-                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">⏰ Horário Limite (Dia do Evento)</label>
-                                <input type="time" id="config_hora_carona" class="w-full p-4 rounded-2xl font-bold text-xs" required>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">🗺️ Bairros Atendidos (Separados por vírgula)</label>
-                                <textarea id="config_bairros_carona" placeholder="Ex: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-xs h-32 resize-none uppercase"></textarea>
-                            </div>
+                        <div>
+                            <label class="text-[10px] font-black text-zinc-500 uppercase ml-2">Data de Nascimento</label>
+                            <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field text-sm uppercase mt-1" onchange="updateIdade(this.value)" required>
                         </div>
-                        <button onclick="salvarConfigCaronas()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg mt-6">💾 Salvar Regras de Logística</button>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-8">
-                    <div class="glass-card p-8 border-t-4 border-t-blue-500 flex flex-col">
-                        <h2 class="text-blue-500 font-black uppercase italic text-xl tracking-tighter mb-2">🗺️ Gerador de Rotas</h2>
-                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Exporte a lista ordenada por bairros para o motorista.</p>
                         
-                        <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full bg-[#0a0a0f] border border-zinc-800 p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none">
-                            <option value="">Selecione o Evento...</option>
-                        </select>
-                        
-                        <textarea id="output-rotas-carona" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-40 bg-[#0a0a0f] border-zinc-800 border resize-none" placeholder="Aguardando seleção do evento..."></textarea>
-                        
-                        <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para o Motorista</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="glass-card p-8 border-t-4 border-t-pink-500 flex flex-col mt-4">
-                <h2 class="text-pink-500 font-black uppercase italic text-xl tracking-tighter mb-2">📲 Base de Clientes (Transmissão)</h2>
-                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Gere a lista de todas as solteiras cadastradas, ordenadas da visita mais recente para a mais antiga.</p>
-                
-                <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="w-full bg-pink-900/40 hover:bg-pink-800/60 border border-pink-500/50 text-pink-300 font-black uppercase text-[10px] py-4 rounded-xl transition-colors mb-4">🔄 Carregar Cadastradas</button>
-                
-                <textarea id="output-marketing" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-48 bg-[#0a0a0f] border-zinc-800 border resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
-                
-                <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para WhatsApp</button>
-            </div>
-        </section>
-
-        <section id="aba-festas" class="hidden space-y-8">
-            
-            <div class="glass-card p-8 border-l-4 border-l-fuchsia-500 mb-8">
-                <h2 class="text-fuchsia-500 font-black uppercase italic text-xl mb-4 tracking-tighter">Meus Modelos de Festa</h2>
-                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Salve um evento já configurado como modelo. O modelo copia valores, camarotes, benefícios e demais regras, mas não copia nome do evento, data, horário nem arte.</p>
-                <div id="grid-modelos" class="flex gap-4 overflow-x-auto pb-4 scroll-x">
-                    <p class="text-zinc-500 text-xs italic uppercase font-bold">Carregando modelos...</p>
-                </div>
-            </div>
-
-            <div class="glass-card p-8 border-l-4 border-l-blue-500 mb-8" id="formEventoContainer">
-                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento & Camarotes</h2>
-                <form id="formEvento" class="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <input type="hidden" id="edit_evento_id">
-                    <input type="hidden" id="url_imagem_atual">
-                    
-                    <input type="text" id="nome_festa" placeholder="NOME DO EVENTO" class="p-4 rounded-2xl font-bold md:col-span-3" required>
-                    
-                    <div class="md:col-span-2 flex flex-col gap-1">
-                        <label class="text-[8px] font-black text-zinc-500 ml-2 uppercase">Data da Festa</label>
-                        <input type="date" id="data_festa" onclick="this.showPicker()" class="p-4 rounded-2xl font-bold uppercase text-xs w-full">
-                    </div>
-
-                    <div class="md:col-span-1 flex flex-col gap-1">
-                        <label class="text-[8px] font-black text-blue-400 ml-2 uppercase">Horário</label>
-                        <input type="time" id="hora_inicio" onclick="this.showPicker()" class="p-4 rounded-2xl font-bold uppercase text-xs w-full">
-                    </div>
-
-                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" id="valor_casal" placeholder="CASAL PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
-                        <input type="text" id="valor_solteiro" placeholder="SOLTEIRO PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
-                    </div>
-
-                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" id="desc_casal" placeholder="CASAL ANIV. R$" class="p-4 rounded-2xl font-bold text-cyan-400 border-cyan-900/30 text-[10px]">
-                        <input type="text" id="desc_solteiro" placeholder="SOLTEIRO ANIV. R$" class="p-4 rounded-2xl font-bold text-cyan-400 border-cyan-900/30 text-[10px]">
-                    </div>
-
-                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-green-500/5 p-4 rounded-3xl border border-green-500/10 mb-4">
-                        <div class="md:col-span-3 text-[10px] font-black text-green-500 uppercase tracking-widest ml-2 mb-2">Valores Pix Antecipado (Pista)</div>
-                        <input type="text" id="ant_casal" placeholder="CASAL SECO PIX R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30 text-[10px]">
-                        <input type="text" id="ant_casal_cons" placeholder="CASAL CONSUMA PIX R$" class="p-4 rounded-2xl font-bold text-fuchsia-400 border-fuchsia-900/50 text-[10px]">
-                        <input type="text" id="ant_solteiro" placeholder="SOLTEIRO PIX R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30 text-[10px]">
-                    </div>
-
-                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-yellow-500/5 p-4 rounded-3xl border border-yellow-500/10 mb-4">
-                        <div class="md:col-span-2 text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 mb-2">Valores Fidelidade (Desconto Sábado)</div>
-                        <input type="text" id="valor_recorrente_casal" placeholder="CASAL FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
-                        <input type="text" id="valor_recorrente_solteiro" placeholder="SOLTEIRO FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
-                    </div>
-
-                    <div class="md:col-span-6 bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5 mb-4">
-                        <label class="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-4 block ml-2">🖼️ Capa do Evento (Upload Seguro)</label>
-                        <input type="file" id="upload_capa" accept="image/*" class="w-full text-xs text-zinc-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-yellow-600 file:text-black hover:file:bg-yellow-500 cursor-pointer">
-                    </div>
-
-                    <div class="md:col-span-6 bg-cyan-900/10 p-6 rounded-[2rem] border border-cyan-500/20 mb-4">
-                        <div class="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4 ml-2">💎 Configuração de Camarotes (Selecione para Ativar)</div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="grid-camarotes-inputs"></div>
-                    </div>
-
-                    <button type="submit" id="btnSalvarEvento" class="md:col-span-6 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
-                </form>
-            </div>
-            
-            <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </section>
-
-        <section id="aba-equipe" class="hidden space-y-12">
-            <div class="glass-card p-8 border-l-4 border-l-yellow-500">
-                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Promoters</h2>
-                <form id="formPromoter" class="flex flex-col md:flex-row gap-3 mb-10">
-                    <input type="text" id="nome_promoter" placeholder="NOME DO PROMOTER" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
-                    <select id="tipo_promoter" class="p-4 rounded-2xl font-bold text-xs">
-                        <option value="padrao">LISTA PADRÃO</option>
-                        <option value="aniversario">LISTA ANIVERSÁRIO</option>
-                        <option value="visualizar">APENAS VISUALIZAR</option>
-                    </select>
-                    <button type="submit" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black transition-all hover:bg-yellow-500">Adicionar</button>
-                </form>
-                <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </div>
-            <div class="glass-card p-8 border-l-4 border-l-green-500">
-                <h2 class="text-green-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Portaria</h2>
-                <form id="formPortaria" class="flex flex-col md:flex-row gap-3 mb-10">
-                    <input type="text" id="login_portaria" placeholder="NOME DO OPERADOR" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
-                    <button type="submit" class="bg-green-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-green-500 transition-all">Cadastrar</button>
-                </form>
-                <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-            </div>
-        </section>
-
-        <section id="aba-aniversarios" class="hidden space-y-8">
-            <div class="glass-card p-8 border-l-4 border-l-cyan-500">
-                <h2 class="text-cyan-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Listas de Aniversariantes</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Data</th><th class="pb-4">Promoter</th><th class="pb-4">Aniversariante</th><th class="pb-4 text-center">Reservas</th><th class="pb-4 text-right pr-4">Ações</th></tr></thead>
-                        <tbody id="tabela-aniversarios-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Gestão de Camarotes (Ativos/Ocupados)</h2>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Evento</th><th class="pb-4">Camarote</th><th class="pb-4">Cliente / Info</th><th class="pb-4 text-center">Status</th><th class="pb-4 text-right pr-4">Ação</th></tr></thead>
-                        <tbody id="tabela-camarotes-body"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <section id="aba-config" class="hidden space-y-8">
-            <div class="glass-card p-8 border-l-4 border-l-red-500">
-                <h2 class="text-red-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurações</h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                    <div class="bg-blue-500/10 border border-blue-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
-                        <h3 class="text-blue-400 font-black uppercase tracking-widest text-[11px] mb-2">Modo Teste</h3>
-                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto">🔓 LIBERAR TESTE</button>
-                    </div>
-                    <div class="bg-red-500/5 border border-red-500/20 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
-                        <h3 class="text-red-400 font-black uppercase tracking-widest text-[11px] mb-2">Limpar Clientes</h3>
-                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto" title="Não apaga as Solteiras cadastradas.">Limpar Base</button>
-                    </div>
-                    <div class="bg-red-500/10 border border-red-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
-                        <h3 class="text-red-500 font-black uppercase tracking-widest text-[11px] mb-2">Zerar Sistema</h3>
-                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto" title="Não apaga as Solteiras cadastradas nem os Modelos.">⚠️ ZERAR TUDO</button>
-                    </div>
-                    <div class="bg-yellow-500/10 border border-yellow-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
-                        <h3 class="text-yellow-500 font-black uppercase tracking-widest text-[11px] mb-4">Taxa de Serviço PIX</h3>
-                        <div class="flex gap-2 mb-4">
-                            <select id="tipo_taxa" class="flex-1 bg-[#0a0a0f] border border-yellow-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
-                                <option value="desativado">Sem Taxa</option>
-                                <option value="fixo">Fixo (R$)</option>
-                                <option value="porcentagem">Porcentagem (%)</option>
-                            </select>
-                            <input type="number" id="valor_taxa" placeholder="VALOR/PORC." class="flex-1 bg-[#0a0a0f] border border-yellow-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
+                        <div class="bg-zinc-100 p-4 rounded-xl border border-zinc-300 flex justify-between items-center text-zinc-900">
+                            <p class="text-[10px] font-black text-zinc-600 uppercase">Idade Calculada</p>
+                            <p id="idadeDisplay" class="text-xl font-black text-zinc-900">--</p>
                         </div>
-                        <button onclick="salvarTaxaPix()" class="w-full bg-yellow-600 text-black text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-yellow-500 transition-all">Salvar Taxa</button>
-                    </div>
-                    
-                    <div class="bg-indigo-500/10 border border-indigo-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
-                        <h3 class="text-indigo-400 font-black uppercase tracking-widest text-[11px] mb-4">Custo Fixo do Sistema</h3>
-                        <div class="flex gap-2 mb-4">
-                            <span class="bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-zinc-500">R$</span>
-                            <input type="number" id="custo_sistema" placeholder="VALOR MENSALIDADE" class="flex-1 bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
-                        </div>
-                        <button onclick="salvarCustoSistema()" class="w-full bg-indigo-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-indigo-500 transition-all">Salvar Custo</button>
-                    </div>
+                        
+                        <textarea id="obs" placeholder="OBSERVAÇÕES (OPCIONAL)..." class="w-full p-4 rounded-xl input-field text-xs uppercase h-20 resize-none"></textarea>
+                        
+                        <button type="submit" id="btnSalvar" class="w-full btn-gold py-5 rounded-xl uppercase text-sm shadow-md mt-2 active:scale-95 transition-all">Confirmar e Liberar</button>
+                        <button type="button" id="btnCancelarEdicao" onclick="limparFormulario()" class="hidden w-full bg-zinc-200 text-zinc-700 hover:bg-zinc-300 py-3 rounded-xl uppercase text-[10px] font-black mt-2 transition-colors border border-zinc-300">Cancelar Edição</button>
+                    </form>
                 </div>
-            </div>
-        </section>
+            </aside>
+
+            <main class="lg:col-span-2 space-y-6">
+                <div class="relative w-full">
+                    <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." class="w-full p-5 rounded-2xl input-field text-base font-black uppercase pl-14 shadow-md" oninput="filtrarClientes()">
+                    <span class="absolute left-5 top-5 text-xl text-zinc-500">🔍</span>
+                </div>
+                <div class="glass-card rounded-[2rem] overflow-hidden min-h-[400px]">
+                    <div id="listaSolteiras" class="flex flex-col"></div>
+                </div>
+            </main>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, serverTimestamp, getDoc, getDocs, query, where, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
+        const colRef = collection(db, "solteiras");
         
-        let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
-        let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
+        // HABILITAR PROTEÇÃO OFFLINE (CACHE LOCAL)
+        enableIndexedDbPersistence(db).catch((err) => {
+            console.warn("Modo offline não suportado ou múltiplas abas abertas.", err);
+        });
 
-        const getPromoterName = (p) => {
-            if (!p) return 'SITE DIRETO';
-            const clean = String(p).toUpperCase().trim();
-            if (clean === 'UNDEFINED' || clean === 'NULL' || clean === '') return 'SITE DIRETO';
-            return clean;
-        };
+        // DETECTOR DE INTERNET
+        window.addEventListener('offline', () => { document.getElementById('status-conexao').classList.remove('hidden'); });
+        window.addEventListener('online', () => { document.getElementById('status-conexao').classList.add('hidden'); });
+        
+        let clientesCache = []; 
+        let operadorLogado = ""; 
+        let stepLogin = 0; 
+        let usuarioData = null; 
+        let eventoHojeCache = null;
+        
+        let sessionTokenAtual = null;
+        let listenerSessao = null;
 
-        const isEventoModeloAntigo = (ev) => {
-            const nome = String(ev?.nome || '').toUpperCase();
-            return ev?.is_modelo === true || nome.includes('MODELO');
-        };
-
-        const CAMPOS_IGNORADOS_MODELO = new Set([
-            'id', 'nome', 'data', 'hora', 'imagem', 'ativo',
-            'modelo_nome', 'origem_evento_id', 'criado_em', 'atualizado_em', 'is_modelo'
-        ]);
-
-        const montarDadosModelo = (ev) => {
-            const modelo = {};
-            Object.keys(ev || {}).forEach(campo => {
-                if (!CAMPOS_IGNORADOS_MODELO.has(campo)) modelo[campo] = ev[campo];
-            });
-            modelo.origem_evento_id = ev.id || '';
-            modelo.criado_em = new Date().toISOString();
-            modelo.atualizado_em = new Date().toISOString();
-            return modelo;
-        };
-
-        const parseVisita = (val) => {
-            if (!val) return null;
-            if (typeof val.toDate === 'function') return val.toDate();
-            if (typeof val === 'string') {
-                if (val.includes('/')) {
-                    const p = val.split(/[/\s:]+/);
-                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]);
-                }
-                return new Date(val);
+        function normalizarDataNascimento(d) {
+            if (!d) return null;
+            if (!isNaN(d) && Number(d) > 10000) {
+                const excelDate = Number(d);
+                const dateObj = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+                const dia = String(dateObj.getUTCDate()).padStart(2, '0');
+                const mes = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+                const ano = dateObj.getUTCFullYear();
+                return { raw: `${ano}-${mes}-${dia}`, display: `${dia}/${mes}` };
             }
-            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
+            const s = String(d).trim();
+            if (s.includes('/')) {
+                const p = s.split('/');
+                if (p.length === 3) return { raw: `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`, display: `${p[0].padStart(2, '0')}/${p[1].padStart(2, '0')}` };
+            }
+            if (s.includes('-')) {
+                const p = s.split('-');
+                if (p.length >= 3) return { raw: s.substring(0, 10), display: `${p[2].padStart(2, '0')}/${p[1].padStart(2, '0')}` };
+            }
             return null;
-        };
+        }
 
-        const parseVisitaUniversal = (val) => {
-            if (!val) return 0;
-            if (typeof val.toDate === 'function') return val.toDate().getTime();
-            if (typeof val === 'string') {
-                const d = new Date(val);
-                if (!isNaN(d)) return d.getTime();
-                if (val.includes('/')) {
-                    const p = val.split(/[/\s:]+/);
-                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]).getTime();
-                }
-            }
-            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000)).getTime();
-            return 0;
-        };
+        function checkAniversarioSemana(dataNorm) {
+            if (!dataNorm || !dataNorm.raw) return false;
+            const partes = dataNorm.raw.split('-'); 
+            if (partes.length < 3) return false;
 
-        const getSolteirasParaEvento = (ev) => {
-            if (!ev || !ev.data) return [];
-            const partesData = ev.data.split('-');
-            if(partesData.length < 3) return [];
-            const inicioEvento = new Date(partesData[0], partesData[1] - 1, partesData[2], 12, 0, 0);
-            const fimEvento = new Date(inicioEvento);
-            fimEvento.setDate(fimEvento.getDate() + 1);
-            fimEvento.setHours(6, 0, 0, 0);
+            const hoje = new Date();
+            const inicioSemana = new Date(hoje);
+            inicioSemana.setDate(hoje.getDate() - hoje.getDay()); // Domingo
+            inicioSemana.setHours(0, 0, 0, 0);
 
-            const presPortaria = dadosSolteiras.filter(s => {
-                let d = parseVisita(s.ultima_visita);
-                return d && !isNaN(d) && d >= inicioEvento && d <= fimEvento;
+            const fimSemana = new Date(inicioSemana);
+            fimSemana.setDate(inicioSemana.getDate() + 6); // Sábado
+            fimSemana.setHours(23, 59, 59, 999);
+
+            const mes = parseInt(partes[1], 10);
+            const dia = parseInt(partes[2], 10);
+            const anosParaConferir = [hoje.getFullYear() - 1, hoje.getFullYear(), hoje.getFullYear() + 1];
+
+            return anosParaConferir.some(ano => {
+                const niver = new Date(ano, mes - 1, dia, 12, 0, 0);
+                return niver >= inicioSemana && niver <= fimSemana;
             });
-
-            const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
-            const presSite = dadosReservas.filter(r => {
-                if (!r.entrou) return false;
-                if (String(r.evento || '').trim().toUpperCase() !== evNomeLimpo) return false;
-                return String(r.tipo_entrada).toUpperCase().includes('SOLTEIRA');
-            });
-
-            const unicas = []; const map = new Map();
-            for (const c of [...presPortaria, ...presSite]) {
-                const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
-                if (!map.has(tel) && tel.length > 5) { map.set(tel, true); unicas.push(c); }
-            }
-            return unicas;
-        };
+        }
 
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
-            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
-            const icon = isSucesso ? '✅' : '⚠️';
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
-            document.getElementById('toast-icon').innerText = icon; document.getElementById('toast-msg').innerText = msg;
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.3)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.3)]';
+            const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : (msg.includes('PROIBIDA') || msg.includes('ENCERRADA') ? '🚨' : '⚠️'));
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20 ${bgClass} ${shadowClass}`;
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
             setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
             setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
-        window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
-
-        const gridCamarotes = document.getElementById('grid-camarotes-inputs');
-        for(let i=1; i<=8; i++) {
-            let nFil = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `Cam 0${i}`;
-            gridCamarotes.innerHTML += `<div class="bg-black/30 p-3 rounded-2xl border border-white/5 flex flex-col items-center gap-2"><label class="flex items-center gap-2 w-full cursor-pointer justify-center"><input type="checkbox" id="cam${i}_ativo" class="check-camarote"><span class="text-[10px] font-black uppercase text-zinc-400">${nFil}</span></label><input type="text" id="v_cam${i}" placeholder="Valor (R$)" class="w-full p-2 rounded-xl text-center text-xs font-bold bg-[#0c0c0e] border border-zinc-800 text-cyan-400 outline-none"><input type="text" id="obs_cam${i}" placeholder="Benefícios" class="w-full p-2 rounded-xl text-center text-[9px] font-bold bg-[#0c0c0e] border border-zinc-800 text-zinc-400 outline-none"></div>`;
-        }
-
-        window.trocarAba = (id, btn, type) => { 
-            document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
-            document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active', 'active-danger', 'active-success', 'active-pink')); 
-            document.getElementById(id).classList.remove('hidden'); 
-            if (type === 'danger') btn.classList.add('active-danger'); 
-            else if (type === 'success') btn.classList.add('active-success');
-            else if (type === 'pink') btn.classList.add('active-pink');
-            else btn.classList.add('active'); 
-        };
-
-        onSnapshot(collection(db, "configuracoes"), snap => {
-            const sys = snap.docs.find(d => d.id === "sistema");
-            if (sys) {
-                const data = sys.data() || {};
-                modoTesteAtivo = data.modo_teste === true;
-                const btn = document.getElementById('btnModoTeste');
-                if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
-                if (document.getElementById('tipo_taxa')) { document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado'; document.getElementById('valor_taxa').value = data.taxa_valor || ''; }
-                if (document.getElementById('config_hora_carona')) { document.getElementById('config_hora_carona').value = data.carona_hora_limite || '18:00'; document.getElementById('config_bairros_carona').value = data.carona_bairros || ''; }
-                
-                if (document.getElementById('custo_sistema')) { document.getElementById('custo_sistema').value = data.custo_sistema !== undefined ? data.custo_sistema : 125; }
-                custoSistemaGlobal = data.custo_sistema !== undefined ? parseFloat(data.custo_sistema) : 125.00;
-            }
-            dadosOperadores = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.id !== "sistema");
-            renderEquipe();
-        });
-
-        window.salvarTaxaPix = async () => {
-            const tipo = document.getElementById('tipo_taxa').value;
-            const valor = parseFloat(document.getElementById('valor_taxa').value) || 0;
-            try { await setDoc(doc(db, "configuracoes", "sistema"), { taxa_tipo: tipo, taxa_valor: valor }, { merge: true }); mostrarAviso("Taxa atualizada com sucesso!", true); } 
-            catch(e) { mostrarAviso("Erro ao salvar taxa."); }
-        };
-
-        window.salvarCustoSistema = async () => {
-            const valor = parseFloat(document.getElementById('custo_sistema').value) || 0;
-            try { await setDoc(doc(db, "configuracoes", "sistema"), { custo_sistema: valor }, { merge: true }); mostrarAviso("Custo do sistema salvo com sucesso!", true); } 
-            catch(e) { mostrarAviso("Erro ao salvar custo."); }
-        };
-
-        window.salvarConfigCaronas = async () => {
-            const h = document.getElementById('config_hora_carona').value;
-            const b = document.getElementById('config_bairros_carona').value.toUpperCase();
-            try { await setDoc(doc(db, "configuracoes", "sistema"), { carona_hora_limite: h, carona_bairros: b }, { merge: true }); mostrarAviso("Regras salvas!", true); } 
-            catch(e) { mostrarAviso("Erro ao salvar configurações."); }
-        };
-
-        window.gerarRelatorioCaronas = () => {
-            const eventoNome = document.getElementById('filtro-evento-carona').value;
-            const textarea = document.getElementById('output-rotas-carona');
-            if(!eventoNome) { textarea.value = "Aguardando seleção do evento..."; return; }
-            const passageiras = dadosReservas.filter(r => r.evento === eventoNome && r.carona === true);
-            if(passageiras.length === 0) { textarea.value = `Nenhuma solicitação de carona para ${eventoNome}.`; return; }
-            const grupos = {};
-            passageiras.forEach(p => { const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase(); if(!grupos[b]) grupos[b] = []; grupos[b].push(p); });
-            let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`; let cont = 1;
-            Object.keys(grupos).sort().forEach(bairro => {
-                texto += `🛑 BAIRRO: ${bairro}\n`;
-                grupos[bairro].forEach(p => { texto += `${cont}. ${p.nome} - ${p.tel || 'S/N'}\nEndereço: ${p.endereco || 'S/E'} - CEP: ${p.cep || '---'}\n`; cont++; });
-                texto += `\n`;
-            });
-            textarea.value = texto.trim();
-        };
-
-        window.copiarRotasCarona = () => { document.getElementById('output-rotas-carona').select(); document.execCommand('copy'); mostrarAviso("Rotas copiadas!", true); };
-
-        window.exportarAuditoriaExcel = () => {
-            const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
-            const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
-            
-            let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP').sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
-            
-            if (fStat === 'entrou') res = res.filter(r => r.entrou === true); 
-            else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true);
-            else if (fStat === 'pix_entrou') res = res.filter(r => r.metodo === 'pix_antecipado' && r.entrou === true);
-            else if (fStat === 'pix_aguardando') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && r.entrou !== true);
-            else if (fStat === 'pix_cancelado') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago !== true);
-            
-            if (termo.length > 1) {
-                const terms = termo.split(/\s+/);
-                res = res.filter(r => {
-                    const dF = isNaN(new Date(r.data_reserva)) ? '' : new Date(r.data_reserva).toLocaleDateString('pt-BR');
-                    const str = `${r.nome || ''} ${r.tel || ''} ${getPromoterName(r.promoter)} ${r.evento || ''} ${r.cpf || ''} ${dF} ${r.porteiro || ''}`.toUpperCase();
-                    return terms.every(t => str.includes(t));
-                });
-            }
-            
-            if (res.length === 0) {
-                mostrarAviso("Nenhum dado na tela para exportar.");
-                return;
-            }
-
-            let csvContent = "DATA RESERVA;CLIENTE;TELEFONE;EVENTO;PROMOTER;TIPO;STATUS;HORA CHECK-IN;OPERADOR\n";
-            
-            res.forEach(r => {
-                const dtRes = isNaN(new Date(r.data_reserva)) ? '---' : new Date(r.data_reserva).toLocaleDateString('pt-BR') + ' ' + new Date(r.data_reserva).toLocaleTimeString('pt-BR');
-                const cliente = (r.nome || '---').replace(/;/g, '');
-                const tel = (r.tel || '---').replace(/;/g, '');
-                const evento = (r.evento || '---').replace(/;/g, '');
-                const promoter = getPromoterName(r.promoter).replace(/;/g, '');
-                const tipo = (r.tipo_entrada || '---').replace(/;/g, '');
-                const status = r.entrou ? 'ENTROU' : 'AGUARDANDO';
-                let dtEntrada = '---';
-                let op = '---';
-                
-                if (r.entrou) {
-                    dtEntrada = r.data_entrada && !isNaN(new Date(r.data_entrada)) ? new Date(r.data_entrada).toLocaleDateString('pt-BR') + ' ' + new Date(r.data_entrada).toLocaleTimeString('pt-BR') : '---';
-                    op = (r.porteiro || 'Sistema').replace(/;/g, '');
-                }
-                
-                csvContent += `${dtRes};${cliente};${tel};${evento};${promoter};${tipo};${status};${dtEntrada};${op}\n`;
-            });
-
-            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            const url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", `Auditoria_E-Club_${fStat}_${new Date().getTime()}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            mostrarAviso("Excel baixado com sucesso!", true);
-        };
-
-        window.gerarListaMarketing = () => {
-            const btn = document.getElementById('btn-gerar-lista');
-            const textarea = document.getElementById('output-marketing');
-            
-            if (dadosSolteiras.length === 0) {
-                textarea.value = "Nenhuma solteira encontrada na base.";
-                return;
-            }
-            
-            const ordenadas = [...dadosSolteiras].sort((a, b) => {
-                const valA = parseVisitaUniversal(a.ultima_visita) || parseVisitaUniversal(a.data_cadastro) || 0;
-                const valB = parseVisitaUniversal(b.ultima_visita) || parseVisitaUniversal(b.data_cadastro) || 0;
-                return valB - valA;
-            });
-
-            let txt = "";
-            ordenadas.forEach(c => {
-                const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
-                if (tel.length >= 8) {
-                    let d = parseVisitaUniversal(c.ultima_visita) || parseVisitaUniversal(c.data_cadastro);
-                    let strData = 'Sem Data';
-                    if (d && !isNaN(d) && d > 0) {
-                        const dataObj = new Date(d);
-                        strData = String(dataObj.getDate()).padStart(2, '0') + '/' + 
-                                  String(dataObj.getMonth() + 1).padStart(2, '0') + '/' + 
-                                  dataObj.getFullYear();
-                    }
-                    txt += `${strData} - ${tel} - ${c.nome}\n`; 
-                }
-            });
-            
-            textarea.value = txt.trim();
-            mostrarAviso("Lista gerada com sucesso!", true);
-        };
-
-        window.copiarMarketing = () => {
-            const t = document.getElementById('output-marketing');
-            if(!t.value || t.value.includes("Clique no botão")) return mostrarAviso("Gere a lista primeiro!");
-            t.select(); document.execCommand('copy');
-            mostrarAviso("Lista copiada! Pronta para colar no WhatsApp.", true);
-        };
-
-        window.duplicarEvento = (id, origem = 'modelos') => {
-            const ev = origem === 'eventos' ? dadosEventos.find(e => e.id === id) : dadosModelosEventos.find(e => e.id === id);
-            if (!ev) return mostrarAviso("Modelo não encontrado.");
-
-            document.getElementById('edit_evento_id').value = "";
-            document.getElementById('nome_festa').value = "";
-            document.getElementById('data_festa').value = "";
-            document.getElementById('hora_inicio').value = "";
-            document.getElementById('url_imagem_atual').value = "";
-            if(document.getElementById('upload_capa')) document.getElementById('upload_capa').value = "";
-
-            document.getElementById('valor_casal').value = ev.valor_casal || "";
-            document.getElementById('valor_solteiro').value = ev.valor_solteiro || "";
-            document.getElementById('desc_casal').value = ev.desc_casal || "";
-            document.getElementById('desc_solteiro').value = ev.desc_solteiro || "";
-            document.getElementById('ant_casal').value = ev.ant_casal || "";
-            document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || "";
-            document.getElementById('ant_solteiro').value = ev.ant_solteiro || "";
-            document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || "";
-            document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || "";
-            if(document.getElementById('diferenciais_noite')) document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || "";
-
-            if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
-
-            for(let i=1; i<=8; i++) {
-                document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false;
-                document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || "";
-                document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || "";
-            }
-
-            mostrarAviso("Modelo carregado! Preencha NOME, DATA, HORÁRIO e IMAGEM.", true);
-            document.getElementById('formEventoContainer').scrollIntoView({ behavior: 'smooth' });
-            document.getElementById('nome_festa').focus();
-        };
-
-        window.salvarEventoComoModelo = async (id) => {
-            const ev = dadosEventos.find(e => e.id === id);
-            if (!ev) return mostrarAviso("Evento não encontrado para virar modelo.");
-
-            const nomeModelo = prompt("Dê um nome interno para este modelo (ex: Festa Pista + 8 Camarotes):");
-            if (!nomeModelo || !nomeModelo.trim()) return;
-
+        async function gerarReciboCheckin(clienteDados) {
             try {
-                const modelo = montarDadosModelo(ev);
-                modelo.modelo_nome = nomeModelo.trim().toUpperCase();
-                await addDoc(collection(db, "modelos_eventos"), modelo);
-                mostrarAviso("Modelo salvo sem nome, data, horário e arte do evento.", true);
-            } catch(e) {
-                mostrarAviso("Erro ao salvar modelo.");
-            }
-        };
+                if(!eventoHojeCache) return; 
 
-        window.removerModeloEvento = async (id) => {
-            if(!confirm("Excluir este modelo? Os eventos reais não serão afetados.")) return;
-            try {
-                await deleteDoc(doc(db, "modelos_eventos", id));
-                mostrarAviso("Modelo removido com sucesso!", true);
-            } catch(e) {
-                mostrarAviso("Erro ao remover modelo.");
-            }
-        };
-
-        onSnapshot(collection(db, "solteiras"), snap => {
-            const agora = new Date(); const batch = writeBatch(db); let del = false;
-            dadosSolteiras = snap.docs.map(d => {
-                const data = d.data(); 
-                let ref = parseVisita(data.ultima_visita) || parseVisita(data.data_cadastro);
-                if (ref && !isNaN(ref) && (agora - ref) / (1000 * 60 * 60 * 24) > 90) { batch.delete(d.ref); del = true; return null; }
-                return { id: d.id, ...data };
-            }).filter(s => s !== null);
-            if(del) batch.commit(); 
-            renderSolteiras();
-        });
-
-        onSnapshot(collection(db, "lista_eventos"), snap => { 
-            dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderAuditoria(); renderSolteiras();
-            const sCarona = document.getElementById('filtro-evento-carona');
-            const evtAtuais = [...new Set(dadosReservas.filter(r=>r.carona===true).map(r=>r.evento))];
-            if(sCarona) {
-                const vAtual = sCarona.value;
-                sCarona.innerHTML = '<option value="">Selecione o Evento com Caronas...</option>' + evtAtuais.map(e => `<option value="${e}">${e}</option>`).join('');
-                if(evtAtuais.includes(vAtual)) sCarona.value = vAtual;
-            }
-        });
-
-        onSnapshot(collection(db, "eventos"), snap => { 
-            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderSolteiras();
-        });
-
-        onSnapshot(collection(db, "modelos_eventos"), snap => {
-            dadosModelosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderGridConfig();
-        });
-
-        onSnapshot(collection(db, "promoters"), snap => { 
-            dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
-            document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Por Promoter (Todos)</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
-            renderEquipe();
-        });
-
-        onSnapshot(collection(db, "links_aniversario"), snap => {
-            dadosAniv = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderAniversarios();
-        });
-
-        window.renderSolteiras = () => {
-            const bCount = document.getElementById('total-solteiras-badge');
-            if(bCount) bCount.innerText = `${dadosSolteiras.length}`;
-        };
-
-        window.renderAuditoria = () => {
-            const tbody = document.getElementById('tabela-auditoria-body'); if(!tbody) return;
-            const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
-            const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
-            
-            let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP').sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
-            if (fStat === 'entrou') res = res.filter(r => r.entrou === true); 
-            else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true);
-            else if (fStat === 'pix_entrou') res = res.filter(r => r.metodo === 'pix_antecipado' && r.entrou === true);
-            else if (fStat === 'pix_aguardando') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && r.entrou !== true);
-            else if (fStat === 'pix_cancelado') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago !== true);
-
-            if (termo.length > 1) {
-                const terms = termo.split(/\s+/);
-                res = res.filter(r => {
-                    const dF = isNaN(new Date(r.data_reserva)) ? '' : new Date(r.data_reserva).toLocaleDateString('pt-BR');
-                    const str = `${r.nome || ''} ${r.tel || ''} ${getPromoterName(r.promoter)} ${r.evento || ''} ${r.cpf || ''} ${dF} ${r.porteiro || ''}`.toUpperCase();
-                    return terms.every(t => str.includes(t));
-                });
-            } else { res = res.slice(0, 100); }
-
-            if (res.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr>`; return; }
-            tbody.innerHTML = res.map(r => {
-                const df = isNaN(new Date(r.data_reserva)) ? '---' : new Date(r.data_reserva).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' - ' + new Date(r.data_reserva).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-                let st = `<span class="text-[9px] font-black uppercase text-zinc-500 flex items-center justify-end gap-1">○ Aguardando</span>`;
-                if (r.metodo === 'pix_antecipado' && r.pago !== true) { st = `<div class="flex flex-col items-end gap-1"><span class="text-[9px] font-black uppercase text-red-500">🚫 PIX PENDENTE</span><span class="text-[7px] text-zinc-500">(ABANDONADO)</span></div>`; } 
-                else if (r.entrou) {
-                    let dent = '---'; if (r.data_entrada && !isNaN(new Date(r.data_entrada))) dent = new Date(r.data_entrada).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + new Date(r.data_entrada).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-                    st = `<div class="flex flex-col items-end gap-1"><span class="text-[10px] font-black uppercase text-green-500">✓ Entrou</span><span class="text-[8px] text-yellow-500 font-black uppercase tracking-widest">👤 ${r.porteiro || 'Sistema'}</span><span class="text-[8px] text-zinc-500 font-mono">🕒 ${dent}</span></div>`;
-                }
-                const nomePromoter = getPromoterName(r.promoter);
-                return `<tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500"><td class="p-4 font-mono text-[10px] text-zinc-400">${df}</td><td class="p-4"><p class="text-xs font-black text-white uppercase">${r.nome}</p><p class="text-[9px] text-zinc-500 font-bold">${r.tel || '---'}</p></td><td class="p-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${r.evento}</span></td><td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${nomePromoter}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${r.aniversariante}</span>` : ''}</div></td><td class="p-4"><span class="text-[9px] font-black uppercase text-cyan-400">${r.tipo_entrada || '---'}</span></td><td class="p-4 text-right">${st}</td></tr>`;
-            }).join('');
-        };
-
-        window.renderRelatorios = () => {
-            const container = document.getElementById('container-bolhas'); if(!container) return;
-            const ativos = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => new Date(a.data) - new Date(b.data));
-            container.innerHTML = ativos.map(ev => {
-                const evN = (ev.nome || '').trim().toLowerCase();
-                const solteirasDoEvento = getSolteirasParaEvento(ev);
-                const todas = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.evento || '').trim().toLowerCase() === evN);
-                const val = todas.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
-                const pM = (v) => Number(String(v || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                const qBusca = query(collection(db, "lista_eventos"), 
+                    where("evento", "==", eventoHojeCache.nome), 
+                    where("tel", "==", clienteDados.tel || '')
+                );
+                const snapBusca = await getDocs(qBusca);
                 
-                const px = val.filter(r => r.metodo === 'pix_antecipado' && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP'));
-                const pCQ = px.filter(r => r.tipo_entrada === 'CASAL').length; const pCCQ = px.filter(r => r.tipo_entrada === 'CASAL CONSUMAÇÃO').length; const pSQ = px.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
-                
-                const recCam = val.filter(r => (r.tipo_entrada?.toUpperCase().includes('CAMAROTE') || r.tipo_entrada?.toUpperCase().includes('VIP')) && r.pago === true && !r.cortesia).reduce((tot, r) => tot + pM(r.valor_pago), 0);
-                const totPis = val.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP')).reduce((tot, r) => tot + pM(r.valor_pago), 0);
-                const totGer = (totPis + recCam).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                
-                let lCam = '';
-                for(let n=1; n<=8; n++) {
-                    if (!ev[`cam${n}_ativo`]) { lCam += `<div class="w-full h-2 rounded-full bg-zinc-800 border border-white/5"></div>`; continue; }
-                    const nBusca = (n === 7) ? "VIP 1" : (n === 8) ? "VIP 2" : `CAMAROTE ${n}`;
-                    const resCam = todas.filter(r => r.tipo_entrada?.toUpperCase() === nBusca || r.tipo_entrada?.toUpperCase() === `CAMAROTE 0${n}`);
-                    let st = 'livre';
-                    if (resCam.some(r => r.cortesia === true)) st = 'cortesia'; else if (resCam.some(r => r.pago === true)) st = 'vendido'; else if (resCam.filter(r => !r.pago && !r.cortesia).some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 5)) st = 'aguardando';
-                    if (st === 'cortesia') lCam += `<div class="w-full h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div>`; else if (st === 'vendido') lCam += `<div class="w-full h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></div>`; else if (st === 'aguardando') lCam += `<div class="w-full h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_#eab308] animate-pulse"></div>`; else lCam += `<div class="w-full h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
-                }
-                
-                return `<div class="event-bubble p-6 flex flex-col justify-between"><div><div class="flex justify-between items-start mb-4"><p class="text-[9px] font-black text-yellow-500 uppercase italic mt-1">${ev.data ? ev.data.split('-').reverse().join('/') : 'S/D'}</p><div class="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg flex flex-col items-end"><span class="text-[7px] font-black text-green-500 uppercase tracking-widest">💰 Total Arrecadado</span><span class="text-sm font-black text-white">${totGer}</span></div></div><h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4></div><div class="bg-cyan-900/10 border border-cyan-500/20 p-4 rounded-2xl mb-4"><div class="flex flex-col gap-2 text-[10px]"><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Seco Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCCQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2 text-fuchsia-400">Casais Consuma Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div></div><div class="grid grid-cols-8 gap-1.5 mt-4">${lCam}</div></div><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista VIP/Pagante</p><p class="text-lg font-black text-white">${val.length}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins Pagantes</p><p class="text-lg font-black text-green-500">${val.filter(r => r.entrou === true).length}</p></div><div class="text-center border-l border-white/5 pl-4"><p class="text-[7px] text-pink-500 uppercase font-black">Solteiras</p><p class="text-lg font-black text-pink-400">${solteirasDoEvento.length}</p></div></div></div>`;
-            }).join('');
-            window.renderPodios();
-        };
-
-        window.renderPodios = () => {
-            const st = {};
-            dadosReservas.forEach(r => { 
-                if (r.tipo_entrada === 'SOLTEIRA VIP' || (r.metodo === 'pix_antecipado' && r.pago !== true)) return; 
-                const p = getPromoterName(r.promoter); 
-                if(!st[p]) st[p] = { r: 0, c: 0 }; st[p].r++; if(r.entrou === true) st[p].c++; 
-            });
-            const med = ['🥇', '🥈', '🥉'];
-            const rR = Object.entries(st).sort((a,b) => b[1].r - a[1].r).slice(0,5); const rC = Object.entries(st).sort((a,b) => b[1].c - a[1].c).slice(0,5);
-            document.getElementById('lista-ranking-reservas').innerHTML = rR.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.r}</p></div>`).join('');
-            document.getElementById('lista-ranking-checkins').innerHTML = rC.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.c}</p></div>`).join('');
-        };
-
-        window.gerarRelatorioGerencial = () => {
-            const tA = document.getElementById('output-excel');
-            const val = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.metodo !== 'pix_antecipado' || r.pago === true));
-            if (val.length === 0) { tA.value = "Sem reservas de pagantes."; return; }
-            const at = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => a.data.localeCompare(b.data)); let cab = "";
-            if (at.length > 0) {
-                const mes = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
-                const dI = new Date(at[0].data + "T12:00:00Z"); const dF = new Date(at[at.length-1].data + "T12:00:00Z");
-                cab = `**De ${String(dI.getDate()).padStart(2, '0')} de ${mes[dI.getMonth()]} a ${String(dF.getDate()).padStart(2, '0')} de ${mes[dF.getMonth()]} de ${dF.getFullYear()}**\n\n`;
-            }
-            const ck = val.filter(r => r.entrou === true).length; const perc = val.length > 0 ? ((ck / val.length) * 100).toFixed(2).replace('.', ',') : "0,00";
-            let txt = cab + `*FEITO ${val.length} RESERVAS DE PAGANTES*\n-> *ENTROU ${perc}%* <-\n\n`;
-            const pst = {}; val.filter(r => r.entrou === true).forEach(r => { const p = getPromoterName(r.promoter); pst[p] = (pst[p] || 0) + 1; });
-            Object.keys(pst).sort().forEach(p => { txt += `${p} - ${pst[p]}\n`; });
-            const pM = (v) => Number(String(v || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
-            const tPx = val.filter(r => r.metodo === 'pix_antecipado' && r.pago === true).reduce((acc, r) => acc + pM(r.valor_pago), 0);
-            
-            const taxaSistema = custoSistemaGlobal || 0;
-            const saldoLiquido = tPx - taxaSistema;
-            
-            txt += `\n--------------------------------\n\n**Enviado pra conta PAGSEGURO**\n`;
-            txt += `Entradas PIX: R$ ${tPx.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
-            txt += `Desconto Sistema: - R$ ${taxaSistema.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
-            txt += `> Saldo Final Enviado: R$ ${saldoLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n\n`;
-            
-            txt += `Ingressos vendidos (E Solteiras)\n\n`;
-            
-            const dS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-            
-            at.forEach(ev => {
-                const rE = val.filter(r => (r.evento || '').trim().toUpperCase() === (ev.nome||'').trim().toUpperCase());
-                const px = rE.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP'));
-                const cQ = px.filter(r => r.tipo_entrada === 'CASAL').length; const ccQ = px.filter(r => r.tipo_entrada === 'CASAL CONSUMAÇÃO').length; const sQ = px.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
-                const solts = getSolteirasParaEvento(ev);
-                
-                if (cQ > 0 || ccQ > 0 || sQ > 0 || solts.length > 0) { 
-                    txt += `*${dS[new Date(ev.data + "T12:00:00Z").getDay()]}*\n`;
-                    if(cQ > 0) txt += `Casal Seco - ${cQ}\n`;
-                    if(ccQ > 0) txt += `Casal Consumação - ${ccQ}\n`;
-                    if(sQ > 0) txt += `Solteiro Seco - ${sQ}\n`;
-                    if(solts.length > 0) txt += `Solteiras - ${solts.length}\n`;
-                    txt += `\n`; 
-                }
-            });
-            txt += `> Camarotes Antecipados\n\n`;
-            at.forEach(ev => {
-                const cA = val.filter(r => (r.evento || '').trim().toUpperCase() === (ev.nome||'').trim().toUpperCase() && (r.tipo_entrada?.toUpperCase().includes('CAMAROTE') || r.tipo_entrada?.toUpperCase().includes('VIP')) && (r.pago === true || r.cortesia === true));
-                if (cA.length > 0) { 
-                    txt += `*${dS[new Date(ev.data + "T12:00:00Z").getDay()]}*\n`; 
-                    cA.sort((a,b) => a.tipo_entrada.localeCompare(b.tipo_entrada)).forEach(c => { 
-                        if (c.cortesia) {
-                            txt += `${c.tipo_entrada} - Cortesia (${getPromoterName(c.promoter)})\n`;
-                        } else {
-                            txt += `${c.tipo_entrada} - Vendido (${c.nome})\n`;
-                        }
-                    }); 
-                    txt += `\n`; 
-                }
-            });
-            tA.value = txt.trim();
-        };
-
-        window.gerarApenasCheckins = () => {
-            const f = document.getElementById('filtro-promoter-excel').value; const tA = document.getElementById('output-excel');
-            let res = dadosReservas.filter(r => r.entrou === true && r.tipo_entrada !== 'SOLTEIRA VIP');
-            if (f) res = res.filter(r => getPromoterName(r.promoter) === f);
-            if (res.length === 0) { tA.value = "Nenhum check-in."; return; }
-            tA.value = "NOME\tTELEFONE\n" + res.map(r => `${r.nome}\t${r.tel || '---'}`).join('\n');
-        };
-
-        window.gerarApenasSolteiras = () => {
-            const tA = document.getElementById('output-excel');
-            const ativos = dadosEventos.filter(e => e.ativo && !isEventoModeloAntigo(e));
-            if (ativos.length === 0) { tA.value = "Nenhum evento ativo no momento."; return; }
-            let unicas = []; let mapa = new Map();
-            ativos.forEach(ev => {
-                const solts = getSolteirasParaEvento(ev);
-                solts.forEach(s => {
-                    const t = String(s.tel || s.telefone || '').replace(/\D/g, '');
-                    if(!mapa.has(t) && t.length > 5) { mapa.set(t, true); unicas.push(s); }
-                });
-            });
-            if (unicas.length === 0) { tA.value = "Nenhuma solteira detectada nos eventos ativos."; return; }
-            tA.value = "NOME\tTELEFONE\n" + unicas.map(r => `${r.nome}\t${r.tel || '---'}`).join('\n');
-        };
-
-        window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); mostrarAviso("Copiado!", true); };
-
-        document.getElementById('formPromoter').addEventListener('submit', async e => {
-            e.preventDefault(); const n = document.getElementById('nome_promoter').value.trim(); const t = document.getElementById('tipo_promoter').value;
-            if(!n) return; 
-            try { await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true }); e.target.reset(); mostrarAviso("Salvo!", true); } 
-            catch(err) { mostrarAviso("Erro."); }
-        });
-
-        document.getElementById('formPortaria').addEventListener('submit', async e => {
-            e.preventDefault(); const n = document.getElementById('login_portaria').value.trim().toLowerCase();
-            if(!n) return; 
-            try { await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true }); e.target.reset(); mostrarAviso("Salvo!", true); } 
-            catch(err) { mostrarAviso("Erro."); }
-        });
-
-        window.editarPromoter = async (id) => {
-            const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`);
-            if (!op) return;
-
-            let up = {};
-            if (op === '1') up.tipo = 'padrao';
-            if (op === '2') up.tipo = 'aniversario';
-            if (op === '3') up.tipo = 'visualizar';
-            if (op === '4') {
-                const ns = prompt("Nova senha:
-
-Digite uma nova senha ou deixe em branco e clique OK para apagar a senha atual. Quando a senha estiver apagada, o promoter será obrigado a cadastrar uma nova senha no próximo acesso.");
-                if (ns === null) return;
-                up.senha = ns.trim();
-                up.session_token = "";
-            }
-
-            if (Object.keys(up).length > 0) {
-                await updateDoc(doc(db, "promoters", id), up);
-                if (op === '4' && up.senha === "") mostrarAviso("Senha apagada. O promoter criará uma nova no próximo acesso.", true);
-                else mostrarAviso("Atualizado!", true);
-            }
-        };
-
-        window.editarOperador = async (id) => {
-            const ns = prompt("Nova senha:
-
-Digite uma nova senha ou deixe em branco e clique OK para apagar a senha atual. Quando a senha estiver apagada, o operador será obrigado a cadastrar uma nova senha no próximo acesso.");
-            if (ns === null) return;
-
-            const novaSenha = ns.trim();
-            await updateDoc(doc(db, "configuracoes", id), { senha: novaSenha, session_token: "" });
-
-            if (novaSenha === "") mostrarAviso("Senha apagada. O operador criará uma nova no próximo acesso.", true);
-            else mostrarAviso("Senha atualizada!", true);
-        };
-
-        function renderEquipe() {
-            const fT = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') + ' ' + new Date(iso).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : 'NUNCA';
-            if (document.getElementById('lista-promoters')) document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `<div class="glass-card p-6 border-l-4 border-l-yellow-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${p.tipo==='aniversario'?'ANIV':p.tipo==='visualizar'?'VIS':'PADRÃO'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(p.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarPromoter('${p.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
-            if (document.getElementById('lista-portaria')) document.getElementById('lista-portaria').innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(op.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
-        }
-
-        window.gerarCopyMeta = (dadosEvento) => {
-            const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
-            const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-            const diaDaSemana = diasSemana[dataObj.getDay()];
-            const dataBr = dataObj.toLocaleDateString('pt-BR');
-            const nomeFestaHashtag = dadosEvento.nome.replace(/\s+/g, '');
-            const diaSemanaHashtag = diaDaSemana.split('-')[0]; 
-            let dptoInfo = ""; if (dadosEvento.diferenciais_noite && dadosEvento.diferenciais_noite.trim() !== '') { dptoInfo = `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}`; }
-            const copyText = `👑 ${dadosEvento.nome.toUpperCase()} — A noite onde você dita as regras na E-Club! 🌹✨\n\nNeste(a) ${diaDaSemana.toLowerCase()}, a nossa festa ganha um tom mais ousado e sofisticado. O evento ${dadosEvento.nome} é um convite especial para celebrar a sua essência em sua forma mais livre e envolvente. Porque você merece um momento para se desconectar da rotina e despertar o seu lado mais magnético.\n\nPrepare-se para uma atmosfera de reverência à liberdade, atitude e beleza. Um ambiente de total entrega e respeito, onde a única regra é se sentir incrível. Afinal, o que acontece na eclub, fica na eclub.\n\n🎧 No comando da trilha sonora:\nNosso residente DJ Neto e o convidado especial DJ Andrezinho assumem a cabine com aquele set feito sob medida para dominar a pista, elevar a energia lá no alto e não deixar ninguém parado!${dptoInfo}\n\n🔥 Uma noite desenhada para exaltar a liberdade de ser a sua melhor e mais sedutora versão. Deixe o seu brilho guiar a festa.\n\n🗓️ Programe-se:\nQuando: ${diaDaSemana} (${dataBr})\nHorário: Abertura da casa às ${dadosEvento.hora || '22h'}\nLocal: Rua Aníbal Goulart Maia Filho, 81 — Bairro Alto.\n\nViva a sua essência. Viva a E-Club.\n\n👉 Siga-nos no Instagram: @eclubswingdance\n📞 Reservas VIPs e Infos (WhatsApp): (41) 99504-0506\n🌐 Garanta seu nome na lista e PIX Antecipado pelo link na bio!\n\n🔞 Aviso Importante: Evento exclusivo para maiores de 18 anos. Indispensável a apresentação de documento oficial com foto.\n\n#${nomeFestaHashtag} #eclub #${diaSemanaHashtag}Curitiba #Lifestyle #MundoLiberal #andrezinhoeclub #DJNeto #CuritibaNight #BairroAlto #eclubswingdance #Liberdade #NoiteCuritibana`;
-            const painel = document.getElementById('painel-copy-marketing'); const textArea = document.getElementById('texto-copy-gerado');
-            if(textArea) { textArea.value = copyText; if(painel) painel.classList.remove('hidden'); }
-        };
-
-        window.copiarTextoMarketing = () => { document.getElementById('texto-copy-gerado').select(); document.execCommand('copy'); mostrarAviso("Copy de vendas copiado!", true); };
-
-        document.getElementById('formEvento').addEventListener('submit', async e => {
-            e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
-            try {
-                const id = document.getElementById('edit_evento_id').value; const arq = document.getElementById('upload_capa').files[0]; let url = document.getElementById('url_imagem_atual').value;
-                if (arq) { const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); await uploadBytes(sr, arq); url = await getDownloadURL(sr); }
-                const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, hora: document.getElementById('hora_inicio').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value, diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '', imagem: url, ativo: true };
-                for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
-                if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
-                e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; mostrarAviso("Evento salvo com sucesso!", true);
-                if (document.getElementById('diferenciais_noite')) gerarCopyMeta(d);
-                document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
-            } catch(err) { mostrarAviso("Erro ao salvar evento."); } finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
-        });
-
-        window.prepararEdicaoEvento = (id) => {
-            const ev = dadosEventos.find(e => e.id === id); document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
-            if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
-            for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
-            document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
-        };
-
-        window.renderGridConfig = () => {
-            const gridModelos = document.getElementById('grid-modelos');
-            const gridEventos = document.getElementById('grid-eventos-config');
-            if(!gridEventos) return;
-
-            if(gridModelos) gridModelos.innerHTML = '';
-            gridEventos.innerHTML = '';
-
-            const modelos = [...dadosModelosEventos].sort((a,b) => String(a.modelo_nome || '').localeCompare(String(b.modelo_nome || '')));
-            const modelosAntigos = dadosEventos.filter(e => isEventoModeloAntigo(e));
-            const normais = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => new Date(a.data) - new Date(b.data));
-
-            if (gridModelos) {
-                let htmlModelos = '';
-
-                if (modelos.length > 0) {
-                    htmlModelos += modelos.map(ev => `
-                        <div class="bg-fuchsia-900/20 border border-fuchsia-500/30 p-4 rounded-2xl min-w-[280px] flex-none flex flex-col justify-between">
-                            <div>
-                                <p class="text-[8px] font-black uppercase text-fuchsia-300/70 tracking-widest mb-2">Modelo Salvo</p>
-                                <h4 class="text-sm font-black uppercase text-fuchsia-400 mb-4 leading-tight">${ev.modelo_nome || 'MODELO SEM NOME'}</h4>
-                                <p class="text-[8px] text-zinc-500 uppercase font-bold mb-4">Não contém nome, data, horário nem arte do evento.</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="duplicarEvento('${ev.id}')" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[9px] font-black uppercase py-2 rounded-xl transition-all shadow-md">Usar Modelo</button>
-                                <button onclick="removerModeloEvento('${ev.id}')" class="bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all">✕</button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-
-                if (modelosAntigos.length > 0) {
-                    htmlModelos += modelosAntigos.map(ev => `
-                        <div class="bg-yellow-900/20 border border-yellow-500/30 p-4 rounded-2xl min-w-[300px] flex-none flex flex-col justify-between">
-                            <div>
-                                <p class="text-[8px] font-black uppercase text-yellow-400 tracking-widest mb-2">Modelo antigo por nome</p>
-                                <h4 class="text-sm font-black uppercase text-yellow-300 mb-3 leading-tight">${ev.nome}</h4>
-                                <p class="text-[8px] text-zinc-500 uppercase font-bold mb-4">Use, converta para o novo formato ou exclua depois da conferência.</p>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button onclick="duplicarEvento('${ev.id}', 'eventos')" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[8px] font-black uppercase py-2 rounded-xl transition-all">Usar</button>
-                                <button onclick="salvarEventoComoModelo('${ev.id}')" class="bg-yellow-600 hover:bg-yellow-500 text-black text-[8px] font-black uppercase py-2 rounded-xl transition-all">Converter</button>
-                                <button onclick="removerItem('eventos', '${ev.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[8px] font-black uppercase py-2 rounded-xl transition-all">✕</button>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-
-                if (!htmlModelos) {
-                    gridModelos.innerHTML = `<p class="text-zinc-500 text-xs italic uppercase font-bold">Nenhum modelo salvo ainda. Escolha um evento configurado abaixo e clique em “Salvar como Modelo”.</p>`;
+                if (snapBusca.empty) {
+                    await addDoc(collection(db, "lista_eventos"), { 
+                        nome: clienteDados.nome, 
+                        tel: clienteDados.tel || '', 
+                        cpf: clienteDados.cpf || '',
+                        evento: eventoHojeCache.nome, 
+                        tipo_entrada: "SOLTEIRA VIP", 
+                        promoter: "PORTARIA VIP", 
+                        porteiro: operadorLogado,
+                        data_reserva: new Date().toISOString(), 
+                        entrou: true, 
+                        data_entrada: new Date().toISOString(),
+                        pago: false, 
+                        metodo: 'portaria', 
+                        valor_pago: "FREE"
+                    });
                 } else {
-                    gridModelos.innerHTML = htmlModelos;
+                    snapBusca.forEach(async (docEncontrado) => {
+                        if(docEncontrado.data().entrou !== true) {
+                            await updateDoc(doc(db, "lista_eventos", docEncontrado.id), {
+                                entrou: true,
+                                data_entrada: new Date().toISOString(),
+                                porteiro: operadorLogado
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Erro ao gerar recibo de solteira", e);
+            }
+        }
+
+        window.verificarOuLogar = async () => {
+            const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
+            const s = document.getElementById('senhaUsuario').value.trim();
+            const btn = document.getElementById('btnAcao');
+            const inputSenha = document.getElementById('senhaUsuario');
+
+            if (stepLogin === 0) {
+                if(!n) return mostrarAviso("Digite o seu usuário!");
+                btn.innerText = "VERIFICANDO...";
+                const docSnap = await getDoc(doc(db, "configuracoes", n));
+                if (docSnap.exists()) {
+                    usuarioData = docSnap.data(); stepLogin = 1;
+                    document.getElementById('areaSenha').classList.remove('hidden');
+                    document.getElementById('inputNomeUsuario').readOnly = true;
+                    if (!usuarioData.senha) {
+                        mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
+                        inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)";
+                        inputSenha.style.borderColor = "#eab308";
+                        btn.innerText = "SALVAR E ENTRAR";
+                    } else { btn.innerText = "ENTRAR NO SISTEMA"; }
+                } else { mostrarAviso("Operador não autorizado."); btn.innerText = "ACESSAR SISTEMA"; }
+            } else {
+                if(!s) return mostrarAviso("Digite a sua senha!");
+                if (!usuarioData.senha) {
+                    if (s.length < 6) return mostrarAviso("Mínimo de 6 caracteres.");
+                    btn.innerText = "SALVANDO...";
+                    
+                    sessionTokenAtual = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                    
+                    await updateDoc(doc(db, "configuracoes", n), { 
+                        senha: s, 
+                        ultimo_login: new Date().toISOString(),
+                        session_token: sessionTokenAtual
+                    });
+                    usuarioData.senha = s;
+                    mostrarAviso("Senha cadastrada com sucesso!", true);
+                }
+                
+                if (usuarioData.senha === s) {
+                    sessionTokenAtual = Date.now().toString(36) + Math.random().toString(36).substring(2);
+                    
+                    await updateDoc(doc(db, "configuracoes", n), { 
+                        ultimo_login: new Date().toISOString(),
+                        session_token: sessionTokenAtual
+                    });
+                    
+                    operadorLogado = n;
+                    document.getElementById('labelOperador').innerText = "OPERADOR: " + n.toUpperCase();
+                    document.getElementById('telaLogin').classList.add('hidden');
+                    document.getElementById('conteudo-sistema').classList.remove('hidden');
+                    iniciarEscutas();
+                    iniciarListenerSessao(n); 
+                } else { 
+                    mostrarAviso("Senha incorreta."); 
+                    btn.innerText = "ENTRAR NO SISTEMA"; 
                 }
             }
-
-            gridEventos.innerHTML = normais.map(ev => `
-                <div class="glass-card overflow-hidden border border-white/5 p-5">
-                    <img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4">
-                    <div class="flex justify-between mb-2">
-                        <p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data ? ev.data.split('-').reverse().join('/') : 'S/D'} - ${ev.hora || '--:--'}</p>
-                        <span class="${ev.ativo ? 'text-green-500' : 'text-zinc-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span>
-                    </div>
-                    <h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4>
-                    <div class="grid grid-cols-3 gap-2 mt-4 border-t border-white/10 pt-4">
-                        <button onclick="prepararEdicaoEvento('${ev.id}')" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 font-black text-[8px] uppercase hover:bg-blue-600 hover:text-white transition-colors rounded-xl py-2">Editar</button>
-                        <button onclick="salvarEventoComoModelo('${ev.id}')" class="bg-fuchsia-600/20 border border-fuchsia-500/30 text-fuchsia-400 font-black text-[8px] uppercase hover:bg-fuchsia-600 hover:text-white transition-colors rounded-xl py-2">Salvar Modelo</button>
-                        <button onclick="removerItem('eventos', '${ev.id}')" class="bg-red-600/20 border border-red-500/30 text-red-500 font-black text-[8px] uppercase hover:bg-red-600 hover:text-white transition-colors rounded-xl py-2">Excluir</button>
-                    </div>
-                </div>
-            `).join('');
         };
 
-        window.removerItem = async (colecao, id) => { 
-            if(!confirm("TEM CERTEZA? Isso vai apagar permanentemente o item.")) return; 
-            try { 
-                if(colecao === 'eventos') { const ev = dadosEventos.find(e => e.id === id); if(ev && ev.imagem && ev.imagem.includes('firebasestorage')) { await deleteObject(ref(storage, ev.imagem)).catch(()=>{}); } }
-                const batch = writeBatch(db); const docRef = doc(db, colecao, id); const snap = await getDoc(docRef); 
-                if (!snap.exists()) return; const d = snap.data(); 
-                if (colecao === 'eventos') { const qR = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", d.nome))); qR.forEach(x => batch.delete(x.ref)); const qA = await getDocs(query(collection(db, "links_aniversario"), where("festa", "==", d.nome))); qA.forEach(x => batch.delete(x.ref)); } 
-                if (colecao === 'links_aniversario') { const qC = await getDocs(query(collection(db, "lista_eventos"), where("aniversariante", "==", d.aniversariante), where("evento", "==", d.festa))); qC.forEach(x => batch.delete(x.ref)); } 
-                batch.delete(docRef); await batch.commit(); mostrarAviso("Excluído com sucesso!", true); 
-            } catch (e) { mostrarAviso("Erro ao excluir."); } 
-        };
+        function iniciarListenerSessao(operadorId) {
+            if(listenerSessao) listenerSessao();
+            
+            listenerSessao = onSnapshot(doc(db, "configuracoes", operadorId), (docSnap) => {
+                if (docSnap.exists()) {
+                    const dadosDb = docSnap.data();
+                    if (dadosDb.session_token && dadosDb.session_token !== sessionTokenAtual) {
+                        if(listenerSessao) listenerSessao();
+                        document.getElementById('conteudo-sistema').classList.add('hidden');
+                        document.getElementById('telaBloqueio').classList.remove('hidden');
+                        document.getElementById('telaBloqueio').classList.add('flex');
+                        mostrarAviso("🚨 CONEXÃO ENCERRADA: Acesso em outro dispositivo.");
+                    }
+                }
+            });
+        }
 
-        window.renderCamarotesVendidos = () => {
-            const tb = document.getElementById('tabela-camarotes-body'); if(!tb) return;
-            const res = dadosReservas.filter(r => (r.tipo_entrada?.toUpperCase().includes('CAMAROTE') || r.tipo_entrada?.toUpperCase().includes('VIP')) && (r.pago === true || r.cortesia === true)).sort((a,b) => a.evento.localeCompare(b.evento));
-            if (res.length === 0) { tb.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-[10px] text-zinc-600 font-bold uppercase tracking-widest italic">Nenhum camarote/VIP ocupado no momento</td></tr>`; return; }
-            tb.innerHTML = res.map(r => `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4 uppercase font-bold text-zinc-300">${r.evento}</td><td class="py-4 font-black text-cyan-400 uppercase">${r.tipo_entrada}</td><td class="py-4 uppercase font-bold text-white">${r.nome} <br><span class="text-[9px] text-zinc-500 font-mono">${r.tel}</span></td><td class="py-4 text-center">${r.cortesia ? `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Cortesia</span>` : `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Vendido</span>`}</td><td class="py-4 text-right pr-4"><button onclick="liberarCamarote('${r.id}')" class="bg-red-500/10 text-red-500 border border-red-500/30 px-4 py-2 rounded-lg text-[8px] font-black uppercase">Liberar</button></td></tr>`).join('');
-        };
+        function iniciarEscutas() {
+            const hojeStr = new Date().toLocaleDateString('en-CA');
+            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true), where("data", "==", hojeStr)), (snap) => {
+                if(!snap.empty) eventoHojeCache = snap.docs[0].data();
+                else eventoHojeCache = null;
+            });
 
-        window.liberarCamarote = async (id) => { if(confirm("Liberar o camarote?")) { try { await deleteDoc(doc(db, "lista_eventos", id)); mostrarAviso("Camarote liberado!", true); } catch(e) { mostrarAviso("Erro ao liberar."); } } };
+            onSnapshot(colRef, (snap) => {
+                clientesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                atualizarContadores();
+                render(clientesCache, false);
+            });
+        }
 
-        window.renderAniversarios = () => {
-            if(!document.getElementById('tabela-aniversarios-body')) return;
-            document.getElementById('tabela-aniversarios-body').innerHTML = dadosAniv.map(l => {
-                const ev = dadosEventos.find(e => (e.nome || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase()); const dt = ev ? (ev.data ? ev.data.split('-').reverse().join('/') : 'S/D') : '---';
-                const q = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase() && (r.aniversariante || '').trim().toLowerCase() === (l.aniversariante || '').trim().toLowerCase()).length;
-                return `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4">${dt}</td><td class="py-4 uppercase">${l.promoter}</td><td class="py-4 font-black text-cyan-400 uppercase">${l.aniversariante}</td><td class="py-4 text-center font-black text-white">${q}</td><td class="py-4 text-right pr-4"><button onclick="removerItem('links_aniversario', '${l.id}')" class="text-red-500">Remover</button></td></tr>`;
-            }).join('');
-        };
+        function limparFocarBusca() {
+            const campoBusca = document.getElementById('buscaCliente');
+            campoBusca.value = '';
+            filtrarClientes(); 
+            campoBusca.focus(); 
+        }
 
-        window.toggleModoTeste = async () => { await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true }); };
-        
-        window.limparBaseDeDados = async () => { 
-            if (confirm("Limpar clientes das listas?\n\nIsso apagará as reservas dos eventos, MAS MANTERÁ SALVA as Solteiras VIP e a Pontuação de Fidelidade dos clientes.")) { 
-                const b = writeBatch(db); 
-                const q = await getDocs(collection(db, "lista_eventos")); 
-                q.forEach(d => b.delete(d.ref)); 
-                await b.commit(); 
-                mostrarAviso("Base de reservas limpa com sucesso!", true); 
-            } 
-        };
-        
-        window.zerarSistemaCompleto = async () => { 
-            if (confirm("⚠️ TEM CERTEZA QUE DESEJA ZERAR EVENTOS E LISTAS?\n\nAs Solteiras Cadastradas, os Pontos de Fidelidade e os Modelos salvos em Meus Modelos NÃO serão afetados.")) { 
-                for (const col of ["lista_eventos", "links_aniversario"]) { 
-                    const b = writeBatch(db); 
-                    const q = await getDocs(collection(db, col)); 
-                    q.forEach(d => b.delete(d.ref)); 
-                    await b.commit(); 
-                } 
+        window.dispararCheckin = async (id) => {
+            try {
+                await updateDoc(doc(db, "solteiras", id), { ultima_visita: serverTimestamp() });
                 
-                // Apaga apenas eventos reais. Modelos novos ficam na coleção "modelos_eventos".
-                // Modelos antigos que ainda estavam salvos dentro de "eventos" também são preservados.
-                const bEv = writeBatch(db);
-                const qEv = await getDocs(collection(db, "eventos"));
-                qEv.forEach(d => {
-                    const data = d.data();
-                    if(!isEventoModeloAntigo(data)) bEv.delete(d.ref);
-                });
-                await bEv.commit();
-                
-                location.reload(); 
-            } 
+                const clienteData = clientesCache.find(c => c.id === id);
+                if(clienteData) await gerarReciboCheckin(clienteData);
+
+                mostrarAviso("Liberada com sucesso!", true);
+                limparFocarBusca(); 
+            } catch (e) { mostrarAviso("Erro ao liberar a cliente!"); }
         };
+
+        window.bloquearDesbloquear = async (id, acaoBloquear) => {
+            try {
+                if (acaoBloquear) {
+                    const motivo = prompt("Qual o motivo do bloqueio?");
+                    if (!motivo) return;
+                    await updateDoc(doc(db, "solteiras", id), { bloqueada: true, motivo_bloqueio: motivo.toUpperCase() });
+                    mostrarAviso("Cliente bloqueada!", true);
+                } else {
+                    if (confirm("Tem certeza que deseja DESBLOQUEAR a entrada dessa cliente?")) {
+                        await updateDoc(doc(db, "solteiras", id), { bloqueada: false, motivo_bloqueio: "" });
+                        mostrarAviso("Cliente desbloqueada!", true);
+                    }
+                }
+            } catch (e) { mostrarAviso("Erro ao executar ação!"); }
+        };
+
+        window.prepararEdicao = (id) => {
+            const jaExiste = clientesCache.find(c => c.id === id);
+            if (!jaExiste) return;
+            const dataNascReal = jaExiste.data_nascimento || jaExiste.nascimento;
+            const normNasc = normalizarDataNascimento(dataNascReal);
+            document.getElementById('editId').value = jaExiste.id; 
+            document.getElementById('nome').value = jaExiste.nome; 
+            document.getElementById('tel').value = jaExiste.tel || ''; 
+            document.getElementById('cpf').value = jaExiste.cpf || ''; 
+            document.getElementById('nascimento').value = normNasc ? normNasc.raw : ''; 
+            document.getElementById('obs').value = jaExiste.obs || '';
+            window.updateIdade(normNasc ? normNasc.raw : null); 
+            document.getElementById('btnSalvar').innerText = "ATUALIZAR DADOS"; 
+            document.getElementById('btnCancelarEdicao').classList.remove('hidden');
+            document.getElementById('tituloForm').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        function render(dados, isBusca = false) {
+            const container = document.getElementById('listaSolteiras');
+            const agora = new Date();
+            const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
+            let paraExibir = isBusca ? dados : dados.filter(c => c.ultima_visita && typeof c.ultima_visita.toDate === 'function' && c.ultima_visita.toDate() >= corte);
+            
+            if (paraExibir.length === 0) {
+                container.innerHTML = `<div class="p-20 text-center text-zinc-500 font-black text-sm uppercase italic">NENHUM RESULTADO NA TELA</div>`;
+                return;
+            }
+            container.innerHTML = '';
+            
+            paraExibir.sort((a,b) => {
+                let valA = a.ultima_visita && typeof a.ultima_visita.toDate === 'function' ? a.ultima_visita.toDate().getTime() : 0;
+                let valB = b.ultima_visita && typeof b.ultima_visita.toDate === 'function' ? b.ultima_visita.toDate().getTime() : 0;
+                return valB - valA;
+            }).forEach(c => {
+                const dataNascReal = c.data_nascimento || c.nascimento;
+                const normNasc = normalizarDataNascimento(dataNascReal);
+                const isNiver = checkAniversarioSemana(normNasc);
+                const niverData = normNasc ? normNasc.display : '--/--';
+                
+                let textoVisita = '---'; let naCasa = false;
+                if (c.ultima_visita) {
+                    if (typeof c.ultima_visita.toDate === 'function') {
+                        const u = c.ultima_visita.toDate(); naCasa = u >= corte; textoVisita = u.toLocaleDateString('pt-BR');
+                    } else if (!isNaN(c.ultima_visita) && Number(c.ultima_visita) > 10000) {
+                        const excelDate = Number(c.ultima_visita); const dateObj = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+                        textoVisita = String(dateObj.getUTCDate()).padStart(2, '0') + '/' + String(dateObj.getUTCMonth() + 1).padStart(2, '0') + '/' + dateObj.getUTCFullYear();
+                    } else if (typeof c.ultima_visita === 'string' && c.ultima_visita.trim() !== '') {
+                        textoVisita = c.ultima_visita;
+                    }
+                }
+                
+                const div = document.createElement('div');
+                div.className = `item-cliente p-6 flex justify-between items-center ${c.bloqueada ? 'cliente-bloqueada' : (isNiver ? 'card-aniversariante' : (naCasa ? 'cliente-checkin-ok' : ''))}`;
+                
+                let painelAcao = ''; let infoBloqueio = '';
+
+                if (c.bloqueada) {
+                    infoBloqueio = `<div class="mt-3 bg-red-100 p-3 rounded-xl border border-red-300"><span class="text-[9px] font-black uppercase text-red-600 block mb-1">🚨 PROIBIDA A ENTRADA. MOTIVO:</span><span class="text-xs font-bold text-zinc-900">${c.motivo_bloqueio || 'Sem motivo detalhado.'}</span></div>`;
+                    painelAcao = `
+                    <div class="flex flex-col items-end gap-2">
+                        <button onclick="bloquearDesbloquear('${c.id}', false)" class="bg-red-600 text-white hover:bg-red-700 px-6 py-4 rounded-xl text-[10px] font-black uppercase transition-all mb-1 shadow-md">Desbloquear 🔓</button>
+                        <button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button>
+                    </div>`;
+                } else {
+                    if (naCasa) {
+                        painelAcao = `
+                        <div class="flex flex-col items-end gap-2">
+                            <span class="text-green-600 text-3xl font-black">✓</span>
+                            <div class="flex gap-4 mt-2">
+                                <button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button>
+                                <button onclick="bloquearDesbloquear('${c.id}', true)" class="text-[10px] font-black uppercase text-red-500 opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button>
+                            </div>
+                        </div>`;
+                    } else {
+                        painelAcao = `
+                        <div class="flex flex-col items-end gap-2">
+                            <button onclick="dispararCheckin('${c.id}')" class="bg-green-600 text-white px-8 py-4 rounded-xl text-[11px] font-black uppercase hover:bg-green-500 transition-all shadow-[0_4px_10px_rgba(22,163,74,0.3)] w-[130px]">Liberar</button>
+                            <div class="flex gap-4 mt-2 w-[130px] justify-center">
+                                <button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button>
+                                <button onclick="bloquearDesbloquear('${c.id}', true)" class="text-red-500 text-[10px] font-black uppercase opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button>
+                            </div>
+                        </div>`;
+                    }
+                }
+
+                div.innerHTML = `
+                    <div class="flex-grow pr-4 w-full">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <h3 class="text-xl font-black uppercase ${c.bloqueada ? 'text-red-600' : 'text-zinc-900'}">${c.nome}</h3>
+                            <span class="text-zinc-600 font-bold text-sm bg-zinc-200 px-2 py-0.5 rounded-lg border border-zinc-300">📱 ${c.tel || '---'}</span>
+                            ${isNiver && !c.bloqueada ? '<span class="bg-yellow-400 text-black px-4 py-1.5 rounded-xl text-[10px] font-black border-2 border-yellow-600 shadow-[0_3px_10px_rgba(234,179,8,0.35)] uppercase tracking-widest animate-pulse">🎂 ANIVERSARIANTE DA SEMANA</span>' : ''}
+                        </div>
+                        <p class="text-[11px] text-zinc-500 font-bold uppercase mt-1">
+                            🆔 <span class="text-zinc-700">${c.cpf || '---'}</span> | 📅 VISITA: <span class="${naCasa ? 'text-green-600 font-black' : 'text-zinc-700'}">${textoVisita}</span> | 🎂 NIVER: <span class="${isNiver && !c.bloqueada ? 'text-yellow-800 bg-yellow-200 px-2 py-0.5 rounded-lg border border-yellow-500 font-black' : 'text-zinc-700'}">${niverData}</span>
+                        </p>
+                        ${c.obs && !c.bloqueada ? `<p class="mt-3 text-[10px] font-bold text-blue-700 uppercase bg-blue-50 inline-block px-3 py-1 rounded border border-blue-200">📌 ${c.obs}</p>` : ''}
+                        ${infoBloqueio}
+                    </div>
+                    <div class="flex-none text-right">
+                        ${painelAcao}
+                    </div>`;
+                container.appendChild(div);
+            });
+        }
+
+        window.maskCPF = (i) => { let v = i.value.replace(/\D/g,"").substring(0,11); v = v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2"); i.value = v; };
+        window.maskTel = (i) => { let v = i.value.replace(/\D/g,"").substring(0,11); v = v.replace(/^(\d{2})(\d)/g,"($1) $2").replace(/(\d)(\d{4})$/,"$1-$2"); i.value = v; };
+        
+        window.updateIdade = (v) => { 
+            if(!v) { document.getElementById('idadeDisplay').innerText = "--"; return; } 
+            const norm = normalizarDataNascimento(v);
+            if (!norm) { document.getElementById('idadeDisplay').innerText = "--"; return; }
+            const h = new Date(); const n = new Date(norm.raw + "T12:00:00"); 
+            let i = h.getFullYear() - n.getFullYear(); 
+            if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; 
+            document.getElementById('idadeDisplay').innerText = isNaN(i) ? "--" : i; 
+        };
+        
+        window.limparFormulario = () => {
+            document.getElementById('formSolteira').reset();
+            document.getElementById('editId').value = "";
+            document.getElementById('btnSalvar').innerText = "Confirmar e Liberar";
+            document.getElementById('btnCancelarEdicao').classList.add('hidden');
+            document.getElementById('idadeDisplay').innerText = "--";
+        };
+
+        window.validarDuplicidade = async (campo) => {
+            const input = document.getElementById(campo); const valor = input.value.replace(/\D/g, ""); if (valor.length < 11) return;
+            const jaExiste = clientesCache.find(c => (c.cpf || '').replace(/\D/g, "") === valor || (c.tel || '').replace(/\D/g, "") === valor);
+            if (jaExiste && document.getElementById('editId').value !== jaExiste.id) {
+                if(jaExiste.bloqueada) {
+                    mostrarAviso(`🚨 PROIBIDA! Motivo: ${jaExiste.motivo_bloqueio}`);
+                    window.limparFormulario(); return;
+                }
+                if (confirm(`CLIENTE ENCONTRADA: ${jaExiste.nome}\n\nOK: Fazer Check-in (Ela já pagou).\nCANCELAR: Editar dados dela.`)) { 
+                    await window.dispararCheckin(jaExiste.id); window.limparFormulario(); 
+                } else { window.prepararEdicao(jaExiste.id); }
+            }
+        };
+
+        document.getElementById('formSolteira').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvar'); const idEx = document.getElementById('editId').value;
+            btn.disabled = true; btn.innerText = "SALVANDO...";
+            try {
+                const dados = { nome: document.getElementById('nome').value.toUpperCase(), tel: document.getElementById('tel').value, cpf: document.getElementById('cpf').value, data_nascimento: document.getElementById('nascimento').value, obs: document.getElementById('obs').value.toUpperCase(), ultima_visita: serverTimestamp() };
+                if (idEx) {
+                    await updateDoc(doc(db, "solteiras", idEx), dados);
+                    await gerarReciboCheckin(dados); // Registra no caixa do dia
+                    mostrarAviso("Dados atualizados com sucesso!", true);
+                } else {
+                    const docRefAdd = await addDoc(colRef, { ...dados, bloqueada: false });
+                    await gerarReciboCheckin(dados); // Registra no caixa do dia
+                    mostrarAviso("Cadastro salvo e liberado!", true);
+                }
+                window.limparFormulario();
+                limparFocarBusca(); 
+            } catch (e) { mostrarAviso("Erro ao salvar os dados!"); }
+            finally { btn.disabled = false; btn.innerText = idEx ? "ATUALIZAR DADOS" : "Confirmar e Liberar"; }
+        });
+
+        window.filtrarClientes = () => {
+            const b = document.getElementById('buscaCliente').value.toUpperCase().trim();
+            if (b.length > 0) { 
+                const t = b.split(/\s+/); 
+                render(clientesCache.filter(c => t.every(x => `${c.nome?.toUpperCase() || ''} ${c.cpf || ''} ${c.tel || ''}`.includes(x))), true); 
+            } else { render(clientesCache, false); }
+        };
+
+        function atualizarContadores() { 
+            const agora = new Date(); const corte = new Date(); corte.setHours(5, 0, 0, 0); if (agora < corte) corte.setDate(corte.getDate() - 1);
+            const total = clientesCache.filter(c => c.ultima_visita && typeof c.ultima_visita.toDate === 'function' && c.ultima_visita.toDate() >= corte).length;
+            document.getElementById('contagemEvento').innerText = total;
+        }
     </script>
 </body>
 </html>
