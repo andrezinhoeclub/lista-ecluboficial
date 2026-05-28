@@ -181,7 +181,10 @@
                 
                 <textarea id="output-marketing" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-48 bg-[#0a0a0f] border-zinc-800 border resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
                 
-                <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para WhatsApp</button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar Lista Completa</button>
+                    <button onclick="copiarMarketingTelefones()" class="w-full bg-green-600 hover:bg-green-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📲 Copiar Só Telefones</button>
+                </div>
             </div>
         </section>
 
@@ -585,6 +588,27 @@
             mostrarAviso("Excel baixado com sucesso!", true);
         };
 
+        const getSolteirasMarketingOrdenadas = () => {
+            return [...dadosSolteiras].sort((a, b) => {
+                const valA = parseVisitaUniversal(a.ultima_visita) || parseVisitaUniversal(a.data_cadastro) || 0;
+                const valB = parseVisitaUniversal(b.ultima_visita) || parseVisitaUniversal(b.data_cadastro) || 0;
+                return valB - valA;
+            });
+        };
+
+        const copiarTextoParaAreaTransferencia = (texto) => {
+            const temp = document.createElement('textarea');
+            temp.value = texto;
+            temp.setAttribute('readonly', '');
+            temp.style.position = 'fixed';
+            temp.style.left = '-9999px';
+            temp.style.top = '-9999px';
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+        };
+
         window.gerarListaMarketing = () => {
             const btn = document.getElementById('btn-gerar-lista');
             const textarea = document.getElementById('output-marketing');
@@ -594,11 +618,7 @@
                 return;
             }
             
-            const ordenadas = [...dadosSolteiras].sort((a, b) => {
-                const valA = parseVisitaUniversal(a.ultima_visita) || parseVisitaUniversal(a.data_cadastro) || 0;
-                const valB = parseVisitaUniversal(b.ultima_visita) || parseVisitaUniversal(b.data_cadastro) || 0;
-                return valB - valA;
-            });
+            const ordenadas = getSolteirasMarketingOrdenadas();
 
             let txt = "";
             ordenadas.forEach(c => {
@@ -624,7 +644,25 @@
             const t = document.getElementById('output-marketing');
             if(!t.value || t.value.includes("Clique no botão")) return mostrarAviso("Gere a lista primeiro!");
             t.select(); document.execCommand('copy');
-            mostrarAviso("Lista copiada! Pronta para colar no WhatsApp.", true);
+            mostrarAviso("Lista completa copiada!", true);
+        };
+
+        window.copiarMarketingTelefones = () => {
+            if (dadosSolteiras.length === 0) return mostrarAviso("Nenhuma solteira encontrada na base.");
+
+            const usados = new Set();
+            const telefones = getSolteirasMarketingOrdenadas()
+                .map(c => String(c.tel || c.telefone || '').replace(/\D/g, ''))
+                .filter(tel => {
+                    if (tel.length < 8 || usados.has(tel)) return false;
+                    usados.add(tel);
+                    return true;
+                });
+
+            if (telefones.length === 0) return mostrarAviso("Nenhum telefone válido encontrado.");
+
+            copiarTextoParaAreaTransferencia(telefones.join('\n'));
+            mostrarAviso(`${telefones.length} telefones copiados para disparo!`, true);
         };
 
         window.duplicarEvento = (id, origem = 'modelos') => {
