@@ -921,8 +921,45 @@
             catch(err) { mostrarAviso("Erro."); }
         });
 
-        window.editarPromoter = async (id) => { const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`); if (!op) return; let up = {}; if (op === '1') up.tipo = 'padrao'; if (op === '2') up.tipo = 'aniversario'; if (op === '3') up.tipo = 'visualizar'; if (op === '4') { const ns = prompt("Nova senha:"); if(ns) up.senha = ns.trim(); } if (Object.keys(up).length > 0) { await updateDoc(doc(db, "promoters", id), up); mostrarAviso("Atualizado!", true); } };
-        window.editarOperador = async (id) => { const ns = prompt("Nova senha:"); if(ns) { await updateDoc(doc(db, "configuracoes", id), {senha: ns.trim()}); mostrarAviso("Senha atualizada!", true); } };
+        window.editarPromoter = async (id) => {
+            const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`);
+            if (!op) return;
+
+            let up = {};
+            if (op === '1') up.tipo = 'padrao';
+            if (op === '2') up.tipo = 'aniversario';
+            if (op === '3') up.tipo = 'visualizar';
+            if (op === '4') {
+                const ns = prompt("Nova senha:\n\nDigite uma nova senha ou deixe em branco e clique OK para apagar a senha atual.\n\nQuando a senha estiver apagada, o promoter será obrigado a cadastrar uma nova senha no próximo acesso.");
+                if (ns === null) return;
+                up.senha = ns.trim();
+                up.session_token = "";
+            }
+
+            if (Object.keys(up).length > 0) {
+                try {
+                    await updateDoc(doc(db, "promoters", id), up);
+                    if (op === '4' && up.senha === "") mostrarAviso("Senha apagada. O promoter criará uma nova no próximo acesso.", true);
+                    else mostrarAviso("Atualizado!", true);
+                } catch(e) {
+                    mostrarAviso("Erro ao atualizar promoter.");
+                }
+            }
+        };
+
+        window.editarOperador = async (id) => {
+            const ns = prompt("Nova senha:\n\nDigite uma nova senha ou deixe em branco e clique OK para apagar a senha atual.\n\nQuando a senha estiver apagada, o operador será obrigado a cadastrar uma nova senha no próximo acesso.");
+            if (ns === null) return;
+
+            const novaSenha = ns.trim();
+            try {
+                await updateDoc(doc(db, "configuracoes", id), { senha: novaSenha, session_token: "" });
+                if (novaSenha === "") mostrarAviso("Senha apagada. O operador criará uma nova no próximo acesso.", true);
+                else mostrarAviso("Senha atualizada!", true);
+            } catch(e) {
+                mostrarAviso("Erro ao atualizar senha.");
+            }
+        };
 
         function renderEquipe() {
             const fT = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') + ' ' + new Date(iso).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : 'NUNCA';
