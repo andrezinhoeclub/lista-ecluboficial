@@ -189,7 +189,7 @@
             
             <div class="glass-card p-8 border-l-4 border-l-fuchsia-500 mb-8">
                 <h2 class="text-fuchsia-500 font-black uppercase italic text-xl mb-4 tracking-tighter">Meus Modelos de Festa</h2>
-                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Qualquer evento criado com a palavra "MODELO" no nome aparecerá aqui.</p>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Salve um evento já configurado como modelo. O modelo copia valores, camarotes, benefícios e demais regras, mas não copia nome do evento, data, horário nem arte.</p>
                 <div id="grid-modelos" class="flex gap-4 overflow-x-auto pb-4 scroll-x">
                     <p class="text-zinc-500 text-xs italic uppercase font-bold">Carregando modelos...</p>
                 </div>
@@ -351,7 +351,7 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
         
-        let dadosReservas = []; let dadosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
+        let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
         let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
 
         const getPromoterName = (p) => {
@@ -359,6 +359,27 @@
             const clean = String(p).toUpperCase().trim();
             if (clean === 'UNDEFINED' || clean === 'NULL' || clean === '') return 'SITE DIRETO';
             return clean;
+        };
+
+        const isEventoModeloAntigo = (ev) => {
+            const nome = String(ev?.nome || '').toUpperCase();
+            return ev?.is_modelo === true || nome.includes('MODELO');
+        };
+
+        const CAMPOS_IGNORADOS_MODELO = new Set([
+            'id', 'nome', 'data', 'hora', 'imagem', 'ativo',
+            'modelo_nome', 'origem_evento_id', 'criado_em', 'atualizado_em', 'is_modelo'
+        ]);
+
+        const montarDadosModelo = (ev) => {
+            const modelo = {};
+            Object.keys(ev || {}).forEach(campo => {
+                if (!CAMPOS_IGNORADOS_MODELO.has(campo)) modelo[campo] = ev[campo];
+            });
+            modelo.origem_evento_id = ev.id || '';
+            modelo.criado_em = new Date().toISOString();
+            modelo.atualizado_em = new Date().toISOString();
+            return modelo;
         };
 
         const parseVisita = (val) => {
@@ -606,37 +627,66 @@
             mostrarAviso("Lista copiada! Pronta para colar no WhatsApp.", true);
         };
 
-        window.duplicarEvento = (id) => {
-            const ev = dadosEventos.find(e => e.id === id); 
-            document.getElementById('edit_evento_id').value = ""; 
-            
-            document.getElementById('nome_festa').value = ""; 
-            document.getElementById('data_festa').value = ""; 
-            document.getElementById('hora_inicio').value = ""; 
+        window.duplicarEvento = (id, origem = 'modelos') => {
+            const ev = origem === 'eventos' ? dadosEventos.find(e => e.id === id) : dadosModelosEventos.find(e => e.id === id);
+            if (!ev) return mostrarAviso("Modelo não encontrado.");
+
+            document.getElementById('edit_evento_id').value = "";
+            document.getElementById('nome_festa').value = "";
+            document.getElementById('data_festa').value = "";
+            document.getElementById('hora_inicio').value = "";
             document.getElementById('url_imagem_atual').value = "";
             if(document.getElementById('upload_capa')) document.getElementById('upload_capa').value = "";
-            
-            document.getElementById('valor_casal').value = ev.valor_casal || ""; 
-            document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; 
-            document.getElementById('desc_casal').value = ev.desc_casal || ""; 
-            document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; 
-            document.getElementById('ant_casal').value = ev.ant_casal || ""; 
-            document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; 
-            document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; 
-            document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; 
-            document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; 
-            
+
+            document.getElementById('valor_casal').value = ev.valor_casal || "";
+            document.getElementById('valor_solteiro').value = ev.valor_solteiro || "";
+            document.getElementById('desc_casal').value = ev.desc_casal || "";
+            document.getElementById('desc_solteiro').value = ev.desc_solteiro || "";
+            document.getElementById('ant_casal').value = ev.ant_casal || "";
+            document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || "";
+            document.getElementById('ant_solteiro').value = ev.ant_solteiro || "";
+            document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || "";
+            document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || "";
+            if(document.getElementById('diferenciais_noite')) document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || "";
+
             if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
-            
-            for(let i=1; i<=8; i++) { 
-                document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; 
-                document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; 
-                document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; 
+
+            for(let i=1; i<=8; i++) {
+                document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false;
+                document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || "";
+                document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || "";
             }
-            
-            mostrarAviso("Modelo carregado! Preencha NOME, DATA e IMAGEM.", true);
+
+            mostrarAviso("Modelo carregado! Preencha NOME, DATA, HORÁRIO e IMAGEM.", true);
             document.getElementById('formEventoContainer').scrollIntoView({ behavior: 'smooth' });
             document.getElementById('nome_festa').focus();
+        };
+
+        window.salvarEventoComoModelo = async (id) => {
+            const ev = dadosEventos.find(e => e.id === id);
+            if (!ev) return mostrarAviso("Evento não encontrado para virar modelo.");
+
+            const nomeModelo = prompt("Dê um nome interno para este modelo (ex: Festa Pista + 8 Camarotes):");
+            if (!nomeModelo || !nomeModelo.trim()) return;
+
+            try {
+                const modelo = montarDadosModelo(ev);
+                modelo.modelo_nome = nomeModelo.trim().toUpperCase();
+                await addDoc(collection(db, "modelos_eventos"), modelo);
+                mostrarAviso("Modelo salvo sem nome, data, horário e arte do evento.", true);
+            } catch(e) {
+                mostrarAviso("Erro ao salvar modelo.");
+            }
+        };
+
+        window.removerModeloEvento = async (id) => {
+            if(!confirm("Excluir este modelo? Os eventos reais não serão afetados.")) return;
+            try {
+                await deleteDoc(doc(db, "modelos_eventos", id));
+                mostrarAviso("Modelo removido com sucesso!", true);
+            } catch(e) {
+                mostrarAviso("Erro ao remover modelo.");
+            }
         };
 
         onSnapshot(collection(db, "solteiras"), snap => {
@@ -666,6 +716,11 @@
         onSnapshot(collection(db, "eventos"), snap => { 
             dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderSolteiras();
+        });
+
+        onSnapshot(collection(db, "modelos_eventos"), snap => {
+            dadosModelosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderGridConfig();
         });
 
         onSnapshot(collection(db, "promoters"), snap => { 
@@ -721,7 +776,7 @@
 
         window.renderRelatorios = () => {
             const container = document.getElementById('container-bolhas'); if(!container) return;
-            const ativos = dadosEventos.sort((a,b) => new Date(a.data) - new Date(b.data));
+            const ativos = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => new Date(a.data) - new Date(b.data));
             container.innerHTML = ativos.map(ev => {
                 const evN = (ev.nome || '').trim().toLowerCase();
                 const solteirasDoEvento = getSolteirasParaEvento(ev);
@@ -768,7 +823,7 @@
             const tA = document.getElementById('output-excel');
             const val = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.metodo !== 'pix_antecipado' || r.pago === true));
             if (val.length === 0) { tA.value = "Sem reservas de pagantes."; return; }
-            const at = dadosEventos.sort((a,b) => a.data.localeCompare(b.data)); let cab = "";
+            const at = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => a.data.localeCompare(b.data)); let cab = "";
             if (at.length > 0) {
                 const mes = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
                 const dI = new Date(at[0].data + "T12:00:00Z"); const dF = new Date(at[at.length-1].data + "T12:00:00Z");
@@ -836,7 +891,7 @@
 
         window.gerarApenasSolteiras = () => {
             const tA = document.getElementById('output-excel');
-            const ativos = dadosEventos.filter(e => e.ativo);
+            const ativos = dadosEventos.filter(e => e.ativo && !isEventoModeloAntigo(e));
             if (ativos.length === 0) { tA.value = "Nenhum evento ativo no momento."; return; }
             let unicas = []; let mapa = new Map();
             ativos.forEach(ev => {
@@ -916,25 +971,54 @@
             const gridEventos = document.getElementById('grid-eventos-config');
             if(!gridEventos) return;
 
-            gridModelos.innerHTML = '';
+            if(gridModelos) gridModelos.innerHTML = '';
             gridEventos.innerHTML = '';
 
-            const modelos = dadosEventos.filter(e => e.nome.toUpperCase().includes('MODELO'));
-            const normais = dadosEventos.filter(e => !e.nome.toUpperCase().includes('MODELO')).sort((a,b) => new Date(a.data) - new Date(b.data));
+            const modelos = [...dadosModelosEventos].sort((a,b) => String(a.modelo_nome || '').localeCompare(String(b.modelo_nome || '')));
+            const modelosAntigos = dadosEventos.filter(e => isEventoModeloAntigo(e));
+            const normais = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => new Date(a.data) - new Date(b.data));
 
-            if (modelos.length > 0 && gridModelos) {
-                gridModelos.innerHTML = modelos.map(ev => `
-                    <div class="bg-fuchsia-900/20 border border-fuchsia-500/30 p-4 rounded-2xl min-w-[250px] flex-none flex flex-col justify-between">
-                        <h4 class="text-sm font-black uppercase text-fuchsia-400 mb-4">${ev.nome}</h4>
-                        <div class="flex gap-2">
-                            <button onclick="duplicarEvento('${ev.id}')" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[9px] font-black uppercase py-2 rounded-xl transition-all shadow-md">Usar Modelo</button>
-                            <button onclick="prepararEdicaoEvento('${ev.id}')" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all">Editar</button>
-                            <button onclick="removerItem('eventos', '${ev.id}')" class="bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all">✕</button>
+            if (gridModelos) {
+                let htmlModelos = '';
+
+                if (modelos.length > 0) {
+                    htmlModelos += modelos.map(ev => `
+                        <div class="bg-fuchsia-900/20 border border-fuchsia-500/30 p-4 rounded-2xl min-w-[280px] flex-none flex flex-col justify-between">
+                            <div>
+                                <p class="text-[8px] font-black uppercase text-fuchsia-300/70 tracking-widest mb-2">Modelo Salvo</p>
+                                <h4 class="text-sm font-black uppercase text-fuchsia-400 mb-4 leading-tight">${ev.modelo_nome || 'MODELO SEM NOME'}</h4>
+                                <p class="text-[8px] text-zinc-500 uppercase font-bold mb-4">Não contém nome, data, horário nem arte do evento.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="duplicarEvento('${ev.id}')" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[9px] font-black uppercase py-2 rounded-xl transition-all shadow-md">Usar Modelo</button>
+                                <button onclick="removerModeloEvento('${ev.id}')" class="bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all">✕</button>
+                            </div>
                         </div>
-                    </div>
-                `).join('');
-            } else {
-                gridModelos.innerHTML = `<p class="text-zinc-500 text-xs italic uppercase font-bold">Nenhum modelo salvo. Crie um evento com a palavra "MODELO" no nome.</p>`;
+                    `).join('');
+                }
+
+                if (modelosAntigos.length > 0) {
+                    htmlModelos += modelosAntigos.map(ev => `
+                        <div class="bg-yellow-900/20 border border-yellow-500/30 p-4 rounded-2xl min-w-[300px] flex-none flex flex-col justify-between">
+                            <div>
+                                <p class="text-[8px] font-black uppercase text-yellow-400 tracking-widest mb-2">Modelo antigo por nome</p>
+                                <h4 class="text-sm font-black uppercase text-yellow-300 mb-3 leading-tight">${ev.nome}</h4>
+                                <p class="text-[8px] text-zinc-500 uppercase font-bold mb-4">Use, converta para o novo formato ou exclua depois da conferência.</p>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="duplicarEvento('${ev.id}', 'eventos')" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[8px] font-black uppercase py-2 rounded-xl transition-all">Usar</button>
+                                <button onclick="salvarEventoComoModelo('${ev.id}')" class="bg-yellow-600 hover:bg-yellow-500 text-black text-[8px] font-black uppercase py-2 rounded-xl transition-all">Converter</button>
+                                <button onclick="removerItem('eventos', '${ev.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[8px] font-black uppercase py-2 rounded-xl transition-all">✕</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                if (!htmlModelos) {
+                    gridModelos.innerHTML = `<p class="text-zinc-500 text-xs italic uppercase font-bold">Nenhum modelo salvo ainda. Escolha um evento configurado abaixo e clique em “Salvar como Modelo”.</p>`;
+                } else {
+                    gridModelos.innerHTML = htmlModelos;
+                }
             }
 
             gridEventos.innerHTML = normais.map(ev => `
@@ -945,9 +1029,10 @@
                         <span class="${ev.ativo ? 'text-green-500' : 'text-zinc-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span>
                     </div>
                     <h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4>
-                    <div class="flex justify-between gap-2 mt-4 border-t border-white/10 pt-4">
-                        <button onclick="prepararEdicaoEvento('${ev.id}')" class="text-blue-500 font-bold text-[9px] uppercase hover:text-white transition-colors w-full text-left">Editar Festa</button>
-                        <button onclick="removerItem('eventos', '${ev.id}')" class="text-red-500 font-bold text-[9px] uppercase hover:text-white transition-colors w-full text-right">Excluir Tudo</button>
+                    <div class="grid grid-cols-3 gap-2 mt-4 border-t border-white/10 pt-4">
+                        <button onclick="prepararEdicaoEvento('${ev.id}')" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 font-black text-[8px] uppercase hover:bg-blue-600 hover:text-white transition-colors rounded-xl py-2">Editar</button>
+                        <button onclick="salvarEventoComoModelo('${ev.id}')" class="bg-fuchsia-600/20 border border-fuchsia-500/30 text-fuchsia-400 font-black text-[8px] uppercase hover:bg-fuchsia-600 hover:text-white transition-colors rounded-xl py-2">Salvar Modelo</button>
+                        <button onclick="removerItem('eventos', '${ev.id}')" class="bg-red-600/20 border border-red-500/30 text-red-500 font-black text-[8px] uppercase hover:bg-red-600 hover:text-white transition-colors rounded-xl py-2">Excluir</button>
                     </div>
                 </div>
             `).join('');
@@ -996,7 +1081,7 @@
         };
         
         window.zerarSistemaCompleto = async () => { 
-            if (confirm("⚠️ TEM CERTEZA QUE DESEJA ZERAR EVENTOS E LISTAS?\n\nAs Solteiras Cadastradas e os Pontos de Fidelidade NÃO serão afetados. Os Eventos salvos com a palavra 'MODELO' no nome também serão protegidos.")) { 
+            if (confirm("⚠️ TEM CERTEZA QUE DESEJA ZERAR EVENTOS E LISTAS?\n\nAs Solteiras Cadastradas, os Pontos de Fidelidade e os Modelos salvos em Meus Modelos NÃO serão afetados.")) { 
                 for (const col of ["lista_eventos", "links_aniversario"]) { 
                     const b = writeBatch(db); 
                     const q = await getDocs(collection(db, col)); 
@@ -1004,14 +1089,13 @@
                     await b.commit(); 
                 } 
                 
-                // Apaga os eventos, exceto os que têm "MODELO" no nome
+                // Apaga apenas eventos reais. Modelos novos ficam na coleção "modelos_eventos".
+                // Modelos antigos que ainda estavam salvos dentro de "eventos" também são preservados.
                 const bEv = writeBatch(db);
                 const qEv = await getDocs(collection(db, "eventos"));
                 qEv.forEach(d => {
                     const data = d.data();
-                    if(!data.nome.toUpperCase().includes('MODELO')) {
-                        bEv.delete(d.ref);
-                    }
+                    if(!isEventoModeloAntigo(data)) bEv.delete(d.ref);
                 });
                 await bEv.commit();
                 
