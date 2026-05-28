@@ -242,7 +242,7 @@
             </h2>
 
             <p class="text-[9px] text-zinc-400 mb-4 leading-relaxed">
-                Selecione o evento, confira as passageiras e clique no botão para copiar a rota.
+                Selecione o evento, confira as passageiras e clique no botão para copiar a rota e abrir o WhatsApp.
             </p>
 
             <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full site-input p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none mt-2">
@@ -251,8 +251,8 @@
 
             <textarea id="output-rotas-carona" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[380px] resize-none whitespace-pre" placeholder="Aguardando seleção do evento..."></textarea>
 
-            <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(59,130,246,0.4)]">
-                📋 Copiar para o Motorista
+            <button onclick="abrirWhatsappRotasCarona()" class="w-full bg-green-600 hover:bg-green-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                📲 Copiar Rotas e Abrir WhatsApp
             </button>
         </div>
     </div>
@@ -1023,7 +1023,7 @@
                     const labelVagas = qtdPass > 1 ? "VAGAS" : "VAGA";
 
                     const enderecoBusca = `${p.endereco || ""}, ${p.bairro || ""}, Curitiba - PR`;
-                    const linkMaps = `http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(enderecoBusca)}`;
+                    const linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoBusca)}`;
 
                     texto += `\n${cont}. ${p.nome || "SEM NOME"}\n`;
                     texto += `WhatsApp: ${p.tel || "Sem número"}\n`;
@@ -1058,17 +1058,26 @@
             }
         }
 
-        window.copiarRotasCarona = function() {
+        window.abrirWhatsappRotasCarona = function() {
             const textarea = document.getElementById("output-rotas-carona");
             const texto = textarea.value.trim();
 
             if (!texto || texto.includes("Aguardando seleção") || texto.includes("Nenhuma solicitação")) {
-                return mostrarAviso("Selecione um evento com caronas para copiar as rotas!");
+                return mostrarAviso("Selecione um evento com caronas antes de abrir o WhatsApp!");
             }
 
             copiarTextoRotas(texto);
 
-            mostrarAviso("Rotas copiadas para o motorista!", true);
+            mostrarAviso("Rotas copiadas! Abrindo WhatsApp...", true);
+
+            const mensagem = encodeURIComponent(texto);
+            const linkWhatsapp = `https://wa.me/?text=${mensagem}`;
+
+            const janela = window.open(linkWhatsapp, "_blank");
+
+            if (!janela) {
+                window.location.href = linkWhatsapp;
+            }
         };
 
         document.addEventListener("DOMContentLoaded", function() {
