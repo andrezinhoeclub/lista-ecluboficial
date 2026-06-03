@@ -116,6 +116,7 @@
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Promoter / Origem</th>
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Tipo</th>
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Status / Check-in</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="tabela-auditoria-body" class="divide-y divide-zinc-800">
@@ -739,6 +740,89 @@
             if(bCount) bCount.innerText = `${dadosSolteiras.length}`;
         };
 
+        const normalizarAuditoria = (v) => String(v || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const apenasNumerosAuditoria = (v) => String(v || '').replace(/\D/g, '');
+
+        const mesmaPessoaNoMesmoEvento = (base, item) => {
+            if (!base || !item) return false;
+            if (base.id && item.id && base.id === item.id) return true;
+
+            const eventoBase = normalizarAuditoria(base.evento);
+            const eventoItem = normalizarAuditoria(item.evento);
+            if (eventoBase && eventoItem && eventoBase !== eventoItem) return false;
+
+            const telBase = apenasNumerosAuditoria(base.tel || base.telefone);
+            const telItem = apenasNumerosAuditoria(item.tel || item.telefone);
+            if (telBase.length >= 8 && telBase === telItem) return true;
+
+            const cpfBase = apenasNumerosAuditoria(base.cpf);
+            const cpfItem = apenasNumerosAuditoria(item.cpf);
+            if (cpfBase.length >= 11 && cpfBase === cpfItem) return true;
+
+            const nomeBase = normalizarAuditoria(base.nome);
+            const nomeItem = normalizarAuditoria(item.nome);
+            const tipoBase = normalizarAuditoria(base.tipo_entrada);
+            const tipoItem = normalizarAuditoria(item.tipo_entrada);
+            return nomeBase.length > 2 && nomeBase === nomeItem && (!tipoBase || !tipoItem || tipoBase === tipoItem);
+        };
+
+        window.excluirClienteAuditoria = async (id) => {
+            const reserva = dadosReservas.find(r => r.id === id);
+            if (!reserva) {
+                mostrarAviso("Cliente não encontrado na auditoria.");
+                return;
+            }
+
+            const nome = reserva.nome || 'Cliente sem nome';
+            const evento = reserva.evento || 'Evento não informado';
+            const tipo = reserva.tipo_entrada || 'Tipo não informado';
+            const pixInfo = reserva.metodo === 'pix_antecipado'
+                ? `\n\nPIX: ${reserva.pago === true ? 'PAGO - será removido dos antecipados/financeiro.' : 'PENDENTE/CANCELADO - será removido da auditoria.'}`
+                : '';
+
+            const ok = confirm(
+                `EXCLUIR CLIENTE DA AUDITORIA?\n\n` +
+                `Cliente: ${nome}\n` +
+                `Evento: ${evento}\n` +
+                `Tipo: ${tipo}${pixInfo}\n\n` +
+                `Esta ação remove a reserva/interação da lista do evento, dos relatórios e da portaria. Não é possível desfazer.`
+            );
+            if (!ok) return;
+
+            try {
+                const batch = writeBatch(db);
+                let removidos = 0;
+
+                if (reserva.evento) {
+                    const qClienteEvento = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", reserva.evento)));
+                    qClienteEvento.forEach(d => {
+                        const item = { id: d.id, ...d.data() };
+                        if (mesmaPessoaNoMesmoEvento(reserva, item)) {
+                            batch.delete(d.ref);
+                            removidos++;
+                        }
+                    });
+                }
+
+                if (removidos === 0) {
+                    batch.delete(doc(db, "lista_eventos", id));
+                    removidos = 1;
+                }
+
+                await batch.commit();
+                mostrarAviso(`${removidos} registro(s) do cliente removido(s). Relatórios e portaria atualizados.`, true);
+            } catch (e) {
+                console.error("Erro ao excluir cliente pela auditoria:", e);
+                mostrarAviso("Erro ao excluir cliente. Verifique as permissões do Firestore.");
+            }
+        };
+
         window.renderAuditoria = () => {
             const tbody = document.getElementById('tabela-auditoria-body'); if(!tbody) return;
             const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
@@ -760,7 +844,7 @@
                 });
             } else { res = res.slice(0, 100); }
 
-            if (res.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr>`; return; }
+            if (res.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr>`; return; }
             tbody.innerHTML = res.map(r => {
                 const df = isNaN(new Date(r.data_reserva)) ? '---' : new Date(r.data_reserva).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' - ' + new Date(r.data_reserva).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
                 let st = `<span class="text-[9px] font-black uppercase text-zinc-500 flex items-center justify-end gap-1">○ Aguardando</span>`;
@@ -770,7 +854,7 @@
                     st = `<div class="flex flex-col items-end gap-1"><span class="text-[10px] font-black uppercase text-green-500">✓ Entrou</span><span class="text-[8px] text-yellow-500 font-black uppercase tracking-widest">👤 ${r.porteiro || 'Sistema'}</span><span class="text-[8px] text-zinc-500 font-mono">🕒 ${dent}</span></div>`;
                 }
                 const nomePromoter = getPromoterName(r.promoter);
-                return `<tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500"><td class="p-4 font-mono text-[10px] text-zinc-400">${df}</td><td class="p-4"><p class="text-xs font-black text-white uppercase">${r.nome}</p><p class="text-[9px] text-zinc-500 font-bold">${r.tel || '---'}</p></td><td class="p-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${r.evento}</span></td><td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${nomePromoter}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${r.aniversariante}</span>` : ''}</div></td><td class="p-4"><span class="text-[9px] font-black uppercase text-cyan-400">${r.tipo_entrada || '---'}</span></td><td class="p-4 text-right">${st}</td></tr>`;
+                return `<tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500"><td class="p-4 font-mono text-[10px] text-zinc-400">${df}</td><td class="p-4"><p class="text-xs font-black text-white uppercase">${r.nome}</p><p class="text-[9px] text-zinc-500 font-bold">${r.tel || '---'}</p></td><td class="p-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${r.evento}</span></td><td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${nomePromoter}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${r.aniversariante}</span>` : ''}</div></td><td class="p-4"><span class="text-[9px] font-black uppercase text-cyan-400">${r.tipo_entrada || '---'}</span></td><td class="p-4 text-right">${st}</td><td class="p-4 text-right"><button onclick="excluirClienteAuditoria('${r.id}')" class="bg-red-600/15 hover:bg-red-600 border border-red-500/40 text-red-400 hover:text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all" title="Excluir cliente da lista, relatórios e portaria">Excluir</button></td></tr>`;
             }).join('');
         };
 
