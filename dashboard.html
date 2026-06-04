@@ -749,6 +749,44 @@
 
         const apenasNumerosAuditoria = (v) => String(v || '').replace(/\D/g, '');
 
+        const parseMoedaAuditoria = (valor) => {
+            if (valor === undefined || valor === null || valor === '') return null;
+            if (typeof valor === 'number') return Number.isFinite(valor) ? valor : null;
+            let v = String(valor).trim().replace(/R\$/gi, '').replace(/\s/g, '').replace(/[^0-9,.-]/g, '');
+            if (!v) return null;
+            if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
+            const n = Number(v);
+            return Number.isFinite(n) ? n : null;
+        };
+
+        const formatarMoedaAuditoria = (valor) => {
+            const n = parseMoedaAuditoria(valor);
+            if (n === null || n <= 0) return 'VALOR NÃO INF.';
+            return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        const montarTipoAuditoria = (r) => {
+            const tipo = r.tipo_entrada || '---';
+            const tipoUpper = String(tipo).toUpperCase();
+            const isPix = r.metodo === 'pix_antecipado';
+            const isCamarote = tipoUpper.includes('CAMAROTE') || tipoUpper.includes('VIP');
+
+            if (!isPix) {
+                return `<span class="text-[9px] font-black uppercase text-cyan-400">${tipo}</span>`;
+            }
+
+            if (isCamarote) {
+                return `<div class="flex flex-col gap-1 items-start"><span class="text-[9px] font-black uppercase text-cyan-400">${tipo}</span><span class="text-[8px] font-black uppercase text-fuchsia-400 bg-fuchsia-500/10 border border-fuchsia-500/20 px-2 py-1 rounded-lg">💎 PIX CAMAROTE</span></div>`;
+            }
+
+            const valor = formatarMoedaAuditoria(r.valor_pago ?? r.valor_pix ?? r.valor_total ?? r.valor ?? r.preco);
+            const label = r.pago === true ? 'PIX PAGO' : 'PIX A PAGAR';
+            const cls = r.pago === true
+                ? 'text-green-400 bg-green-500/10 border-green-500/20'
+                : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+            return `<div class="flex flex-col gap-1 items-start"><span class="text-[9px] font-black uppercase text-cyan-400">${tipo}</span><span class="text-[8px] font-black uppercase ${cls} border px-2 py-1 rounded-lg">💸 ${label}: ${valor}</span></div>`;
+        };
+
         const mesmaPessoaNoMesmoEvento = (base, item) => {
             if (!base || !item) return false;
             if (base.id && item.id && base.id === item.id) return true;
@@ -854,7 +892,8 @@
                     st = `<div class="flex flex-col items-end gap-1"><span class="text-[10px] font-black uppercase text-green-500">✓ Entrou</span><span class="text-[8px] text-yellow-500 font-black uppercase tracking-widest">👤 ${r.porteiro || 'Sistema'}</span><span class="text-[8px] text-zinc-500 font-mono">🕒 ${dent}</span></div>`;
                 }
                 const nomePromoter = getPromoterName(r.promoter);
-                return `<tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500"><td class="p-4 font-mono text-[10px] text-zinc-400">${df}</td><td class="p-4"><p class="text-xs font-black text-white uppercase">${r.nome}</p><p class="text-[9px] text-zinc-500 font-bold">${r.tel || '---'}</p></td><td class="p-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${r.evento}</span></td><td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${nomePromoter}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${r.aniversariante}</span>` : ''}</div></td><td class="p-4"><span class="text-[9px] font-black uppercase text-cyan-400">${r.tipo_entrada || '---'}</span></td><td class="p-4 text-right">${st}</td><td class="p-4 text-right"><button onclick="excluirClienteAuditoria('${r.id}')" class="bg-red-600/15 hover:bg-red-600 border border-red-500/40 text-red-400 hover:text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all" title="Excluir cliente da lista, relatórios e portaria">Excluir</button></td></tr>`;
+                const tipoAuditoria = montarTipoAuditoria(r);
+                return `<tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500"><td class="p-4 font-mono text-[10px] text-zinc-400">${df}</td><td class="p-4"><p class="text-xs font-black text-white uppercase">${r.nome}</p><p class="text-[9px] text-zinc-500 font-bold">${r.tel || '---'}</p></td><td class="p-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${r.evento}</span></td><td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${nomePromoter}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${r.aniversariante}</span>` : ''}</div></td><td class="p-4">${tipoAuditoria}</td><td class="p-4 text-right">${st}</td><td class="p-4 text-right"><button onclick="excluirClienteAuditoria('${r.id}')" class="bg-red-600/15 hover:bg-red-600 border border-red-500/40 text-red-400 hover:text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all" title="Excluir cliente da lista, relatórios e portaria">Excluir</button></td></tr>`;
             }).join('');
         };
 
