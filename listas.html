@@ -189,6 +189,31 @@
         let taxaPixTipo = 'desativado';
         let taxaPixValor = 0;
 
+        const nomeCamaroteSistema = (num) => {
+            const n = Number(num);
+            if (n === 7) return 'VIP 1';
+            if (n === 8) return 'VIP 2';
+            return `CAMAROTE ${n}`;
+        };
+
+        const nomeCamaroteVisual = (num) => {
+            const n = Number(num);
+            if (n === 7) return 'VIP 1';
+            if (n === 8) return 'VIP 2';
+            return `CAMAROTE 0${n}`;
+        };
+
+        const tipoEntradaCorrespondeCamarote = (tipo, num) => {
+            const n = Number(num);
+            const t = String(tipo || '').toUpperCase().trim().replace(/\s+/g, ' ');
+            const aliases = [
+                nomeCamaroteSistema(n),
+                `CAMAROTE ${n}`,
+                `CAMAROTE 0${n}`
+            ].map(v => String(v).toUpperCase().trim());
+            return aliases.includes(t);
+        };
+
         const extrairValorNumerico = (v) => {
             if (!v) return 0;
             let limpo = String(v).replace('R$', '').replace(/\s/g, '').replace(',', '.');
@@ -617,10 +642,7 @@
                     let valBase = extrairValorNumerico(valCamCru);
                     
                     if(eventoAtivo[`cam${i}_ativo`] && valBase > 0) {
-                        const nomeDB = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `CAMAROTE ${i}`;
-                        const nomeAlternativo = `CAMAROTE 0${i}`; 
-
-                        const resCam = ultimasReservas.filter(r => { const ent = String(r.tipo_entrada).toUpperCase().trim(); return ent === nomeDB || ent === nomeAlternativo; });
+                        const resCam = ultimasReservas.filter(r => tipoEntradaCorrespondeCamarote(r.tipo_entrada, i));
                         
                         let status = 'livre', classCor = 'cam-livre', icone = '✅';
                         
@@ -682,7 +704,7 @@
             let btnClicado = document.getElementById(`btn-cam-${num}`);
             if(btnClicado) btnClicado.classList.add('cam-selecionado');
             
-            let nomeCam = (num === 7) ? "VIP 1" : (num === 8) ? "VIP 2" : `CAMAROTE 0${num}`;
+            let nomeCam = nomeCamaroteVisual(num);
             document.getElementById('cam-selecionado-nome').innerText = nomeCam;
             
             let valBase = extrairValorNumerico(valorRaw);
@@ -714,7 +736,7 @@
                 const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
                 if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
                 
-                let nomeSalvar = (numCamaroteSelecionado === 7) ? "VIP 1" : (numCamaroteSelecionado === 8) ? "VIP 2" : `CAMAROTE ${numCamaroteSelecionado}`;
+                let nomeSalvar = nomeCamaroteSistema(numCamaroteSelecionado);
 
                 let valRawBase = eventoAtivo[`v_cam${numCamaroteSelecionado}`];
                 let valPuroDB = extrairValorNumerico(valRawBase);
