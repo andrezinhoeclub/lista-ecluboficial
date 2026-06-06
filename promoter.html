@@ -129,6 +129,38 @@
         let logado = ""; let reservas = []; let eventos = []; let dadosPromoter = null; let linksAniv = [];
         let camCortesiaSelecionado = null; let tipoCortesiaSelecionado = null;
 
+        const nomeCamaroteSistema = (num) => {
+            const n = Number(num);
+            if (n === 7) return 'VIP 1';
+            if (n === 8) return 'VIP 2';
+            return `CAMAROTE ${n}`;
+        };
+
+        const nomeCamaroteVisual = (num) => {
+            const n = Number(num);
+            if (n === 7) return 'VIP 1';
+            if (n === 8) return 'VIP 2';
+            return `CAMAROTE 0${n}`;
+        };
+
+        const nomeCamaroteCurto = (num) => {
+            const n = Number(num);
+            if (n === 7) return 'VIP1';
+            if (n === 8) return 'VIP2';
+            return `C${n}`;
+        };
+
+        const tipoEntradaCorrespondeCamarote = (tipo, num) => {
+            const n = Number(num);
+            const t = String(tipo || '').toUpperCase().trim().replace(/\s+/g, ' ');
+            const aliases = [
+                nomeCamaroteSistema(n),
+                `CAMAROTE ${n}`,
+                `CAMAROTE 0${n}`
+            ].map(v => String(v).toUpperCase().trim());
+            return aliases.includes(t);
+        };
+
         // FUNÇÃO DE AVISO MODERNA (TOAST)
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -141,7 +173,7 @@
             if(msg.includes('PROIBIDA')) { icon = '🚨'; }
             
             // Layout escuro exclusivo para leitura de Camarotes
-            if(msg.includes('CAMAROTE 0')) {
+            if(msg.includes('CAMAROTE 0') || msg.includes('VIP 1') || msg.includes('VIP 2')) {
                 bgClass = 'bg-[#121214] border border-zinc-700'; // Fundo preto/cinza escuro
                 shadowClass = 'shadow-[0_0_30px_rgba(0,0,0,0.9)]'; // Sombra forte para destacar
                 textClass = 'text-cyan-400'; // Texto azul claro neon (ótimo no escuro)
@@ -295,7 +327,10 @@
                 const minhas = reservasValidas.filter(r => (r.promoter || '').toLowerCase().trim() === logado).length;
                 const geral = reservasValidas.length;
                 
-                const camesGeral = reservasDoEvento.filter(r => (r.tipo_entrada || '').toUpperCase().includes('CAMAROTE'));
+                const camesGeral = reservasDoEvento.filter(r => {
+                    const tipoCam = String(r.tipo_entrada || '').toUpperCase().trim();
+                    return tipoCam.includes('CAMAROTE') || tipoCam === 'VIP 1' || tipoCam === 'VIP 2';
+                });
                 
                 const dataHoraFormatada = `${ev.data.split('-').reverse().join('/')} ${ev.hora ? 'às ' + ev.hora : ''}`;
                 
@@ -305,13 +340,15 @@
                         const ativo = ev[`cam${n}_ativo`] === true;
                         if (!ativo) { luzesCamarotes += `<div class="w-full py-1 rounded bg-zinc-900/50 flex items-center justify-center text-[7px] text-zinc-600 font-bold border border-white/5">x</div>`; continue; }
 
-                        const resDesseCam = camesGeral.filter(r => (r.tipo_entrada || '').toUpperCase() === `CAMAROTE ${n}`);
+                        const resDesseCam = camesGeral.filter(r => tipoEntradaCorrespondeCamarote(r.tipo_entrada, n));
+                        const nomeCamVisor = nomeCamaroteVisual(n);
+                        const nomeCamCurto = nomeCamaroteCurto(n);
                         let statusCam = 'livre';
                         let nomeCliente = "";
                         
                         if (resDesseCam.length > 0) {
                             // Captura o nome e garante que não quebre o código se tiver aspas no nome do cliente
-                            nomeCliente = resDesseCam[0].nome.replace(/'/g, "\\'"); 
+                            nomeCliente = String(resDesseCam[0].nome || '').replace(/'/g, "\\'"); 
                         }
                         
                         if (resDesseCam.some(r => r.cortesia === true)) statusCam = 'cortesia';
@@ -323,16 +360,16 @@
 
                         let clickEvt = "";
                         if (statusCam === 'cortesia') {
-                            clickEvt = `onclick="mostrarAviso('🎁 CAMAROTE 0${n} - ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]"`;
-                            luzesCamarotes += `<div ${clickEvt}>C${n}</div>`; 
+                            clickEvt = `onclick="mostrarAviso('🎁 ${nomeCamVisor} - ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]"`;
+                            luzesCamarotes += `<div ${clickEvt}>${nomeCamCurto}</div>`; 
                         } else if (statusCam === 'vendido') {
-                            clickEvt = `onclick="mostrarAviso('💎 CAMAROTE 0${n} - ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]"`;
-                            luzesCamarotes += `<div ${clickEvt}>C${n}</div>`; 
+                            clickEvt = `onclick="mostrarAviso('💎 ${nomeCamVisor} - ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]"`;
+                            luzesCamarotes += `<div ${clickEvt}>${nomeCamCurto}</div>`; 
                         } else if (statusCam === 'aguardando') {
-                            clickEvt = `onclick="mostrarAviso('⏳ CAMAROTE 0${n} - AGUARDANDO: ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308]"`;
-                            luzesCamarotes += `<div ${clickEvt}>C${n}</div>`; 
+                            clickEvt = `onclick="mostrarAviso('⏳ ${nomeCamVisor} - AGUARDANDO: ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308]"`;
+                            luzesCamarotes += `<div ${clickEvt}>${nomeCamCurto}</div>`; 
                         } else {
-                            luzesCamarotes += `<div class="w-full py-1.5 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">C${n}</div>`; 
+                            luzesCamarotes += `<div class="w-full py-1.5 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">${nomeCamCurto}</div>`; 
                         }
                     }
 
@@ -392,7 +429,8 @@
             for(let i=1; i<=8; i++) {
                 if(ev[`cam${i}_ativo`]) {
                     let status = 'livre'; let classCor = 'border-green-500/50 bg-green-500/10 text-green-400';
-                    const resCam = resEvento.filter(r => r.tipo_entrada === `CAMAROTE ${i}`);
+                    const resCam = resEvento.filter(r => tipoEntradaCorrespondeCamarote(r.tipo_entrada, i));
+                    const nomeCamVisor = nomeCamaroteVisual(i);
                     if (resCam.some(r => r.cortesia === true)) { status = 'cortesia dada'; classCor = 'border-blue-500/50 bg-blue-500/10 text-blue-400 opacity-50 cursor-not-allowed'; } 
                     else if (resCam.some(r => r.pago === true)) { status = 'vendido'; classCor = 'border-red-500/50 bg-red-500/10 text-red-400 opacity-50 cursor-not-allowed'; } 
                     else {
@@ -400,12 +438,12 @@
                         if(temPendente) { status = 'aguardando pix'; classCor = 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400 opacity-50 cursor-not-allowed'; }
                     }
                     const onclickAction = status === 'livre' ? `onclick="selecionarCamCortesia(${i})"` : '';
-                    grid.innerHTML += `<div ${onclickAction} class="p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${classCor} ${status==='livre'?'cursor-pointer hover:bg-green-500/20 hover:scale-105':''}"><span class="text-[10px] font-black uppercase">Cam 0${i}</span><span class="text-[7px] font-bold uppercase mt-1 opacity-70">${status}</span></div>`;
+                    grid.innerHTML += `<div ${onclickAction} class="p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${classCor} ${status==='livre'?'cursor-pointer hover:bg-green-500/20 hover:scale-105':''}"><span class="text-[10px] font-black uppercase">${nomeCamVisor}</span><span class="text-[7px] font-bold uppercase mt-1 opacity-70">${status}</span></div>`;
                 }
             }
         };
 
-        window.selecionarCamCortesia = (num) => { camCortesiaSelecionado = num; document.getElementById('txt-camarote-selecionado').innerText = `🎁 SELECIONADO: CAMAROTE 0${num}`; document.getElementById('form-cortesia').classList.remove('hidden'); };
+        window.selecionarCamCortesia = (num) => { camCortesiaSelecionado = num; document.getElementById('txt-camarote-selecionado').innerText = `🎁 SELECIONADO: ${nomeCamaroteVisual(num)}`; document.getElementById('form-cortesia').classList.remove('hidden'); };
         window.selTipoCort = (tipo) => {
             tipoCortesiaSelecionado = tipo;
             document.getElementById('btn-cort-casal').className = "bg-black border border-zinc-800 p-3 rounded-xl text-[10px] font-black uppercase text-zinc-400 transition-all";
@@ -421,11 +459,17 @@
             if (!n || t.length < 14) return mostrarAviso("Preencha nome e telefone!");
             const btn = document.getElementById('btnSalvarCortesia'); const originalText = btn.innerText; btn.innerText = "SALVANDO..."; btn.disabled = true;
             try {
-                const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", f), where("tipo_entrada", "==", `CAMAROTE ${camCortesiaSelecionado}`)));
+                const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", f)));
                 let ocupado = false;
-                checkFinal.forEach(d => { const ex = d.data(); if (ex.cortesia === true || ex.pago === true || (ex.pago === false && !ex.cortesia && ((new Date() - new Date(ex.data_reserva))/60000 < 5))) ocupado = true; });
+                checkFinal.forEach(d => {
+                    const ex = d.data();
+                    if (
+                        tipoEntradaCorrespondeCamarote(ex.tipo_entrada, camCortesiaSelecionado) &&
+                        (ex.cortesia === true || ex.pago === true || (ex.pago === false && !ex.cortesia && ((new Date() - new Date(ex.data_reserva))/60000 < 5)))
+                    ) ocupado = true;
+                });
                 if (ocupado) throw new Error("Ops! Este Camarote acabou de ficar indisponível. Selecione outro.");
-                await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, evento: f, tipo_entrada: `CAMAROTE ${camCortesiaSelecionado}`, pagamento_porta: tipoCortesiaSelecionado, promoter: logado, cortesia: true, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'portaria' });
+                await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, evento: f, tipo_entrada: nomeCamaroteSistema(camCortesiaSelecionado), pagamento_porta: tipoCortesiaSelecionado, promoter: logado, cortesia: true, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'portaria' });
                 mostrarAviso("🎁 Cortesia concedida com sucesso!", true); fecharModalCortesia();
             } catch (e) { mostrarAviso(e.message); } finally { btn.innerText = originalText; btn.disabled = false; }
         };
@@ -469,9 +513,10 @@
 
             for(let i=1; i<=8; i++) {
                 if(ev[`cam${i}_ativo`]) {
-                    const resCam = resEvento.filter(r => r.tipo_entrada === `CAMAROTE ${i}`);
+                    const resCam = resEvento.filter(r => tipoEntradaCorrespondeCamarote(r.tipo_entrada, i));
+                    const nomeCamVisor = nomeCamaroteVisual(i);
                     const isOcupado = resCam.some(r => r.cortesia === true || r.pago === true || (r.pago === false && !r.cortesia && ((new Date() - new Date(r.data_reserva)) / 60000) < 5));
-                    if (!isOcupado) { options += `<option value="${i}">🎁 CAMAROTE 0${i} (LIVRE)</option>`; hasLivre = true; }
+                    if (!isOcupado) { options += `<option value="${i}">🎁 ${nomeCamVisor} (LIVRE)</option>`; hasLivre = true; }
                 }
             }
 
@@ -503,9 +548,15 @@
             
             try { 
                 if (camSelecionado) {
-                    const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", f), where("tipo_entrada", "==", `CAMAROTE ${camSelecionado}`)));
+                    const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", f)));
                     let ocupado = false;
-                    checkFinal.forEach(d => { const ex = d.data(); if (ex.cortesia === true || ex.pago === true || (ex.pago === false && !ex.cortesia && ((new Date() - new Date(ex.data_reserva))/60000 < 5))) ocupado = true; });
+                    checkFinal.forEach(d => {
+                        const ex = d.data();
+                        if (
+                            tipoEntradaCorrespondeCamarote(ex.tipo_entrada, camSelecionado) &&
+                            (ex.cortesia === true || ex.pago === true || (ex.pago === false && !ex.cortesia && ((new Date() - new Date(ex.data_reserva))/60000 < 5)))
+                        ) ocupado = true;
+                    });
                     if (ocupado) throw new Error("Ops! O Camarote selecionado acabou de ser reservado.");
                 }
 
@@ -515,7 +566,7 @@
                     nome: n,
                     tel: t,
                     evento: f,
-                    tipo_entrada: camSelecionado ? `CAMAROTE ${camSelecionado}` : "VIP_DONO",
+                    tipo_entrada: camSelecionado ? nomeCamaroteSistema(camSelecionado) : "VIP_DONO",
                     is_dono: true,
                     promoter: logado,
                     cortesia: !!camSelecionado,
