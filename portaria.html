@@ -137,6 +137,22 @@
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false; let listenerSessao = null;
 
+        const tipoEntradaCorrespondeCamarote = (tipo, num) => {
+            const n = Number(num);
+            const t = String(tipo || '').toUpperCase().trim().replace(/\s+/g, ' ');
+            const principal = n === 7 ? 'VIP 1' : n === 8 ? 'VIP 2' : `CAMAROTE ${n}`;
+            const aliases = [principal, `CAMAROTE ${n}`, `CAMAROTE 0${n}`].map(v => String(v).toUpperCase().trim());
+            return aliases.includes(t);
+        };
+
+        const normalizarTipoCamaroteExibicao = (tipo) => {
+            if (tipoEntradaCorrespondeCamarote(tipo, 7)) return 'VIP 1';
+            if (tipoEntradaCorrespondeCamarote(tipo, 8)) return 'VIP 2';
+            return String(tipo || '').toUpperCase().trim();
+        };
+
+        const isVipEspecialCamarote = (tipo) => tipoEntradaCorrespondeCamarote(tipo, 7) || tipoEntradaCorrespondeCamarote(tipo, 8);
+
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
@@ -351,7 +367,7 @@
             cont.innerHTML = '';
             filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
                 const ev = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase()) || {};
-                const tipoNorm = String(c.tipo_entrada || '').toUpperCase().trim(); 
+                const tipoNorm = normalizarTipoCamaroteExibicao(c.tipo_entrada); 
                 const pagPorta = String(c.pagamento_porta || '').toUpperCase(); 
                 const isCasal = tipoNorm.includes("CASAL") || /\s+E\s+/i.test(c.nome); const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
                 const isCortesia = c.cortesia === true; const isAniv = c.aniversariante && c.aniversariante.trim() !== ""; const isPix = c.metodo === 'pix_antecipado';
@@ -403,7 +419,7 @@
                 if (!isDono && !isFidelidade) {
                     if (isCamaroteOrVip) {
                         if (isPix) { 
-                            if (tipoNorm === "VIP 1" || tipoNorm === "VIP 2" || tipoNorm === "CAMAROTE 7" || tipoNorm === "CAMAROTE 8") {
+                            if (isVipEspecialCamarote(tipoNorm)) {
                                 tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ SEM CONSUMAÇÃO</span>`;
                             } else {
                                 tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
