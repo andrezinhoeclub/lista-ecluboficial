@@ -19,6 +19,8 @@
             transition: all 0.2s ease;
         }
         .client-card:hover { background: #16161a; border-color: #333; }
+        .client-card.pix-fora-turno { background: rgba(113, 63, 18, 0.35); border-color: rgba(234, 179, 8, 0.65); border-left-color: #facc15; box-shadow: 0 0 22px rgba(234, 179, 8, 0.12); }
+        .client-card.pix-fora-turno:hover { background: rgba(133, 77, 14, 0.45); border-color: rgba(250, 204, 21, 0.85); }
         
         .client-card.entrou { pointer-events: none; border-color: #1a1a1c; background: #08080a; border-left-color: #333; }
         .client-card.entrou .dados-cliente { filter: grayscale(1); opacity: 0.3; }
@@ -350,7 +352,12 @@
                 if (c.tipo_entrada === 'SOLTEIRA VIP') return false;
 
                 const evRel = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase());
-                if (!isModoTeste && (!evRel || getStatusTurno(evRel.data) !== "ONLINE")) return false;
+                const eventoOnline = evRel && getStatusTurno(evRel.data) === "ONLINE";
+                const pixPago = c.metodo === 'pix_antecipado' && String(c.pago) === 'true';
+
+                // Mantém a regra atual da portaria: evento do turno aparece normalmente.
+                // Exceção: PIX pago aparece na busca mesmo se for de outro dia/evento, para a portaria conseguir localizar o cliente.
+                if (!isModoTeste && !eventoOnline && !pixPago) return false;
                 if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
                 
                 const nomeString = String(c.nome || '').toUpperCase();
@@ -371,6 +378,8 @@
                 const pagPorta = String(c.pagamento_porta || '').toUpperCase(); 
                 const isCasal = tipoNorm.includes("CASAL") || /\s+E\s+/i.test(c.nome); const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
                 const isCortesia = c.cortesia === true; const isAniv = c.aniversariante && c.aniversariante.trim() !== ""; const isPix = c.metodo === 'pix_antecipado';
+                const eventoOnlineCard = ev && ev.data ? getStatusTurno(ev.data) === "ONLINE" : false;
+                const pixForaDoTurno = isPix && String(c.pago) === 'true' && !isModoTeste && !eventoOnlineCard;
                 const isFidelidade = tipoNorm.includes("FIDELIDADE");
 
                 const isCamaroteOrVip = tipoNorm.includes("CAMAROTE") || tipoNorm === "VIP 1" || tipoNorm === "VIP 2";
@@ -438,9 +447,10 @@
                 
                 const numTel = c.tel || c.telefone || '';
                 const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os 9 dígitos limpos">📋 COPIAR</button>` : '';
+                const avisoPixForaTurno = pixForaDoTurno ? `<p class="mt-2 text-[9px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/10 border border-yellow-500/30 px-2 py-1 rounded-lg inline-block">⚠️ PIX DE OUTRO EVENTO: ${c.evento || 'EVENTO NÃO INFORMADO'}</p>` : '';
 
                 cont.innerHTML += `
-                <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''}">
+                <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''} ${pixForaDoTurno ? 'pix-fora-turno' : ''}">
                     <div class="flex-1 min-w-[250px] max-w-[400px] dados-cliente">
                         <div class="flex items-center gap-2 mb-1">
                             <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
@@ -450,6 +460,7 @@
                             <p class="text-sm font-mono text-zinc-500">${numTel || '---'}</p>
                             ${btnCopiar}
                         </div>
+                        ${avisoPixForaTurno}
                     </div>
                     <div class="flex flex-col gap-1 w-[140px] dados-cliente">${tagsHTML}</div>
                     <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px] dados-cliente">
