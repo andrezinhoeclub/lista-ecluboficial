@@ -448,8 +448,11 @@
             }
 
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            const hojeStr = new Date().toLocaleDateString('en-CA');
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= hojeStr).sort((a, b) => a.data.localeCompare(b.data));
+            // Regra segura de data: depois da meia-noite, evento de ontem some da lista.
+            // Nao usa toLocaleDateString porque pode variar conforme navegador/celular.
+            const agoraLista = new Date();
+            const hojeStr = `${agoraLista.getFullYear()}-${String(agoraLista.getMonth() + 1).padStart(2, '0')}-${String(agoraLista.getDate()).padStart(2, '0')}`;
+            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => String(ev.data || '').slice(0, 10) >= hojeStr).sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')));
             if (eventoFixo) eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
 
             const container = document.getElementById('listaEventos');
