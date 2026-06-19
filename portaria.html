@@ -174,20 +174,61 @@
             return `${ano}-${mes}-${dia}`;
         };
 
+        const normalizarDataEventoPortaria = (dataEvento) => {
+            if (!dataEvento) return null;
+
+            if (typeof dataEvento.toDate === 'function') {
+                const d = dataEvento.toDate();
+                if (!isNaN(d)) return formatarDataLocal(d);
+            }
+
+            const str = String(dataEvento).trim();
+
+            // Aceita o formato padrão do sistema: YYYY-MM-DD
+            const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+            // Aceita formato BR caso algum evento tenha sido salvo assim: DD/MM/YYYY
+            const br = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+            if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+
+            const d = new Date(str);
+            return isNaN(d) ? null : formatarDataLocal(d);
+        };
+
+        const normalizarHoraEventoPortaria = (horaEvento) => {
+            const str = String(horaEvento || '21:00').trim().toLowerCase();
+            const match = str.match(/(\d{1,2})(?::|h)?\s*(\d{2})?/);
+            let h = match ? Number(match[1]) : 21;
+            let m = match && match[2] !== undefined ? Number(match[2]) : 0;
+
+            if (!Number.isFinite(h) || h < 0 || h > 23) h = 21;
+            if (!Number.isFinite(m) || m < 0 || m > 59) m = 0;
+
+            return { h, m };
+        };
+
         const getStatusTurno = (dataEvento) => {
             if (!dataEvento) return "RESTRITO";
-            if (isModoTeste) return "ONLINE"; 
-            
-            const agora = new Date(); 
-            const hora = agora.getHours(); 
-            const hoje = formatarDataLocal(agora);
-            
-            const ontemObj = new Date(agora); 
-            ontemObj.setDate(ontemObj.getDate() - 1); 
-            const ontem = formatarDataLocal(ontemObj);
-            
-            if (hora >= 21 && dataEvento === hoje) return "ONLINE";
-            if (hora < 5 && dataEvento === ontem) return "ONLINE";
+            if (isModoTeste) return "ONLINE";
+
+            const dataLimpa = normalizarDataEventoPortaria(dataEvento);
+            if (!dataLimpa) return "RESTRITO";
+
+            const partes = dataLimpa.split('-').map(Number);
+            if (partes.length < 3 || !partes[0] || !partes[1] || !partes[2]) return "RESTRITO";
+
+            // PORTARIA AUTÔNOMA:
+            // abre sempre às 21:00 do dia cadastrado no evento, independente do horário salvo no cadastro.
+            const inicioEvento = new Date(partes[0], partes[1] - 1, partes[2], 21, 0, 0, 0);
+            const fimEvento = new Date(inicioEvento);
+            fimEvento.setDate(fimEvento.getDate() + 1);
+            fimEvento.setHours(6, 0, 0, 0);
+
+            const agora = new Date();
+
+            if (agora >= inicioEvento && agora <= fimEvento) return "ONLINE";
+
             return "RESTRITO";
         };
 
@@ -303,7 +344,7 @@
                 
                 bancoEventos.sort((a,b) => new Date(a.data || 0) - new Date(b.data || 0)).forEach(ev => {
                     if (!ev.data) return;
-                    const status = getStatusTurno(ev.data);
+                    const status = getStatusTurno(ev.data, ev.hora);
                     const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
                     
                     const total = bancoClientes.filter(c => String(c.evento || '').trim().toUpperCase() === evNomeLimpo && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true') && c.tipo_entrada !== 'SOLTEIRA VIP').length;
@@ -352,7 +393,7 @@
                 if (c.tipo_entrada === 'SOLTEIRA VIP') return false;
 
                 const evRel = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase());
-                const eventoOnline = evRel && getStatusTurno(evRel.data) === "ONLINE";
+                const eventoOnline = evRel && getStatusTurno(evRel.data, evRel.hora) === "ONLINE";
                 const pixPago = c.metodo === 'pix_antecipado' && String(c.pago) === 'true';
 
                 // Mantém a regra atual da portaria: evento do turno aparece normalmente.
@@ -378,7 +419,7 @@
                 const pagPorta = String(c.pagamento_porta || '').toUpperCase(); 
                 const isCasal = tipoNorm.includes("CASAL") || /\s+E\s+/i.test(c.nome); const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
                 const isCortesia = c.cortesia === true; const isAniv = c.aniversariante && c.aniversariante.trim() !== ""; const isPix = c.metodo === 'pix_antecipado';
-                const eventoOnlineCard = ev && ev.data ? getStatusTurno(ev.data) === "ONLINE" : false;
+                const eventoOnlineCard = ev && ev.data ? getStatusTurno(ev.data, ev.hora) === "ONLINE" : false;
                 const pixForaDoTurno = isPix && String(c.pago) === 'true' && !isModoTeste && !eventoOnlineCard;
                 const isFidelidade = tipoNorm.includes("FIDELIDADE");
 
