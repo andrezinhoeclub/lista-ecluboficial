@@ -213,6 +213,63 @@
             return "R$ " + Number(num).toFixed(2).replace('.', ',');
         };
 
+        const formatarDataLocalISO = (data) => {
+            if (!(data instanceof Date) || isNaN(data.getTime())) return '';
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        };
+
+        const obterHojeISO = () => formatarDataLocalISO(new Date());
+
+        const normalizarDataEvento = (valor) => {
+            if (!valor) return '';
+
+            if (valor instanceof Date) return formatarDataLocalISO(valor);
+
+            if (typeof valor === 'object') {
+                try {
+                    if (typeof valor.toDate === 'function') return formatarDataLocalISO(valor.toDate());
+                    if (typeof valor.seconds === 'number') return formatarDataLocalISO(new Date(valor.seconds * 1000));
+                } catch (_) {
+                    return '';
+                }
+            }
+
+            const texto = String(valor).trim();
+            let m = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+
+            m = texto.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+            if (m) return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+
+            m = texto.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+            if (m) return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+
+            const dataTentativa = new Date(texto);
+            return formatarDataLocalISO(dataTentativa);
+        };
+
+        const eventoJaPassou = (evento) => {
+            const dataEvento = normalizarDataEvento(evento && evento.data);
+            if (!dataEvento) return true;
+            return dataEvento < obterHojeISO();
+        };
+
+        const vendasOnlineEncerradas = (evento) => {
+            const dataEvento = normalizarDataEvento(evento && evento.data);
+            if (!dataEvento) return true;
+            return new Date() >= new Date(`${dataEvento}T22:00:00`);
+        };
+
+        const bloquearEventoPassadoSeNecessario = (evento) => {
+            if (!eventoJaPassou(evento)) return false;
+            mostrarAviso('Evento encerrado. Atualizando lista...');
+            setTimeout(() => location.reload(), 1200);
+            return true;
+        };
+
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
@@ -370,8 +427,14 @@
             }
 
             const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            const hojeStr = new Date().toLocaleDateString('en-CA');
-            eventosCache = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(ev => ev.data >= hojeStr).sort((a, b) => a.data.localeCompare(b.data));
+            const hojeStr = obterHojeISO();
+            eventosCache = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(ev => {
+                    const dataEvento = normalizarDataEvento(ev.data);
+                    return dataEvento && dataEvento >= hojeStr;
+                })
+                .sort((a, b) => normalizarDataEvento(a.data).localeCompare(normalizarDataEvento(b.data)));
             if (eventoFixo) eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
 
             const container = document.getElementById('listaEventos');
@@ -386,10 +449,7 @@
                     if(ev[`cam${i}_ativo`] && extrairValorNumerico(ev[`v_cam${i}`]) > 0) temCamaroteAtivo = true; 
                 }
 
-                const dataEventoFormatada = ev.data + "T22:00:00";
-                const limiteVendas = new Date(dataEventoFormatada);
-                const agora = new Date();
-                const vendasEncerradas = agora >= limiteVendas;
+                const vendasEncerradas = vendasOnlineEncerradas(ev);
 
                 let renderHtml = '';
 
@@ -437,6 +497,7 @@
 
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id); 
+            if (bloquearEventoPassadoSeNecessario(eventoAtivo)) return;
             eFluxoPix = isPix;
             tipoAtivo = null;
             aplicouDescontoFidelidade = false;
@@ -555,6 +616,12 @@
             btn.disabled = true; btn.innerText = "PROCESSANDO...";
             
             try {
+                if (bloquearEventoPassadoSeNecessario(eventoAtivo)) {
+                    btn.disabled = false;
+                    btn.innerText = "Confirmar Presença";
+                    return;
+                }
+
                 if(eFluxoPix || !aplicouDescontoFidelidade) {
                    const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
                    if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
@@ -598,6 +665,7 @@
 
         window.iniciarFluxoCamarote = (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
+            if (bloquearEventoPassadoSeNecessario(eventoAtivo)) return;
             const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
             
             let ultimasReservas = [];
@@ -711,6 +779,12 @@
             btn.disabled = true; btn.innerText = "VALIDANDO...";
             
             try {
+                if (bloquearEventoPassadoSeNecessario(eventoAtivo)) {
+                    btn.disabled = false;
+                    btn.innerText = "Garantir Ingresso ⚡";
+                    return;
+                }
+
                 const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
                 if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
                 
