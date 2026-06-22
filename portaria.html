@@ -37,9 +37,64 @@
         
         .btn-liberar { background: #eab308; color: #000; transition: all 0.2s; }
         .btn-liberar:hover { background: #fbbf24; transform: translateY(-1px); }
+
+
+        /* TEMA CLARO / ESCURO DA PORTARIA - somente visual */
+        .theme-toggle {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 10050;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(234, 179, 8, 0.45);
+            background: rgba(0, 0, 0, 0.72);
+            color: #facc15;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            box-shadow: 0 0 22px rgba(234, 179, 8, 0.14);
+            backdrop-filter: blur(10px);
+            transition: all 0.2s ease;
+        }
+        .theme-toggle:hover { transform: translateY(-1px); border-color: #facc15; }
+
+        body.tema-claro { background: #f4f4f5; color: #111827; }
+        body.tema-claro .login-bg { background: radial-gradient(circle at center, #ffffff 0%, #e5e7eb 100%); }
+        body.tema-claro .glass { background: rgba(255,255,255,0.88); border-color: rgba(15,23,42,0.14); color: #111827; }
+        body.tema-claro aside { background: rgba(255,255,255,0.92) !important; border-color: #d1d5db !important; }
+        body.tema-claro main header { background: rgba(255,255,255,0.86) !important; border-color: #d1d5db !important; }
+        body.tema-claro section { background: #f3f4f6 !important; }
+        body.tema-claro input { background: #ffffff !important; border-color: #cbd5e1 !important; color: #111827 !important; }
+        body.tema-claro input::placeholder { color: #6b7280 !important; }
+        body.tema-claro .client-card { background: #ffffff; border-color: #e5e7eb; border-left-color: #ca8a04; color: #111827; box-shadow: 0 10px 30px rgba(15,23,42,0.07); }
+        body.tema-claro .client-card:hover { background: #f9fafb; border-color: #cbd5e1; }
+        body.tema-claro .client-card.pix-fora-turno { background: #fef3c7; border-color: rgba(202, 138, 4, 0.62); border-left-color: #d97706; box-shadow: 0 0 22px rgba(202, 138, 4, 0.12); }
+        body.tema-claro .client-card.pix-fora-turno:hover { background: #fde68a; border-color: #d97706; }
+        body.tema-claro .client-card.entrou { background: #e5e7eb; border-color: #cbd5e1; border-left-color: #9ca3af; }
+        body.tema-claro .text-white { color: #111827 !important; }
+        body.tema-claro .text-zinc-300,
+        body.tema-claro .text-zinc-400,
+        body.tema-claro .text-zinc-500,
+        body.tema-claro .text-zinc-600,
+        body.tema-claro .text-zinc-700 { color: #4b5563 !important; }
+        body.tema-claro .border-zinc-900,
+        body.tema-claro .border-zinc-800,
+        body.tema-claro .border-zinc-700,
+        body.tema-claro .border-white\/5 { border-color: #d1d5db !important; }
+        body.tema-claro .bg-zinc-800,
+        body.tema-claro .bg-zinc-800\/80 { background: #e5e7eb !important; }
+        body.tema-claro .bg-zinc-900\/50 { background: #f3f4f6 !important; }
+        body.tema-claro .theme-toggle { background: rgba(255,255,255,0.9); color: #854d0e; border-color: rgba(202,138,4,0.5); box-shadow: 0 8px 24px rgba(15,23,42,0.12); }
     </style>
 </head>
 <body class="flex h-screen relative">
+
+    <button id="btnTemaPortaria" type="button" onclick="alternarTemaPortaria()" class="theme-toggle" title="Alternar fundo claro/escuro">🌙 <span>ESCURO</span></button>
 
     <div id="status-conexao" class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.5)] hidden z-[9999] animate-pulse">
         🔴 Sem Internet (Operando no Cache Local)
@@ -138,6 +193,29 @@
 
         let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
         let isModoTeste = false; let listenerSessao = null;
+
+
+        const CHAVE_TEMA_PORTARIA = 'eclub_portaria_tema_visual_v1';
+
+        const aplicarTemaPortaria = (tema) => {
+            const temaClaro = tema === 'claro';
+            document.body.classList.toggle('tema-claro', temaClaro);
+
+            const btnTema = document.getElementById('btnTemaPortaria');
+            if (btnTema) {
+                btnTema.innerHTML = temaClaro ? '☀️ <span>CLARO</span>' : '🌙 <span>ESCURO</span>';
+                btnTema.title = temaClaro ? 'Mudar para fundo escuro' : 'Mudar para fundo claro';
+            }
+        };
+
+        window.alternarTemaPortaria = () => {
+            const temaAtual = document.body.classList.contains('tema-claro') ? 'claro' : 'escuro';
+            const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
+            localStorage.setItem(CHAVE_TEMA_PORTARIA, novoTema);
+            aplicarTemaPortaria(novoTema);
+        };
+
+        aplicarTemaPortaria(localStorage.getItem(CHAVE_TEMA_PORTARIA) || 'escuro');
 
         const tipoEntradaCorrespondeCamarote = (tipo, num) => {
             const n = Number(num);
