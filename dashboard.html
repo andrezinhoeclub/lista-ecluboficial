@@ -637,6 +637,12 @@
             return norm === 'FABI' || norm === 'FABIELE' || norm.includes('FABI');
         };
 
+        const isSiteDiretoRelatorio = (promoterRaw) => {
+            if (promoterRaw === undefined || promoterRaw === null || String(promoterRaw).trim() === '') return true;
+            const norm = normalizarRelatorio(promoterRaw).replace(/_/g, ' ');
+            return norm === 'SITE DIRETO' || norm === 'DIRETO' || norm === 'SITE';
+        };
+
         const getTipoPromoterRelatorio = (promoterRaw) => {
             const cad = getCadastroPromoterRelatorio(promoterRaw);
             if (!cad) return '';
@@ -644,6 +650,7 @@
         };
 
         const isPromoterVisivelRelatorio = (promoterRaw, permitirSemCadastro = false) => {
+            if (isSiteDiretoRelatorio(promoterRaw)) return true;
             const cad = getCadastroPromoterRelatorio(promoterRaw);
             if (!cad) return permitirSemCadastro || isFabiRelatorio(promoterRaw);
             const tipo = String(cad.tipo || 'padrao').toLowerCase().trim();
@@ -654,6 +661,7 @@
         const isPromoterAniversarioRelatorio = (promoterRaw) => getTipoPromoterRelatorio(promoterRaw) === 'aniversario';
 
         const getPromoterRelatorio = (promoterRaw) => {
+            if (isSiteDiretoRelatorio(promoterRaw)) return 'SITE_DIRETO';
             if (isFabiRelatorio(promoterRaw)) return getNomeFabiRelatorio();
             return getNomePromoterCadastroRelatorio(promoterRaw);
         };
