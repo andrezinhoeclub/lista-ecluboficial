@@ -24,6 +24,11 @@
         .mini-capa { width: 100%; height: 100px; object-fit: cover; border-bottom: 1px solid #1a1a1c; border-radius: 1.5rem; opacity: 0.8; margin-bottom: 1rem; }
         .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #22d3ee; cursor: pointer; }
         input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; padding: 5px; }
+
+        .relatorio-mensal-barra { height: 12px; border-radius: 999px; background: linear-gradient(90deg, #eab308, #22c55e); box-shadow: 0 0 14px rgba(234,179,8,0.25); min-width: 4px; transition: width .25s ease; }
+        .relatorio-mensal-barra.solteiras { background: linear-gradient(90deg, #db2777, #f472b6); box-shadow: 0 0 14px rgba(219,39,119,0.25); }
+        .relatorio-mensal-row { display: grid; grid-template-columns: 150px 1fr 58px; gap: 12px; align-items: center; }
+        @media (max-width: 768px) { .relatorio-mensal-row { grid-template-columns: 95px 1fr 42px; gap: 8px; } }
     </style>
 </head>
 <body class="p-4 md:p-8 relative">
@@ -76,6 +81,66 @@
                 <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance e Financeiro</h2>
                 <div id="container-bolhas" class="scroll-x"></div>
             </div>
+            <div class="glass-card p-8 border-l-4 border-l-orange-500">
+                <div class="flex flex-col lg:flex-row justify-between gap-6 mb-8">
+                    <div>
+                        <h2 class="text-orange-400 font-black uppercase italic text-xl tracking-tighter">📊 Relatório Mensal por Promoter</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Check-ins reais por mês/ano, com solteiras no gráfico e regra especial da Fabi.</p>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 min-w-full lg:min-w-[560px]">
+                        <select id="relatorio_mes" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase">
+                            <option value="0">Janeiro</option>
+                            <option value="1">Fevereiro</option>
+                            <option value="2">Março</option>
+                            <option value="3">Abril</option>
+                            <option value="4">Maio</option>
+                            <option value="5">Junho</option>
+                            <option value="6">Julho</option>
+                            <option value="7">Agosto</option>
+                            <option value="8">Setembro</option>
+                            <option value="9">Outubro</option>
+                            <option value="10">Novembro</option>
+                            <option value="11">Dezembro</option>
+                        </select>
+                        <select id="relatorio_ano" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase"></select>
+                        <select id="relatorio_metrica" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase">
+                            <option value="checkins">Check-ins</option>
+                            <option value="reservas">Reservas Válidas</option>
+                        </select>
+                        <button onclick="exportarRelatorioMensalPromoters()" class="bg-orange-600 hover:bg-orange-500 text-white font-black uppercase text-[10px] px-5 py-4 rounded-2xl transition-all shadow-lg">Exportar CSV</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-black/30 border border-white/5 rounded-3xl p-5 text-center"><p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Total Promoters</p><p id="relatorio_total_promoters" class="text-3xl font-black text-white mt-1">0</p></div>
+                    <div class="bg-green-500/10 border border-green-500/20 rounded-3xl p-5 text-center"><p id="relatorio_kpi_label" class="text-[8px] text-green-400 font-black uppercase tracking-widest">Check-ins do Mês</p><p id="relatorio_total_checkins" class="text-3xl font-black text-green-400 mt-1">0</p></div>
+                    <div class="bg-pink-500/10 border border-pink-500/20 rounded-3xl p-5 text-center"><p class="text-[8px] text-pink-400 font-black uppercase tracking-widest">Solteiras</p><p id="relatorio_total_solteiras" class="text-3xl font-black text-pink-400 mt-1">0</p></div>
+                    <div class="bg-yellow-500/10 border border-yellow-500/20 rounded-3xl p-5 text-center"><p class="text-[8px] text-yellow-400 font-black uppercase tracking-widest">Top Promoter</p><p id="relatorio_top_promoter" class="text-lg font-black text-yellow-400 mt-2 uppercase truncate">---</p></div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-5 gap-8">
+                    <div class="xl:col-span-2 overflow-x-auto bg-black/20 border border-white/5 rounded-3xl p-4">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[9px] text-zinc-500 font-black uppercase border-b border-white/10">
+                                    <th class="py-3 px-2">Promoter / Base</th>
+                                    <th class="py-3 px-2 text-center">Qtd.</th>
+                                    <th class="py-3 px-2 text-right">%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="relatorio_tabela_promoters"></tbody>
+                        </table>
+                    </div>
+                    <div class="xl:col-span-3 bg-black/20 border border-white/5 rounded-3xl p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <p id="relatorio_grafico_titulo" class="text-[10px] font-black uppercase text-orange-400 tracking-widest">Gráfico do mês</p>
+                            <p class="text-[8px] font-bold uppercase text-zinc-600">Fabi inclui promoters de aniversário</p>
+                        </div>
+                        <div id="relatorio_grafico_promoters" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div class="glass-card p-8 border-t-4 border-t-yellow-500 text-center">
                     <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest">🏆 Pódio de Reservas</h2>
@@ -494,6 +559,235 @@
             return unicas;
         };
 
+
+        const escapeRelatorioHTML = (valor) => String(valor ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const normalizarRelatorio = (valor) => String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const parseDataRelatorio = (valor) => {
+            if (!valor) return null;
+            if (typeof valor.toDate === 'function') return valor.toDate();
+            if (valor instanceof Date) return isNaN(valor) ? null : valor;
+            if (typeof valor === 'number' && Number.isFinite(valor)) {
+                if (valor > 10000 && valor < 1000000) return new Date(Math.round((valor - 25569) * 86400 * 1000));
+                return new Date(valor);
+            }
+            const texto = String(valor).trim();
+            if (!texto) return null;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+                const [a, m, d] = texto.split('-').map(Number);
+                return new Date(a, m - 1, d, 12, 0, 0);
+            }
+            if (/^\d{2}\/\d{2}\/\d{4}/.test(texto)) {
+                const p = texto.split(/[\/\s:]+/).map(Number);
+                return new Date(p[2], p[1] - 1, p[0], p[3] || 12, p[4] || 0, p[5] || 0);
+            }
+            const d = new Date(texto);
+            return isNaN(d) ? null : d;
+        };
+
+        const dentroDoMesRelatorio = (data, mes, ano) => {
+            const d = parseDataRelatorio(data);
+            return !!(d && !isNaN(d) && d.getMonth() === Number(mes) && d.getFullYear() === Number(ano));
+        };
+
+        const getEventoRelatorio = (nomeEvento) => {
+            const n = normalizarRelatorio(nomeEvento);
+            return dadosEventos.find(e => normalizarRelatorio(e.nome) === n) || null;
+        };
+
+        const getNomeFabiRelatorio = () => {
+            const candidatos = [...dadosPromoters, ...dadosReservas].map(x => x?.nome || x?.promoter || x?.id || '').filter(Boolean);
+            const achou = candidatos.find(n => {
+                const norm = normalizarRelatorio(n);
+                return norm === 'FABI' || norm === 'FABIELE' || norm.includes('FABI');
+            });
+            return achou ? getPromoterName(achou) : 'FABI';
+        };
+
+        const isPromoterAniversarioRelatorio = (promoterRaw) => {
+            const pNorm = normalizarRelatorio(promoterRaw);
+            return dadosPromoters.some(p => {
+                const nome = normalizarRelatorio(p.nome);
+                const id = normalizarRelatorio(p.id);
+                return (nome === pNorm || id === pNorm) && p.tipo === 'aniversario';
+            });
+        };
+
+        const getPromoterRelatorio = (promoterRaw) => {
+            const nome = getPromoterName(promoterRaw);
+            const norm = normalizarRelatorio(nome);
+            const fabi = getNomeFabiRelatorio();
+            if (norm === 'FABI' || norm === 'FABIELE' || norm.includes('FABI')) return fabi;
+            if (isPromoterAniversarioRelatorio(promoterRaw)) return fabi;
+            return nome;
+        };
+
+        const isReservaValidaRelatorio = (r) => {
+            if (!r || r.tipo_entrada === 'SOLTEIRA VIP') return false;
+            if (String(r.tipo_entrada || '').toUpperCase().includes('SOLTEIRA')) return false;
+            if (r.metodo === 'pix_antecipado' && r.pago !== true) return false;
+            return true;
+        };
+
+        const getDataReferenciaReservaRelatorio = (r, metrica) => {
+            if (metrica === 'checkins') return r.data_entrada;
+            const ev = getEventoRelatorio(r.evento);
+            return ev?.data || r.data_reserva;
+        };
+
+        const contarSolteirasRelatorio = (mes, ano) => {
+            const mapa = new Map();
+            const add = (item, dataRef) => {
+                if (!dentroDoMesRelatorio(dataRef, mes, ano)) return;
+                const tel = String(item.tel || item.telefone || '').replace(/\D/g, '');
+                const chave = tel.length >= 8 ? tel : normalizarRelatorio(item.nome || JSON.stringify(item));
+                if (chave) mapa.set(chave, true);
+            };
+
+            dadosSolteiras.forEach(s => add(s, s.ultima_visita || s.data_cadastro));
+            dadosReservas.forEach(r => {
+                const tipo = String(r.tipo_entrada || '').toUpperCase();
+                if (r.entrou === true && tipo.includes('SOLTEIRA')) add(r, r.data_entrada);
+            });
+            return mapa.size;
+        };
+
+        const popularAnosRelatorioMensal = () => {
+            const selMes = document.getElementById('relatorio_mes');
+            const selAno = document.getElementById('relatorio_ano');
+            if (!selMes || !selAno) return;
+
+            const agora = new Date();
+            if (selMes.value === '') selMes.value = String(agora.getMonth());
+            const atualSelecionado = selAno.value || String(agora.getFullYear());
+            const anos = new Set([agora.getFullYear(), agora.getFullYear() - 1, agora.getFullYear() + 1]);
+
+            dadosReservas.forEach(r => {
+                [r.data_entrada, r.data_reserva].forEach(v => {
+                    const d = parseDataRelatorio(v);
+                    if (d && !isNaN(d)) anos.add(d.getFullYear());
+                });
+            });
+            dadosEventos.forEach(e => {
+                const d = parseDataRelatorio(e.data);
+                if (d && !isNaN(d)) anos.add(d.getFullYear());
+            });
+            dadosSolteiras.forEach(s => {
+                const d = parseDataRelatorio(s.ultima_visita || s.data_cadastro);
+                if (d && !isNaN(d)) anos.add(d.getFullYear());
+            });
+
+            const opts = [...anos].sort((a,b) => b - a).map(a => `<option value="${a}">${a}</option>`).join('');
+            if (selAno.innerHTML !== opts) selAno.innerHTML = opts;
+            selAno.value = [...anos].map(String).includes(atualSelecionado) ? atualSelecionado : String(agora.getFullYear());
+        };
+
+        const montarDadosRelatorioMensal = () => {
+            const mes = Number(document.getElementById('relatorio_mes')?.value ?? new Date().getMonth());
+            const ano = Number(document.getElementById('relatorio_ano')?.value ?? new Date().getFullYear());
+            const metrica = document.getElementById('relatorio_metrica')?.value || 'checkins';
+            const fabi = getNomeFabiRelatorio();
+            const totais = new Map();
+
+            dadosPromoters.filter(p => p.ativo !== false).forEach(p => {
+                const nome = getPromoterRelatorio(p.nome || p.id);
+                if (nome) totais.set(nome, 0);
+            });
+
+            dadosReservas.forEach(r => {
+                if (!isReservaValidaRelatorio(r)) return;
+                if (metrica === 'checkins' && r.entrou !== true) return;
+                const dataRef = getDataReferenciaReservaRelatorio(r, metrica);
+                if (!dentroDoMesRelatorio(dataRef, mes, ano)) return;
+                const nome = getPromoterRelatorio(r.promoter);
+                totais.set(nome, (totais.get(nome) || 0) + 1);
+            });
+
+            if (!totais.has(fabi)) totais.set(fabi, 0);
+            const linhas = [...totais.entries()]
+                .map(([promoter, total]) => ({ promoter, total }))
+                .filter(l => l.total > 0 || dadosPromoters.some(p => normalizarRelatorio(getPromoterRelatorio(p.nome || p.id)) === normalizarRelatorio(l.promoter)))
+                .sort((a,b) => b.total - a.total || a.promoter.localeCompare(b.promoter));
+
+            const solteiras = contarSolteirasRelatorio(mes, ano);
+            return { mes, ano, metrica, linhas, solteiras, total: linhas.reduce((s,l) => s + l.total, 0) };
+        };
+
+        window.renderRelatorioMensalPromoters = () => {
+            const boxGrafico = document.getElementById('relatorio_grafico_promoters');
+            const tabela = document.getElementById('relatorio_tabela_promoters');
+            if (!boxGrafico || !tabela) return;
+
+            popularAnosRelatorioMensal();
+            const dados = montarDadosRelatorioMensal();
+            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const labelMetrica = dados.metrica === 'reservas' ? 'Reservas válidas' : 'Check-ins';
+            const linhasGrafico = [...dados.linhas, { promoter: 'SOLTEIRAS', total: dados.solteiras, solteiras: true }];
+            const max = Math.max(1, ...linhasGrafico.map(l => l.total));
+            const top = dados.linhas.find(l => l.total > 0);
+
+            document.getElementById('relatorio_total_promoters').innerText = dados.linhas.filter(l => l.total > 0).length;
+            document.getElementById('relatorio_total_checkins').innerText = dados.total;
+            document.getElementById('relatorio_total_solteiras').innerText = dados.solteiras;
+            document.getElementById('relatorio_top_promoter').innerText = top ? `${top.promoter} (${top.total})` : '---';
+            document.getElementById('relatorio_kpi_label').innerText = `${labelMetrica} do mês`;
+            document.getElementById('relatorio_grafico_titulo').innerText = `${labelMetrica} por promoter — ${meses[dados.mes]}/${dados.ano}`;
+
+            if (linhasGrafico.every(l => l.total === 0)) {
+                boxGrafico.innerHTML = `<div class="py-16 text-center text-zinc-600 font-black uppercase text-xs">Sem dados para este mês</div>`;
+            } else {
+                boxGrafico.innerHTML = linhasGrafico.map(l => {
+                    const pctBar = Math.max(0, (l.total / max) * 100);
+                    return `<div class="relatorio-mensal-row">
+                        <div class="text-[10px] font-black uppercase ${l.solteiras ? 'text-pink-400' : 'text-zinc-300'} truncate" title="${escapeRelatorioHTML(l.promoter)}">${escapeRelatorioHTML(l.promoter)}</div>
+                        <div class="bg-zinc-900 border border-white/5 rounded-full overflow-hidden h-3"><div class="relatorio-mensal-barra ${l.solteiras ? 'solteiras' : ''}" style="width:${pctBar}%"></div></div>
+                        <div class="text-right text-sm font-black ${l.solteiras ? 'text-pink-400' : 'text-white'}">${l.total}</div>
+                    </div>`;
+                }).join('');
+            }
+
+            const base = dados.total || 1;
+            tabela.innerHTML = dados.linhas.map(l => {
+                const pct = dados.total > 0 ? ((l.total / base) * 100).toFixed(1).replace('.', ',') + '%' : '0%';
+                return `<tr class="border-b border-white/5 hover:bg-white/5">
+                    <td class="py-3 px-2 text-[10px] font-black uppercase text-white">${escapeRelatorioHTML(l.promoter)}</td>
+                    <td class="py-3 px-2 text-center text-sm font-black text-green-400">${l.total}</td>
+                    <td class="py-3 px-2 text-right text-[10px] font-bold text-zinc-400">${pct}</td>
+                </tr>`;
+            }).join('') + `<tr class="border-t border-pink-500/30 bg-pink-500/5"><td class="py-3 px-2 text-[10px] font-black uppercase text-pink-400">Solteiras</td><td class="py-3 px-2 text-center text-sm font-black text-pink-400">${dados.solteiras}</td><td class="py-3 px-2 text-right text-[10px] font-bold text-pink-300">base mês</td></tr>`;
+        };
+
+        window.exportarRelatorioMensalPromoters = () => {
+            const dados = montarDadosRelatorioMensal();
+            const meses = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+            const metrica = dados.metrica === 'reservas' ? 'RESERVAS VALIDAS' : 'CHECK-INS';
+            let csv = `MES;ANO;PROMOTER;${metrica}\n`;
+            dados.linhas.forEach(l => { csv += `${meses[dados.mes]};${dados.ano};${String(l.promoter).replace(/;/g, '')};${l.total}\n`; });
+            csv += `${meses[dados.mes]};${dados.ano};SOLTEIRAS;${dados.solteiras}\n`;
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `Relatorio_Mensal_Eclub_${meses[dados.mes]}_${dados.ano}.csv`;
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            mostrarAviso('Relatório mensal exportado!', true);
+        };
+
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
@@ -803,6 +1097,7 @@
             }
             dadosOperadores = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.id !== "sistema");
             renderEquipe();
+            renderRelatorioMensalPromoters();
         });
 
         window.salvarTaxaPix = async () => {
@@ -1018,11 +1313,12 @@
             }).filter(s => s !== null);
             if(del) batch.commit(); 
             renderSolteiras();
+            renderRelatorioMensalPromoters();
         });
 
         onSnapshot(collection(db, "lista_eventos"), snap => { 
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderAuditoria(); renderSolteiras();
+            renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderAuditoria(); renderSolteiras(); renderRelatorioMensalPromoters();
             const sCarona = document.getElementById('filtro-evento-carona');
             const evtAtuais = [...new Set(dadosReservas.filter(r=>r.carona===true).map(r=>r.evento))];
             if(sCarona) {
@@ -1034,7 +1330,7 @@
 
         onSnapshot(collection(db, "eventos"), snap => { 
             dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderSolteiras();
+            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderSolteiras(); renderRelatorioMensalPromoters();
         });
 
         onSnapshot(collection(db, "modelos_eventos"), snap => {
@@ -1046,6 +1342,7 @@
             dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
             document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Por Promoter (Todos)</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
             renderEquipe();
+            renderRelatorioMensalPromoters();
         });
 
         onSnapshot(collection(db, "links_aniversario"), snap => {
