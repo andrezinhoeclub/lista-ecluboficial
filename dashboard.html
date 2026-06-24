@@ -87,7 +87,7 @@
                         <h2 class="text-orange-400 font-black uppercase italic text-xl tracking-tighter">📊 Relatório Mensal por Promoter</h2>
                         <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Check-ins reais por mês/ano, com solteiras no gráfico e regra especial da Fabi.</p>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 min-w-full lg:min-w-[560px]">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 min-w-full lg:min-w-[700px]">
                         <select id="relatorio_mes" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase">
                             <option value="0">Janeiro</option>
                             <option value="1">Fevereiro</option>
@@ -106,6 +106,11 @@
                         <select id="relatorio_metrica" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase">
                             <option value="checkins">Check-ins</option>
                             <option value="reservas">Reservas Válidas</option>
+                        </select>
+                        <select id="relatorio_fonte" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase">
+                            <option value="ambos">Sistema + Histórico</option>
+                            <option value="sistema">Só Sistema</option>
+                            <option value="historico">Só Histórico</option>
                         </select>
                         <button onclick="exportarRelatorioMensalPromoters()" class="bg-orange-600 hover:bg-orange-500 text-white font-black uppercase text-[10px] px-5 py-4 rounded-2xl transition-all shadow-lg">Exportar CSV</button>
                     </div>
@@ -473,6 +478,9 @@
         let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
         let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
 
+        // Histórico manual importado da planilha enviada. Somente leitura para relatório/gráfico; não interfere em portaria, lista, PIX, auditoria ou camarotes.
+        const CHECKINS_HISTORICOS_MANUAIS = [{"ano":2025,"mes":6,"promoter":"Agatha","checkins":98},{"ano":2025,"mes":6,"promoter":"Antonio","checkins":40},{"ano":2025,"mes":6,"promoter":"Casal Real","checkins":3},{"ano":2025,"mes":6,"promoter":"Elton","checkins":116},{"ano":2025,"mes":6,"promoter":"Erótic","checkins":245},{"ano":2025,"mes":6,"promoter":"Fabiele","checkins":88},{"ano":2025,"mes":6,"promoter":"Juliano","checkins":149},{"ano":2025,"mes":6,"promoter":"Lizona","checkins":39},{"ano":2025,"mes":6,"promoter":"Marcelo","checkins":8},{"ano":2025,"mes":6,"promoter":"Paola","checkins":6},{"ano":2025,"mes":6,"promoter":"Rafael","checkins":9},{"ano":2025,"mes":7,"promoter":"Agatha","checkins":109},{"ano":2025,"mes":7,"promoter":"Andreia","checkins":11},{"ano":2025,"mes":7,"promoter":"Antonio","checkins":53},{"ano":2025,"mes":7,"promoter":"Casal Real","checkins":4},{"ano":2025,"mes":7,"promoter":"Elton","checkins":75},{"ano":2025,"mes":7,"promoter":"Erótic","checkins":285},{"ano":2025,"mes":7,"promoter":"Fabiele","checkins":110},{"ano":2025,"mes":7,"promoter":"Juliano","checkins":8},{"ano":2025,"mes":7,"promoter":"Lizona","checkins":26},{"ano":2025,"mes":7,"promoter":"Marcelo","checkins":2},{"ano":2025,"mes":7,"promoter":"Paola","checkins":224},{"ano":2025,"mes":7,"promoter":"Rafael","checkins":8},{"ano":2025,"mes":8,"promoter":"Agatha","checkins":68},{"ano":2025,"mes":8,"promoter":"Andreia","checkins":33},{"ano":2025,"mes":8,"promoter":"Antonio","checkins":37},{"ano":2025,"mes":8,"promoter":"Elton","checkins":88},{"ano":2025,"mes":8,"promoter":"Erótic","checkins":222},{"ano":2025,"mes":8,"promoter":"Fabiele","checkins":81},{"ano":2025,"mes":8,"promoter":"Juliano","checkins":6},{"ano":2025,"mes":8,"promoter":"Lizona","checkins":9},{"ano":2025,"mes":8,"promoter":"Marcelo","checkins":6},{"ano":2025,"mes":8,"promoter":"Paola","checkins":162},{"ano":2025,"mes":8,"promoter":"Rafael","checkins":6},{"ano":2025,"mes":9,"promoter":"Agatha","checkins":39},{"ano":2025,"mes":9,"promoter":"Andreia","checkins":3},{"ano":2025,"mes":9,"promoter":"Antonio","checkins":43},{"ano":2025,"mes":9,"promoter":"Elton","checkins":75},{"ano":2025,"mes":9,"promoter":"Erótic","checkins":295},{"ano":2025,"mes":9,"promoter":"Fabiele","checkins":108},{"ano":2025,"mes":9,"promoter":"Lizona","checkins":9},{"ano":2025,"mes":9,"promoter":"Marcelo","checkins":1},{"ano":2025,"mes":9,"promoter":"Paola","checkins":395},{"ano":2025,"mes":9,"promoter":"Rafael","checkins":4},{"ano":2025,"mes":10,"promoter":"Agatha","checkins":29},{"ano":2025,"mes":10,"promoter":"Andreia","checkins":8},{"ano":2025,"mes":10,"promoter":"Antonio","checkins":28},{"ano":2025,"mes":10,"promoter":"Elton","checkins":68},{"ano":2025,"mes":10,"promoter":"Erótic","checkins":225},{"ano":2025,"mes":10,"promoter":"Fabiele","checkins":83},{"ano":2025,"mes":10,"promoter":"Lizona","checkins":9},{"ano":2025,"mes":10,"promoter":"Marcelo","checkins":1},{"ano":2025,"mes":10,"promoter":"Paola","checkins":250},{"ano":2025,"mes":10,"promoter":"Rafael","checkins":10},{"ano":2025,"mes":11,"promoter":"Agatha","checkins":120},{"ano":2025,"mes":11,"promoter":"Andreia","checkins":2},{"ano":2025,"mes":11,"promoter":"Antonio","checkins":34},{"ano":2025,"mes":11,"promoter":"Débora","checkins":121},{"ano":2025,"mes":11,"promoter":"Elton","checkins":62},{"ano":2025,"mes":11,"promoter":"Erótic","checkins":259},{"ano":2025,"mes":11,"promoter":"Fabiele","checkins":86},{"ano":2025,"mes":11,"promoter":"Henrique","checkins":8},{"ano":2025,"mes":11,"promoter":"Jair","checkins":27},{"ano":2025,"mes":11,"promoter":"Lizona","checkins":25},{"ano":2025,"mes":11,"promoter":"Paola","checkins":1},{"ano":2025,"mes":11,"promoter":"Rafael","checkins":6},{"ano":2026,"mes":0,"promoter":"Agatha","checkins":81},{"ano":2026,"mes":0,"promoter":"Andreia","checkins":6},{"ano":2026,"mes":0,"promoter":"Antonio","checkins":56},{"ano":2026,"mes":0,"promoter":"Débora","checkins":200},{"ano":2026,"mes":0,"promoter":"Elton","checkins":62},{"ano":2026,"mes":0,"promoter":"Erótic","checkins":282},{"ano":2026,"mes":0,"promoter":"Fabiele","checkins":90},{"ano":2026,"mes":0,"promoter":"Henrique","checkins":8},{"ano":2026,"mes":0,"promoter":"Jair","checkins":22},{"ano":2026,"mes":0,"promoter":"Lizona","checkins":10},{"ano":2026,"mes":0,"promoter":"Ousadia","checkins":3},{"ano":2026,"mes":0,"promoter":"Rafael","checkins":4},{"ano":2026,"mes":1,"promoter":"Agatha","checkins":78},{"ano":2026,"mes":1,"promoter":"Andreia","checkins":7},{"ano":2026,"mes":1,"promoter":"Antonio","checkins":44},{"ano":2026,"mes":1,"promoter":"Débora","checkins":251},{"ano":2026,"mes":1,"promoter":"Elton","checkins":61},{"ano":2026,"mes":1,"promoter":"Erótic","checkins":321},{"ano":2026,"mes":1,"promoter":"Fabiele","checkins":107},{"ano":2026,"mes":1,"promoter":"Henrique","checkins":5},{"ano":2026,"mes":1,"promoter":"Jair","checkins":28},{"ano":2026,"mes":1,"promoter":"Lizona","checkins":13},{"ano":2026,"mes":1,"promoter":"Marcelo","checkins":2},{"ano":2026,"mes":2,"promoter":"Agatha","checkins":57},{"ano":2026,"mes":2,"promoter":"Andreia","checkins":7},{"ano":2026,"mes":2,"promoter":"Antonio","checkins":43},{"ano":2026,"mes":2,"promoter":"Débora","checkins":138},{"ano":2026,"mes":2,"promoter":"Elton","checkins":61},{"ano":2026,"mes":2,"promoter":"Erótic","checkins":166},{"ano":2026,"mes":2,"promoter":"Fabiele","checkins":60},{"ano":2026,"mes":2,"promoter":"Henrique","checkins":2},{"ano":2026,"mes":2,"promoter":"Jair","checkins":18},{"ano":2026,"mes":2,"promoter":"Juliano","checkins":1},{"ano":2026,"mes":2,"promoter":"Lizona","checkins":17},{"ano":2026,"mes":3,"promoter":"Agatha","checkins":113},{"ano":2026,"mes":3,"promoter":"Andreia","checkins":1},{"ano":2026,"mes":3,"promoter":"Antonio","checkins":54},{"ano":2026,"mes":3,"promoter":"Débora","checkins":188},{"ano":2026,"mes":3,"promoter":"Elton","checkins":25},{"ano":2026,"mes":3,"promoter":"Erótic","checkins":277},{"ano":2026,"mes":3,"promoter":"Fabiele","checkins":97},{"ano":2026,"mes":3,"promoter":"Henrique","checkins":13},{"ano":2026,"mes":3,"promoter":"Jair","checkins":37},{"ano":2026,"mes":3,"promoter":"Lizona","checkins":42},{"ano":2026,"mes":4,"promoter":"Agatha","checkins":186},{"ano":2026,"mes":4,"promoter":"Andreia","checkins":6},{"ano":2026,"mes":4,"promoter":"Antonio","checkins":54},{"ano":2026,"mes":4,"promoter":"Débora","checkins":208},{"ano":2026,"mes":4,"promoter":"Erótic","checkins":375},{"ano":2026,"mes":4,"promoter":"Fabiele","checkins":146},{"ano":2026,"mes":4,"promoter":"Henrique","checkins":14},{"ano":2026,"mes":4,"promoter":"Jair","checkins":31},{"ano":2026,"mes":4,"promoter":"Juliano","checkins":2},{"ano":2026,"mes":4,"promoter":"Lizona","checkins":5},{"ano":2026,"mes":5,"promoter":"Agatha","checkins":85},{"ano":2026,"mes":5,"promoter":"Antonio","checkins":29},{"ano":2026,"mes":5,"promoter":"Débora","checkins":167},{"ano":2026,"mes":5,"promoter":"Erótic","checkins":272},{"ano":2026,"mes":5,"promoter":"Fabiele","checkins":107},{"ano":2026,"mes":5,"promoter":"Henrique","checkins":4},{"ano":2026,"mes":5,"promoter":"Lizona","checkins":17},{"ano":2026,"mes":11,"promoter":"Agatha","checkins":9},{"ano":2026,"mes":11,"promoter":"Antonio","checkins":5},{"ano":2026,"mes":11,"promoter":"Débora","checkins":20},{"ano":2026,"mes":11,"promoter":"Elton","checkins":6},{"ano":2026,"mes":11,"promoter":"Erótic","checkins":21},{"ano":2026,"mes":11,"promoter":"Fabiele","checkins":7}];
+
         const getPromoterName = (p) => {
             if (!p) return 'SITE DIRETO';
             const clean = String(p).toUpperCase().trim();
@@ -687,6 +695,9 @@
                 const d = parseDataRelatorio(s.ultima_visita || s.data_cadastro);
                 if (d && !isNaN(d)) anos.add(d.getFullYear());
             });
+            CHECKINS_HISTORICOS_MANUAIS.forEach(h => {
+                if (Number.isFinite(Number(h.ano))) anos.add(Number(h.ano));
+            });
 
             const opts = [...anos].sort((a,b) => b - a).map(a => `<option value="${a}">${a}</option>`).join('');
             if (selAno.innerHTML !== opts) selAno.innerHTML = opts;
@@ -697,6 +708,11 @@
             const mes = Number(document.getElementById('relatorio_mes')?.value ?? new Date().getMonth());
             const ano = Number(document.getElementById('relatorio_ano')?.value ?? new Date().getFullYear());
             const metrica = document.getElementById('relatorio_metrica')?.value || 'checkins';
+            let fonte = document.getElementById('relatorio_fonte')?.value || 'ambos';
+            if (metrica === 'reservas' && fonte === 'historico') fonte = 'sistema';
+
+            const usarSistema = fonte !== 'historico';
+            const usarHistorico = metrica === 'checkins' && fonte !== 'sistema';
             const fabi = getNomeFabiRelatorio();
             const totais = new Map();
 
@@ -705,14 +721,26 @@
                 if (nome) totais.set(nome, 0);
             });
 
-            dadosReservas.forEach(r => {
-                if (!isReservaValidaRelatorio(r)) return;
-                if (metrica === 'checkins' && r.entrou !== true) return;
-                const dataRef = getDataReferenciaReservaRelatorio(r, metrica);
-                if (!dentroDoMesRelatorio(dataRef, mes, ano)) return;
-                const nome = getPromoterRelatorio(r.promoter);
-                totais.set(nome, (totais.get(nome) || 0) + 1);
-            });
+            if (usarSistema) {
+                dadosReservas.forEach(r => {
+                    if (!isReservaValidaRelatorio(r)) return;
+                    if (metrica === 'checkins' && r.entrou !== true) return;
+                    const dataRef = getDataReferenciaReservaRelatorio(r, metrica);
+                    if (!dentroDoMesRelatorio(dataRef, mes, ano)) return;
+                    const nome = getPromoterRelatorio(r.promoter);
+                    totais.set(nome, (totais.get(nome) || 0) + 1);
+                });
+            }
+
+            if (usarHistorico) {
+                CHECKINS_HISTORICOS_MANUAIS.forEach(h => {
+                    if (Number(h.mes) !== mes || Number(h.ano) !== ano) return;
+                    const qtd = Number(h.checkins || 0);
+                    if (!Number.isFinite(qtd) || qtd <= 0) return;
+                    const nome = getPromoterRelatorio(h.promoter);
+                    totais.set(nome, (totais.get(nome) || 0) + qtd);
+                });
+            }
 
             if (!totais.has(fabi)) totais.set(fabi, 0);
             const linhas = [...totais.entries()]
@@ -721,7 +749,7 @@
                 .sort((a,b) => b.total - a.total || a.promoter.localeCompare(b.promoter));
 
             const solteiras = contarSolteirasRelatorio(mes, ano);
-            return { mes, ano, metrica, linhas, solteiras, total: linhas.reduce((s,l) => s + l.total, 0) };
+            return { mes, ano, metrica, fonte, linhas, solteiras, total: linhas.reduce((s,l) => s + l.total, 0) };
         };
 
         window.renderRelatorioMensalPromoters = () => {
@@ -730,9 +758,13 @@
             if (!boxGrafico || !tabela) return;
 
             popularAnosRelatorioMensal();
+            const selFonte = document.getElementById('relatorio_fonte');
+            const selMetrica = document.getElementById('relatorio_metrica');
+            if (selFonte && selMetrica && selMetrica.value === 'reservas' && selFonte.value === 'historico') selFonte.value = 'sistema';
             const dados = montarDadosRelatorioMensal();
             const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
             const labelMetrica = dados.metrica === 'reservas' ? 'Reservas válidas' : 'Check-ins';
+            const labelFonte = dados.fonte === 'historico' ? 'Histórico manual' : (dados.fonte === 'sistema' ? 'Sistema atual' : 'Sistema + histórico');
             const linhasGrafico = [...dados.linhas, { promoter: 'SOLTEIRAS', total: dados.solteiras, solteiras: true }];
             const max = Math.max(1, ...linhasGrafico.map(l => l.total));
             const top = dados.linhas.find(l => l.total > 0);
@@ -742,7 +774,7 @@
             document.getElementById('relatorio_total_solteiras').innerText = dados.solteiras;
             document.getElementById('relatorio_top_promoter').innerText = top ? `${top.promoter} (${top.total})` : '---';
             document.getElementById('relatorio_kpi_label').innerText = `${labelMetrica} do mês`;
-            document.getElementById('relatorio_grafico_titulo').innerText = `${labelMetrica} por promoter — ${meses[dados.mes]}/${dados.ano}`;
+            document.getElementById('relatorio_grafico_titulo').innerText = `${labelMetrica} por promoter — ${meses[dados.mes]}/${dados.ano} • ${labelFonte}`;
 
             if (linhasGrafico.every(l => l.total === 0)) {
                 boxGrafico.innerHTML = `<div class="py-16 text-center text-zinc-600 font-black uppercase text-xs">Sem dados para este mês</div>`;
@@ -772,9 +804,10 @@
             const dados = montarDadosRelatorioMensal();
             const meses = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
             const metrica = dados.metrica === 'reservas' ? 'RESERVAS VALIDAS' : 'CHECK-INS';
-            let csv = `MES;ANO;PROMOTER;${metrica}\n`;
-            dados.linhas.forEach(l => { csv += `${meses[dados.mes]};${dados.ano};${String(l.promoter).replace(/;/g, '')};${l.total}\n`; });
-            csv += `${meses[dados.mes]};${dados.ano};SOLTEIRAS;${dados.solteiras}\n`;
+            const fonteLabel = dados.fonte === 'historico' ? 'HISTORICO MANUAL' : (dados.fonte === 'sistema' ? 'SISTEMA ATUAL' : 'SISTEMA + HISTORICO');
+            let csv = `MES;ANO;FONTE;PROMOTER;${metrica}\n`;
+            dados.linhas.forEach(l => { csv += `${meses[dados.mes]};${dados.ano};${fonteLabel};${String(l.promoter).replace(/;/g, '')};${l.total}\n`; });
+            csv += `${meses[dados.mes]};${dados.ano};${fonteLabel};SOLTEIRAS;${dados.solteiras}\n`;
             const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
