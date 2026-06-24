@@ -85,9 +85,9 @@
                 <div class="flex flex-col lg:flex-row justify-between gap-6 mb-8">
                     <div>
                         <h2 class="text-orange-400 font-black uppercase italic text-xl tracking-tighter">📊 Relatório Mensal por Promoter</h2>
-                        <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Check-ins por mês/ano, somente promoters padrão/aniversário, com solteiras e média dos aniversários na Fabi.</p>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Check-ins por mês/ano a partir de julho, somente promoters padrão/aniversário, com solteiras e média dos aniversários na Fabi.</p>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 min-w-full lg:min-w-[700px]">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 min-w-full lg:min-w-[620px]">
                         <select id="relatorio_mes" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase">
                             <option value="0">Janeiro</option>
                             <option value="1">Fevereiro</option>
@@ -95,7 +95,7 @@
                             <option value="3">Abril</option>
                             <option value="4">Maio</option>
                             <option value="5">Junho</option>
-                            <option value="6">Julho</option>
+                            <option value="6" selected>Julho</option>
                             <option value="7">Agosto</option>
                             <option value="8">Setembro</option>
                             <option value="9">Outubro</option>
@@ -107,11 +107,7 @@
                             <option value="checkins">Check-ins</option>
                             <option value="reservas">Reservas Válidas</option>
                         </select>
-                        <select id="relatorio_fonte" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase">
-                            <option value="ambos">Sistema + Histórico</option>
-                            <option value="sistema">Só Sistema</option>
-                            <option value="historico">Só Histórico</option>
-                        </select>
+                        <input type="hidden" id="relatorio_fonte" value="sistema">
                         <button onclick="exportarRelatorioMensalPromoters()" class="bg-orange-600 hover:bg-orange-500 text-white font-black uppercase text-[10px] px-5 py-4 rounded-2xl transition-all shadow-lg">Exportar CSV</button>
                     </div>
                 </div>
@@ -478,8 +474,8 @@
         let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
         let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
 
-        // Histórico manual de check-ins 2026 importado da lista enviada. Somente leitura para relatório/gráfico; não interfere em portaria, lista, PIX, auditoria ou camarotes.
-        const CHECKINS_HISTORICOS_MANUAIS = [{"ano":2026,"mes":0,"promoter":"Agatha","checkins":81},{"ano":2026,"mes":0,"promoter":"Andreia","checkins":6},{"ano":2026,"mes":0,"promoter":"Antonio","checkins":56},{"ano":2026,"mes":0,"promoter":"Débora","checkins":200},{"ano":2026,"mes":0,"promoter":"Elton","checkins":62},{"ano":2026,"mes":0,"promoter":"Erótic","checkins":282},{"ano":2026,"mes":0,"promoter":"Fabiele","checkins":90},{"ano":2026,"mes":0,"promoter":"Henrique","checkins":8},{"ano":2026,"mes":0,"promoter":"Jair","checkins":22},{"ano":2026,"mes":0,"promoter":"Lizona","checkins":10},{"ano":2026,"mes":0,"promoter":"Ousadia","checkins":3},{"ano":2026,"mes":0,"promoter":"Rafael","checkins":4},{"ano":2026,"mes":1,"promoter":"Agatha","checkins":78},{"ano":2026,"mes":1,"promoter":"Andreia","checkins":7},{"ano":2026,"mes":1,"promoter":"Antonio","checkins":44},{"ano":2026,"mes":1,"promoter":"Débora","checkins":251},{"ano":2026,"mes":1,"promoter":"Elton","checkins":61},{"ano":2026,"mes":1,"promoter":"Erótic","checkins":321},{"ano":2026,"mes":1,"promoter":"Fabiele","checkins":107},{"ano":2026,"mes":1,"promoter":"Henrique","checkins":5},{"ano":2026,"mes":1,"promoter":"Jair","checkins":28},{"ano":2026,"mes":1,"promoter":"Lizona","checkins":13},{"ano":2026,"mes":1,"promoter":"Marcelo","checkins":2},{"ano":2026,"mes":2,"promoter":"Agatha","checkins":57},{"ano":2026,"mes":2,"promoter":"Andreia","checkins":7},{"ano":2026,"mes":2,"promoter":"Antonio","checkins":43},{"ano":2026,"mes":2,"promoter":"Débora","checkins":138},{"ano":2026,"mes":2,"promoter":"Elton","checkins":61},{"ano":2026,"mes":2,"promoter":"Erótic","checkins":166},{"ano":2026,"mes":2,"promoter":"Fabiele","checkins":60},{"ano":2026,"mes":2,"promoter":"Henrique","checkins":2},{"ano":2026,"mes":2,"promoter":"Jair","checkins":18},{"ano":2026,"mes":2,"promoter":"Juliano","checkins":1},{"ano":2026,"mes":2,"promoter":"Lizona","checkins":17},{"ano":2026,"mes":3,"promoter":"Agatha","checkins":113},{"ano":2026,"mes":3,"promoter":"Andreia","checkins":1},{"ano":2026,"mes":3,"promoter":"Antonio","checkins":54},{"ano":2026,"mes":3,"promoter":"Débora","checkins":188},{"ano":2026,"mes":3,"promoter":"Elton","checkins":25},{"ano":2026,"mes":3,"promoter":"Erótic","checkins":277},{"ano":2026,"mes":3,"promoter":"Fabiele","checkins":97},{"ano":2026,"mes":3,"promoter":"Henrique","checkins":13},{"ano":2026,"mes":3,"promoter":"Jair","checkins":37},{"ano":2026,"mes":3,"promoter":"Lizona","checkins":42},{"ano":2026,"mes":4,"promoter":"Agatha","checkins":186},{"ano":2026,"mes":4,"promoter":"Andreia","checkins":6},{"ano":2026,"mes":4,"promoter":"Antonio","checkins":54},{"ano":2026,"mes":4,"promoter":"Débora","checkins":208},{"ano":2026,"mes":4,"promoter":"Erótic","checkins":375},{"ano":2026,"mes":4,"promoter":"Fabiele","checkins":146},{"ano":2026,"mes":4,"promoter":"Henrique","checkins":14},{"ano":2026,"mes":4,"promoter":"Jair","checkins":31},{"ano":2026,"mes":4,"promoter":"Juliano","checkins":2},{"ano":2026,"mes":4,"promoter":"Lizona","checkins":5},{"ano":2026,"mes":5,"promoter":"Agatha","checkins":85},{"ano":2026,"mes":5,"promoter":"Antonio","checkins":29},{"ano":2026,"mes":5,"promoter":"Débora","checkins":167},{"ano":2026,"mes":5,"promoter":"Erótic","checkins":272},{"ano":2026,"mes":5,"promoter":"Fabiele","checkins":107},{"ano":2026,"mes":5,"promoter":"Henrique","checkins":4},{"ano":2026,"mes":5,"promoter":"Lizona","checkins":17}];
+        // Relatório daqui para frente: histórico manual zerado. Somente dados reais do sistema/Firebase serão usados.
+        const CHECKINS_HISTORICOS_MANUAIS = [];
 
         const getPromoterName = (p) => {
             if (!p) return 'SITE DIRETO';
@@ -648,11 +644,12 @@
             return String(cad.tipo || 'padrao').toLowerCase().trim();
         };
 
-        const isPromoterVisivelRelatorio = (promoterRaw) => {
+        const isPromoterVisivelRelatorio = (promoterRaw, permitirSemCadastro = false) => {
             const cad = getCadastroPromoterRelatorio(promoterRaw);
-            if (!cad) return false;
+            if (!cad) return permitirSemCadastro || isFabiRelatorio(promoterRaw);
             const tipo = String(cad.tipo || 'padrao').toLowerCase().trim();
-            return cad.ativo !== false && (tipo === 'padrao' || tipo === 'aniversario');
+            if (cad.ativo === false || tipo === 'visualizar') return false;
+            return tipo === 'padrao' || tipo === 'aniversario';
         };
 
         const isPromoterAniversarioRelatorio = (promoterRaw) => getTipoPromoterRelatorio(promoterRaw) === 'aniversario';
@@ -759,7 +756,7 @@
             if (usarHistorico) {
                 CHECKINS_HISTORICOS_MANUAIS.forEach(h => {
                     if (Number(h.mes) !== mes || Number(h.ano) !== ano) return;
-                    if (!isPromoterVisivelRelatorio(h.promoter)) return;
+                    if (!isPromoterVisivelRelatorio(h.promoter, true)) return;
                     const qtd = Number(h.checkins || 0);
                     if (!Number.isFinite(qtd) || qtd <= 0) return;
                     const nome = getPromoterRelatorio(h.promoter);
