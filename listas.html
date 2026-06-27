@@ -439,11 +439,6 @@
 
             const container = document.getElementById('listaEventos');
             container.innerHTML = eventosCache.map(ev => {
-                const valPortariaCasal = extrairValorNumerico(ev.valor_casal);
-                const valPortariaSolteiro = extrairValorNumerico(ev.valor_solteiro);
-                // Nome na Lista só fica disponível quando ao menos um valor de portaria foi configurado.
-                const temListaAtiva = (valPortariaCasal > 0 || valPortariaSolteiro > 0);
-
                 const valPixCasal = extrairValorNumerico(ev.ant_casal);
                 const valPixCasalCons = extrairValorNumerico(ev.ant_casal_cons);
                 const valPixSolt = extrairValorNumerico(ev.ant_solteiro);
@@ -468,7 +463,7 @@
                         </div>
                         <div class="p-8">
                             <h3 class="text-lg font-black uppercase italic text-zinc-400 mb-6 text-center tracking-tighter">EVENTO:<br><span class="text-white text-xl">${ev.nome}</span></h3>
-                            ${temListaAtiva ? `<button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs font-black italic transition-all active:scale-95">🎁 COLOCAR NOME NA LISTA</button>` : `<p class="text-[9px] font-black uppercase tracking-widest text-zinc-600">Lista indisponível para este evento</p>`}
+                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs font-black italic transition-all active:scale-95">🎁 COLOCAR NOME NA LISTA</button>
                         </div>
                     </div>`;
                 } else {
@@ -484,16 +479,12 @@
                         `;
                     }
 
-                    const botaoListaHTML = temListaAtiva
-                        ? `<button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs font-black mb-3 italic transition-all active:scale-95">📝 NOME NA LISTA</button>`
-                        : '';
-
                     renderHtml = `
                     <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
                         ${topoCardHTML}
                         <div class="p-8">
                             <h3 class="text-2xl font-black uppercase italic mb-6 text-center text-white tracking-tighter">${ev.nome}</h3>
-                            ${botaoListaHTML}
+                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs font-black mb-3 italic transition-all active:scale-95">📝 NOME NA LISTA</button>
                             <div class="grid grid-cols-2 gap-3">
                                 ${botoesVendaHTML}
                             </div>
@@ -506,15 +497,7 @@
 
         window.iniciarFluxo = (id, isPix) => {
             eventoAtivo = eventosCache.find(e => e.id === id); 
-            if (!eventoAtivo) return;
             if (bloquearEventoPassadoSeNecessario(eventoAtivo)) return;
-
-            const temPortariaConfigurada = extrairValorNumerico(eventoAtivo.valor_casal) > 0 || extrairValorNumerico(eventoAtivo.valor_solteiro) > 0;
-            if (!isPix && !temPortariaConfigurada) {
-                mostrarAviso('Nome na Lista indisponível para este evento.');
-                return;
-            }
-
             eFluxoPix = isPix;
             tipoAtivo = null;
             aplicouDescontoFidelidade = false;
