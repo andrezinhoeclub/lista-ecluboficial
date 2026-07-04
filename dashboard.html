@@ -67,6 +67,7 @@
             </div>
             <nav class="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 overflow-x-auto">
                 <button onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu active px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Relatórios</button>
+                <button onclick="trocarAba('aba-relatorio-mensal', this, 'normal'); renderRelatorioMensalPromoters();" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-orange-400">Mensal</button>
                 <button onclick="trocarAba('aba-auditoria', this, 'success')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-emerald-400">Auditoria</button>
                 <button onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Eventos</button>
                 <button onclick="trocarAba('aba-solteiras', this, 'pink')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-pink-500">Carona</button>
@@ -81,11 +82,41 @@
                 <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance e Financeiro</h2>
                 <div id="container-bolhas" class="scroll-x"></div>
             </div>
-            <div class="glass-card p-8 border-l-4 border-l-orange-500">
+            
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-card p-8 border-t-4 border-t-yellow-500 text-center">
+                    <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest">🏆 Pódio de Reservas</h2>
+                    <div id="lista-ranking-reservas" class="space-y-4 text-left"></div>
+                </div>
+                <div class="glass-card p-8 border-t-4 border-t-green-500 text-center">
+                    <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest">🔥 Pódio de Check-ins</h2>
+                    <div id="lista-ranking-checkins" class="space-y-4 text-left"></div>
+                </div>
+                <div class="glass-card p-8 border-t-4 border-t-blue-600 flex flex-col">
+                    <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Exportar Dados</h2>
+                    <select id="filtro-promoter-excel" class="w-full bg-[#0a0a0f] border border-zinc-800 p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white outline-none"></select>
+                    <div class="flex flex-col gap-2 mb-4">
+                        <button onclick="gerarRelatorioGerencial()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">Resumo Gerencial</button>
+                        <button onclick="gerarApenasCheckins()" class="w-full bg-green-600/20 text-green-400 border border-green-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-green-600 hover:text-white transition-all">Extrair Check-ins Pagantes</button>
+                        <button onclick="gerarApenasSolteiras()" class="w-full bg-pink-600/20 text-pink-400 border border-pink-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-pink-600 hover:text-white transition-all">Extrair Solteiras Presentes</button>
+                    </div>
+                    <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800" placeholder="Selecione a opção desejada..."></textarea>
+                    <button onclick="copiarOutput()" class="w-full bg-blue-600 text-[11px] text-white font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">📋 Copiar p/ WhatsApp</button>
+                </div>
+            </div>
+        </section>
+
+                <section id="aba-relatorio-mensal" class="hidden space-y-8">
+            <div class="glass-card p-6 border-l-4 border-l-orange-500">
+                <h2 class="text-orange-400 font-black uppercase italic text-xl tracking-tighter">Histórico Mensal</h2>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Consulta permanente de reservas e check-ins por promoter.</p>
+            </div>
+<div class="glass-card p-8 border-l-4 border-l-orange-500">
                 <div class="flex flex-col lg:flex-row justify-between gap-6 mb-8">
                     <div>
                         <h2 class="text-orange-400 font-black uppercase italic text-xl tracking-tighter">📊 Relatório Mensal por Promoter</h2>
-                        <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Check-ins por mês/ano a partir de julho, somente promoters padrão/aniversário, com solteiras.</p>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Consulta por mês e promoter. Reservas e check-ins já arquivados continuam disponíveis mesmo após a limpeza da base operacional.</p>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 min-w-full lg:min-w-[620px]">
                         <select id="relatorio_mes" onchange="renderRelatorioMensalPromoters()" class="p-4 rounded-2xl text-[10px] font-black uppercase">
@@ -140,31 +171,9 @@
                     </div>
                 </div>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div class="glass-card p-8 border-t-4 border-t-yellow-500 text-center">
-                    <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest">🏆 Pódio de Reservas</h2>
-                    <div id="lista-ranking-reservas" class="space-y-4 text-left"></div>
-                </div>
-                <div class="glass-card p-8 border-t-4 border-t-green-500 text-center">
-                    <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest">🔥 Pódio de Check-ins</h2>
-                    <div id="lista-ranking-checkins" class="space-y-4 text-left"></div>
-                </div>
-                <div class="glass-card p-8 border-t-4 border-t-blue-600 flex flex-col">
-                    <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Exportar Dados</h2>
-                    <select id="filtro-promoter-excel" class="w-full bg-[#0a0a0f] border border-zinc-800 p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white outline-none"></select>
-                    <div class="flex flex-col gap-2 mb-4">
-                        <button onclick="gerarRelatorioGerencial()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">Resumo Gerencial</button>
-                        <button onclick="gerarApenasCheckins()" class="w-full bg-green-600/20 text-green-400 border border-green-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-green-600 hover:text-white transition-all">Extrair Check-ins Pagantes</button>
-                        <button onclick="gerarApenasSolteiras()" class="w-full bg-pink-600/20 text-pink-400 border border-pink-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-pink-600 hover:text-white transition-all">Extrair Solteiras Presentes</button>
-                    </div>
-                    <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800" placeholder="Selecione a opção desejada..."></textarea>
-                    <button onclick="copiarOutput()" class="w-full bg-blue-600 text-[11px] text-white font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">📋 Copiar p/ WhatsApp</button>
-                </div>
-            </div>
         </section>
 
-        <section id="aba-auditoria" class="hidden space-y-8">
+<section id="aba-auditoria" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-emerald-500">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-emerald-500 font-black uppercase italic text-xl tracking-tighter">Conferência & Auditoria Live</h2>
@@ -428,11 +437,13 @@
                     </div>
                     <div class="bg-red-500/5 border border-red-500/20 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
                         <h3 class="text-red-400 font-black uppercase tracking-widest text-[11px] mb-2">Limpar Clientes</h3>
-                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto" title="Não apaga as Solteiras cadastradas.">Limpar Base</button>
+                        <p class="text-[8px] text-zinc-500 font-bold uppercase mb-3">Arquiva histórico mensal</p>
+                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto" title="Remove da operação, mas preserva reservas e check-ins no Histórico Mensal.">Limpar Base</button>
                     </div>
                     <div class="bg-red-500/10 border border-red-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
                         <h3 class="text-red-500 font-black uppercase tracking-widest text-[11px] mb-2">Zerar Sistema</h3>
-                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto" title="Não apaga as Solteiras cadastradas nem os Modelos.">⚠️ ZERAR TUDO</button>
+                        <p class="text-[8px] text-zinc-500 font-bold uppercase mb-3">Histórico mensal protegido</p>
+                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto" title="Não apaga as Solteiras cadastradas, os Modelos nem o Histórico Mensal.">⚠️ ZERAR TUDO</button>
                     </div>
                     <div class="bg-yellow-500/10 border border-yellow-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
                         <h3 class="text-yellow-500 font-black uppercase tracking-widest text-[11px] mb-4">Taxa de Serviço PIX</h3>
@@ -470,7 +481,7 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
         
-        let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
+        let dadosReservas = []; let dadosHistoricoReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
         let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
 
         // Relatório daqui para frente: histórico manual zerado. Somente dados reais do sistema/Firebase serão usados.
@@ -624,7 +635,7 @@
         };
 
         const getNomeFabiRelatorio = () => {
-            const candidatos = [...dadosPromoters, ...dadosReservas].map(x => x?.nome || x?.promoter || x?.id || '').filter(Boolean);
+            const candidatos = [...dadosPromoters, ...getReservasParaRelatorio()].map(x => x?.nome || x?.promoter || x?.id || '').filter(Boolean);
             const achou = candidatos.find(n => {
                 const norm = normalizarRelatorio(n);
                 return norm === 'FABI' || norm === 'FABIELE' || norm.includes('FABI');
@@ -673,10 +684,25 @@
             return true;
         };
 
+        // Une a base operacional com o arquivo permanente, sem duplicar reservas que ainda estejam ativas.
+        const getReservasParaRelatorio = () => {
+            const unicas = new Map();
+            dadosHistoricoReservas.forEach(r => {
+                const chave = String(r.origem_reserva_id || r.id || `${r.evento || ''}_${r.tel || ''}_${r.data_reserva || ''}`);
+                unicas.set(chave, r);
+            });
+            dadosReservas.forEach(r => {
+                const chave = String(r.origem_reserva_id || r.id || `${r.evento || ''}_${r.tel || ''}_${r.data_reserva || ''}`);
+                unicas.set(chave, r);
+            });
+            return [...unicas.values()];
+        };
+
         const getDataReferenciaReservaRelatorio = (r, metrica) => {
             if (metrica === 'checkins') return r.data_entrada;
             const ev = getEventoRelatorio(r.evento);
-            return ev?.data || r.data_reserva;
+            // data_evento é gravada no arquivo antes de o evento ser removido do sistema.
+            return r.data_evento || ev?.data || r.data_reserva;
         };
 
         const contarSolteirasRelatorio = (mes, ano) => {
@@ -689,7 +715,7 @@
             };
 
             dadosSolteiras.forEach(s => add(s, s.ultima_visita || s.data_cadastro));
-            dadosReservas.forEach(r => {
+            getReservasParaRelatorio().forEach(r => {
                 const tipo = String(r.tipo_entrada || '').toUpperCase();
                 if (r.entrou === true && tipo.includes('SOLTEIRA')) add(r, r.data_entrada);
             });
@@ -706,8 +732,8 @@
             const atualSelecionado = selAno.value || String(agora.getFullYear());
             const anos = new Set([agora.getFullYear(), agora.getFullYear() - 1, agora.getFullYear() + 1]);
 
-            dadosReservas.forEach(r => {
-                [r.data_entrada, r.data_reserva].forEach(v => {
+            getReservasParaRelatorio().forEach(r => {
+                [r.data_entrada, r.data_reserva, r.data_evento].forEach(v => {
                     const d = parseDataRelatorio(v);
                     if (d && !isNaN(d)) anos.add(d.getFullYear());
                 });
@@ -749,10 +775,10 @@
                 });
 
             if (usarSistema) {
-                dadosReservas.forEach(r => {
+                getReservasParaRelatorio().forEach(r => {
                     if (!isReservaValidaRelatorio(r)) return;
                     if (metrica === 'checkins' && r.entrou !== true) return;
-                    if (!isPromoterVisivelRelatorio(r.promoter)) return;
+                    if (!isPromoterVisivelRelatorio(r.promoter, r.origem_reserva_id !== undefined)) return;
                     const dataRef = getDataReferenciaReservaRelatorio(r, metrica);
                     if (!dentroDoMesRelatorio(dataRef, mes, ano)) return;
                     const nome = getPromoterRelatorio(r.promoter);
@@ -805,7 +831,7 @@
             const dados = montarDadosRelatorioMensal();
             const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
             const labelMetrica = dados.metrica === 'reservas' ? 'Reservas válidas' : 'Check-ins';
-            const labelFonte = dados.fonte === 'historico' ? 'Histórico manual' : (dados.fonte === 'sistema' ? 'Sistema atual' : 'Sistema + histórico');
+            const labelFonte = dados.fonte === 'historico' ? 'Histórico manual' : (dados.fonte === 'sistema' ? 'Base atual + histórico protegido' : 'Sistema + histórico');
             const linhasGrafico = [...dados.linhas, { promoter: 'SOLTEIRAS', total: dados.solteiras, solteiras: true }];
             const max = Math.max(1, ...linhasGrafico.map(l => l.total));
             const top = dados.linhas.find(l => l.total > 0);
@@ -845,7 +871,7 @@
             const dados = montarDadosRelatorioMensal();
             const meses = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
             const metrica = dados.metrica === 'reservas' ? 'RESERVAS VALIDAS' : 'CHECK-INS';
-            const fonteLabel = dados.fonte === 'historico' ? 'HISTORICO MANUAL' : (dados.fonte === 'sistema' ? 'SISTEMA ATUAL' : 'SISTEMA + HISTORICO');
+            const fonteLabel = dados.fonte === 'historico' ? 'HISTORICO MANUAL' : (dados.fonte === 'sistema' ? 'BASE ATUAL + HISTORICO PROTEGIDO' : 'SISTEMA + HISTORICO');
             let csv = `MES;ANO;FONTE;PROMOTER;${metrica}\n`;
             dados.linhas.forEach(l => { csv += `${meses[dados.mes]};${dados.ano};${fonteLabel};${String(l.promoter).replace(/;/g, '')};${l.total}\n`; });
             csv += `${meses[dados.mes]};${dados.ano};${fonteLabel};SOLTEIRAS;${dados.solteiras}\n`;
@@ -1390,6 +1416,11 @@
             renderRelatorioMensalPromoters();
         });
 
+        onSnapshot(collection(db, "historico_reservas"), snap => {
+            dadosHistoricoReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderRelatorioMensalPromoters();
+        });
+
         onSnapshot(collection(db, "lista_eventos"), snap => { 
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderAuditoria(); renderSolteiras(); renderRelatorioMensalPromoters();
@@ -1924,38 +1955,95 @@
         };
 
         window.toggleModoTeste = async () => { await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true }); };
+
+        // Antes de limpar a operação semanal, cada reserva é movida para o arquivo permanente.
+        // O set e o delete são feitos no mesmo batch: se o arquivo falhar, a reserva ativa não é apagada.
+        const arquivarEExcluirReservas = async (docs, motivo) => {
+            const itens = Array.from(docs || []);
+            const LIMITE_POR_LOTE = 200; // 200 arquivos + 200 exclusões, abaixo do limite do Firestore.
+
+            for (let inicio = 0; inicio < itens.length; inicio += LIMITE_POR_LOTE) {
+                const lote = itens.slice(inicio, inicio + LIMITE_POR_LOTE);
+                const batch = writeBatch(db);
+
+                lote.forEach(snapReserva => {
+                    const reserva = snapReserva.data();
+                    const evento = dadosEventos.find(ev => normalizarRelatorio(ev.nome) === normalizarRelatorio(reserva.evento));
+                    const historicoRef = doc(db, "historico_reservas", snapReserva.id);
+
+                    batch.set(historicoRef, {
+                        ...reserva,
+                        origem_reserva_id: snapReserva.id,
+                        data_evento: reserva.data_evento || evento?.data || null,
+                        arquivado_em: new Date().toISOString(),
+                        motivo_arquivamento: motivo
+                    }, { merge: true });
+                    batch.delete(snapReserva.ref);
+                });
+
+                await batch.commit();
+            }
+            return itens.length;
+        };
+
+        const excluirColecaoEmLotes = async (nomeColecao) => {
+            const snap = await getDocs(collection(db, nomeColecao));
+            const itens = snap.docs;
+            const LIMITE_POR_LOTE = 400;
+            for (let inicio = 0; inicio < itens.length; inicio += LIMITE_POR_LOTE) {
+                const batch = writeBatch(db);
+                itens.slice(inicio, inicio + LIMITE_POR_LOTE).forEach(item => batch.delete(item.ref));
+                await batch.commit();
+            }
+        };
         
         window.limparBaseDeDados = async () => { 
-            if (confirm("Limpar clientes das listas?\n\nIsso apagará as reservas dos eventos, MAS MANTERÁ SALVA as Solteiras VIP e a Pontuação de Fidelidade dos clientes.")) { 
-                const b = writeBatch(db); 
-                const q = await getDocs(collection(db, "lista_eventos")); 
-                q.forEach(d => b.delete(d.ref)); 
-                await b.commit(); 
-                mostrarAviso("Base de reservas limpa com sucesso!", true); 
-            } 
+            const confirmarLimpeza = confirm(
+                "LIMPAR BASE OPERACIONAL?\n\n" +
+                "As reservas sairão das listas e da portaria, mas serão arquivadas permanentemente na aba MENSAL. " +
+                "Os relatórios futuros de reservas e check-ins por mês/promoter permanecerão disponíveis."
+            );
+            if (!confirmarLimpeza) return;
+
+            try {
+                const q = await getDocs(collection(db, "lista_eventos"));
+                const total = await arquivarEExcluirReservas(q.docs, "limpeza_base_operacional");
+                mostrarAviso(`${total} reserva(s) arquivada(s). Base operacional limpa com segurança.`, true);
+            } catch (e) {
+                console.error("Erro ao arquivar a base:", e);
+                mostrarAviso("A limpeza foi cancelada: não foi possível proteger o histórico.");
+            }
         };
         
         window.zerarSistemaCompleto = async () => { 
-            if (confirm("⚠️ TEM CERTEZA QUE DESEJA ZERAR EVENTOS E LISTAS?\n\nAs Solteiras Cadastradas, os Pontos de Fidelidade e os Modelos salvos em Meus Modelos NÃO serão afetados.")) { 
-                for (const col of ["lista_eventos", "links_aniversario"]) { 
-                    const b = writeBatch(db); 
-                    const q = await getDocs(collection(db, col)); 
-                    q.forEach(d => b.delete(d.ref)); 
-                    await b.commit(); 
-                } 
+            const confirmarZerar = confirm(
+                "⚠️ TEM CERTEZA QUE DESEJA ZERAR EVENTOS E LISTAS?\n\n" +
+                "Antes da limpeza, todas as reservas serão arquivadas para manter o histórico mensal por promoter. " +
+                "As Solteiras cadastradas, os pontos de fidelidade e os modelos salvos não serão afetados."
+            );
+            if (!confirmarZerar) return;
+
+            try {
+                const qReservas = await getDocs(collection(db, "lista_eventos"));
+                await arquivarEExcluirReservas(qReservas.docs, "zerar_sistema");
+                await excluirColecaoEmLotes("links_aniversario");
                 
                 // Apaga apenas eventos reais. Modelos novos ficam na coleção "modelos_eventos".
                 // Modelos antigos que ainda estavam salvos dentro de "eventos" também são preservados.
-                const bEv = writeBatch(db);
                 const qEv = await getDocs(collection(db, "eventos"));
-                qEv.forEach(d => {
-                    const data = d.data();
-                    if(!isEventoModeloAntigo(data)) bEv.delete(d.ref);
-                });
-                await bEv.commit();
+                const eventosReais = qEv.docs.filter(d => !isEventoModeloAntigo(d.data()));
+                for (let inicio = 0; inicio < eventosReais.length; inicio += 400) {
+                    const bEv = writeBatch(db);
+                    eventosReais.slice(inicio, inicio + 400).forEach(d => bEv.delete(d.ref));
+                    await bEv.commit();
+                }
                 
-                location.reload(); 
-            } 
+                mostrarAviso("Sistema limpo. Histórico mensal protegido.", true);
+                setTimeout(() => location.reload(), 900);
+            } catch (e) {
+                console.error("Erro ao zerar sistema:", e);
+                mostrarAviso("A limpeza foi interrompida para proteger o histórico.");
+            }
         };
     </script>
 
