@@ -799,10 +799,14 @@
 
             if (!totais.has(fabi)) totais.set(fabi, 0);
 
-            const aniversariosComMovimento = [...totais.entries()]
-                .filter(([promoter, total]) => total > 0 && isPromoterAniversarioRelatorio(promoter) && !isFabiRelatorio(promoter));
-            const mediaAniversario = aniversariosComMovimento.length > 0
-                ? Math.round(aniversariosComMovimento.reduce((s, [,total]) => s + total, 0) / aniversariosComMovimento.length)
+            // A média da Fabiele considera promoters de aniversário e também o resultado do link da casa (SITE_DIRETO).
+            // Assim como os aniversariantes, SITE_DIRETO só entra quando tiver resultado maior que zero no mês consultado.
+            const participantesMediaFabi = [...totais.entries()]
+                .filter(([promoter, total]) => total > 0
+                    && !isFabiRelatorio(promoter)
+                    && (isPromoterAniversarioRelatorio(promoter) || isSiteDiretoRelatorio(promoter)));
+            const mediaAniversario = participantesMediaFabi.length > 0
+                ? Math.round(participantesMediaFabi.reduce((s, [,total]) => s + total, 0) / participantesMediaFabi.length)
                 : 0;
             if (mediaAniversario > 0) totais.set(fabi, (totais.get(fabi) || 0) + mediaAniversario);
 
