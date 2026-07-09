@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v31: login de operadores online/offline com credenciais locais sincronizadas -->
+  <!-- E-CLUB Vallet v33: eventos 21h-08h, relatório por evento, placa ativa global e limpeza 180 dias -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -115,6 +115,26 @@
       backdrop-filter: blur(18px);
     }
     .loginOverlay.hidden { display: none; }
+    .scheduleOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background: radial-gradient(circle at 20% 0%, rgba(37,99,235,.16), transparent 38%), rgba(5,5,8,.985);
+      backdrop-filter: blur(18px);
+    }
+    .scheduleOverlay.show { display: flex; }
+    .scheduleCard { width: min(100%, 470px); background: rgba(14,14,20,.97); border: 1px solid rgba(59,130,246,.30); border-radius: 34px; padding: 32px; box-shadow: 0 30px 100px rgba(0,0,0,.58); text-align: center; }
+    .scheduleCard img { height: 58px; width: auto; margin-bottom: 18px; }
+    .scheduleCard h2 { margin: 8px 0; font-size: 25px; font-weight: 950; text-transform: uppercase; font-style: italic; letter-spacing: -.04em; }
+    .scheduleCard p { color: var(--muted); font-size: 10px; font-weight: 850; text-transform: uppercase; line-height: 1.6; }
+    .scheduleTime { margin: 20px 0; padding: 18px; border-radius: 22px; background: rgba(59,130,246,.09); border: 1px solid rgba(59,130,246,.22); color: #93c5fd; font-size: 15px; font-weight: 950; text-transform: uppercase; }
+    .operationScheduleBanner { margin-bottom: 16px; padding: 14px 17px; border-radius: 20px; border: 1px solid rgba(34,197,94,.25); background: rgba(34,197,94,.08); color: #86efac; font-size: 9px; font-weight: 950; text-transform: uppercase; line-height: 1.5; letter-spacing: .06em; }
+    .operationScheduleBanner.exitOnly { border-color: rgba(249,115,22,.30); background: rgba(249,115,22,.09); color: #fdba74; }
+    .btn[disabled], input[disabled], select[disabled], textarea[disabled] { opacity: .48; cursor: not-allowed; }
     .loginCard {
       width: min(100%, 410px);
       background: rgba(14,14,20,.96);
@@ -547,6 +567,17 @@
 <body>
   <div id="toast" class="toast"></div>
 
+  <div id="vallet-horario-bloqueio" class="scheduleOverlay" aria-live="polite">
+    <div class="scheduleCard">
+      <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
+      <div class="loginEyebrow">Vallet fora do horário</div>
+      <h2>Operação fechada</h2>
+      <div class="scheduleTime">Acesso das 21:00 às 08:00</div>
+      <p id="vallet-horario-mensagem">O Vallet é liberado somente nos dias com evento cadastrado.</p>
+      <button class="btn blue full" type="button" onclick="verificarHorarioAgora()" style="margin-top:18px">Verificar novamente</button>
+    </div>
+  </div>
+
   <div id="vallet-login" class="loginOverlay">
     <div class="loginCard">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
@@ -603,6 +634,7 @@
       <div class="statusBox">
         <span id="netStatus" class="pill">Verificando...</span>
         <span id="syncStatus" class="pill">0 pendentes</span>
+        <span id="eventoValletStatus" class="pill">Evento...</span>
         <button id="themeToggle" class="pill themeToggle" onclick="alternarTema()" type="button" aria-label="Alternar tema">☀️ Modo claro</button>
         <button class="pill" onclick="forcarSincronizacao()">Sincronizar</button>
       </div>
@@ -620,6 +652,7 @@
     <datalist id="datalistCores"></datalist>
 
     <section id="tab-atendimento" class="section active">
+      <div id="operationScheduleBanner" class="operationScheduleBanner">Verificando horário e evento...</div>
       <div class="quickStats">
         <div class="stat"><small>Recebidos</small><strong id="kpiRecebido">0</strong></div>
         <div class="stat"><small>Solicitados</small><strong id="kpiSolicitado">0</strong></div>
@@ -694,7 +727,7 @@
           </div>
 
           <div class="row" style="margin-top:4px;">
-            <button class="btn yellow full" onclick="receberVeiculo(true)">Receber e imprimir</button>
+            <button id="btnReceberImprimir" class="btn yellow full" onclick="receberVeiculo(true)">Receber e imprimir</button>
           </div>
         </div>
 
@@ -949,7 +982,7 @@
     };
 
     const DB_NAME = 'eclub_vallet_v1';
-    const DB_VERSION = 3;
+    const DB_VERSION = 4;
     const STORE_SETOR = 'setores';
     const STORE_MODELO = 'modelos';
     const STORE_COR = 'cores';
@@ -958,6 +991,7 @@
     const STORE_QUEUE = 'queue';
     const STORE_META = 'meta';
     const STORE_OPERADOR = 'operadores';
+    const STORE_EVENTO = 'eventos_casa';
     const DEVICE_ID_KEY = 'eclub_vallet_device_id';
     const OPERADOR_KEY = 'eclub_vallet_operador';
     const LOGIN_SESSION_KEY = 'eclub_vallet_login_session';
@@ -993,6 +1027,9 @@
     let atendimentos = [];
     let fila = [];
     let operadores = [];
+    let eventosCasa = [];
+    let recepcaoValletLiberada = false;
+    let modoSomenteSaidaVallet = false;
     let operadorAtual = null;
     let sincronizando = false;
     let atendimentoEdicaoAtivaId = null;
@@ -1061,6 +1098,7 @@
           if (!db.objectStoreNames.contains(STORE_QUEUE)) db.createObjectStore(STORE_QUEUE, { keyPath: 'id' });
           if (!db.objectStoreNames.contains(STORE_META)) db.createObjectStore(STORE_META, { keyPath: 'id' });
           if (!db.objectStoreNames.contains(STORE_OPERADOR)) db.createObjectStore(STORE_OPERADOR, { keyPath: 'id' });
+          if (!db.objectStoreNames.contains(STORE_EVENTO)) db.createObjectStore(STORE_EVENTO, { keyPath: 'id' });
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
@@ -1084,6 +1122,14 @@
         req.onerror = () => reject(req.error);
       });
     }
+    function clearStore(store) {
+      return new Promise((resolve, reject) => {
+        const req = tx(store, 'readwrite').clear();
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
     function getAll(store) {
       return new Promise((resolve, reject) => {
         const req = tx(store).getAll();
@@ -1146,6 +1192,7 @@
       atendimentos = (await getAll(STORE_ATEND)).sort((a,b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')));
       fila = (await getAll(STORE_QUEUE)).sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
       operadores = (await getAll(STORE_OPERADOR)).sort((a,b) => String(a.nome || a.usuario).localeCompare(String(b.nome || b.usuario)));
+      eventosCasa = (await getAll(STORE_EVENTO)).filter(e => e && e.data).sort((a,b) => String(a.data || '').localeCompare(String(b.data || '')));
     }
 
     async function salvarMeta(key, value) { await put(STORE_META, { id: key, value }); }
@@ -1205,13 +1252,14 @@
       const fb = await initFirebase();
       if (!fb) return;
       try {
-        const [setSnap, modSnap, corSnap, veiSnap, atSnap, opSnap] = await Promise.all([
+        const [setSnap, modSnap, corSnap, veiSnap, atSnap, opSnap, evtSnap] = await Promise.all([
           fb.getDocs(fb.collection(fb.db, 'vallet_setores')),
           fb.getDocs(fb.collection(fb.db, 'vallet_modelos')),
           fb.getDocs(fb.collection(fb.db, 'vallet_cores')),
           fb.getDocs(fb.collection(fb.db, 'vallet_veiculos')),
           fb.getDocs(fb.collection(fb.db, 'vallet_atendimentos')),
-          fb.getDocs(fb.collection(fb.db, 'vallet_operadores'))
+          fb.getDocs(fb.collection(fb.db, 'vallet_operadores')),
+          fb.getDocs(fb.collection(fb.db, 'eventos'))
         ]);
         const puts = [];
         setSnap.forEach(d => puts.push(put(STORE_SETOR, { id: d.id, ...d.data() })));
@@ -1219,6 +1267,8 @@
         corSnap.forEach(d => puts.push(put(STORE_COR, { id: d.id, ...d.data() })));
         veiSnap.forEach(d => puts.push(put(STORE_VEICULO, { id: d.id, ...d.data() })));
         opSnap.forEach(d => puts.push(put(STORE_OPERADOR, { id: d.id, ...d.data() })));
+        await clearStore(STORE_EVENTO);
+        evtSnap.forEach(d => puts.push(put(STORE_EVENTO, { id: d.id, ...d.data() })));
         atSnap.forEach(d => {
           const data = { id: d.id, ...d.data() };
           if (data.data_operacao === dataLocal() || data.ativo === true) puts.push(put(STORE_ATEND, data));
@@ -1243,8 +1293,11 @@
         vaga: atendimento.vaga || '',
         descricao,
         operador: getOperador(),
+        evento_id: atendimento.evento_id || '',
+        evento_nome: atendimento.evento_nome || '',
+        evento_data: atendimento.evento_data || atendimento.data_operacao || '',
         data_hora: agoraISO(),
-        data_operacao: dataLocal(),
+        data_operacao: atendimento.data_operacao || dataOperacaoAtual(),
         origem_dispositivo: deviceId()
       };
       await queueSet('vallet_movimentos', movimento.id, movimento);
@@ -1252,6 +1305,225 @@
 
     function getOperador() {
       return normalize(operadorAtual?.nome || operadorAtual?.usuario || localStorage.getItem(OPERADOR_KEY) || 'OPERADOR');
+    }
+
+
+    function eventoEhModeloVallet(ev) {
+      const nome = normalize(ev?.nome || '');
+      return ev?.is_modelo === true || nome.includes('MODELO');
+    }
+
+    function janelaEventoVallet(ev) {
+      if (!ev || !ev.data || eventoEhModeloVallet(ev)) return null;
+      const partes = String(ev.data).split('-').map(Number);
+      if (partes.length !== 3 || partes.some(n => !Number.isFinite(n))) return null;
+      const inicio = new Date(partes[0], partes[1] - 1, partes[2], 21, 0, 0, 0);
+      const fim = new Date(partes[0], partes[1] - 1, partes[2] + 1, 8, 0, 0, 0);
+      return { evento: ev, inicio, fim };
+    }
+
+    function getJanelaValletAgora(referencia = new Date()) {
+      return eventosCasa
+        .filter(ev => ev.ativo !== false)
+        .map(janelaEventoVallet)
+        .filter(Boolean)
+        .find(j => referencia >= j.inicio && referencia < j.fim) || null;
+    }
+
+    function getProximaJanelaVallet(referencia = new Date()) {
+      return eventosCasa
+        .filter(ev => ev.ativo !== false)
+        .map(janelaEventoVallet)
+        .filter(j => j && j.inicio > referencia)
+        .sort((a,b) => a.inicio - b.inicio)[0] || null;
+    }
+
+    function dataOperacaoAtual() {
+      return getJanelaValletAgora()?.evento?.data || dataLocal();
+    }
+
+    function atendimentosAtivosAgora() {
+      return atendimentos.filter(a => a.ativo !== false && a.status !== 'ENTREGUE');
+    }
+
+    function formatarJanelaVallet(janela) {
+      if (!janela) return '';
+      return `${janela.inicio.toLocaleDateString('pt-BR')} às 21:00 • ${normalize(janela.evento?.nome || 'EVENTO')}`;
+    }
+
+    function definirCamposRecepcaoHabilitados(habilitado) {
+      const ids = ['placa','modelo','cor','setorAtendimento','vaga','clienteNome','clienteTel','obs'];
+      ids.forEach(id => { const el = $(id); if (el) el.disabled = !habilitado; });
+      const btn = $('btnReceberImprimir');
+      if (btn) {
+        btn.disabled = !habilitado;
+        btn.textContent = habilitado ? 'RECEBER E IMPRIMIR' : 'NOVOS CHECK-INS ENCERRADOS';
+      }
+    }
+
+    function avaliarControleHorarioVallet() {
+      const janela = getJanelaValletAgora();
+      const pendentes = atendimentosAtivosAgora();
+      recepcaoValletLiberada = Boolean(janela);
+      modoSomenteSaidaVallet = !janela && pendentes.length > 0;
+      return { janela, pendentes, acessoPermitido: Boolean(janela || pendentes.length > 0) };
+    }
+
+    function atualizarControleHorarioVallet({ forcarTela = false } = {}) {
+      const controle = avaliarControleHorarioVallet();
+      const overlay = $('vallet-horario-bloqueio');
+      const mensagem = $('vallet-horario-mensagem');
+      const status = $('eventoValletStatus');
+      const banner = $('operationScheduleBanner');
+      const proxima = getProximaJanelaVallet();
+
+      definirCamposRecepcaoHabilitados(Boolean(controle.janela));
+
+      if (controle.janela) {
+        overlay?.classList.remove('show');
+        if (status) {
+          status.textContent = `🔵 ${normalize(controle.janela.evento?.nome || 'EVENTO')}`;
+          status.className = 'pill online';
+        }
+        if (banner) {
+          banner.className = 'operationScheduleBanner';
+          banner.textContent = `VALLET ABERTO • ${normalize(controle.janela.evento?.nome || 'EVENTO')} • NOVOS CHECK-INS LIBERADOS ATÉ 08:00`;
+        }
+      } else if (controle.pendentes.length) {
+        overlay?.classList.remove('show');
+        if (status) {
+          status.textContent = `🟠 SOMENTE ENTREGAS • ${controle.pendentes.length}`;
+          status.className = 'pill offline';
+        }
+        if (banner) {
+          banner.className = 'operationScheduleBanner exitOnly';
+          banner.textContent = `HORÁRIO ENCERRADO • NOVOS CHECK-INS BLOQUEADOS • FINALIZE A ENTREGA DOS ${controle.pendentes.length} VEÍCULO(S) AINDA ATIVO(S)`;
+        }
+      } else {
+        if (status) {
+          status.textContent = '🔴 VALLET FECHADO';
+          status.className = 'pill offline';
+        }
+        if (mensagem) mensagem.textContent = proxima ? `PRÓXIMA ABERTURA: ${formatarJanelaVallet(proxima)}. O ACESSO SERÁ LIBERADO AUTOMATICAMENTE.` : 'NENHUM PRÓXIMO EVENTO ATIVO ESTÁ CADASTRADO NA DASHBOARD.';
+        if (forcarTela || operadorAtual || !$('vallet-login')?.classList.contains('hidden')) {
+          $('appPrincipal').hidden = true;
+          $('vallet-login').classList.add('hidden');
+          overlay?.classList.add('show');
+        }
+      }
+      return controle;
+    }
+
+    async function verificarHorarioAgora() {
+      if (navigator.onLine) {
+        await processarFila();
+        await puxarFirebase();
+        await carregarLocal();
+      }
+      const controle = atualizarControleHorarioVallet({ forcarTela: true });
+      if (controle.acessoPermitido) {
+        $('vallet-horario-bloqueio').classList.remove('show');
+        await iniciarAutenticacao();
+      } else toast('Vallet ainda fora do horário de funcionamento.');
+    }
+
+    function parseDataVallet(valor) {
+      if (!valor) return null;
+      if (typeof valor.toDate === 'function') return valor.toDate();
+      if (valor.seconds !== undefined) return new Date(Number(valor.seconds) * 1000);
+      const d = new Date(valor);
+      return isNaN(d) ? null : d;
+    }
+
+    async function limparVeiculosInativos180Dias() {
+      if (!navigator.onLine) return;
+      const hoje = dataLocal();
+      if (await lerMeta('limpeza_180_dias') === hoje) return;
+      const ativos = new Set(atendimentosAtivosAgora().map(a => normPlaca(a.placa_norm || a.placa)).filter(Boolean));
+      const ultimaPorPlaca = new Map();
+      atendimentos.forEach(a => {
+        const placa = normPlaca(a.placa_norm || a.placa);
+        const data = parseDataVallet(a.recebido_em || a.criado_em || a.atualizado_em);
+        if (!placa || !data) return;
+        const atual = ultimaPorPlaca.get(placa);
+        if (!atual || data > atual) ultimaPorPlaca.set(placa, data);
+      });
+      const limite = Date.now() - 180 * 24 * 60 * 60 * 1000;
+      const expirados = veiculos.filter(v => {
+        const placa = normPlaca(v.placa_norm || v.placa || v.id);
+        if (!placa || ativos.has(placa)) return false;
+        const datas = [parseDataVallet(v.ultima_visita), ultimaPorPlaca.get(placa), parseDataVallet(v.criado_em || v.data_cadastro || v.atualizado_em)].filter(Boolean);
+        if (!datas.length) return false;
+        return Math.max(...datas.map(d => d.getTime())) < limite;
+      });
+      for (const veiculo of expirados) {
+        await del(STORE_VEICULO, veiculo.id).catch(() => {});
+        await queueDelete('vallet_veiculos', veiculo.id);
+      }
+      await salvarMeta('limpeza_180_dias', hoje);
+      if (expirados.length) toast(`${expirados.length} cadastro(s) antigo(s) removido(s).`, true);
+    }
+
+    async function reservarPlacaAtivaGlobal(placa, atendimentoId, janela) {
+      if (!navigator.onLine) return { reservado: false, offline: true };
+      const fb = await initFirebase();
+      if (!fb) return { reservado: false, offline: true };
+
+      const ativosSnap = await fb.getDocs(fb.query(
+        fb.collection(fb.db, 'vallet_atendimentos'),
+        fb.where('placa_norm', '==', placa)
+      ));
+      let ativoExistente = null;
+      ativosSnap.forEach(d => {
+        const a = { id: d.id, ...d.data() };
+        if (a.ativo !== false && a.status !== 'ENTREGUE' && a.id !== atendimentoId) ativoExistente = a;
+      });
+      if (ativoExistente) throw new Error(`A placa ${placa} já está ativa no ticket #${ativoExistente.ticket || '---'}. Entregue o veículo antes de cadastrar novamente.`);
+
+      const lockRef = fb.doc(fb.db, 'vallet_placas_ativas', placa);
+      await fb.runTransaction(fb.db, async transaction => {
+        const lockSnap = await transaction.get(lockRef);
+        if (lockSnap.exists()) {
+          const lock = lockSnap.data() || {};
+          if (lock.ativo !== false && lock.atendimento_id !== atendimentoId) {
+            throw new Error(`A placa ${placa} já está ativa em outro terminal.`);
+          }
+        }
+        transaction.set(lockRef, {
+          placa,
+          ativo: true,
+          atendimento_id: atendimentoId,
+          evento_id: janela?.evento?.id || '',
+          evento_nome: janela?.evento?.nome || '',
+          evento_data: janela?.evento?.data || '',
+          reservado_em: agoraISO(),
+          operador: getOperador(),
+          origem_dispositivo: deviceId()
+        });
+      });
+      return { reservado: true, offline: false };
+    }
+
+    async function liberarPlacaAtivaGlobal(placa, atendimentoId = '') {
+      const p = normPlaca(placa);
+      if (!p) return;
+      if (!navigator.onLine) {
+        await queueDelete('vallet_placas_ativas', p);
+        return;
+      }
+      try {
+        const fb = await initFirebase();
+        if (!fb) throw new Error('Firebase indisponível');
+        const ref = fb.doc(fb.db, 'vallet_placas_ativas', p);
+        await fb.runTransaction(fb.db, async transaction => {
+          const snap = await transaction.get(ref);
+          if (!snap.exists()) return;
+          const lock = snap.data() || {};
+          if (!atendimentoId || !lock.atendimento_id || lock.atendimento_id === atendimentoId) transaction.delete(ref);
+        });
+      } catch (e) {
+        await queueDelete('vallet_placas_ativas', p);
+      }
     }
 
     function gerarSalt() {
@@ -1310,6 +1582,11 @@
     }
 
     async function concluirLogin(operador, lembrar=false) {
+      const controleHorario = atualizarControleHorarioVallet();
+      if (!controleHorario.acessoPermitido) {
+        $('vallet-horario-bloqueio').classList.add('show');
+        return;
+      }
       operadorAtual = operador;
       localStorage.setItem(OPERADOR_KEY, operador.nome || operador.usuario);
       sessionStorage.setItem(LOGIN_SESSION_KEY, operador.id);
@@ -1324,6 +1601,8 @@
 
     async function iniciarAutenticacao() {
       await carregarLocal();
+      const controleHorario = atualizarControleHorarioVallet({ forcarTela: true });
+      if (!controleHorario.acessoPermitido) return;
       const lembrado = localStorage.getItem(LOGIN_REMEMBER_KEY);
       const sessao = sessionStorage.getItem(LOGIN_SESSION_KEY);
       const operadorId = lembrado || sessao;
@@ -1442,7 +1721,7 @@
     }
 
     function maiorTicketLocalDoDia() {
-      const hoje = dataLocal();
+      const hoje = dataOperacaoAtual();
       return atendimentos
         .filter(a => String(a.data_operacao || '') === hoje)
         .reduce((maior, a) => {
@@ -1452,7 +1731,7 @@
     }
 
     function chaveContadorTicket() {
-      return 'ticket_' + dataLocal().replace(/-/g, '');
+      return 'ticket_' + dataOperacaoAtual().replace(/-/g, '');
     }
 
     async function lerContadorTicketGlobal() {
@@ -1490,7 +1769,7 @@
             const numero = Math.max(ultimoGlobal, maiorLocal) + 1;
 
             transaction.set(refContador, {
-              data_operacao: dataLocal(),
+              data_operacao: dataOperacaoAtual(),
               ultimo_ticket: numero,
               atualizado_em: agoraISO(),
               ultimo_dispositivo: deviceId(),
@@ -1971,6 +2250,8 @@
     }
 
     async function receberVeiculo(imprimirAposSalvar = false) {
+      const janelaVallet = getJanelaValletAgora();
+      if (!janelaVallet) return toast('Novos check-ins são liberados somente no dia do evento, das 21:00 às 08:00.');
       const placa = obterPlacaValida($('placa').value);
       if (!placa) return;
       $('placa').value = placa;
@@ -1985,7 +2266,12 @@
         return toast(`A placa ${placa} já está ativa no ticket #${duplicado.ticket}. Entregue/finalize o atendimento antes de cadastrar novamente.`);
       }
 
+      let reservaGlobal = null;
+      let id = '';
       try {
+        const ticket = await proximoTicket();
+        id = `${janelaVallet.evento.data.replace(/-/g,'')}_${deviceId()}_${ticket}`;
+        reservaGlobal = await reservarPlacaAtivaGlobal(placa, id, janelaVallet);
         const veiculo = await salvarVeiculoBase({
           placa,
           modelo: $('modelo').value,
@@ -1994,12 +2280,15 @@
           cliente_tel: $('clienteTel').value,
           obs: $('obs').value
         });
-        const ticket = await proximoTicket();
-        const id = `${dataLocal().replace(/-/g,'')}_${deviceId()}_${ticket}`;
         const atendimento = {
           id,
           ticket,
-          data_operacao: dataLocal(),
+          data_operacao: janelaVallet.evento.data,
+          evento_id: janelaVallet.evento.id || '',
+          evento_nome: normalize(janelaVallet.evento.nome || 'EVENTO'),
+          evento_data: janelaVallet.evento.data,
+          janela_vallet_inicio: janelaVallet.inicio.toISOString(),
+          janela_vallet_fim: janelaVallet.fim.toISOString(),
           placa,
           placa_norm: placa,
           modelo: veiculo.modelo || normalize($('modelo').value),
@@ -2030,7 +2319,10 @@
         if (imprimirAposSalvar) {
           setTimeout(() => imprimirTicketAtendimento(atendimento, false), 120);
         }
-      } catch (e) { toast(e.message || 'Erro ao receber veículo.'); }
+      } catch (e) {
+        if (reservaGlobal?.reservado && id) await liberarPlacaAtivaGlobal(placa, id);
+        toast(e.message || 'Erro ao receber veículo.');
+      }
     }
 
     function limparFormularioAtendimento() {
@@ -2091,7 +2383,11 @@
         ultima_alteracao_em: quando,
         ultima_alteracao_operador: getOperador()
       }, 'ENTREGUE', 'Veículo entregue ao cliente');
-      if (novo) await salvarHistoricoVeiculoAtendimento(novo, { entrega: true, quando });
+      if (novo) {
+        await salvarHistoricoVeiculoAtendimento(novo, { entrega: true, quando });
+        await liberarPlacaAtivaGlobal(novo.placa_norm || novo.placa, novo.id);
+      }
+      atualizarControleHorarioVallet({ forcarTela: true });
     }
     function abrirModalEdicao(id) {
       const a = atendimentos.find(x => x.id === id);
@@ -2265,7 +2561,7 @@
     function getAtendimentosFiltrados({ usarBusca = true } = {}) {
       const q = usarBusca ? normalize($('buscaAtendimentos').value) : '';
       const filtro = $('filtroStatus').value;
-      const hoje = dataLocal();
+      const hoje = dataOperacaoAtual();
       let lista = atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
 
       if (filtro === 'ativos') lista = lista.filter(a => a.ativo !== false && a.status !== 'ENTREGUE');
@@ -2355,7 +2651,7 @@
     }
 
     function renderKpis() {
-      const hoje = dataLocal();
+      const hoje = dataOperacaoAtual();
       const lista = atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
       $('kpiRecebido').textContent = lista.filter(a => a.status === 'RECEBIDO').length;
       $('kpiSolicitado').textContent = lista.filter(a => a.status === 'SOLICITADO').length;
@@ -2383,6 +2679,7 @@
       renderSetores();
       renderQueue();
       atualizarStatus();
+      atualizarControleHorarioVallet();
     }
 
     function atualizarStatus(msg='') {
@@ -2489,6 +2786,8 @@
 
       $('loginUsuario')?.addEventListener('input', verificarPrimeiroAcessoVallet);
       $('loginUsuario')?.addEventListener('change', verificarPrimeiroAcessoVallet);
+      await limparVeiculosInativos180Dias();
+      atualizarControleHorarioVallet({ forcarTela: true });
       await iniciarAutenticacao();
       if ('serviceWorker' in navigator) {
         let recarregandoPorAtualizacao = false;
@@ -2498,7 +2797,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=32', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=33', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
@@ -2507,10 +2806,11 @@
           await processarFila();
           await atualizarTicketPreview();
         }
+        atualizarControleHorarioVallet({ forcarTela: true });
       }, 30000);
     }
 
-    window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await atualizarTicketPreview(); });
+    window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await puxarFirebase(); await carregarLocal(); await atualizarTicketPreview(); atualizarControleHorarioVallet({ forcarTela: true }); });
     window.addEventListener('offline', () => { atualizarStatus(); toast('Sem internet. Salvando neste aparelho.'); });
     window.addEventListener('afterprint', () => { const t = document.getElementById('ticketImpressao'); if (t) t.setAttribute('aria-hidden', 'true'); });
     window.addEventListener('DOMContentLoaded', iniciar);

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB MASTER | Command Center</title>
+    <!-- Dashboard E-Club v33: relatórios e regras operacionais do Vallet -->
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -15,6 +16,7 @@
         .btn-menu.active-danger { background: #ef4444; color: #fff; font-weight: 800; border-color: #f87171; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
         .btn-menu.active-success { background: #10b981; color: #000; font-weight: 800; border-color: #34d399; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
         .btn-menu.active-pink { background: #db2777; color: #fff; font-weight: 800; border-color: #f472b6; box-shadow: 0 0 20px rgba(219, 39, 119, 0.4); }
+        .btn-menu.active-blue { background: #2563eb; color: #fff; font-weight: 800; border-color: #60a5fa; box-shadow: 0 0 20px rgba(37, 99, 235, 0.35); }
         .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
         .scroll-x::-webkit-scrollbar { height: 6px; }
         .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
@@ -66,6 +68,7 @@
                 <button onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Eventos</button>
                 <button onclick="trocarAba('aba-solteiras', this, 'pink')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-pink-500">Carona</button>
                 <button onclick="trocarAba('aba-equipe', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Equipe</button>
+                <button onclick="trocarAba('aba-vallet', this, 'blue')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-blue-400">Vallet</button>
                 <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-cyan-400">Listas/Cams</button>
                 <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
             </nav>
@@ -313,6 +316,130 @@
             </div>
         </section>
 
+
+        <section id="aba-vallet" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-[0.25em] text-blue-400 mb-2">Controle operacional</p>
+                        <h2 class="text-blue-500 font-black uppercase italic text-2xl tracking-tighter">Relatórios do Vallet</h2>
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase mt-2 tracking-widest leading-relaxed">Check-ins por evento, veículos no pátio, base única por placa e limpeza automática após 180 dias sem visita.</p>
+                    </div>
+                    <div class="bg-blue-500/10 border border-blue-500/25 px-7 py-5 rounded-3xl min-w-[260px]">
+                        <p class="text-[8px] text-blue-300 font-black uppercase tracking-widest mb-2">Funcionamento do Vallet</p>
+                        <p id="vallet-status-horario" class="text-sm text-white font-black uppercase">Verificando eventos...</p>
+                        <p id="vallet-proximo-evento" class="text-[8px] text-zinc-400 font-bold uppercase mt-2 leading-relaxed">Acesso das 21h às 08h do dia seguinte.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="glass-card p-6 border-t-4 border-t-blue-500 text-center">
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">No pátio agora</p>
+                    <p id="vallet-kpi-patio" class="text-4xl font-black text-blue-400 mt-2">0</p>
+                </div>
+                <div class="glass-card p-6 border-t-4 border-t-orange-500 text-center">
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Solicitados</p>
+                    <p id="vallet-kpi-solicitados" class="text-4xl font-black text-orange-400 mt-2">0</p>
+                </div>
+                <div class="glass-card p-6 border-t-4 border-t-emerald-500 text-center">
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Veículos cadastrados</p>
+                    <p id="vallet-kpi-cadastrados" class="text-4xl font-black text-emerald-400 mt-2">0</p>
+                    <p class="text-[7px] text-zinc-600 font-black uppercase mt-2">Placas únicas</p>
+                </div>
+                <div class="glass-card p-6 border-t-4 border-t-purple-500 text-center">
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Check-ins totais</p>
+                    <p id="vallet-kpi-checkins" class="text-4xl font-black text-purple-400 mt-2">0</p>
+                </div>
+                <div class="glass-card p-6 border-t-4 border-t-yellow-500 text-center col-span-2 lg:col-span-1">
+                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Eventos atendidos</p>
+                    <p id="vallet-kpi-eventos" class="text-4xl font-black text-yellow-400 mt-2">0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div class="glass-card p-8 border-l-4 border-l-purple-500 xl:col-span-2">
+                    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-7">
+                        <div>
+                            <h3 class="text-purple-400 font-black uppercase italic text-xl tracking-tighter">Check-ins por evento</h3>
+                            <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Cada entrada é contabilizada. A mesma placa pode aparecer novamente em eventos diferentes.</p>
+                        </div>
+                        <input id="busca-relatorio-vallet" oninput="renderRelatorioVallet()" type="text" placeholder="BUSCAR EVENTO OU PLACA" class="p-4 rounded-2xl font-bold text-[10px] uppercase md:max-w-xs">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-[9px] text-zinc-500 font-black uppercase border-b border-white/5">
+                                    <th class="pb-4 pl-3">Data</th>
+                                    <th class="pb-4">Evento</th>
+                                    <th class="pb-4 text-center">Check-ins</th>
+                                    <th class="pb-4 text-center">Placas únicas</th>
+                                    <th class="pb-4 text-center">Entregues</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-vallet-eventos" class="divide-y divide-zinc-800"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="glass-card p-8 border-l-4 border-l-red-500 flex flex-col">
+                    <h3 class="text-red-400 font-black uppercase italic text-xl tracking-tighter">Higiene da base</h3>
+                    <p class="text-[9px] text-zinc-500 font-bold uppercase mt-2 leading-relaxed">Perfis de veículos sem check-in há mais de 180 dias são excluídos. Os atendimentos históricos permanecem nos relatórios.</p>
+                    <div class="bg-red-500/5 border border-red-500/20 rounded-3xl p-6 text-center my-7">
+                        <p class="text-[8px] text-red-300 font-black uppercase tracking-widest">Elegíveis para limpeza</p>
+                        <p id="vallet-kpi-expirados" class="text-4xl font-black text-white mt-2">0</p>
+                    </div>
+                    <div class="space-y-3 text-[9px] font-bold uppercase text-zinc-400 mb-7">
+                        <p>✓ Não exclui veículo atualmente no pátio.</p>
+                        <p>✓ Remove cadastros duplicados da mesma placa.</p>
+                        <p>✓ Preserva o histórico de check-ins e entregas.</p>
+                        <p id="vallet-ultima-limpeza" class="text-blue-400">Última limpeza: ainda não executada.</p>
+                    </div>
+                    <button id="btn-limpeza-vallet" onclick="executarLimpezaVallet180Dias(true)" class="w-full bg-red-600 hover:bg-red-500 text-white font-black uppercase text-[10px] py-4 rounded-2xl transition-all mt-auto">Executar limpeza agora</button>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 border-l-4 border-l-cyan-500">
+                <div class="mb-7">
+                    <h3 class="text-cyan-400 font-black uppercase italic text-xl tracking-tighter">Últimos check-ins do Vallet</h3>
+                    <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">A placa só pode receber um novo atendimento após a entrega do atendimento ativo.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[9px] text-zinc-500 font-black uppercase border-b border-white/5">
+                                <th class="pb-4 pl-3">Entrada</th>
+                                <th class="pb-4">Ticket</th>
+                                <th class="pb-4">Placa</th>
+                                <th class="pb-4">Evento</th>
+                                <th class="pb-4">Operador</th>
+                                <th class="pb-4 text-right pr-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-vallet-recentes" class="divide-y divide-zinc-800"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-500/5 border border-blue-500/20 rounded-3xl p-6">
+                    <p class="text-blue-400 text-[9px] font-black uppercase tracking-widest">Horário fixo</p>
+                    <p class="text-white text-sm font-black uppercase mt-2">21:00 até 08:00</p>
+                    <p class="text-zinc-500 text-[8px] font-bold uppercase mt-2 leading-relaxed">A abertura depende de um evento cadastrado para o dia.</p>
+                </div>
+                <div class="bg-yellow-500/5 border border-yellow-500/20 rounded-3xl p-6">
+                    <p class="text-yellow-400 text-[9px] font-black uppercase tracking-widest">Placa ativa</p>
+                    <p class="text-white text-sm font-black uppercase mt-2">Não permite duplicidade</p>
+                    <p class="text-zinc-500 text-[8px] font-bold uppercase mt-2 leading-relaxed">Outro check-in só é liberado depois que o veículo for entregue.</p>
+                </div>
+                <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-6">
+                    <p class="text-emerald-400 text-[9px] font-black uppercase tracking-widest">Histórico por evento</p>
+                    <p class="text-white text-sm font-black uppercase mt-2">Repetição permitida</p>
+                    <p class="text-zinc-500 text-[8px] font-bold uppercase mt-2 leading-relaxed">A mesma placa conta novamente quando visitar outro evento.</p>
+                </div>
+            </div>
+        </section>
+
         <section id="aba-aniversarios" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-cyan-500">
                 <h2 class="text-cyan-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Listas de Aniversariantes</h2>
@@ -423,6 +550,8 @@
         const storage = getStorage(app);
         
         let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = []; let dadosValletOperadores = [];
+        let dadosValletAtendimentos = []; let dadosValletVeiculos = []; let configSistemaDashboard = {};
+        let valletAtendimentosCarregados = false; let valletVeiculosCarregados = false; let limpezaValletEmAndamento = false;
         let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
         const getPromoterName = (p) => {
             if (!p) return 'SITE DIRETO';
@@ -809,11 +938,12 @@
 
         window.trocarAba = (id, btn, type) => { 
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
-            document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active', 'active-danger', 'active-success', 'active-pink')); 
+            document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active', 'active-danger', 'active-success', 'active-pink', 'active-blue')); 
             document.getElementById(id).classList.remove('hidden'); 
             if (type === 'danger') btn.classList.add('active-danger'); 
             else if (type === 'success') btn.classList.add('active-success');
             else if (type === 'pink') btn.classList.add('active-pink');
+            else if (type === 'blue') btn.classList.add('active-blue');
             else btn.classList.add('active'); 
         };
 
@@ -821,6 +951,7 @@
             const sys = snap.docs.find(d => d.id === "sistema");
             if (sys) {
                 const data = sys.data() || {};
+                configSistemaDashboard = data;
                 modoTesteAtivo = data.modo_teste === true;
                 const btn = document.getElementById('btnModoTeste');
                 if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
@@ -832,6 +963,7 @@
             }
             dadosOperadores = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.id !== "sistema");
             renderEquipe();
+            renderRelatorioVallet();
             
         });
 
@@ -840,6 +972,278 @@
                 .map(d => ({ id: d.id, ...d.data() }))
                 .sort((a, b) => String(a.nome || a.usuario || a.id).localeCompare(String(b.nome || b.usuario || b.id), 'pt-BR'));
             renderEquipe();
+        });
+
+
+        const normalizarPlacaRelatorioVallet = (v) => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7);
+        const normalizarBuscaRelatorioVallet = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+        const escaparHtmlRelatorioVallet = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+        const parseDataRelatorioVallet = (valor) => {
+            if (!valor) return null;
+            if (typeof valor.toDate === 'function') return valor.toDate();
+            if (valor.seconds !== undefined) return new Date(Number(valor.seconds) * 1000);
+            if (valor instanceof Date) return isNaN(valor) ? null : valor;
+            const d = new Date(valor);
+            return isNaN(d) ? null : d;
+        };
+
+        const eventoRealRelatorioVallet = (ev) => ev && !isEventoModeloAntigo(ev) && ev.data;
+
+        const janelaEventoRelatorioVallet = (ev) => {
+            if (!eventoRealRelatorioVallet(ev)) return null;
+            const partes = String(ev.data).split('-').map(Number);
+            if (partes.length !== 3 || partes.some(n => !Number.isFinite(n))) return null;
+            const inicio = new Date(partes[0], partes[1] - 1, partes[2], 21, 0, 0, 0);
+            const fim = new Date(partes[0], partes[1] - 1, partes[2] + 1, 8, 0, 0, 0);
+            return { inicio, fim };
+        };
+
+        const eventoDoAtendimentoRelatorioVallet = (a) => {
+            if (!a) return null;
+            if (a.evento_id) {
+                const porId = dadosEventos.find(ev => ev.id === a.evento_id);
+                if (porId) return porId;
+            }
+            if (a.evento_nome || a.evento_data) {
+                const porDados = dadosEventos.find(ev =>
+                    (!a.evento_data || String(ev.data || '') === String(a.evento_data)) &&
+                    (!a.evento_nome || normalizarBuscaRelatorioVallet(ev.nome) === normalizarBuscaRelatorioVallet(a.evento_nome))
+                );
+                if (porDados) return porDados;
+                return {
+                    id: `historico_${a.evento_data || 'sem-data'}_${normalizarBuscaRelatorioVallet(a.evento_nome || 'EVENTO')}`,
+                    nome: a.evento_nome || 'EVENTO DO VALLET',
+                    data: a.evento_data || ''
+                };
+            }
+            const entrada = parseDataRelatorioVallet(a.recebido_em || a.criado_em || a.atualizado_em);
+            if (!entrada) return null;
+            return dadosEventos.find(ev => {
+                const janela = janelaEventoRelatorioVallet(ev);
+                return janela && entrada >= janela.inicio && entrada < janela.fim;
+            }) || null;
+        };
+
+        const dataBrRelatorioVallet = (dataIso) => {
+            const p = String(dataIso || '').split('-');
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : 'SEM DATA';
+        };
+
+        const atendimentoAtivoRelatorioVallet = (a) => a && a.ativo !== false && String(a.status || '').toUpperCase() !== 'ENTREGUE';
+
+        const mapaUltimoCheckinPorPlacaVallet = () => {
+            const mapa = new Map();
+            dadosValletAtendimentos.forEach(a => {
+                const placa = normalizarPlacaRelatorioVallet(a.placa_norm || a.placa);
+                const data = parseDataRelatorioVallet(a.recebido_em || a.criado_em || a.atualizado_em);
+                if (!placa || !data) return;
+                const atual = mapa.get(placa);
+                if (!atual || data > atual) mapa.set(placa, data);
+            });
+            return mapa;
+        };
+
+        const analisarBaseVeiculosVallet = () => {
+            const ativos = new Set(dadosValletAtendimentos.filter(atendimentoAtivoRelatorioVallet).map(a => normalizarPlacaRelatorioVallet(a.placa_norm || a.placa)).filter(Boolean));
+            const ultimoCheckin = mapaUltimoCheckinPorPlacaVallet();
+            const grupos = new Map();
+            dadosValletVeiculos.forEach(v => {
+                const placa = normalizarPlacaRelatorioVallet(v.placa_norm || v.placa || v.id);
+                if (!placa) return;
+                if (!grupos.has(placa)) grupos.set(placa, []);
+                grupos.get(placa).push(v);
+            });
+
+            const idsDuplicados = [];
+            const canonicos = [];
+            grupos.forEach((lista, placa) => {
+                lista.sort((a, b) => {
+                    const aCanon = a.id === placa ? 1 : 0;
+                    const bCanon = b.id === placa ? 1 : 0;
+                    if (aCanon !== bCanon) return bCanon - aCanon;
+                    const da = parseDataRelatorioVallet(a.atualizado_em || a.ultima_visita || a.criado_em)?.getTime() || 0;
+                    const dbv = parseDataRelatorioVallet(b.atualizado_em || b.ultima_visita || b.criado_em)?.getTime() || 0;
+                    return dbv - da;
+                });
+                canonicos.push({ placa, veiculo: lista[0] });
+                lista.slice(1).forEach(v => idsDuplicados.push(v.id));
+            });
+
+            const limite = Date.now() - (180 * 24 * 60 * 60 * 1000);
+            const idsExpirados = [];
+            canonicos.forEach(({ placa, veiculo }) => {
+                if (ativos.has(placa)) return;
+                const datas = [
+                    parseDataRelatorioVallet(veiculo.ultima_visita),
+                    ultimoCheckin.get(placa),
+                    parseDataRelatorioVallet(veiculo.criado_em || veiculo.data_cadastro || veiculo.atualizado_em)
+                ].filter(Boolean);
+                if (!datas.length) return;
+                const referencia = new Date(Math.max(...datas.map(d => d.getTime())));
+                if (referencia.getTime() < limite) idsExpirados.push(veiculo.id);
+            });
+
+            return {
+                totalPlacasUnicas: grupos.size,
+                idsDuplicados: [...new Set(idsDuplicados)],
+                idsExpirados: [...new Set(idsExpirados)],
+                idsParaExcluir: [...new Set([...idsDuplicados, ...idsExpirados])]
+            };
+        };
+
+        window.renderRelatorioVallet = () => {
+            const ativos = dadosValletAtendimentos.filter(atendimentoAtivoRelatorioVallet);
+            const solicitados = ativos.filter(a => String(a.status || '').toUpperCase() === 'SOLICITADO');
+            const analiseBase = analisarBaseVeiculosVallet();
+
+            const grupos = new Map();
+            dadosEventos.filter(eventoRealRelatorioVallet).forEach(ev => {
+                grupos.set(ev.id, { evento: ev, atendimentos: [] });
+            });
+            const semEvento = [];
+            dadosValletAtendimentos.forEach(a => {
+                const ev = eventoDoAtendimentoRelatorioVallet(a);
+                if (!ev) { semEvento.push(a); return; }
+                const chave = ev.id || `${ev.data || ''}_${normalizarBuscaRelatorioVallet(ev.nome)}`;
+                if (!grupos.has(chave)) grupos.set(chave, { evento: ev, atendimentos: [] });
+                grupos.get(chave).atendimentos.push(a);
+            });
+            if (semEvento.length) grupos.set('__sem_evento__', { evento: { id: '__sem_evento__', nome: 'SEM EVENTO VINCULADO', data: '' }, atendimentos: semEvento });
+
+            const gruposLista = [...grupos.values()].sort((a, b) => String(b.evento.data || '').localeCompare(String(a.evento.data || '')) || String(b.evento.nome || '').localeCompare(String(a.evento.nome || ''), 'pt-BR'));
+            const eventosAtendidos = gruposLista.filter(g => g.evento.id !== '__sem_evento__' && g.atendimentos.length > 0).length;
+
+            const setText = (id, valor) => { const el = document.getElementById(id); if (el) el.textContent = valor; };
+            setText('vallet-kpi-patio', ativos.length);
+            setText('vallet-kpi-solicitados', solicitados.length);
+            setText('vallet-kpi-cadastrados', analiseBase.totalPlacasUnicas);
+            setText('vallet-kpi-checkins', dadosValletAtendimentos.length);
+            setText('vallet-kpi-eventos', eventosAtendidos);
+            setText('vallet-kpi-expirados', analiseBase.idsParaExcluir.length);
+
+            const agora = new Date();
+            const eventosReais = dadosEventos.filter(eventoRealRelatorioVallet);
+            const ativoAgora = eventosReais.find(ev => {
+                const j = janelaEventoRelatorioVallet(ev);
+                return ev.ativo !== false && j && agora >= j.inicio && agora < j.fim;
+            });
+            const proximos = eventosReais.map(ev => ({ ev, j: janelaEventoRelatorioVallet(ev) })).filter(x => x.ev.ativo !== false && x.j && x.j.inicio > agora).sort((a,b) => a.j.inicio - b.j.inicio);
+            const statusHorario = document.getElementById('vallet-status-horario');
+            const proximoEvento = document.getElementById('vallet-proximo-evento');
+            if (statusHorario && proximoEvento) {
+                if (ativoAgora) {
+                    statusHorario.textContent = `ABERTO • ${ativoAgora.nome || 'EVENTO'}`;
+                    statusHorario.className = 'text-sm text-emerald-400 font-black uppercase';
+                    proximoEvento.textContent = `Evento de ${dataBrRelatorioVallet(ativoAgora.data)} • encerra às 08:00.`;
+                } else {
+                    statusHorario.textContent = 'FECHADO PARA NOVOS CHECK-INS';
+                    statusHorario.className = 'text-sm text-red-400 font-black uppercase';
+                    proximoEvento.textContent = proximos[0] ? `Próxima abertura: ${dataBrRelatorioVallet(proximos[0].ev.data)} às 21:00 • ${proximos[0].ev.nome || 'EVENTO'}.` : 'Nenhum próximo evento ativo cadastrado.';
+                }
+            }
+
+            const termo = normalizarBuscaRelatorioVallet(document.getElementById('busca-relatorio-vallet')?.value || '');
+            const linhasEvento = gruposLista.filter(g => {
+                if (!termo) return true;
+                const placas = g.atendimentos.map(a => a.placa || '').join(' ');
+                return normalizarBuscaRelatorioVallet(`${g.evento.nome || ''} ${g.evento.data || ''} ${placas}`).includes(termo);
+            }).slice(0, 80).map(g => {
+                const placas = new Set(g.atendimentos.map(a => normalizarPlacaRelatorioVallet(a.placa_norm || a.placa)).filter(Boolean));
+                const entregues = g.atendimentos.filter(a => String(a.status || '').toUpperCase() === 'ENTREGUE' || a.ativo === false).length;
+                return `<tr class="hover:bg-white/[0.02]">
+                    <td class="py-4 pl-3 text-[10px] text-zinc-400 font-bold whitespace-nowrap">${dataBrRelatorioVallet(g.evento.data)}</td>
+                    <td class="py-4 text-[10px] text-white font-black uppercase">${escaparHtmlRelatorioVallet(g.evento.nome || 'SEM EVENTO')}</td>
+                    <td class="py-4 text-center text-sm text-purple-400 font-black">${g.atendimentos.length}</td>
+                    <td class="py-4 text-center text-sm text-blue-400 font-black">${placas.size}</td>
+                    <td class="py-4 text-center text-sm text-emerald-400 font-black">${entregues}</td>
+                </tr>`;
+            }).join('');
+            const corpoEventos = document.getElementById('tabela-vallet-eventos');
+            if (corpoEventos) corpoEventos.innerHTML = linhasEvento || `<tr><td colspan="5" class="py-10 text-center text-[9px] text-zinc-600 font-black uppercase">Nenhum evento encontrado.</td></tr>`;
+
+            const recentes = [...dadosValletAtendimentos].sort((a,b) => {
+                const da = parseDataRelatorioVallet(a.recebido_em || a.criado_em)?.getTime() || 0;
+                const dbv = parseDataRelatorioVallet(b.recebido_em || b.criado_em)?.getTime() || 0;
+                return dbv - da;
+            }).filter(a => {
+                if (!termo) return true;
+                const ev = eventoDoAtendimentoRelatorioVallet(a);
+                return normalizarBuscaRelatorioVallet(`${a.placa || ''} ${a.ticket || ''} ${ev?.nome || a.evento_nome || ''} ${a.operador_recebimento || ''}`).includes(termo);
+            }).slice(0, 100);
+            const linhasRecentes = recentes.map(a => {
+                const ev = eventoDoAtendimentoRelatorioVallet(a);
+                const entrada = parseDataRelatorioVallet(a.recebido_em || a.criado_em);
+                const status = String(a.status || 'RECEBIDO').toUpperCase();
+                const cor = status === 'ENTREGUE' ? 'text-emerald-400' : status === 'SOLICITADO' ? 'text-orange-400' : 'text-blue-400';
+                return `<tr class="hover:bg-white/[0.02]">
+                    <td class="py-4 pl-3 text-[9px] text-zinc-400 font-bold whitespace-nowrap">${entrada ? entrada.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '---'}</td>
+                    <td class="py-4 text-[10px] text-yellow-400 font-black">#${escaparHtmlRelatorioVallet(a.ticket || '---')}</td>
+                    <td class="py-4 text-xs text-white font-black tracking-widest">${escaparHtmlRelatorioVallet(a.placa || '---')}</td>
+                    <td class="py-4 text-[9px] text-zinc-300 font-bold uppercase">${escaparHtmlRelatorioVallet(ev?.nome || a.evento_nome || 'SEM EVENTO')}</td>
+                    <td class="py-4 text-[9px] text-zinc-400 font-bold uppercase">${escaparHtmlRelatorioVallet(a.operador_recebimento || '---')}</td>
+                    <td class="py-4 pr-3 text-right text-[9px] ${cor} font-black uppercase">${escaparHtmlRelatorioVallet(status)}</td>
+                </tr>`;
+            }).join('');
+            const corpoRecentes = document.getElementById('tabela-vallet-recentes');
+            if (corpoRecentes) corpoRecentes.innerHTML = linhasRecentes || `<tr><td colspan="6" class="py-10 text-center text-[9px] text-zinc-600 font-black uppercase">Nenhum check-in registrado.</td></tr>`;
+
+            const ultima = configSistemaDashboard.vallet_ultima_limpeza ? parseDataRelatorioVallet(configSistemaDashboard.vallet_ultima_limpeza) : null;
+            const ultimaEl = document.getElementById('vallet-ultima-limpeza');
+            if (ultimaEl) ultimaEl.textContent = ultima ? `Última limpeza: ${ultima.toLocaleString('pt-BR')} • ${Number(configSistemaDashboard.vallet_ultima_limpeza_qtd || 0)} removido(s).` : 'Última limpeza: ainda não executada.';
+        };
+
+        window.executarLimpezaVallet180Dias = async (manual = false) => {
+            if (limpezaValletEmAndamento || !valletAtendimentosCarregados || !valletVeiculosCarregados) return;
+            const analise = analisarBaseVeiculosVallet();
+            if (manual && analise.idsParaExcluir.length && !confirm(`Excluir ${analise.idsParaExcluir.length} cadastro(s) de veículo?\n\nSerão removidos perfis duplicados e veículos sem check-in há mais de 180 dias. O histórico de atendimentos será preservado.`)) return;
+            limpezaValletEmAndamento = true;
+            const btn = document.getElementById('btn-limpeza-vallet');
+            if (btn) { btn.disabled = true; btn.textContent = 'LIMPANDO...'; }
+            try {
+                const ids = analise.idsParaExcluir;
+                for (let i = 0; i < ids.length; i += 400) {
+                    const batch = writeBatch(db);
+                    ids.slice(i, i + 400).forEach(id => batch.delete(doc(db, 'vallet_veiculos', id)));
+                    await batch.commit();
+                }
+                const agoraIso = new Date().toISOString();
+                await setDoc(doc(db, 'configuracoes', 'sistema'), {
+                    vallet_ultima_limpeza: agoraIso,
+                    vallet_ultima_limpeza_qtd: ids.length,
+                    vallet_regra_inatividade_dias: 180
+                }, { merge: true });
+                localStorage.setItem('eclub_vallet_limpeza_dashboard_dia', agoraIso.slice(0, 10));
+                if (manual) mostrarAviso(ids.length ? `${ids.length} cadastro(s) removido(s). Histórico preservado.` : 'Nenhum veículo precisava ser removido.', true);
+            } catch (e) {
+                console.error('Erro na limpeza do Vallet:', e);
+                if (manual) mostrarAviso('Erro ao limpar a base do Vallet. Verifique as permissões do Firestore.');
+            } finally {
+                limpezaValletEmAndamento = false;
+                if (btn) { btn.disabled = false; btn.textContent = 'EXECUTAR LIMPEZA AGORA'; }
+                renderRelatorioVallet();
+            }
+        };
+
+        const agendarLimpezaAutomaticaVallet = () => {
+            if (!valletAtendimentosCarregados || !valletVeiculosCarregados || limpezaValletEmAndamento) return;
+            const hoje = new Date().toISOString().slice(0, 10);
+            if (localStorage.getItem('eclub_vallet_limpeza_dashboard_dia') === hoje) return;
+            setTimeout(() => executarLimpezaVallet180Dias(false), 500);
+        };
+
+        onSnapshot(collection(db, 'vallet_atendimentos'), snap => {
+            dadosValletAtendimentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            valletAtendimentosCarregados = true;
+            renderRelatorioVallet();
+            agendarLimpezaAutomaticaVallet();
+        });
+
+        onSnapshot(collection(db, 'vallet_veiculos'), snap => {
+            dadosValletVeiculos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            valletVeiculosCarregados = true;
+            renderRelatorioVallet();
+            agendarLimpezaAutomaticaVallet();
         });
 
         window.salvarTaxaPix = async () => {
@@ -1072,7 +1476,7 @@
 
         onSnapshot(collection(db, "eventos"), snap => { 
             dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderSolteiras(); 
+            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderSolteiras(); renderRelatorioVallet(); 
         });
 
         onSnapshot(collection(db, "modelos_eventos"), snap => {
