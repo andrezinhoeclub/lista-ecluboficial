@@ -229,6 +229,11 @@
     .tinyBtn.disabled, .tinyBtn:disabled { background: #3f3f46; color: #a1a1aa; opacity: .55; cursor: not-allowed; filter: grayscale(1); }
     .empty { text-align: center; padding: 34px 18px; color: #5f5f69; font-size: 11px; font-weight: 950; text-transform: uppercase; border: 1px dashed rgba(255,255,255,.11); border-radius: 24px; }
     .notice { border: 1px solid rgba(234,179,8,.22); background: rgba(234,179,8,.08); border-radius: 20px; padding: 13px; color: #fde68a; font-size: 10px; font-weight: 850; text-transform: uppercase; line-height: 1.45; margin: 10px 0; }
+    .historyBox { border: 1px solid rgba(59,130,246,.22); background: rgba(59,130,246,.08); border-radius: 20px; padding: 14px 16px; color: #bfdbfe; font-size: 10px; font-weight: 850; text-transform: uppercase; line-height: 1.55; margin: 10px 0 14px; }
+    .historyBox .historyTitle { color: #93c5fd; font-size: 9px; letter-spacing: .18em; font-weight: 950; margin-bottom: 8px; }
+    .historyBox b { color: #ffffff; }
+    .historyBox .dangerLine { color: #fecaca; }
+    .historyBox .mutedLine { color: #94a3b8; }
     .toast {
       position: fixed;
       top: 18px;
@@ -362,6 +367,11 @@
     body.theme-light .meta { color: #344054; }
     body.theme-light .empty { color: #98a2b3; border-color: rgba(15,23,42,.18); background: rgba(255,255,255,.45); }
     body.theme-light .notice { background: rgba(255,251,235,.95); color: #92400e; border-color: rgba(234,179,8,.35); }
+    body.theme-light .historyBox { background: rgba(239,246,255,.96); color: #344054; border-color: rgba(37,99,235,.20); }
+    body.theme-light .historyBox .historyTitle { color: #175cd3; }
+    body.theme-light .historyBox b { color: #101828; }
+    body.theme-light .historyBox .dangerLine { color: #b42318; }
+    body.theme-light .historyBox .mutedLine { color: #667085; }
     body.theme-light .drawer { background: rgba(15,23,42,.36); }
     body.theme-light .drawerBox { background: #ffffff; border-color: rgba(15,23,42,.14); }
     body.theme-light .btn.ghost { background: rgba(255,255,255,.86); color: #344054; border-color: rgba(15,23,42,.14); }
@@ -453,7 +463,7 @@
           </div>
 
           <div id="avisoVeiculoNovo" class="notice hidden">Veículo ainda não cadastrado. Ao receber, ele será salvo na base de veículos.</div>
-          <div id="avisoVeiculoEncontrado" class="notice hidden">Veículo encontrado. Dados carregados para atendimento.</div>
+          <div id="avisoVeiculoEncontrado" class="historyBox hidden">Veículo encontrado. Dados carregados para atendimento.</div>
 
           <div class="row two">
             <div>
@@ -1194,17 +1204,88 @@
       return Array.isArray(v && v.ocorrencias) ? v.ocorrencias.filter(o => o && o.texto && o.removida !== true) : [];
     }
 
+    function atendimentosDaPlaca(placa) {
+      const p = normPlaca(placa);
+      if (!p) return [];
+      return atendimentos
+        .filter(a => normPlaca(a.placa_norm || a.placa) === p)
+        .sort((a,b) => String(b.recebido_em || b.criado_em || b.atualizado_em || '').localeCompare(String(a.recebido_em || a.criado_em || a.atualizado_em || '')));
+    }
+
+    function historicoAgregadoPlaca(placa, veiculoBase = null) {
+      const p = normPlaca(placa || veiculoBase?.placa_norm || veiculoBase?.placa || veiculoBase?.id);
+      const registros = atendimentosDaPlaca(p);
+      const v = veiculoBase || getVeiculoPorPlaca(p) || {};
+
+      const datasVisita = [];
+      if (v.ultima_visita) datasVisita.push(v.ultima_visita);
+      registros.forEach(a => { if (a.recebido_em || a.criado_em) datasVisita.push(a.recebido_em || a.criado_em); });
+      const ultimaVisita = datasVisita.sort((a,b) => String(b).localeCompare(String(a)))[0] || '';
+
+      const datasEntrega = [];
+      if (v.ultima_entrega) datasEntrega.push(v.ultima_entrega);
+      registros.forEach(a => { if (a.entregue_em) datasEntrega.push(a.entregue_em); });
+      const ultimaEntrega = datasEntrega.sort((a,b) => String(b).localeCompare(String(a)))[0] || '';
+
+      const ocorrencias = [];
+      listaOcorrenciasVeiculo(v).forEach(o => ocorrencias.push({
+        texto: normalize(o.texto), em: o.em || '', operador: o.operador || '', ticket: o.ticket || '', atendimento_id: o.atendimento_id || ''
+      }));
+      registros.forEach(a => {
+        if (a.ocorrencia_texto) {
+          ocorrencias.push({
+            texto: normalize(a.ocorrencia_texto),
+            em: a.ocorrencia_em || a.ultima_alteracao_em || a.atualizado_em || '',
+            operador: a.operador_ocorrencia || a.operador_ultima_acao || a.operador_edicao || '',
+            ticket: a.ticket || '',
+            atendimento_id: a.id || ''
+          });
+        }
+      });
+      const ocorrUnicas = [];
+      const seenOc = new Set();
+      ocorrencias.forEach(o => {
+        if (!o.texto) return;
+        const chave = `${o.atendimento_id || ''}|${o.em || ''}|${o.texto}`;
+        if (seenOc.has(chave)) return;
+        seenOc.add(chave);
+        ocorrUnicas.push(o);
+      });
+      ocorrUnicas.sort((a,b) => String(b.em || '').localeCompare(String(a.em || '')));
+
+      const observacoes = [];
+      const addObs = (texto, em='', operador='', ticket='') => {
+        const t = normalize(texto);
+        if (!t) return;
+        if (observacoes.some(o => o.texto === t)) return;
+        observacoes.push({ texto: t, em, operador, ticket });
+      };
+      addObs(v.obs, v.atualizado_em || v.ultima_visita || '', '', '');
+      (Array.isArray(v.historico_observacoes) ? v.historico_observacoes : []).forEach(o => addObs(o.texto, o.em, o.operador, o.ticket));
+      registros.forEach(a => addObs(a.obs, a.ultima_alteracao_em || a.recebido_em || a.criado_em, a.operador_ultima_acao || a.operador_recebimento, a.ticket));
+
+      return { placa: p, registros, ultimaVisita, ultimaEntrega, ocorrencias: ocorrUnicas, observacoes };
+    }
+
     function resumoHistoricoVeiculo(v) {
       if (!v) return '';
-      const ocorrencias = listaOcorrenciasVeiculo(v)
-        .sort((a,b) => String(b.em || '').localeCompare(String(a.em || '')))
-        .slice(0, 3);
-      const partes = [];
-      if (v.ultima_visita) partes.push(`<b>Última visita:</b> ${formatarDataHoraCurta(v.ultima_visita)}`);
-      if (v.ultima_entrega) partes.push(`<b>Última entrega:</b> ${formatarDataHoraCurta(v.ultima_entrega)}`);
-      if (v.obs) partes.push(`<b>Obs. gravada:</b> ${v.obs}`);
-      if (ocorrencias.length) partes.push(`<b>Ocorrências:</b> ${ocorrencias.map(o => `${formatarDataHoraCurta(o.em)} • ${o.operador || '---'} • ${o.texto}`).join(' / ')}`);
-      return partes.length ? partes.join('<br>') : 'Veículo encontrado. Dados carregados para atendimento.';
+      const h = historicoAgregadoPlaca(v.placa_norm || v.placa || v.id, v);
+      const partes = ['<div class="historyTitle">VEÍCULO ENCONTRADO • HISTÓRICO DA PLACA</div>'];
+      partes.push('<div><b>Dados carregados:</b> modelo, cor, cliente, telefone e observações da base.</div>');
+      if (h.ultimaVisita) partes.push(`<div><b>Última visita:</b> ${formatarDataHoraCurta(h.ultimaVisita)}</div>`);
+      if (h.ultimaEntrega) partes.push(`<div><b>Última entrega ao cliente:</b> ${formatarDataHoraCurta(h.ultimaEntrega)}</div>`);
+
+      if (h.observacoes.length) {
+        partes.push(`<div><b>Observações gravadas:</b> ${h.observacoes.slice(0, 3).map(o => `${o.texto}${o.em ? ` <span class="mutedLine">(${formatarDataHoraCurta(o.em)}${o.operador ? ' • ' + o.operador : ''})</span>` : ''}`).join(' / ')}</div>`);
+      }
+      if (h.ocorrencias.length) {
+        partes.push(`<div class="dangerLine"><b>Ocorrências gravadas:</b> ${h.ocorrencias.slice(0, 4).map(o => `${o.ticket ? '#' + o.ticket + ' • ' : ''}${formatarDataHoraCurta(o.em)} • ${o.operador || '---'} • ${o.texto}`).join(' / ')}</div>`);
+      }
+      if (!h.ultimaVisita && !h.ultimaEntrega && !h.observacoes.length && !h.ocorrencias.length) {
+        partes.push('<div>Sem visitas, entregas ou ocorrências anteriores registradas nesta placa.</div>');
+      }
+      partes.push('<div class="mutedLine">Selecione o setor atual deste novo atendimento antes de receber o veículo.</div>');
+      return partes.join('');
     }
 
     function mesclarOcorrencia(lista, ocorrencia) {
