@@ -296,6 +296,21 @@
                 </form>
                 <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
+
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-8">
+                    <div>
+                        <h2 class="text-blue-500 font-black uppercase italic text-xl tracking-tighter">Gestão de Vallet</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Cadastre o funcionário. No primeiro acesso ele cria a própria senha.</p>
+                    </div>
+                    <span class="bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-blue-400 uppercase">Acesso ao Vallet</span>
+                </div>
+                <form id="formVallet" class="flex flex-col md:flex-row gap-3 mb-10">
+                    <input type="text" id="nome_vallet" placeholder="NOME DO FUNCIONÁRIO" class="flex-grow p-4 rounded-2xl font-bold text-sm uppercase" required>
+                    <button type="submit" class="bg-blue-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-blue-500 transition-all">Cadastrar</button>
+                </form>
+                <div id="lista-vallet" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
         </section>
 
         <section id="aba-aniversarios" class="hidden space-y-8">
@@ -407,7 +422,7 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
         
-        let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = [];
+        let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = []; let dadosValletOperadores = [];
         let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
         const getPromoterName = (p) => {
             if (!p) return 'SITE DIRETO';
@@ -415,6 +430,18 @@
             if (clean === 'UNDEFINED' || clean === 'NULL' || clean === '') return 'SITE DIRETO';
             return clean;
         };
+
+        const normalizarNomeVallet = (valor) => String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const criarUsuarioVallet = (nome) => normalizarNomeVallet(nome)
+            .replace(/[^A-Z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .substring(0, 50);
 
         const isEventoModeloAntigo = (ev) => {
             const nome = String(ev?.nome || '').toUpperCase();
@@ -806,6 +833,13 @@
             dadosOperadores = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.id !== "sistema");
             renderEquipe();
             
+        });
+
+        onSnapshot(collection(db, "vallet_operadores"), snap => {
+            dadosValletOperadores = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => String(a.nome || a.usuario || a.id).localeCompare(String(b.nome || b.usuario || b.id), 'pt-BR'));
+            renderEquipe();
         });
 
         window.salvarTaxaPix = async () => {
@@ -1367,6 +1401,34 @@
             catch(err) { mostrarAviso("Erro."); }
         });
 
+        document.getElementById('formVallet').addEventListener('submit', async e => {
+            e.preventDefault();
+            const nome = normalizarNomeVallet(document.getElementById('nome_vallet').value);
+            const usuario = criarUsuarioVallet(nome);
+            if (!nome || !usuario) return mostrarAviso("Informe o nome do funcionário.");
+
+            try {
+                const operadorRef = doc(db, "vallet_operadores", usuario);
+                const existente = await getDoc(operadorRef);
+                const agora = new Date().toISOString();
+                const dados = {
+                    usuario,
+                    nome,
+                    perfil: 'OPERADOR',
+                    ativo: true,
+                    atualizado_em: agora,
+                    origem_cadastro: 'DASHBOARD'
+                };
+                if (!existente.exists()) dados.criado_em = agora;
+                await setDoc(operadorRef, dados, { merge: true });
+                e.target.reset();
+                mostrarAviso("Funcionário do Vallet cadastrado!", true);
+            } catch(err) {
+                console.error(err);
+                mostrarAviso("Erro ao cadastrar funcionário do Vallet.");
+            }
+        });
+
         window.editarPromoter = async (id) => {
             const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`);
             if (!op) return;
@@ -1407,10 +1469,75 @@
             }
         };
 
+        window.editarOperadorVallet = async (id) => {
+            const operador = dadosValletOperadores.find(op => op.id === id);
+            if (!operador) return mostrarAviso("Funcionário não encontrado.");
+            const novoNomeRaw = prompt("Nome do funcionário do Vallet:", operador.nome || operador.usuario || id);
+            if (novoNomeRaw === null) return;
+            const novoNome = normalizarNomeVallet(novoNomeRaw);
+            if (!novoNome) return mostrarAviso("O nome não pode ficar vazio.");
+            try {
+                await updateDoc(doc(db, "vallet_operadores", id), {
+                    nome: novoNome,
+                    atualizado_em: new Date().toISOString()
+                });
+                mostrarAviso("Nome atualizado!", true);
+            } catch (e) {
+                mostrarAviso("Erro ao atualizar funcionário.");
+            }
+        };
+
+        window.resetarSenhaVallet = async (id) => {
+            const operador = dadosValletOperadores.find(op => op.id === id);
+            if (!operador) return mostrarAviso("Funcionário não encontrado.");
+            if (!confirm(`RESETAR A SENHA DE ${operador.nome || operador.usuario || id}?
+
+No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
+            try {
+                await setDoc(doc(db, "vallet_operadores", id), {
+                    senha_hash: '',
+                    senha_salt: '',
+                    session_token: '',
+                    atualizado_em: new Date().toISOString()
+                }, { merge: true });
+                mostrarAviso("Senha resetada. O funcionário criará outra no próximo acesso.", true);
+            } catch (e) {
+                mostrarAviso("Erro ao resetar senha.");
+            }
+        };
+
         function renderEquipe() {
             const fT = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') + ' ' + new Date(iso).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : 'NUNCA';
             if (document.getElementById('lista-promoters')) document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `<div class="glass-card p-6 border-l-4 border-l-yellow-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${p.tipo==='aniversario'?'ANIV':p.tipo==='visualizar'?'VIS':'PADRÃO'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(p.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarPromoter('${p.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
             if (document.getElementById('lista-portaria')) document.getElementById('lista-portaria').innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(op.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
+
+            const listaVallet = document.getElementById('lista-vallet');
+            if (listaVallet) {
+                if (!dadosValletOperadores.length) {
+                    listaVallet.innerHTML = `<div class="md:col-span-2 lg:col-span-3 border border-dashed border-blue-500/20 rounded-3xl p-8 text-center text-[9px] text-zinc-600 font-black uppercase tracking-widest">Nenhum funcionário do Vallet cadastrado</div>`;
+                } else {
+                    listaVallet.innerHTML = dadosValletOperadores.map(op => {
+                        const configurada = Boolean(op.senha_hash);
+                        const statusClass = configurada ? 'text-emerald-400' : 'text-yellow-400';
+                        const status = configurada ? 'SENHA CONFIGURADA' : 'AGUARDANDO PRIMEIRO ACESSO';
+                        return `<div class="glass-card p-6 border-l-4 border-l-blue-500 mb-2">
+                            <div class="flex justify-between items-start gap-4">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-black uppercase text-white break-words">${op.nome || op.usuario || op.id}</p>
+                                    <p class="text-[8px] text-blue-400 font-black mt-2 uppercase tracking-widest break-all">USUÁRIO: <span class="text-white">${op.usuario || op.id}</span></p>
+                                    <p class="text-[8px] ${statusClass} font-black mt-2 uppercase tracking-widest">● ${status}</p>
+                                    <p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(op.ultimo_login)}</span></p>
+                                </div>
+                                <button onclick="removerItem('vallet_operadores', '${op.id}')" class="text-red-500 text-[11px] font-black uppercase" title="Excluir funcionário">✕</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 mt-5 border-t border-white/5 pt-4">
+                                <button onclick="editarOperadorVallet('${op.id}')" class="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[8px] font-black uppercase py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all">Editar nome</button>
+                                <button onclick="resetarSenhaVallet('${op.id}')" class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[8px] font-black uppercase py-3 rounded-xl hover:bg-yellow-500 hover:text-black transition-all">Resetar senha</button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            }
         }
 
         window.gerarCopyMeta = (dadosEvento) => {

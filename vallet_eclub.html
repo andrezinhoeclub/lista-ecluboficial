@@ -558,14 +558,18 @@
         <div id="loginOfflineNotice" class="loginModeNotice hidden">Modo offline: usando os operadores já salvos neste aparelho.</div>
         <div class="loginFields">
           <input id="loginUsuario" name="usuario" autocomplete="username" placeholder="USUÁRIO" required />
-          <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="SENHA" required />
+          <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="SENHA" minlength="4" required />
+          <div id="primeiroAcessoCampos" class="hidden">
+            <div class="loginModeNotice" style="margin:0 0 11px">Primeiro acesso: crie sua senha pessoal para este usuário.</div>
+            <input id="loginSenha2" name="senha2" type="password" autocomplete="new-password" placeholder="CONFIRME A NOVA SENHA" minlength="4" />
+          </div>
         </div>
         <label class="loginRemember">
           <input id="loginLembrar" type="checkbox" />
           manter acesso neste aparelho
         </label>
         <button id="btnEntrarVallet" class="btn yellow full" type="submit">Entrar</button>
-        <p class="loginHint">Os operadores serão administrados futuramente na aba Equipe da dashboard.</p>
+        <p class="loginHint">Os funcionários são administrados na aba Equipe da dashboard. No primeiro acesso, cada funcionário cria a própria senha.</p>
       </form>
 
       <form id="setupBox" class="setupBox" onsubmit="criarPrimeiroOperador(event)">
@@ -1271,7 +1275,27 @@
     }
 
     function operadoresAtivos() {
-      return operadores.filter(o => o.ativo !== false && o.senha_hash && o.usuario);
+      return operadores.filter(o => o.ativo !== false && o.usuario);
+    }
+
+    function operadorDigitadoNoLogin() {
+      const usuario = normalize($('loginUsuario')?.value || '');
+      if (!usuario) return null;
+      return operadoresAtivos().find(o => normalize(o.usuario) === usuario || normalize(o.nome) === usuario) || null;
+    }
+
+    function verificarPrimeiroAcessoVallet() {
+      const operador = operadorDigitadoNoLogin();
+      const primeiroAcesso = Boolean(operador && !operador.senha_hash);
+      $('primeiroAcessoCampos')?.classList.toggle('hidden', !primeiroAcesso);
+      const confirmar = $('loginSenha2');
+      if (confirmar) {
+        confirmar.required = primeiroAcesso;
+        if (!primeiroAcesso) confirmar.value = '';
+      }
+      const btn = $('btnEntrarVallet');
+      if (btn && !btn.disabled) btn.textContent = primeiroAcesso ? 'CRIAR SENHA E ENTRAR' : 'ENTRAR';
+      return primeiroAcesso;
     }
 
     function atualizarTelaLogin() {
@@ -1279,8 +1303,10 @@
       $('loginBox').classList.toggle('hidden', semOperadores);
       $('setupBox').classList.toggle('active', semOperadores);
       $('loginOfflineNotice').classList.toggle('hidden', navigator.onLine);
-      if (!semOperadores) setTimeout(() => $('loginUsuario')?.focus(), 50);
-      else setTimeout(() => $('setupUsuario')?.focus(), 50);
+      if (!semOperadores) {
+        verificarPrimeiroAcessoVallet();
+        setTimeout(() => $('loginUsuario')?.focus(), 50);
+      } else setTimeout(() => $('setupUsuario')?.focus(), 50);
     }
 
     async function concluirLogin(operador, lembrar=false) {
@@ -1319,18 +1345,42 @@
       btn.disabled = true;
       btn.textContent = 'VERIFICANDO...';
       try {
-        const operador = operadoresAtivos().find(o => normalize(o.usuario) === usuario || normalize(o.nome) === usuario);
-        if (!operador) throw new Error('Usuário não encontrado.');
-        const hash = await hashSenha(senha, operador.senha_salt || operador.id);
-        if (hash !== operador.senha_hash) throw new Error('Senha incorreta.');
+        let operador = operadoresAtivos().find(o => normalize(o.usuario) === usuario || normalize(o.nome) === usuario);
+        if (!operador) throw new Error('Usuário não encontrado. Peça o cadastro na dashboard.');
+
+        if (!operador.senha_hash) {
+          const senha2 = $('loginSenha2').value;
+          if (senha.length < 4) throw new Error('Crie uma senha com pelo menos 4 caracteres.');
+          if (senha !== senha2) throw new Error('As senhas não conferem.');
+          const salt = gerarSalt();
+          operador = {
+            ...operador,
+            senha_salt: salt,
+            senha_hash: await hashSenha(senha, salt),
+            atualizado_em: agoraISO(),
+            ultimo_login: agoraISO()
+          };
+          await put(STORE_OPERADOR, operador);
+          await queueSet('vallet_operadores', operador.id, operador);
+          await carregarLocal();
+          toast('Senha criada com sucesso.', true);
+        } else {
+          const hash = await hashSenha(senha, operador.senha_salt || operador.id);
+          if (hash !== operador.senha_hash) throw new Error('Senha incorreta.');
+          operador = { ...operador, ultimo_login: agoraISO(), atualizado_em: agoraISO() };
+          await put(STORE_OPERADOR, operador);
+          await queueSet('vallet_operadores', operador.id, operador);
+        }
+
         $('loginSenha').value = '';
+        $('loginSenha2').value = '';
         await concluirLogin(operador, $('loginLembrar').checked);
         toast(`Bem-vindo, ${normalize(operador.nome || operador.usuario)}.`, true);
       } catch (e) {
         toast(e.message || 'Não foi possível entrar.');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'ENTRAR';
+        verificarPrimeiroAcessoVallet();
       }
     }
 
@@ -1385,6 +1435,7 @@
       $('appPrincipal').hidden = true;
       $('operadorNome').textContent = 'SEM LOGIN';
       $('loginSenha').value = '';
+      $('loginSenha2').value = '';
       $('loginLembrar').checked = false;
       $('vallet-login').classList.remove('hidden');
       atualizarTelaLogin();
@@ -2436,6 +2487,8 @@
         await carregarLocal();
       }
 
+      $('loginUsuario')?.addEventListener('input', verificarPrimeiroAcessoVallet);
+      $('loginUsuario')?.addEventListener('change', verificarPrimeiroAcessoVallet);
       await iniciarAutenticacao();
       if ('serviceWorker' in navigator) {
         let recarregandoPorAtualizacao = false;
@@ -2445,7 +2498,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=31', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=32', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
