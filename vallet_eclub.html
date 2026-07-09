@@ -169,7 +169,20 @@
       border-radius: 24px;
       padding: 16px;
     }
+    .vehicleCard.operationCard {
+      padding: 13px 15px;
+      border-radius: 20px;
+    }
     .vehicleTop { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .operationHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .operationMain { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; min-width: 0; }
+    .operationText { min-width: 210px; flex: 1; }
+    .operationText strong { font-size: 12px; }
+    .operationInfo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px 12px; margin-top: 8px; }
+    .operationInfo span { color: var(--muted); font-size: 9px; font-weight: 900; text-transform: uppercase; line-height: 1.35; overflow-wrap: anywhere; }
+    .operationInfo b { color: var(--text); font-weight: 950; }
+    .operationCard .actions { margin-top: 10px; }
+    .operationCard .ticket { min-width: 66px; }
     .plate {
       display: inline-flex;
       align-items: center;
@@ -362,6 +375,9 @@
       .statusBox { justify-content: flex-start; }
       .grid2, .grid3, .grid4, .two, .three, .quickStats, .cadastroGrid { grid-template-columns: 1fr; }
       .actions { grid-template-columns: repeat(2, 1fr); }
+      .operationInfo { grid-template-columns: 1fr; }
+      .operationHeader { flex-direction: column; }
+      .operationText { min-width: 0; width: 100%; }
       .card { padding: 18px; border-radius: 24px; }
       .title { flex-direction: column; }
       .titleRight { align-items: flex-start; width: 100%; }
@@ -1000,6 +1016,31 @@
     }
 
     function safeArg(v) { return String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
+    function formatarDataHoraCurta(valor) {
+      if (!valor) return '---';
+      const d = new Date(valor);
+      if (Number.isNaN(d.getTime())) return '---';
+      return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function getDataUltimaAcao(a) {
+      return a.entregue_em || a.solicitado_em || a.estacionado_em || a.ocorrencia_em || a.atualizado_em || a.criado_em;
+    }
+
+    function getOperadorUltimaAcao(a) {
+      return a.operador_ultima_acao || a.operador_recebimento || '---';
+    }
+
+    function buscarAtendimentoAtivoPorPlaca(placa) {
+      const p = normPlaca(placa);
+      return atendimentos.find(a =>
+        normPlaca(a.placa_norm || a.placa) === p &&
+        a.ativo !== false &&
+        a.status !== 'ENTREGUE'
+      );
+    }
+
     function setModeloCampo(campoId, nome) {
       const el = $(campoId);
       if (!el) return;
@@ -1131,6 +1172,11 @@
       if (!setor) return toast('Selecione o setor onde o veículo ficará.');
       if (!normalize($('modelo').value)) return toast('Escolha ou informe o modelo do veículo.');
       if (!normalize($('cor').value)) return toast('Escolha a cor do veículo.');
+
+      const duplicado = buscarAtendimentoAtivoPorPlaca(placa);
+      if (duplicado) {
+        return toast(`A placa ${placa} já está ativa no ticket #${duplicado.ticket}. Entregue/finalize o atendimento antes de cadastrar novamente.`);
+      }
 
       try {
         const veiculo = await salvarVeiculoBase({
@@ -1345,18 +1391,32 @@
 
       const box = $('listaAtendimentos');
       if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum veículo na operação.</div>'; return; }
-      box.innerHTML = lista.map(a => `<div class="vehicleCard">
-        <div class="vehicleTop">
-          <div><div class="ticket">#${a.ticket}</div><div style="margin-top:8px;"><span class="plate">${a.placa}</span></div></div>
+      box.innerHTML = lista.map(a => {
+        const dataCadastro = formatarDataHoraCurta(a.recebido_em || a.criado_em);
+        const dataUltima = formatarDataHoraCurta(getDataUltimaAcao(a));
+        const operadorCadastro = a.operador_recebimento || '---';
+        const operadorUltima = getOperadorUltimaAcao(a);
+        const textoLiberacao = a.entregue_em
+          ? `<span><b>Liberação:</b> ${formatarDataHoraCurta(a.entregue_em)} • ${operadorUltima}</span>`
+          : `<span><b>Última ação:</b> ${dataUltima} • ${operadorUltima}</span>`;
+        return `<div class="vehicleCard operationCard">
+        <div class="operationHeader">
+          <div class="operationMain">
+            <div class="ticket">#${a.ticket}</div>
+            <span class="plate">${a.placa}</span>
+            <div class="operationText meta">
+              <strong>${a.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${a.cor || 'COR NÃO INFORMADA'}<br>
+              <span class="muted">${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
+            </div>
+          </div>
           <span class="tag ${a.status}">${a.status}</span>
         </div>
-        <div class="meta">
-          <strong>${a.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${a.cor || 'COR NÃO INFORMADA'}<br>
-          <span class="muted">CLIENTE: ${a.cliente_nome || '---'} ${a.cliente_tel ? '• ' + a.cliente_tel : ''}</span><br>
-          <span class="muted">LOCAL: ${a.setor_nome || '---'} ${a.vaga ? '• ' + a.vaga : ''}</span><br>
-          <span class="muted">OPERADOR: ${a.operador_recebimento || a.operador_ultima_acao || '---'}</span>
-          ${(a.modelo_precisa_revisao || a.cor_precisa_revisao) ? '<br><span class="dangerText">REVISAR: MODELO/COR FORA DA LISTA PADRÃO</span>' : ''}
-          ${a.obs ? '<br><span class="dangerText">OBS: '+a.obs+'</span>' : ''}
+        <div class="operationInfo">
+          <span><b>Cliente:</b> ${a.cliente_nome || '---'}${a.cliente_tel ? ' • ' + a.cliente_tel : ''}</span>
+          <span><b>Cadastro:</b> ${dataCadastro} • ${operadorCadastro}</span>
+          ${textoLiberacao}
+          ${(a.modelo_precisa_revisao || a.cor_precisa_revisao) ? '<span class="dangerText"><b>Revisar:</b> modelo/cor fora da lista padrão</span>' : ''}
+          ${a.obs ? '<span class="dangerText"><b>Obs:</b> '+a.obs+'</span>' : ''}
         </div>
         <div class="actions">
           <button class="tinyBtn blue" onclick="abrirModalLocalizacao('${a.id}')">Estacionar</button>
@@ -1364,7 +1424,8 @@
           <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
           <button class="tinyBtn red" onclick="registrarOcorrencia('${a.id}')">Ocorrência</button>
         </div>
-      </div>`).join('');
+      </div>`;
+      }).join('');
     }
 
     function renderKpis() {
@@ -1490,7 +1551,7 @@
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('vallet_sw.js?v=7').catch(() => {});
+        navigator.serviceWorker.register('vallet_sw.js?v=8').catch(() => {});
       }
       if (navigator.onLine) {
         await processarFila();
