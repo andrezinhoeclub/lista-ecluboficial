@@ -1083,11 +1083,34 @@
     }
 
     function getDataUltimaAcao(a) {
-      return a.entregue_em || a.solicitado_em || a.estacionado_em || a.ocorrencia_em || a.atualizado_em || a.criado_em;
+      const candidatos = [
+        ['ENTREGUE', a.entregue_em],
+        ['OCORRENCIA', a.ocorrencia_em],
+        ['SOLICITADO', a.solicitado_em],
+        ['ESTACIONADO', a.estacionado_em],
+        ['EDITADO', a.editado_em || a.ultima_alteracao_em],
+        ['RECEBIDO', a.recebido_em],
+        ['ATUALIZADO', a.atualizado_em],
+        ['CRIADO', a.criado_em]
+      ].filter(([,valor]) => valor && !Number.isNaN(new Date(valor).getTime()));
+      if (!candidatos.length) return '';
+      candidatos.sort((x, y) => new Date(y[1]).getTime() - new Date(x[1]).getTime());
+      return candidatos[0][1];
     }
 
     function getOperadorUltimaAcao(a) {
-      return a.operador_ultima_acao || a.operador_recebimento || '---';
+      const candidatos = [
+        ['ENTREGUE', a.entregue_em, a.operador_ultima_acao || a.operador_entrega],
+        ['OCORRENCIA', a.ocorrencia_em, a.operador_ocorrencia || a.operador_ultima_acao],
+        ['SOLICITADO', a.solicitado_em, a.operador_ultima_acao || a.operador_solicitacao],
+        ['ESTACIONADO', a.estacionado_em, a.operador_ultima_acao || a.operador_estacionamento],
+        ['EDITADO', a.editado_em || a.ultima_alteracao_em, a.operador_edicao || a.ultima_alteracao_operador],
+        ['RECEBIDO', a.recebido_em, a.operador_recebimento],
+        ['ATUALIZADO', a.atualizado_em, a.operador_ultima_acao || a.ultima_alteracao_operador]
+      ].filter(([,valor]) => valor && !Number.isNaN(new Date(valor).getTime()));
+      if (!candidatos.length) return a.operador_ultima_acao || a.operador_recebimento || '---';
+      candidatos.sort((x, y) => new Date(y[1]).getTime() - new Date(x[1]).getTime());
+      return candidatos[0][2] || a.operador_ultima_acao || a.operador_recebimento || '---';
     }
 
     function buscarAtendimentoAtivoPorPlaca(placa) {
@@ -1335,11 +1358,15 @@
       if (!texto) return;
       const a = atendimentos.find(x => x.id === id);
       const quando = agoraISO();
+      const operador = getOperador();
       await atualizarAtendimento(id, {
         status: 'OCORRENCIA',
+        ativo: true,
         obs: normalize((a.obs || '') + ' | OCORRÊNCIA: ' + texto),
         ocorrencia_em: quando,
-        operador_ocorrencia: getOperador()
+        operador_ocorrencia: operador,
+        ultima_alteracao_em: quando,
+        ultima_alteracao_operador: operador
       }, 'OCORRENCIA', texto);
     }
 
@@ -1573,24 +1600,21 @@
               <span class="muted">${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
             </div>
           </div>
-          <span class="tag ${a.status}">${a.status}</span>
+          <span class="tag ${a.status}">${a.status === 'OCORRENCIA' ? 'OCORRÊNCIA' : a.status}</span>
         </div>
         <div class="operationInfo">
           <span><b>Cliente:</b> ${a.cliente_nome || '---'}${a.cliente_tel ? ' • ' + a.cliente_tel : ''}</span>
           <span><b>Cadastro:</b> ${dataCadastro} • ${operadorCadastro}</span>
           ${textoLiberacao}
           ${a.editado_em ? `<span><b>Última edição:</b> ${formatarDataHoraCurta(a.editado_em)} • ${a.operador_edicao || a.ultima_alteracao_operador || '---'}</span>` : ''}
+          ${a.ocorrencia_em ? `<span class="dangerText"><b>Ocorrência registrada:</b> ${formatarDataHoraCurta(a.ocorrencia_em)} • ${a.operador_ocorrencia || a.operador_ultima_acao || '---'}</span>` : ''}
           ${(a.modelo_precisa_revisao || a.cor_precisa_revisao) ? '<span class="dangerText"><b>Revisar:</b> modelo/cor fora da lista padrão</span>' : ''}
           ${a.obs ? '<span class="dangerText"><b>Obs:</b> '+a.obs+'</span>' : ''}
         </div>
-        <div class="actions" style="grid-template-columns:repeat(5,1fr);">
+        <div class="actions" style="grid-template-columns:repeat(3,1fr);">
           <button class="tinyBtn purple" onclick="abrirModalEdicao('${a.id}')">Editar</button>
-          <button class="tinyBtn blue" onclick="abrirModalLocalizacao('${a.id}')">Estacionar</button>
           <button class="tinyBtn orange" onclick="solicitarVeiculo('${a.id}')">Solicitado</button>
           <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
-          ${atendimentoEdicaoAtivaId === a.id
-            ? `<button class="tinyBtn red" onclick="registrarOcorrenciaEditando('${a.id}')">Ocorrência</button>`
-            : `<button class="tinyBtn red disabled" disabled title="Clique em Editar para liberar ocorrência">Ocorrência</button>`}
         </div>
       </div>`;
       }).join('');
