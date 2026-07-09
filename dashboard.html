@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB MASTER | Command Center</title>
-    <!-- Dashboard E-Club v33: relatórios e regras operacionais do Vallet -->
+    <!-- Dashboard E-Club v34: relatório financeiro simplificado do Vallet -->
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -319,83 +319,37 @@
 
         <section id="aba-vallet" class="hidden space-y-8">
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <p class="text-[9px] font-black uppercase tracking-[0.25em] text-blue-400 mb-2">Controle operacional</p>
+                <h2 class="text-blue-500 font-black uppercase italic text-2xl tracking-tighter">Relatórios do Vallet</h2>
+                <p class="text-[10px] text-zinc-400 font-bold uppercase mt-2 tracking-widest leading-relaxed">Veículos atualmente no pátio e entradas contabilizadas por evento.</p>
+            </div>
+
+            <div class="max-w-md">
+                <div class="glass-card p-8 border-t-4 border-t-blue-500 text-center">
+                    <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Veículos no pátio agora</p>
+                    <p id="vallet-kpi-patio" class="text-5xl font-black text-blue-400 mt-3">0</p>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 border-l-4 border-l-purple-500">
+                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-7">
                     <div>
-                        <p class="text-[9px] font-black uppercase tracking-[0.25em] text-blue-400 mb-2">Controle operacional</p>
-                        <h2 class="text-blue-500 font-black uppercase italic text-2xl tracking-tighter">Relatórios do Vallet</h2>
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase mt-2 tracking-widest leading-relaxed">Check-ins por evento, veículos no pátio, base única por placa e limpeza automática após 180 dias sem visita.</p>
+                        <h3 class="text-purple-400 font-black uppercase italic text-xl tracking-tighter">Entradas por evento</h3>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Cada veículo recebido é contabilizado como uma entrada para o relatório financeiro.</p>
                     </div>
-                    <div class="bg-blue-500/10 border border-blue-500/25 px-7 py-5 rounded-3xl min-w-[260px]">
-                        <p class="text-[8px] text-blue-300 font-black uppercase tracking-widest mb-2">Funcionamento do Vallet</p>
-                        <p id="vallet-status-horario" class="text-sm text-white font-black uppercase">Verificando eventos...</p>
-                        <p id="vallet-proximo-evento" class="text-[8px] text-zinc-400 font-bold uppercase mt-2 leading-relaxed">Acesso das 21h às 08h do dia seguinte.</p>
-                    </div>
+                    <input id="busca-relatorio-vallet" oninput="renderRelatorioVallet()" type="text" placeholder="BUSCAR EVENTO OU PLACA" class="p-4 rounded-2xl font-bold text-[10px] uppercase md:max-w-xs">
                 </div>
-            </div>
-
-            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                <div class="glass-card p-6 border-t-4 border-t-blue-500 text-center">
-                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">No pátio agora</p>
-                    <p id="vallet-kpi-patio" class="text-4xl font-black text-blue-400 mt-2">0</p>
-                </div>
-                <div class="glass-card p-6 border-t-4 border-t-orange-500 text-center">
-                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Solicitados</p>
-                    <p id="vallet-kpi-solicitados" class="text-4xl font-black text-orange-400 mt-2">0</p>
-                </div>
-                <div class="glass-card p-6 border-t-4 border-t-emerald-500 text-center">
-                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Veículos cadastrados</p>
-                    <p id="vallet-kpi-cadastrados" class="text-4xl font-black text-emerald-400 mt-2">0</p>
-                    <p class="text-[7px] text-zinc-600 font-black uppercase mt-2">Placas únicas</p>
-                </div>
-                <div class="glass-card p-6 border-t-4 border-t-purple-500 text-center">
-                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Check-ins totais</p>
-                    <p id="vallet-kpi-checkins" class="text-4xl font-black text-purple-400 mt-2">0</p>
-                </div>
-                <div class="glass-card p-6 border-t-4 border-t-yellow-500 text-center col-span-2 lg:col-span-1">
-                    <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Eventos atendidos</p>
-                    <p id="vallet-kpi-eventos" class="text-4xl font-black text-yellow-400 mt-2">0</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <div class="glass-card p-8 border-l-4 border-l-purple-500 xl:col-span-2">
-                    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-7">
-                        <div>
-                            <h3 class="text-purple-400 font-black uppercase italic text-xl tracking-tighter">Check-ins por evento</h3>
-                            <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Cada entrada é contabilizada. A mesma placa pode aparecer novamente em eventos diferentes.</p>
-                        </div>
-                        <input id="busca-relatorio-vallet" oninput="renderRelatorioVallet()" type="text" placeholder="BUSCAR EVENTO OU PLACA" class="p-4 rounded-2xl font-bold text-[10px] uppercase md:max-w-xs">
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="text-[9px] text-zinc-500 font-black uppercase border-b border-white/5">
-                                    <th class="pb-4 pl-3">Data</th>
-                                    <th class="pb-4">Evento</th>
-                                    <th class="pb-4 text-center">Check-ins</th>
-                                    <th class="pb-4 text-center">Placas únicas</th>
-                                    <th class="pb-4 text-center">Entregues</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabela-vallet-eventos" class="divide-y divide-zinc-800"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="glass-card p-8 border-l-4 border-l-red-500 flex flex-col">
-                    <h3 class="text-red-400 font-black uppercase italic text-xl tracking-tighter">Higiene da base</h3>
-                    <p class="text-[9px] text-zinc-500 font-bold uppercase mt-2 leading-relaxed">Perfis de veículos sem check-in há mais de 180 dias são excluídos. Os atendimentos históricos permanecem nos relatórios.</p>
-                    <div class="bg-red-500/5 border border-red-500/20 rounded-3xl p-6 text-center my-7">
-                        <p class="text-[8px] text-red-300 font-black uppercase tracking-widest">Elegíveis para limpeza</p>
-                        <p id="vallet-kpi-expirados" class="text-4xl font-black text-white mt-2">0</p>
-                    </div>
-                    <div class="space-y-3 text-[9px] font-bold uppercase text-zinc-400 mb-7">
-                        <p>✓ Não exclui veículo atualmente no pátio.</p>
-                        <p>✓ Remove cadastros duplicados da mesma placa.</p>
-                        <p>✓ Preserva o histórico de check-ins e entregas.</p>
-                        <p id="vallet-ultima-limpeza" class="text-blue-400">Última limpeza: ainda não executada.</p>
-                    </div>
-                    <button id="btn-limpeza-vallet" onclick="executarLimpezaVallet180Dias(true)" class="w-full bg-red-600 hover:bg-red-500 text-white font-black uppercase text-[10px] py-4 rounded-2xl transition-all mt-auto">Executar limpeza agora</button>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[9px] text-zinc-500 font-black uppercase border-b border-white/5">
+                                <th class="pb-4 pl-3">Data</th>
+                                <th class="pb-4">Evento</th>
+                                <th class="pb-4 text-center">Entradas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-vallet-eventos" class="divide-y divide-zinc-800"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -421,23 +375,6 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-blue-500/5 border border-blue-500/20 rounded-3xl p-6">
-                    <p class="text-blue-400 text-[9px] font-black uppercase tracking-widest">Horário fixo</p>
-                    <p class="text-white text-sm font-black uppercase mt-2">21:00 até 08:00</p>
-                    <p class="text-zinc-500 text-[8px] font-bold uppercase mt-2 leading-relaxed">A abertura depende de um evento cadastrado para o dia.</p>
-                </div>
-                <div class="bg-yellow-500/5 border border-yellow-500/20 rounded-3xl p-6">
-                    <p class="text-yellow-400 text-[9px] font-black uppercase tracking-widest">Placa ativa</p>
-                    <p class="text-white text-sm font-black uppercase mt-2">Não permite duplicidade</p>
-                    <p class="text-zinc-500 text-[8px] font-bold uppercase mt-2 leading-relaxed">Outro check-in só é liberado depois que o veículo for entregue.</p>
-                </div>
-                <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-3xl p-6">
-                    <p class="text-emerald-400 text-[9px] font-black uppercase tracking-widest">Histórico por evento</p>
-                    <p class="text-white text-sm font-black uppercase mt-2">Repetição permitida</p>
-                    <p class="text-zinc-500 text-[8px] font-bold uppercase mt-2 leading-relaxed">A mesma placa conta novamente quando visitar outro evento.</p>
-                </div>
-            </div>
         </section>
 
         <section id="aba-aniversarios" class="hidden space-y-8">
@@ -1111,7 +1048,9 @@
             });
             if (semEvento.length) grupos.set('__sem_evento__', { evento: { id: '__sem_evento__', nome: 'SEM EVENTO VINCULADO', data: '' }, atendimentos: semEvento });
 
-            const gruposLista = [...grupos.values()].sort((a, b) => String(b.evento.data || '').localeCompare(String(a.evento.data || '')) || String(b.evento.nome || '').localeCompare(String(a.evento.nome || ''), 'pt-BR'));
+            const gruposLista = [...grupos.values()]
+                .filter(g => g.atendimentos.length > 0)
+                .sort((a, b) => String(b.evento.data || '').localeCompare(String(a.evento.data || '')) || String(b.evento.nome || '').localeCompare(String(a.evento.nome || ''), 'pt-BR'));
             const eventosAtendidos = gruposLista.filter(g => g.evento.id !== '__sem_evento__' && g.atendimentos.length > 0).length;
 
             const setText = (id, valor) => { const el = document.getElementById(id); if (el) el.textContent = valor; };
@@ -1122,45 +1061,18 @@
             setText('vallet-kpi-eventos', eventosAtendidos);
             setText('vallet-kpi-expirados', analiseBase.idsParaExcluir.length);
 
-            const agora = new Date();
-            const eventosReais = dadosEventos.filter(eventoRealRelatorioVallet);
-            const ativoAgora = eventosReais.find(ev => {
-                const j = janelaEventoRelatorioVallet(ev);
-                return ev.ativo !== false && j && agora >= j.inicio && agora < j.fim;
-            });
-            const proximos = eventosReais.map(ev => ({ ev, j: janelaEventoRelatorioVallet(ev) })).filter(x => x.ev.ativo !== false && x.j && x.j.inicio > agora).sort((a,b) => a.j.inicio - b.j.inicio);
-            const statusHorario = document.getElementById('vallet-status-horario');
-            const proximoEvento = document.getElementById('vallet-proximo-evento');
-            if (statusHorario && proximoEvento) {
-                if (ativoAgora) {
-                    statusHorario.textContent = `ABERTO • ${ativoAgora.nome || 'EVENTO'}`;
-                    statusHorario.className = 'text-sm text-emerald-400 font-black uppercase';
-                    proximoEvento.textContent = `Evento de ${dataBrRelatorioVallet(ativoAgora.data)} • encerra às 08:00.`;
-                } else {
-                    statusHorario.textContent = 'FECHADO PARA NOVOS CHECK-INS';
-                    statusHorario.className = 'text-sm text-red-400 font-black uppercase';
-                    proximoEvento.textContent = proximos[0] ? `Próxima abertura: ${dataBrRelatorioVallet(proximos[0].ev.data)} às 21:00 • ${proximos[0].ev.nome || 'EVENTO'}.` : 'Nenhum próximo evento ativo cadastrado.';
-                }
-            }
-
             const termo = normalizarBuscaRelatorioVallet(document.getElementById('busca-relatorio-vallet')?.value || '');
             const linhasEvento = gruposLista.filter(g => {
                 if (!termo) return true;
                 const placas = g.atendimentos.map(a => a.placa || '').join(' ');
                 return normalizarBuscaRelatorioVallet(`${g.evento.nome || ''} ${g.evento.data || ''} ${placas}`).includes(termo);
-            }).slice(0, 80).map(g => {
-                const placas = new Set(g.atendimentos.map(a => normalizarPlacaRelatorioVallet(a.placa_norm || a.placa)).filter(Boolean));
-                const entregues = g.atendimentos.filter(a => String(a.status || '').toUpperCase() === 'ENTREGUE' || a.ativo === false).length;
-                return `<tr class="hover:bg-white/[0.02]">
-                    <td class="py-4 pl-3 text-[10px] text-zinc-400 font-bold whitespace-nowrap">${dataBrRelatorioVallet(g.evento.data)}</td>
-                    <td class="py-4 text-[10px] text-white font-black uppercase">${escaparHtmlRelatorioVallet(g.evento.nome || 'SEM EVENTO')}</td>
-                    <td class="py-4 text-center text-sm text-purple-400 font-black">${g.atendimentos.length}</td>
-                    <td class="py-4 text-center text-sm text-blue-400 font-black">${placas.size}</td>
-                    <td class="py-4 text-center text-sm text-emerald-400 font-black">${entregues}</td>
-                </tr>`;
-            }).join('');
+            }).slice(0, 80).map(g => `<tr class="hover:bg-white/[0.02]">
+                <td class="py-4 pl-3 text-[10px] text-zinc-400 font-bold whitespace-nowrap">${dataBrRelatorioVallet(g.evento.data)}</td>
+                <td class="py-4 text-[10px] text-white font-black uppercase">${escaparHtmlRelatorioVallet(g.evento.nome || 'SEM EVENTO')}</td>
+                <td class="py-4 text-center text-base text-purple-400 font-black">${g.atendimentos.length}</td>
+            </tr>`).join('');
             const corpoEventos = document.getElementById('tabela-vallet-eventos');
-            if (corpoEventos) corpoEventos.innerHTML = linhasEvento || `<tr><td colspan="5" class="py-10 text-center text-[9px] text-zinc-600 font-black uppercase">Nenhum evento encontrado.</td></tr>`;
+            if (corpoEventos) corpoEventos.innerHTML = linhasEvento || `<tr><td colspan="3" class="py-10 text-center text-[9px] text-zinc-600 font-black uppercase">Nenhuma entrada encontrada.</td></tr>`;
 
             const recentes = [...dadosValletAtendimentos].sort((a,b) => {
                 const da = parseDataRelatorioVallet(a.recebido_em || a.criado_em)?.getTime() || 0;
@@ -1188,9 +1100,6 @@
             const corpoRecentes = document.getElementById('tabela-vallet-recentes');
             if (corpoRecentes) corpoRecentes.innerHTML = linhasRecentes || `<tr><td colspan="6" class="py-10 text-center text-[9px] text-zinc-600 font-black uppercase">Nenhum check-in registrado.</td></tr>`;
 
-            const ultima = configSistemaDashboard.vallet_ultima_limpeza ? parseDataRelatorioVallet(configSistemaDashboard.vallet_ultima_limpeza) : null;
-            const ultimaEl = document.getElementById('vallet-ultima-limpeza');
-            if (ultimaEl) ultimaEl.textContent = ultima ? `Última limpeza: ${ultima.toLocaleString('pt-BR')} • ${Number(configSistemaDashboard.vallet_ultima_limpeza_qtd || 0)} removido(s).` : 'Última limpeza: ainda não executada.';
         };
 
         window.executarLimpezaVallet180Dias = async (manual = false) => {
