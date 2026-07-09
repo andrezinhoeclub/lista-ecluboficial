@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v21: exclusão definitiva de modelos e cores -->
+  <!-- E-CLUB Vallet v23: impressão de ticket pelo navegador -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -191,7 +191,7 @@
     .buscaQuickText { display: flex; flex-direction: column; gap: 3px; min-width: 0; text-transform: uppercase; }
     .buscaQuickText strong { color: var(--text); font-size: 25px; font-weight: 950; line-height: 1.05; }
     .buscaQuickText span { color: var(--muted); font-size: 19px; font-weight: 950; line-height: 1.15; }
-    .buscaQuickActions { grid-template-columns: repeat(3,1fr); margin-top: 16px !important; }
+    .buscaQuickActions { grid-template-columns: repeat(4,1fr); margin-top: 16px !important; }
     .plate {
       display: inline-flex;
       align-items: center;
@@ -411,6 +411,42 @@
       .ticketCorner { width: 100%; }
       .brand h1 { font-size: 20px; }
     }
+
+    /* Impressão térmica pelo navegador — MP-4200 / bobina 80 mm */
+    #ticketImpressao { display: none; }
+    @media print {
+      @page { size: 80mm auto; margin: 0; }
+      html, body {
+        width: 80mm !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        color: #000 !important;
+      }
+      body > * { display: none !important; }
+      #ticketImpressao {
+        display: block !important;
+        width: 72mm !important;
+        margin: 0 auto !important;
+        padding: 4mm 2mm 7mm !important;
+        background: #fff !important;
+        color: #000 !important;
+        font-family: Arial, Helvetica, sans-serif !important;
+        text-transform: uppercase;
+        box-shadow: none !important;
+      }
+      .ticketPrintBrand { font-size: 18pt; font-weight: 900; text-align: center; line-height: 1.05; }
+      .ticketPrintSub { font-size: 8pt; font-weight: 700; text-align: center; margin-top: 1mm; }
+      .ticketPrintVia { font-size: 8pt; font-weight: 900; text-align: center; margin-top: 2mm; }
+      .ticketPrintLine { border-top: 1px dashed #000; margin: 3mm 0; }
+      .ticketPrintNumber { font-size: 30pt; font-weight: 900; text-align: center; letter-spacing: .05em; line-height: 1; }
+      .ticketPrintPlate { font-size: 24pt; font-weight: 900; text-align: center; letter-spacing: .10em; margin-top: 3mm; }
+      .ticketPrintVehicle { font-size: 11pt; font-weight: 900; text-align: center; margin-top: 2mm; }
+      .ticketPrintRow { display: flex; justify-content: space-between; gap: 3mm; font-size: 8.5pt; font-weight: 700; margin-top: 1.7mm; }
+      .ticketPrintRow b { font-weight: 900; }
+      .ticketPrintFooter { font-size: 8.5pt; font-weight: 900; text-align: center; line-height: 1.35; margin-top: 3mm; }
+    }
   </style>
 </head>
 <body>
@@ -520,7 +556,10 @@
             </div>
           </div>
 
-          <button class="btn yellow full" onclick="receberVeiculo()">Receber e cadastrar</button>
+          <div class="row two" style="margin-top:4px;">
+            <button class="btn yellow" onclick="receberVeiculo(true)">Receber e imprimir</button>
+            <button class="btn ghost" onclick="receberVeiculo(false)">Receber sem imprimir</button>
+          </div>
         </div>
 
         <div class="card">
@@ -744,6 +783,22 @@
         <button class="btn ghost" onclick="fecharModalEdicao()">Cancelar</button>
       </div>
     </div>
+  </div>
+
+
+  <div id="ticketImpressao" aria-hidden="true">
+    <div class="ticketPrintBrand">E-CLUB VALLET</div>
+    <div class="ticketPrintSub">COMPROVANTE DE VEÍCULO</div>
+    <div id="ticketPrintVia" class="ticketPrintVia"></div>
+    <div class="ticketPrintLine"></div>
+    <div id="ticketPrintNumero" class="ticketPrintNumber">#000</div>
+    <div id="ticketPrintPlaca" class="ticketPrintPlate">ABC1D23</div>
+    <div id="ticketPrintVeiculo" class="ticketPrintVehicle">MODELO • COR</div>
+    <div class="ticketPrintLine"></div>
+    <div class="ticketPrintRow"><span><b>ENTRADA</b></span><span id="ticketPrintEntrada">--/--/---- --:--</span></div>
+    <div class="ticketPrintRow"><span><b>OPERADOR</b></span><span id="ticketPrintOperador">---</span></div>
+    <div class="ticketPrintLine"></div>
+    <div class="ticketPrintFooter">GUARDE ESTE TICKET.<br>APRESENTE-O PARA RETIRAR O VEÍCULO.</div>
   </div>
 
   <script>
@@ -1174,6 +1229,33 @@
       return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     }
 
+    function formatarDataHoraTicket(valor) {
+      const d = valor ? new Date(valor) : new Date();
+      if (Number.isNaN(d.getTime())) return '--/--/---- --:--';
+      return d.toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function imprimirTicketAtendimento(atendimento, segundaVia = true) {
+      if (!atendimento) return toast('Atendimento não encontrado para impressão.');
+      $('ticketPrintVia').textContent = segundaVia ? '2ª VIA / REIMPRESSÃO' : '';
+      $('ticketPrintNumero').textContent = `#${String(atendimento.ticket || '').padStart(3, '0')}`;
+      $('ticketPrintPlaca').textContent = atendimento.placa || '---';
+      $('ticketPrintVeiculo').textContent = `${atendimento.modelo || 'MODELO NÃO INFORMADO'} • ${atendimento.cor || 'COR NÃO INFORMADA'}`;
+      $('ticketPrintEntrada').textContent = formatarDataHoraTicket(atendimento.recebido_em || atendimento.criado_em);
+      $('ticketPrintOperador').textContent = atendimento.operador_recebimento || getOperador() || '---';
+      $('ticketImpressao').setAttribute('aria-hidden', 'false');
+      window.print();
+    }
+
+    function imprimirTicketPorId(id) {
+      const atendimento = atendimentos.find(a => a.id === id);
+      if (!atendimento) return toast('Atendimento não encontrado para reimpressão.');
+      imprimirTicketAtendimento(atendimento, true);
+    }
+
     function getDataUltimaAcao(a) {
       const candidatos = [
         ['ENTREGUE', a.entregue_em],
@@ -1452,7 +1534,7 @@
       renderChipsPadrao();
     }
 
-    async function receberVeiculo() {
+    async function receberVeiculo(imprimirAposSalvar = false) {
       const placa = normPlaca($('placa').value);
       if (!placa || placa.length < 7) return toast('Informe uma placa válida.');
       if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador.');
@@ -1508,6 +1590,9 @@
         limparFormularioAtendimento();
         await carregarLocal(); renderTudo(); atualizarTicketPreview();
         toast(`Ticket ${ticket} recebido.`, true);
+        if (imprimirAposSalvar) {
+          setTimeout(() => imprimirTicketAtendimento(atendimento, false), 120);
+        }
       } catch (e) { toast(e.message || 'Erro ao receber veículo.'); }
     }
 
@@ -1793,6 +1878,7 @@
           </div>
           <div class="actions buscaQuickActions">
             <button class="tinyBtn purple" onclick="abrirModalEdicao('${a.id}')">Editar</button>
+            <button class="tinyBtn blue" onclick="imprimirTicketPorId('${a.id}')">Reimprimir</button>
             <button class="tinyBtn orange" onclick="solicitarVeiculo('${a.id}')">Solicitado</button>
             <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
           </div>
@@ -1821,8 +1907,9 @@
           ${(a.modelo_precisa_revisao || a.cor_precisa_revisao) ? '<span class="dangerText"><b>Revisar:</b> modelo/cor fora da lista padrão</span>' : ''}
           ${a.obs ? '<span class="dangerText"><b>Obs:</b> '+a.obs+'</span>' : ''}
         </div>
-        <div class="actions" style="grid-template-columns:repeat(3,1fr);">
+        <div class="actions" style="grid-template-columns:repeat(4,1fr);">
           <button class="tinyBtn purple" onclick="abrirModalEdicao('${a.id}')">Editar</button>
+          <button class="tinyBtn blue" onclick="imprimirTicketPorId('${a.id}')">Reimprimir</button>
           <button class="tinyBtn orange" onclick="solicitarVeiculo('${a.id}')">Solicitado</button>
           <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
         </div>
@@ -1981,7 +2068,7 @@
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('vallet_sw.js?v=21').catch(() => {});
+        navigator.serviceWorker.register('vallet_sw.js?v=23').catch(() => {});
       }
       if (navigator.onLine) {
         await processarFila();
@@ -1994,6 +2081,7 @@
 
     window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); });
     window.addEventListener('offline', () => { atualizarStatus(); toast('Sem internet. Salvando neste aparelho.'); });
+    window.addEventListener('afterprint', () => { const t = document.getElementById('ticketImpressao'); if (t) t.setAttribute('aria-hidden', 'true'); });
     window.addEventListener('DOMContentLoaded', iniciar);
   </script>
 </body>
