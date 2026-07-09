@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v24: somente receber e imprimir -->
+  <!-- E-CLUB Vallet v25: somente receber e imprimir + atualização forçada de cache -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -2067,7 +2067,16 @@
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('vallet_sw.js?v=24').catch(() => {});
+        let recarregandoPorAtualizacao = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (recarregandoPorAtualizacao) return;
+          recarregandoPorAtualizacao = true;
+          window.location.reload();
+        });
+
+        navigator.serviceWorker.register('vallet_sw.js?v=25', { updateViaCache: 'none' })
+          .then((registro) => registro.update())
+          .catch(() => {});
       }
       if (navigator.onLine) {
         await processarFila();
