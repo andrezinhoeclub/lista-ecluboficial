@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v25: somente receber e imprimir + atualização forçada de cache -->
+  <!-- E-CLUB Vallet v26: ações por ícones na busca + lista inferior sem botões -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -192,6 +192,24 @@
     .buscaQuickText strong { color: var(--text); font-size: 25px; font-weight: 950; line-height: 1.05; }
     .buscaQuickText span { color: var(--muted); font-size: 19px; font-weight: 950; line-height: 1.15; }
     .buscaQuickActions { grid-template-columns: repeat(4,1fr); margin-top: 16px !important; }
+    .iconAction {
+      min-height: 48px;
+      padding: 10px;
+      font-size: 21px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 15px;
+    }
+    .iconAction:focus-visible {
+      outline: 3px solid rgba(234,179,8,.45);
+      outline-offset: 2px;
+    }
+    .operationListItem { padding: 12px 14px; }
+    .operationListItem .operationHeader { align-items: center; }
+    .operationListItem .operationMain { gap: 10px; }
+    .operationListItem .operationText { min-width: 180px; }
     .plate {
       display: inline-flex;
       align-items: center;
@@ -403,7 +421,8 @@
       .buscaQuickCard .buscaPlate { font-size: 22px; min-width: 0; width: max-content; max-width: 100%; }
       .buscaQuickText strong { font-size: 20px; }
       .buscaQuickText span { font-size: 15px; }
-      .buscaQuickActions { grid-template-columns: 1fr; }
+      .buscaQuickActions { grid-template-columns: repeat(4, 1fr); }
+      .iconAction { min-height: 46px; font-size: 20px; }
       .operationText { min-width: 0; width: 100%; }
       .card { padding: 18px; border-radius: 24px; }
       .title { flex-direction: column; }
@@ -1855,14 +1874,6 @@
     }
 
     function montarCardAtendimento(a, compactoBusca = false) {
-      const dataCadastro = formatarDataHoraCurta(a.recebido_em || a.criado_em);
-      const dataUltima = formatarDataHoraCurta(getDataUltimaAcao(a));
-      const operadorCadastro = a.operador_recebimento || '---';
-      const operadorUltima = getOperadorUltimaAcao(a);
-      const textoLiberacao = a.entregue_em
-        ? `<span><b>Liberação:</b> ${formatarDataHoraCurta(a.entregue_em)} • ${operadorUltima}</span>`
-        : `<span><b>Última ação:</b> ${dataUltima} • ${operadorUltima}</span>`;
-      const vHist = getVeiculoPorPlaca(a.placa);
       const tagStatus = a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status;
 
       if (compactoBusca) {
@@ -1876,15 +1887,15 @@
             </div>
           </div>
           <div class="actions buscaQuickActions">
-            <button class="tinyBtn purple" onclick="abrirModalEdicao('${a.id}')">Editar</button>
-            <button class="tinyBtn blue" onclick="imprimirTicketPorId('${a.id}')">Reimprimir</button>
-            <button class="tinyBtn orange" onclick="solicitarVeiculo('${a.id}')">Solicitado</button>
-            <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
+            <button class="tinyBtn purple iconAction" onclick="abrirModalEdicao('${a.id}')" title="Editar atendimento" aria-label="Editar atendimento">✏️</button>
+            <button class="tinyBtn blue iconAction" onclick="imprimirTicketPorId('${a.id}')" title="Reimprimir ticket" aria-label="Reimprimir ticket">🖨️</button>
+            <button class="tinyBtn orange iconAction" onclick="solicitarVeiculo('${a.id}')" title="Marcar veículo como solicitado" aria-label="Marcar veículo como solicitado">🔔</button>
+            <button class="tinyBtn green iconAction" onclick="entregarVeiculo('${a.id}')" title="Entregar veículo" aria-label="Entregar veículo">✅</button>
           </div>
         </div>`;
       }
 
-      return `<div class="vehicleCard operationCard">
+      return `<div class="vehicleCard operationCard operationListItem">
         <div class="operationHeader">
           <div class="operationMain">
             <div class="ticket">#${a.ticket}</div>
@@ -1895,22 +1906,6 @@
             </div>
           </div>
           <span class="tag ${tagStatus}">${tagStatus}</span>
-        </div>
-        <div class="operationInfo">
-          <span><b>Cliente:</b> ${a.cliente_nome || '---'}${a.cliente_tel ? ' • ' + a.cliente_tel : ''}</span>
-          <span><b>Cadastro:</b> ${dataCadastro} • ${operadorCadastro}</span>
-          ${textoLiberacao}
-          ${a.editado_em ? `<span><b>Última edição:</b> ${formatarDataHoraCurta(a.editado_em)} • ${a.operador_edicao || a.ultima_alteracao_operador || '---'}</span>` : ''}
-          ${vHist && vHist.ultima_visita ? `<span><b>Última visita da placa:</b> ${formatarDataHoraCurta(vHist.ultima_visita)}</span>` : ''}
-          ${vHist && vHist.ultima_entrega ? `<span><b>Última entrega da placa:</b> ${formatarDataHoraCurta(vHist.ultima_entrega)}</span>` : ''}
-          ${(a.modelo_precisa_revisao || a.cor_precisa_revisao) ? '<span class="dangerText"><b>Revisar:</b> modelo/cor fora da lista padrão</span>' : ''}
-          ${a.obs ? '<span class="dangerText"><b>Obs:</b> '+a.obs+'</span>' : ''}
-        </div>
-        <div class="actions" style="grid-template-columns:repeat(4,1fr);">
-          <button class="tinyBtn purple" onclick="abrirModalEdicao('${a.id}')">Editar</button>
-          <button class="tinyBtn blue" onclick="imprimirTicketPorId('${a.id}')">Reimprimir</button>
-          <button class="tinyBtn orange" onclick="solicitarVeiculo('${a.id}')">Solicitado</button>
-          <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
         </div>
       </div>`;
     }
@@ -1933,7 +1928,7 @@
     }
 
     function renderAtendimentos() {
-      const lista = getAtendimentosFiltrados({ usarBusca: true });
+      const lista = getAtendimentosFiltrados({ usarBusca: false });
       const box = $('listaAtendimentos');
       if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum veículo na operação.</div>'; return; }
       box.innerHTML = lista.map(a => montarCardAtendimento(a, false)).join('');
@@ -2074,7 +2069,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=25', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=26', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
