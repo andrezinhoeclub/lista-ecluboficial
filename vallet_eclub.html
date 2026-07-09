@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v29: placa obrigatoriamente com 7 caracteres nos formatos AAA0000 ou AAA0A00 -->
+  <!-- E-CLUB Vallet v31: login de operadores online/offline com credenciais locais sincronizadas -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -71,7 +71,73 @@
     .brand p { margin: 4px 0 0; font-size: 8px; letter-spacing: .18em; color: var(--muted); font-weight: 950; text-transform: uppercase; }
     .operatorHeader { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .operatorHeader span { color: var(--muted); font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .12em; }
-    .operatorHeader input { width: 190px; max-width: 70vw; padding: 9px 12px; border-radius: 999px; font-size: 10px; background: rgba(255,255,255,.045); }
+    .operatorHeader strong {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      max-width: 260px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.045);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--text);
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .logoutMini {
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: rgba(239,68,68,.10);
+      border: 1px solid rgba(239,68,68,.28);
+      color: #fca5a5;
+      font-size: 8px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .loginOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(234,179,8,.15), transparent 38%),
+        radial-gradient(circle at 100% 15%, rgba(168,85,247,.16), transparent 38%),
+        rgba(5,5,8,.98);
+      backdrop-filter: blur(18px);
+    }
+    .loginOverlay.hidden { display: none; }
+    .loginCard {
+      width: min(100%, 410px);
+      background: rgba(14,14,20,.96);
+      border: 1px solid rgba(234,179,8,.22);
+      border-radius: 34px;
+      padding: 30px;
+      box-shadow: 0 30px 100px rgba(0,0,0,.55);
+      text-align: center;
+    }
+    .loginCard img { width: auto; height: 58px; object-fit: contain; margin-bottom: 18px; }
+    .loginEyebrow { color: var(--yellow); font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .28em; }
+    .loginCard h2 { margin: 7px 0 7px; color: var(--text); font-size: 25px; font-weight: 950; text-transform: uppercase; font-style: italic; letter-spacing: -.04em; }
+    .loginCard .loginSub { margin: 0 0 22px; color: var(--muted); font-size: 9px; font-weight: 850; text-transform: uppercase; line-height: 1.5; letter-spacing: .08em; }
+    .loginFields { display: grid; gap: 11px; text-align: left; }
+    .loginFields input { text-transform: none; font-size: 13px; padding: 17px; }
+    .loginFields input[name=usuario], .loginFields input[name=nome] { text-transform: uppercase; }
+    .loginRemember { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; color: var(--muted); font-size: 9px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
+    .loginRemember input { width: 16px; height: 16px; accent-color: var(--yellow); }
+    .loginHint { margin-top: 16px; color: #62626e; font-size: 8px; font-weight: 800; text-transform: uppercase; line-height: 1.5; }
+    .loginModeNotice { margin-bottom: 15px; padding: 11px 13px; border-radius: 16px; background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.20); color: #7dd3fc; font-size: 8px; font-weight: 900; text-transform: uppercase; line-height: 1.45; }
+    .setupBox { display: none; }
+    .setupBox.active { display: block; }
+    .loginBox.hidden { display: none; }
     .titleRight { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
     .ticketCorner { min-width: 138px; border: 1px solid rgba(234,179,8,.32); background: rgba(234,179,8,.075); border-radius: 18px; padding: 10px 12px; text-align: center; }
     .ticketCorner span { display: block; color: var(--muted); font-size: 7px; font-weight: 950; text-transform: uppercase; letter-spacing: .14em; margin-bottom: 5px; }
@@ -408,7 +474,10 @@
     body.theme-light .drawer { background: rgba(15,23,42,.36); }
     body.theme-light .drawerBox { background: #ffffff; border-color: rgba(15,23,42,.14); }
     body.theme-light .btn.ghost { background: rgba(255,255,255,.86); color: #344054; border-color: rgba(15,23,42,.14); }
-    body.theme-light .operatorHeader input { background: rgba(255,255,255,.92); color: #101828; border-color: rgba(15,23,42,.16); }
+    body.theme-light .operatorHeader strong { background: rgba(255,255,255,.92); color: #101828; border-color: rgba(15,23,42,.16); }
+    body.theme-light .loginOverlay { background: radial-gradient(circle at 20% 0%, rgba(234,179,8,.14), transparent 38%), radial-gradient(circle at 100% 15%, rgba(168,85,247,.12), transparent 38%), rgba(244,246,251,.98); }
+    body.theme-light .loginCard { background: rgba(255,255,255,.97); border-color: rgba(202,138,4,.28); box-shadow: 0 30px 90px rgba(15,23,42,.18); }
+    body.theme-light .loginFields input { background: #fff !important; color: #101828 !important; border-color: rgba(15,23,42,.16) !important; }
     body.theme-light .ticketCorner { background: rgba(255,251,235,.96); border-color: rgba(234,179,8,.38); }
     body.theme-light .ticketCorner input { color: #92400e; }
 
@@ -477,7 +546,43 @@
 </head>
 <body>
   <div id="toast" class="toast"></div>
-  <div class="wrap">
+
+  <div id="vallet-login" class="loginOverlay">
+    <div class="loginCard">
+      <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
+      <div class="loginEyebrow">Acesso restrito</div>
+      <h2>Vallet E-Club</h2>
+      <p class="loginSub">Entre com o usuário e a senha do operador.</p>
+
+      <form id="loginBox" class="loginBox" onsubmit="fazerLogin(event)">
+        <div id="loginOfflineNotice" class="loginModeNotice hidden">Modo offline: usando os operadores já salvos neste aparelho.</div>
+        <div class="loginFields">
+          <input id="loginUsuario" name="usuario" autocomplete="username" placeholder="USUÁRIO" required />
+          <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="SENHA" required />
+        </div>
+        <label class="loginRemember">
+          <input id="loginLembrar" type="checkbox" />
+          manter acesso neste aparelho
+        </label>
+        <button id="btnEntrarVallet" class="btn yellow full" type="submit">Entrar</button>
+        <p class="loginHint">Os operadores serão administrados futuramente na aba Equipe da dashboard.</p>
+      </form>
+
+      <form id="setupBox" class="setupBox" onsubmit="criarPrimeiroOperador(event)">
+        <div class="loginModeNotice">Primeiro acesso: crie o operador administrador inicial.</div>
+        <div class="loginFields">
+          <input id="setupUsuario" name="usuario" autocomplete="username" placeholder="USUÁRIO DE ACESSO" required />
+          <input id="setupNome" name="nome" placeholder="NOME DO OPERADOR" required />
+          <input id="setupSenha" name="senha" type="password" autocomplete="new-password" placeholder="CRIE UMA SENHA (MÍN. 4)" minlength="4" required />
+          <input id="setupSenha2" name="senha2" type="password" autocomplete="new-password" placeholder="CONFIRME A SENHA" minlength="4" required />
+        </div>
+        <button id="btnCriarOperador" class="btn yellow full" type="submit" style="margin-top:15px">Criar operador e entrar</button>
+        <p class="loginHint">Faça este primeiro cadastro com internet para disponibilizar o operador nos demais terminais.</p>
+      </form>
+    </div>
+  </div>
+
+  <div id="appPrincipal" class="wrap" hidden>
     <header class="topbar">
       <div class="brand">
         <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
@@ -485,8 +590,9 @@
           <h1>Vallet E-Club</h1>
           <p>Operação online/offline</p>
           <div class="operatorHeader">
-            <span>Operador</span>
-            <input id="operador" placeholder="NOME DO FUNCIONÁRIO" oninput="salvarOperadorLocal()" />
+            <span>Operador conectado</span>
+            <strong id="operadorNome">SEM LOGIN</strong>
+            <button class="logoutMini" type="button" onclick="sairOperador()">Sair</button>
           </div>
         </div>
       </div>
@@ -839,7 +945,7 @@
     };
 
     const DB_NAME = 'eclub_vallet_v1';
-    const DB_VERSION = 2;
+    const DB_VERSION = 3;
     const STORE_SETOR = 'setores';
     const STORE_MODELO = 'modelos';
     const STORE_COR = 'cores';
@@ -847,8 +953,11 @@
     const STORE_ATEND = 'atendimentos';
     const STORE_QUEUE = 'queue';
     const STORE_META = 'meta';
+    const STORE_OPERADOR = 'operadores';
     const DEVICE_ID_KEY = 'eclub_vallet_device_id';
     const OPERADOR_KEY = 'eclub_vallet_operador';
+    const LOGIN_SESSION_KEY = 'eclub_vallet_login_session';
+    const LOGIN_REMEMBER_KEY = 'eclub_vallet_login_remember';
     const THEME_KEY = 'eclub_vallet_theme';
 
     function aplicarTema(tema) {
@@ -879,6 +988,8 @@
     let veiculos = [];
     let atendimentos = [];
     let fila = [];
+    let operadores = [];
+    let operadorAtual = null;
     let sincronizando = false;
     let atendimentoEdicaoAtivaId = null;
 
@@ -945,6 +1056,7 @@
           if (!db.objectStoreNames.contains(STORE_ATEND)) db.createObjectStore(STORE_ATEND, { keyPath: 'id' });
           if (!db.objectStoreNames.contains(STORE_QUEUE)) db.createObjectStore(STORE_QUEUE, { keyPath: 'id' });
           if (!db.objectStoreNames.contains(STORE_META)) db.createObjectStore(STORE_META, { keyPath: 'id' });
+          if (!db.objectStoreNames.contains(STORE_OPERADOR)) db.createObjectStore(STORE_OPERADOR, { keyPath: 'id' });
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
@@ -1029,6 +1141,7 @@
       veiculos = [...veiculosMap.values()].sort((a,b) => String(a.placa).localeCompare(String(b.placa)));
       atendimentos = (await getAll(STORE_ATEND)).sort((a,b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')));
       fila = (await getAll(STORE_QUEUE)).sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
+      operadores = (await getAll(STORE_OPERADOR)).sort((a,b) => String(a.nome || a.usuario).localeCompare(String(b.nome || b.usuario)));
     }
 
     async function salvarMeta(key, value) { await put(STORE_META, { id: key, value }); }
@@ -1088,18 +1201,20 @@
       const fb = await initFirebase();
       if (!fb) return;
       try {
-        const [setSnap, modSnap, corSnap, veiSnap, atSnap] = await Promise.all([
+        const [setSnap, modSnap, corSnap, veiSnap, atSnap, opSnap] = await Promise.all([
           fb.getDocs(fb.collection(fb.db, 'vallet_setores')),
           fb.getDocs(fb.collection(fb.db, 'vallet_modelos')),
           fb.getDocs(fb.collection(fb.db, 'vallet_cores')),
           fb.getDocs(fb.collection(fb.db, 'vallet_veiculos')),
-          fb.getDocs(fb.collection(fb.db, 'vallet_atendimentos'))
+          fb.getDocs(fb.collection(fb.db, 'vallet_atendimentos')),
+          fb.getDocs(fb.collection(fb.db, 'vallet_operadores'))
         ]);
         const puts = [];
         setSnap.forEach(d => puts.push(put(STORE_SETOR, { id: d.id, ...d.data() })));
         modSnap.forEach(d => puts.push(put(STORE_MODELO, { id: d.id, ...d.data() })));
         corSnap.forEach(d => puts.push(put(STORE_COR, { id: d.id, ...d.data() })));
         veiSnap.forEach(d => puts.push(put(STORE_VEICULO, { id: d.id, ...d.data() })));
+        opSnap.forEach(d => puts.push(put(STORE_OPERADOR, { id: d.id, ...d.data() })));
         atSnap.forEach(d => {
           const data = { id: d.id, ...d.data() };
           if (data.data_operacao === dataLocal() || data.ativo === true) puts.push(put(STORE_ATEND, data));
@@ -1131,8 +1246,149 @@
       await queueSet('vallet_movimentos', movimento.id, movimento);
     }
 
-    function getOperador() { return normalize($('operador')?.value || localStorage.getItem(OPERADOR_KEY) || 'OPERADOR'); }
-    function salvarOperadorLocal() { localStorage.setItem(OPERADOR_KEY, $('operador').value.trim()); }
+    function getOperador() {
+      return normalize(operadorAtual?.nome || operadorAtual?.usuario || localStorage.getItem(OPERADOR_KEY) || 'OPERADOR');
+    }
+
+    function gerarSalt() {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function hashSenha(senha, salt) {
+      const texto = `${salt}|ECLUB_VALLET|${String(senha || '')}`;
+      if (crypto?.subtle) {
+        const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+        return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+      return btoa(unescape(encodeURIComponent(texto)));
+    }
+
+    function usuarioId(usuario) {
+      const limpo = normalize(usuario).replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      return limpo || ('OPERADOR_' + Date.now());
+    }
+
+    function operadoresAtivos() {
+      return operadores.filter(o => o.ativo !== false && o.senha_hash && o.usuario);
+    }
+
+    function atualizarTelaLogin() {
+      const semOperadores = operadoresAtivos().length === 0;
+      $('loginBox').classList.toggle('hidden', semOperadores);
+      $('setupBox').classList.toggle('active', semOperadores);
+      $('loginOfflineNotice').classList.toggle('hidden', navigator.onLine);
+      if (!semOperadores) setTimeout(() => $('loginUsuario')?.focus(), 50);
+      else setTimeout(() => $('setupUsuario')?.focus(), 50);
+    }
+
+    async function concluirLogin(operador, lembrar=false) {
+      operadorAtual = operador;
+      localStorage.setItem(OPERADOR_KEY, operador.nome || operador.usuario);
+      sessionStorage.setItem(LOGIN_SESSION_KEY, operador.id);
+      if (lembrar) localStorage.setItem(LOGIN_REMEMBER_KEY, operador.id);
+      else localStorage.removeItem(LOGIN_REMEMBER_KEY);
+      $('operadorNome').textContent = normalize(operador.nome || operador.usuario);
+      $('vallet-login').classList.add('hidden');
+      $('appPrincipal').hidden = false;
+      await atualizarTicketPreview();
+      renderTudo();
+    }
+
+    async function iniciarAutenticacao() {
+      await carregarLocal();
+      const lembrado = localStorage.getItem(LOGIN_REMEMBER_KEY);
+      const sessao = sessionStorage.getItem(LOGIN_SESSION_KEY);
+      const operadorId = lembrado || sessao;
+      const salvo = operadoresAtivos().find(o => o.id === operadorId);
+      if (salvo) {
+        await concluirLogin(salvo, Boolean(lembrado));
+        return;
+      }
+      $('appPrincipal').hidden = true;
+      $('vallet-login').classList.remove('hidden');
+      atualizarTelaLogin();
+    }
+
+    async function fazerLogin(event) {
+      event.preventDefault();
+      const usuario = normalize($('loginUsuario').value);
+      const senha = $('loginSenha').value;
+      const btn = $('btnEntrarVallet');
+      btn.disabled = true;
+      btn.textContent = 'VERIFICANDO...';
+      try {
+        const operador = operadoresAtivos().find(o => normalize(o.usuario) === usuario || normalize(o.nome) === usuario);
+        if (!operador) throw new Error('Usuário não encontrado.');
+        const hash = await hashSenha(senha, operador.senha_salt || operador.id);
+        if (hash !== operador.senha_hash) throw new Error('Senha incorreta.');
+        $('loginSenha').value = '';
+        await concluirLogin(operador, $('loginLembrar').checked);
+        toast(`Bem-vindo, ${normalize(operador.nome || operador.usuario)}.`, true);
+      } catch (e) {
+        toast(e.message || 'Não foi possível entrar.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'ENTRAR';
+      }
+    }
+
+    async function criarPrimeiroOperador(event) {
+      event.preventDefault();
+      if (operadoresAtivos().length > 0) {
+        atualizarTelaLogin();
+        return toast('Já existe operador cadastrado. Faça o login.');
+      }
+      const usuario = normalize($('setupUsuario').value);
+      const nome = normalize($('setupNome').value);
+      const senha = $('setupSenha').value;
+      const senha2 = $('setupSenha2').value;
+      if (!usuario || !nome) return toast('Preencha usuário e nome do operador.');
+      if (senha.length < 4) return toast('A senha precisa ter pelo menos 4 caracteres.');
+      if (senha !== senha2) return toast('As senhas não conferem.');
+      const btn = $('btnCriarOperador');
+      btn.disabled = true;
+      btn.textContent = 'CRIANDO...';
+      try {
+        const salt = gerarSalt();
+        const operador = {
+          id: usuarioId(usuario),
+          usuario,
+          nome,
+          senha_salt: salt,
+          senha_hash: await hashSenha(senha, salt),
+          perfil: 'ADMIN',
+          ativo: true,
+          criado_em: agoraISO(),
+          atualizado_em: agoraISO(),
+          origem_dispositivo: deviceId()
+        };
+        await put(STORE_OPERADOR, operador);
+        await queueSet('vallet_operadores', operador.id, operador);
+        await carregarLocal();
+        await concluirLogin(operador, true);
+        toast('Primeiro operador criado com sucesso.', true);
+      } catch (e) {
+        toast(e.message || 'Não foi possível criar o operador.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'CRIAR OPERADOR E ENTRAR';
+      }
+    }
+
+    function sairOperador() {
+      operadorAtual = null;
+      sessionStorage.removeItem(LOGIN_SESSION_KEY);
+      localStorage.removeItem(LOGIN_REMEMBER_KEY);
+      localStorage.removeItem(OPERADOR_KEY);
+      $('appPrincipal').hidden = true;
+      $('operadorNome').textContent = 'SEM LOGIN';
+      $('loginSenha').value = '';
+      $('loginLembrar').checked = false;
+      $('vallet-login').classList.remove('hidden');
+      atualizarTelaLogin();
+    }
 
     function maiorTicketLocalDoDia() {
       const hoje = dataLocal();
@@ -2169,7 +2425,6 @@
       aplicarTema(localStorage.getItem(THEME_KEY) || 'dark');
       idb = await openDB();
       deviceId();
-      $('operador').value = localStorage.getItem(OPERADOR_KEY) || '';
       await bootstrapPadrao();
       await carregarLocal();
 
@@ -2181,8 +2436,7 @@
         await carregarLocal();
       }
 
-      await atualizarTicketPreview();
-      renderTudo();
+      await iniciarAutenticacao();
       if ('serviceWorker' in navigator) {
         let recarregandoPorAtualizacao = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -2191,7 +2445,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=30', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=31', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
