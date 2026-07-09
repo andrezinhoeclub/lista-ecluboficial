@@ -1,7 +1,7 @@
-const CACHE_NAME = 'eclub-vallet-v27';
+const CACHE_NAME = 'eclub-vallet-v28';
 const APP_SHELL = [
   './vallet_eclub.html',
-  './vallet_eclub.html?v=27',
+  './vallet_eclub.html?v=28',
   './vallet_manifest.json'
 ];
 
@@ -44,7 +44,7 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(async () => {
           return (await caches.match(request))
-            || (await caches.match('./vallet_eclub.html?v=27'))
+            || (await caches.match('./vallet_eclub.html?v=28'))
             || (await caches.match('./vallet_eclub.html'));
         })
     );

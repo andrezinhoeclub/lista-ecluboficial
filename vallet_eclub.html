@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v27: ações escritas e ampliadas na busca + lista inferior sem botões -->
+  <!-- E-CLUB Vallet v28: validação rígida de placas AAA0000 ou AAA0A00 -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -77,6 +77,8 @@
     .ticketCorner span { display: block; color: var(--muted); font-size: 7px; font-weight: 950; text-transform: uppercase; letter-spacing: .14em; margin-bottom: 5px; }
     .ticketCorner input { padding: 0; border: 0; background: transparent; color: var(--yellow); text-align: center; font-size: 28px; font-weight: 950; letter-spacing: .08em; pointer-events: none; cursor: default; }
     .placaGrande { font-size: clamp(30px, 7vw, 54px); letter-spacing: .12em; text-align: center; padding: 22px 18px; border-radius: 24px; font-weight: 950; }
+    .plateRule { margin-top: 8px; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    input.inputInvalid { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,.14) !important; }
     .buscaGrande { font-size: clamp(15px, 3vw, 20px); padding: 20px 18px; border-radius: 22px; }
     .obsGrande { min-height: 104px; }
 
@@ -533,7 +535,8 @@
           <div class="row">
             <div>
               <label class="fieldLabel">Placa</label>
-              <input id="placa" class="placaGrande" placeholder="ABC1D23" oninput="aoDigitarPlaca()" maxlength="8" />
+              <input id="placa" class="placaGrande" placeholder="ABC1234" oninput="aoDigitarPlaca()" maxlength="7" autocapitalize="characters" spellcheck="false" />
+              <div class="plateRule">Formatos aceitos: AAA0000 ou AAA0A00</div>
             </div>
           </div>
 
@@ -665,7 +668,7 @@
         <div class="card">
           <div class="title"><div><h2>Cadastrar veículo</h2><p>Base de veículos reaproveitada nos próximos atendimentos.</p></div></div>
           <div class="row two">
-            <input id="cadPlaca" placeholder="PLACA" maxlength="8" />
+            <div><input id="cadPlaca" placeholder="PLACA" maxlength="7" autocapitalize="characters" spellcheck="false" oninput="normalizarCampoPlaca('cadPlaca')" /><div class="plateRule">AAA0000 ou AAA0A00</div></div>
             <input id="cadClienteTel" placeholder="TELEFONE" oninput="maskTel(this)" />
           </div>
           <div class="row two">
@@ -762,7 +765,8 @@
       <div class="row two">
         <div>
           <label class="fieldLabel">Placa</label>
-          <input id="editPlaca" class="placaGrande" placeholder="ABC1D23" maxlength="8" oninput="this.value = normPlaca(this.value)" />
+          <input id="editPlaca" class="placaGrande" placeholder="ABC1234" maxlength="7" autocapitalize="characters" spellcheck="false" oninput="normalizarCampoPlaca('editPlaca')" />
+          <div class="plateRule">Formatos aceitos: AAA0000 ou AAA0A00</div>
         </div>
         <div>
           <label class="fieldLabel">Setor</label>
@@ -887,6 +891,27 @@
     const horaLocal = () => new Date().toLocaleString('pt-BR');
     const normalize = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
     const normPlaca = (v) => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().substring(0, 8);
+    const formatarEntradaPlaca = (v) => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().substring(0, 7);
+    const REGEX_PLACA = /^[A-Z]{3}(?:[0-9]{4}|[0-9][A-Z][0-9]{2})$/;
+    const placaValida = (v) => REGEX_PLACA.test(formatarEntradaPlaca(v));
+
+    function normalizarCampoPlaca(id) {
+      const el = $(id);
+      if (!el) return;
+      el.value = formatarEntradaPlaca(el.value);
+      const invalida = el.value.length === 7 && !placaValida(el.value);
+      el.classList.toggle('inputInvalid', invalida);
+      el.setAttribute('aria-invalid', invalida ? 'true' : 'false');
+    }
+
+    function obterPlacaValida(valor) {
+      const placa = formatarEntradaPlaca(valor);
+      if (!placaValida(placa)) {
+        toast('Placa inválida. Use somente AAA0000 ou AAA0A00.');
+        return null;
+      }
+      return placa;
+    }
     const deviceId = () => {
       let id = localStorage.getItem(DEVICE_ID_KEY);
       if (!id) {
@@ -1496,8 +1521,8 @@
     }
 
     async function salvarVeiculoBase(data) {
-      const placa = normPlaca(data.placa);
-      if (!placa) throw new Error('Placa inválida.');
+      const placa = formatarEntradaPlaca(data.placa);
+      if (!placaValida(placa)) throw new Error('Placa inválida. Use somente AAA0000 ou AAA0A00.');
       const antigo = getVeiculoPorPlaca(placa) || {};
       const veiculo = {
         ...antigo,
@@ -1537,11 +1562,12 @@
     }
 
     function aoDigitarPlaca() {
-      const placa = normPlaca($('placa').value);
-      $('placa').value = placa;
+      normalizarCampoPlaca('placa');
+      const placa = formatarEntradaPlaca($('placa').value);
       $('avisoVeiculoNovo').classList.add('hidden');
       $('avisoVeiculoEncontrado').classList.add('hidden');
       if (placa.length < 7) return;
+      if (!placaValida(placa)) return;
       const v = getVeiculoPorPlaca(placa);
       if (v) {
         $('modelo').value = v.modelo || '';
@@ -1558,8 +1584,9 @@
     }
 
     async function receberVeiculo(imprimirAposSalvar = false) {
-      const placa = normPlaca($('placa').value);
-      if (!placa || placa.length < 7) return toast('Informe uma placa válida.');
+      const placa = obterPlacaValida($('placa').value);
+      if (!placa) return;
+      $('placa').value = placa;
       if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador.');
       const setor = getSetorById($('setorAtendimento').value);
       if (!setor) return toast('Selecione o setor onde o veículo ficará.');
@@ -1709,8 +1736,9 @@
       if (!a) return toast('Atendimento não encontrado.');
       if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador para salvar a edição.');
 
-      const placa = normPlaca($('editPlaca').value);
-      if (!placa || placa.length < 7) return toast('Informe uma placa válida.');
+      const placa = obterPlacaValida($('editPlaca').value);
+      if (!placa) return;
+      $('editPlaca').value = placa;
       const duplicada = atendimentos.find(x => x.id !== id && normPlaca(x.placa_norm || x.placa) === placa && x.ativo !== false && x.status !== 'ENTREGUE');
       if (duplicada) return toast(`Esta placa já está ativa no ticket ${duplicada.ticket}.`);
 
