@@ -525,7 +525,6 @@
               <option value="RECEBIDO">Recebidos</option>
               <option value="SOLICITADO">Solicitados</option>
               <option value="ENTREGUE">Entregues</option>
-              <option value="OCORRENCIA">Ocorrência</option>
             </select>
             <button class="btn ghost" onclick="limparBuscaAtendimento()">Limpar busca</button>
           </div>
@@ -726,18 +725,6 @@
           <label class="fieldLabel">Observações sobre o carro</label>
           <textarea id="editObs" class="obsGrande" placeholder="EX: ARRANHÃO, CHAVE COM CONTROLE, SEM ESTEPE"></textarea>
         </div>
-      </div>
-      <div class="row">
-        <div>
-          <label class="fieldLabel">Ocorrência deste atendimento</label>
-          <textarea id="editOcorrenciaTexto" class="obsGrande" placeholder="DESCREVA OU ALTERE A OCORRÊNCIA DESTE ATENDIMENTO"></textarea>
-          <div id="editOcorrenciaMeta" class="smallText"></div>
-        </div>
-      </div>
-      <div class="notice">Ao salvar uma ocorrência, a edição será salva, a tela será fechada e o status ficará como OCORRÊNCIA. Use apagar ocorrência apenas quando o registro tiver sido lançado por engano.</div>
-      <div class="row two">
-        <button class="btn red" onclick="registrarOcorrenciaDoEditor()">Salvar / alterar ocorrência</button>
-        <button class="btn ghost" onclick="apagarOcorrenciaDoEditor()">Apagar ocorrência</button>
       </div>
       <div class="row two">
         <button class="btn green" onclick="salvarEdicaoAtendimento()">Salvar edição</button>
@@ -1156,7 +1143,6 @@
     function getDataUltimaAcao(a) {
       const candidatos = [
         ['ENTREGUE', a.entregue_em],
-        ['OCORRENCIA', a.ocorrencia_em],
         ['SOLICITADO', a.solicitado_em],
         ['ESTACIONADO', a.estacionado_em],
         ['EDITADO', a.editado_em || a.ultima_alteracao_em],
@@ -1172,7 +1158,6 @@
     function getOperadorUltimaAcao(a) {
       const candidatos = [
         ['ENTREGUE', a.entregue_em, a.operador_ultima_acao || a.operador_entrega],
-        ['OCORRENCIA', a.ocorrencia_em, a.operador_ocorrencia || a.operador_ultima_acao],
         ['SOLICITADO', a.solicitado_em, a.operador_ultima_acao || a.operador_solicitacao],
         ['ESTACIONADO', a.estacionado_em, a.operador_ultima_acao || a.operador_estacionamento],
         ['EDITADO', a.editado_em || a.ultima_alteracao_em, a.operador_edicao || a.ultima_alteracao_operador],
@@ -1227,32 +1212,6 @@
       registros.forEach(a => { if (a.entregue_em) datasEntrega.push(a.entregue_em); });
       const ultimaEntrega = datasEntrega.sort((a,b) => String(b).localeCompare(String(a)))[0] || '';
 
-      const ocorrencias = [];
-      listaOcorrenciasVeiculo(v).forEach(o => ocorrencias.push({
-        texto: normalize(o.texto), em: o.em || '', operador: o.operador || '', ticket: o.ticket || '', atendimento_id: o.atendimento_id || ''
-      }));
-      registros.forEach(a => {
-        if (a.ocorrencia_texto) {
-          ocorrencias.push({
-            texto: normalize(a.ocorrencia_texto),
-            em: a.ocorrencia_em || a.ultima_alteracao_em || a.atualizado_em || '',
-            operador: a.operador_ocorrencia || a.operador_ultima_acao || a.operador_edicao || '',
-            ticket: a.ticket || '',
-            atendimento_id: a.id || ''
-          });
-        }
-      });
-      const ocorrUnicas = [];
-      const seenOc = new Set();
-      ocorrencias.forEach(o => {
-        if (!o.texto) return;
-        const chave = `${o.atendimento_id || ''}|${o.em || ''}|${o.texto}`;
-        if (seenOc.has(chave)) return;
-        seenOc.add(chave);
-        ocorrUnicas.push(o);
-      });
-      ocorrUnicas.sort((a,b) => String(b.em || '').localeCompare(String(a.em || '')));
-
       const observacoes = [];
       const addObs = (texto, em='', operador='', ticket='') => {
         const t = normalize(texto);
@@ -1262,9 +1221,13 @@
       };
       addObs(v.obs, v.atualizado_em || v.ultima_visita || '', '', '');
       (Array.isArray(v.historico_observacoes) ? v.historico_observacoes : []).forEach(o => addObs(o.texto, o.em, o.operador, o.ticket));
-      registros.forEach(a => addObs(a.obs, a.ultima_alteracao_em || a.recebido_em || a.criado_em, a.operador_ultima_acao || a.operador_recebimento, a.ticket));
+      registros.forEach(a => {
+        addObs(a.obs, a.ultima_alteracao_em || a.recebido_em || a.criado_em, a.operador_ultima_acao || a.operador_recebimento, a.ticket);
+        // Dados antigos lançados no campo de ocorrência são tratados apenas como observação, sem campo separado.
+        addObs(a.ocorrencia_texto, a.ocorrencia_em || a.ultima_alteracao_em || a.recebido_em || a.criado_em, a.operador_ocorrencia || a.operador_ultima_acao || a.operador_recebimento, a.ticket);
+      });
 
-      return { placa: p, registros, ultimaVisita, ultimaEntrega, ocorrencias: ocorrUnicas, observacoes };
+      return { placa: p, registros, ultimaVisita, ultimaEntrega, observacoes };
     }
 
     function resumoHistoricoVeiculo(v) {
@@ -1274,28 +1237,14 @@
       partes.push('<div><b>Dados carregados:</b> modelo, cor, cliente, telefone e observações da base.</div>');
       if (h.ultimaVisita) partes.push(`<div><b>Última visita:</b> ${formatarDataHoraCurta(h.ultimaVisita)}</div>`);
       if (h.ultimaEntrega) partes.push(`<div><b>Última entrega ao cliente:</b> ${formatarDataHoraCurta(h.ultimaEntrega)}</div>`);
-
       if (h.observacoes.length) {
-        partes.push(`<div><b>Observações gravadas:</b> ${h.observacoes.slice(0, 3).map(o => `${o.texto}${o.em ? ` <span class="mutedLine">(${formatarDataHoraCurta(o.em)}${o.operador ? ' • ' + o.operador : ''})</span>` : ''}`).join(' / ')}</div>`);
+        partes.push(`<div><b>Observações gravadas:</b> ${h.observacoes.slice(0, 4).map(o => `${o.texto}${o.em ? ` <span class="mutedLine">(${formatarDataHoraCurta(o.em)}${o.operador ? ' • ' + o.operador : ''})</span>` : ''}`).join(' / ')}</div>`);
       }
-      if (h.ocorrencias.length) {
-        partes.push(`<div class="dangerLine"><b>Ocorrências gravadas:</b> ${h.ocorrencias.slice(0, 4).map(o => `${o.ticket ? '#' + o.ticket + ' • ' : ''}${formatarDataHoraCurta(o.em)} • ${o.operador || '---'} • ${o.texto}`).join(' / ')}</div>`);
-      }
-      if (!h.ultimaVisita && !h.ultimaEntrega && !h.observacoes.length && !h.ocorrencias.length) {
-        partes.push('<div>Sem visitas, entregas ou ocorrências anteriores registradas nesta placa.</div>');
+      if (!h.ultimaVisita && !h.ultimaEntrega && !h.observacoes.length) {
+        partes.push('<div>Sem visitas ou observações anteriores registradas nesta placa.</div>');
       }
       partes.push('<div class="mutedLine">Selecione o setor atual deste novo atendimento antes de receber o veículo.</div>');
       return partes.join('');
-    }
-
-    function mesclarOcorrencia(lista, ocorrencia) {
-      const base = Array.isArray(lista) ? lista.filter(o => o && o.atendimento_id !== ocorrencia.atendimento_id) : [];
-      base.push(ocorrencia);
-      return base.sort((a,b) => String(b.em || '').localeCompare(String(a.em || ''))).slice(0, 30);
-    }
-
-    function removerOcorrencia(lista, atendimentoId) {
-      return (Array.isArray(lista) ? lista : []).filter(o => o && o.atendimento_id !== atendimentoId);
     }
 
     async function salvarHistoricoVeiculoAtendimento(atendimento, opcoes = {}) {
@@ -1304,24 +1253,10 @@
       if (!placa) return null;
       const antigo = getVeiculoPorPlaca(placa) || {};
       const quando = opcoes.quando || agoraISO();
-      let ocorrencias = Array.isArray(antigo.ocorrencias) ? [...antigo.ocorrencias] : [];
-
-      if (opcoes.removerOcorrencia) {
-        ocorrencias = removerOcorrencia(ocorrencias, atendimento.id);
-      } else if (opcoes.ocorrenciaTexto || atendimento.ocorrencia_texto) {
-        ocorrencias = mesclarOcorrencia(ocorrencias, {
-          id: `${atendimento.id}_ocorrencia`,
-          atendimento_id: atendimento.id,
-          ticket: atendimento.ticket,
-          texto: normalize(opcoes.ocorrenciaTexto || atendimento.ocorrencia_texto),
-          em: opcoes.ocorrenciaEm || atendimento.ocorrencia_em || quando,
-          operador: opcoes.operador || atendimento.operador_ocorrencia || atendimento.operador_ultima_acao || getOperador()
-        });
-      }
-
-      const historicoObs = Array.isArray(antigo.historico_observacoes) ? [...antigo.historico_observacoes] : [];
-      const obsAtual = normalize(atendimento.obs || antigo.obs || '');
-      if (obsAtual && !historicoObs.some(o => o.texto === obsAtual)) {
+      const temObsNoAtendimento = Object.prototype.hasOwnProperty.call(atendimento, 'obs');
+      const obsAtual = normalize(temObsNoAtendimento ? atendimento.obs : (antigo.obs || ''));
+      const historicoObs = [];
+      if (obsAtual) {
         historicoObs.unshift({ texto: obsAtual, em: quando, operador: getOperador(), atendimento_id: atendimento.id, ticket: atendimento.ticket });
       }
 
@@ -1345,11 +1280,11 @@
         ultima_vaga: atendimento.vaga || antigo.ultima_vaga || '',
         ultima_visita: opcoes.entrada ? (atendimento.recebido_em || atendimento.criado_em || quando) : (antigo.ultima_visita || atendimento.recebido_em || atendimento.criado_em || ''),
         ultima_entrega: opcoes.entrega ? (atendimento.entregue_em || quando) : (antigo.ultima_entrega || ''),
-        ultima_ocorrencia_texto: ocorrencias[0]?.texto || '',
-        ultima_ocorrencia_em: ocorrencias[0]?.em || '',
-        ultima_ocorrencia_operador: ocorrencias[0]?.operador || '',
-        ocorrencias,
-        historico_observacoes: historicoObs.slice(0, 30),
+        ultima_ocorrencia_texto: '',
+        ultima_ocorrencia_em: '',
+        ultima_ocorrencia_operador: '',
+        ocorrencias: [],
+        historico_observacoes: historicoObs,
         atualizado_em: quando,
         origem_dispositivo: deviceId()
       };
@@ -1606,24 +1541,6 @@
       }, 'ENTREGUE', 'Veículo entregue ao cliente');
       if (novo) await salvarHistoricoVeiculoAtendimento(novo, { entrega: true, quando });
     }
-    async function registrarOcorrencia(id) {
-      const texto = prompt('Descreva a ocorrência:');
-      if (!texto) return;
-      const a = atendimentos.find(x => x.id === id);
-      const quando = agoraISO();
-      const operador = getOperador();
-      await atualizarAtendimento(id, {
-        status: 'OCORRENCIA',
-        ativo: true,
-        obs: normalize((a.obs || '') + ' | OCORRÊNCIA: ' + texto),
-        ocorrencia_texto: normalize(texto),
-        ocorrencia_em: quando,
-        operador_ocorrencia: operador,
-        ultima_alteracao_em: quando,
-        ultima_alteracao_operador: operador
-      }, 'OCORRENCIA', texto);
-    }
-
     function abrirModalEdicao(id) {
       const a = atendimentos.find(x => x.id === id);
       if (!a) return;
@@ -1638,12 +1555,6 @@
       $('editClienteNome').value = a.cliente_nome || '';
       $('editClienteTel').value = a.cliente_tel || '';
       $('editObs').value = a.obs || '';
-      if ($('editOcorrenciaTexto')) $('editOcorrenciaTexto').value = a.ocorrencia_texto || '';
-      if ($('editOcorrenciaMeta')) {
-        $('editOcorrenciaMeta').innerHTML = a.ocorrencia_em
-          ? `Ocorrência atual: ${formatarDataHoraCurta(a.ocorrencia_em)} • ${a.operador_ocorrencia || a.operador_ultima_acao || '---'}`
-          : 'Nenhuma ocorrência registrada neste atendimento.';
-      }
       renderAtendimentos();
       $('modalEdicao').classList.add('show');
     }
@@ -1699,131 +1610,6 @@
       toast('Edição salva com data, hora e operador.', true);
     }
 
-    async function registrarOcorrenciaDoEditor() {
-      const id = $('editAtendimentoId').value;
-      const a = atendimentos.find(x => x.id === id);
-      if (!id || !a) return toast('Abra um atendimento para editar.');
-      if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador para registrar a ocorrência.');
-
-      const ocorrencia = normalize(($('editOcorrenciaTexto') && $('editOcorrenciaTexto').value) || '');
-      if (!ocorrencia) return toast('Descreva a ocorrência antes de salvar.');
-
-      const placa = normPlaca($('editPlaca').value);
-      if (!placa || placa.length < 7) return toast('Informe uma placa válida.');
-      const duplicada = atendimentos.find(x => x.id !== id && normPlaca(x.placa_norm || x.placa) === placa && x.ativo !== false && x.status !== 'ENTREGUE');
-      if (duplicada) return toast(`Esta placa já está ativa no ticket ${duplicada.ticket}.`);
-
-      const setor = getSetorEdicaoSeguro(a);
-      const modelo = normalize($('editModelo').value);
-      const cor = normalize($('editCor').value);
-      const obsBase = normalize($('editObs').value);
-      const quando = agoraISO();
-      const operador = getOperador();
-
-      const patch = {
-        status_anterior_ocorrencia: a.status === 'OCORRENCIA' ? (a.status_anterior_ocorrencia || 'RECEBIDO') : a.status,
-        status: 'OCORRENCIA',
-        ativo: true,
-        placa,
-        placa_norm: placa,
-        modelo,
-        cor,
-        setor_id: setor.id || '',
-        setor_nome: setor.nome || '',
-        vaga: normalize($('editVaga').value),
-        cliente_nome: normalize($('editClienteNome').value),
-        cliente_tel: $('editClienteTel').value.trim(),
-        obs: obsBase,
-        ocorrencia_texto: ocorrencia,
-        ocorrencia_em: quando,
-        operador_ocorrencia: operador,
-        editado_em: quando,
-        operador_edicao: operador,
-        ultima_alteracao_em: quando,
-        ultima_alteracao_operador: operador,
-        operador_ultima_acao: operador,
-        atualizado_em: quando,
-        modelo_precisa_revisao: modeloRevisao(modelo),
-        cor_precisa_revisao: corRevisao(cor)
-      };
-
-      const novo = { ...a, ...patch };
-
-      try {
-        await put(STORE_ATEND, novo);
-        await queueSet('vallet_atendimentos', novo.id, novo);
-        await criarMovimento(novo, 'OCORRENCIA', ocorrencia);
-        await salvarHistoricoVeiculoAtendimento(novo, { ocorrenciaTexto: ocorrencia, ocorrenciaEm: quando, operador, quando });
-
-        atendimentoEdicaoAtivaId = null;
-        $('modalEdicao').classList.remove('show');
-        await carregarLocal();
-        renderTudo();
-        toast('Ocorrência salva, histórico da placa atualizado e tela fechada.', true);
-      } catch (e) {
-        console.warn('Falha ao registrar ocorrência', e);
-        toast('Erro ao registrar ocorrência. Tente novamente.');
-      }
-    }
-
-    async function apagarOcorrenciaDoEditor() {
-      const id = $('editAtendimentoId').value;
-      const a = atendimentos.find(x => x.id === id);
-      if (!id || !a) return toast('Abra um atendimento para editar.');
-      if (!a.ocorrencia_em && !a.ocorrencia_texto) return toast('Este atendimento não possui ocorrência para apagar.');
-      if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador para apagar a ocorrência.');
-      if (!confirm('Apagar a ocorrência deste atendimento?')) return;
-
-      const placa = normPlaca($('editPlaca').value || a.placa);
-      const setor = getSetorEdicaoSeguro(a);
-      const modelo = normalize($('editModelo').value || a.modelo);
-      const cor = normalize($('editCor').value || a.cor);
-      const quando = agoraISO();
-      const operador = getOperador();
-      const statusRestaurado = a.status === 'OCORRENCIA' ? (a.status_anterior_ocorrencia || 'RECEBIDO') : a.status;
-
-      const patch = {
-        status: statusRestaurado,
-        status_anterior_ocorrencia: '',
-        placa,
-        placa_norm: placa,
-        modelo,
-        cor,
-        setor_id: setor.id || '',
-        setor_nome: setor.nome || '',
-        vaga: normalize($('editVaga').value),
-        cliente_nome: normalize($('editClienteNome').value),
-        cliente_tel: $('editClienteTel').value.trim(),
-        obs: normalize($('editObs').value),
-        ocorrencia_texto: '',
-        ocorrencia_em: '',
-        operador_ocorrencia: '',
-        ocorrencia_removida_em: quando,
-        ocorrencia_removida_operador: operador,
-        editado_em: quando,
-        operador_edicao: operador,
-        ultima_alteracao_em: quando,
-        ultima_alteracao_operador: operador,
-        operador_ultima_acao: operador,
-        atualizado_em: quando,
-        modelo_precisa_revisao: modeloRevisao(modelo),
-        cor_precisa_revisao: corRevisao(cor)
-      };
-      const novo = { ...a, ...patch };
-      await put(STORE_ATEND, novo);
-      await queueSet('vallet_atendimentos', novo.id, novo);
-      await criarMovimento(novo, 'OCORRENCIA_REMOVIDA', 'Ocorrência apagada pelo operador');
-      await salvarHistoricoVeiculoAtendimento(novo, { removerOcorrencia: true, quando });
-      atendimentoEdicaoAtivaId = null;
-      $('modalEdicao').classList.remove('show');
-      await carregarLocal(); renderTudo();
-      toast('Ocorrência apagada e histórico da placa atualizado.', true);
-    }
-
-    async function registrarOcorrenciaEditando(id) {
-      if (atendimentoEdicaoAtivaId !== id) return toast('Clique em Editar antes de registrar ocorrência.');
-      await registrarOcorrencia(id);
-    }
 
     function montarSelectSetores() {
       const ativos = setores.filter(s => s.ativo !== false);
@@ -1919,10 +1705,9 @@
       const box = $('listaVeiculos');
       if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum veículo encontrado.</div>'; return; }
       box.innerHTML = lista.map(v => {
-        const ocorrencias = listaOcorrenciasVeiculo(v).slice(0, 3);
         return `<div class="vehicleCard">
         <div class="vehicleTop"><span class="plate">${v.placa}</span><span class="tag">Cadastro</span></div>
-        <div class="meta"><strong>${v.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${v.cor || 'COR NÃO INFORMADA'}<br><span class="muted">${v.cliente_nome || 'CLIENTE NÃO INFORMADO'} ${v.cliente_tel ? '• ' + v.cliente_tel : ''}</span>${v.ultima_visita ? '<br><span class="muted">ÚLTIMA VISITA: '+formatarDataHoraCurta(v.ultima_visita)+'</span>' : ''}${v.ultima_entrega ? '<br><span class="muted">ÚLTIMA ENTREGA: '+formatarDataHoraCurta(v.ultima_entrega)+'</span>' : ''}${(v.modelo_precisa_revisao || v.cor_precisa_revisao) ? '<br><span class="dangerText">REVISAR CADASTRO: MODELO/COR FORA DA LISTA PADRÃO</span>' : ''}${v.obs ? '<br><span class="muted">OBS: '+v.obs+'</span>' : ''}${ocorrencias.length ? '<br><span class="dangerText">OCORRÊNCIAS: '+ocorrencias.map(o => formatarDataHoraCurta(o.em)+' • '+o.texto).join(' / ')+'</span>' : ''}</div>
+        <div class="meta"><strong>${v.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${v.cor || 'COR NÃO INFORMADA'}<br><span class="muted">${v.cliente_nome || 'CLIENTE NÃO INFORMADO'} ${v.cliente_tel ? '• ' + v.cliente_tel : ''}</span>${v.ultima_visita ? '<br><span class="muted">ÚLTIMA VISITA: '+formatarDataHoraCurta(v.ultima_visita)+'</span>' : ''}${v.ultima_entrega ? '<br><span class="muted">ÚLTIMA ENTREGA: '+formatarDataHoraCurta(v.ultima_entrega)+'</span>' : ''}${(v.modelo_precisa_revisao || v.cor_precisa_revisao) ? '<br><span class="dangerText">REVISAR CADASTRO: MODELO/COR FORA DA LISTA PADRÃO</span>' : ''}${v.obs ? '<br><span class="muted">OBS: '+v.obs+'</span>' : ''}</div>
       </div>`;
       }).join('');
     }
@@ -1936,7 +1721,7 @@
       else if (filtro !== 'todos') lista = lista.filter(a => a.status === filtro);
       if (q) lista = lista.filter(a => [a.ticket, a.placa, a.modelo, a.cor, a.cliente_nome, a.cliente_tel, a.setor_nome, a.vaga, a.status].some(x => normalize(x).includes(q)));
 
-      const ordem = { SOLICITADO: 1, OCORRENCIA: 2, RECEBIDO: 3, ESTACIONADO: 4, ENTREGUE: 9 };
+      const ordem = { SOLICITADO: 1, RECEBIDO: 2, ESTACIONADO: 3, ENTREGUE: 9 };
       lista.sort((a,b) => (ordem[a.status] || 8) - (ordem[b.status] || 8) || String(b.atualizado_em).localeCompare(String(a.atualizado_em)));
 
       const box = $('listaAtendimentos');
@@ -1950,9 +1735,6 @@
           ? `<span><b>Liberação:</b> ${formatarDataHoraCurta(a.entregue_em)} • ${operadorUltima}</span>`
           : `<span><b>Última ação:</b> ${dataUltima} • ${operadorUltima}</span>`;
         const vHist = getVeiculoPorPlaca(a.placa);
-        const ocorrenciasAntigas = listaOcorrenciasVeiculo(vHist)
-          .filter(o => o.atendimento_id !== a.id)
-          .slice(0, 2);
         return `<div class="vehicleCard operationCard">
         <div class="operationHeader">
           <div class="operationMain">
@@ -1963,7 +1745,7 @@
               <span class="muted">${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
             </div>
           </div>
-          <span class="tag ${a.status}">${a.status === 'OCORRENCIA' ? 'OCORRÊNCIA' : a.status}</span>
+          <span class="tag ${a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status}">${a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status}</span>
         </div>
         <div class="operationInfo">
           <span><b>Cliente:</b> ${a.cliente_nome || '---'}${a.cliente_tel ? ' • ' + a.cliente_tel : ''}</span>
@@ -1972,8 +1754,6 @@
           ${a.editado_em ? `<span><b>Última edição:</b> ${formatarDataHoraCurta(a.editado_em)} • ${a.operador_edicao || a.ultima_alteracao_operador || '---'}</span>` : ''}
           ${vHist && vHist.ultima_visita ? `<span><b>Última visita da placa:</b> ${formatarDataHoraCurta(vHist.ultima_visita)}</span>` : ''}
           ${vHist && vHist.ultima_entrega ? `<span><b>Última entrega da placa:</b> ${formatarDataHoraCurta(vHist.ultima_entrega)}</span>` : ''}
-          ${a.ocorrencia_em ? `<span class="dangerText"><b>Ocorrência registrada:</b> ${formatarDataHoraCurta(a.ocorrencia_em)} • ${a.operador_ocorrencia || a.operador_ultima_acao || '---'}${a.ocorrencia_texto ? ' • ' + a.ocorrencia_texto : ''}</span>` : ''}
-          ${ocorrenciasAntigas.length ? `<span class="dangerText"><b>Histórico da placa:</b> ${ocorrenciasAntigas.map(o => `${formatarDataHoraCurta(o.em)} • ${o.texto}`).join(' / ')}</span>` : ''}
           ${(a.modelo_precisa_revisao || a.cor_precisa_revisao) ? '<span class="dangerText"><b>Revisar:</b> modelo/cor fora da lista padrão</span>' : ''}
           ${a.obs ? '<span class="dangerText"><b>Obs:</b> '+a.obs+'</span>' : ''}
         </div>
@@ -1990,7 +1770,7 @@
       const hoje = dataLocal();
       const lista = atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
       $('kpiRecebido').textContent = lista.filter(a => a.status === 'RECEBIDO').length;
-      $('kpiSolicitado').textContent = lista.filter(a => a.status === 'SOLICITADO' || a.status === 'OCORRENCIA').length;
+      $('kpiSolicitado').textContent = lista.filter(a => a.status === 'SOLICITADO').length;
       $('kpiEntregue').textContent = lista.filter(a => a.status === 'ENTREGUE').length;
     }
 
@@ -2109,7 +1889,7 @@
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('vallet_sw.js?v=11').catch(() => {});
+        navigator.serviceWorker.register('vallet_sw.js?v=16').catch(() => {});
       }
       if (navigator.onLine) {
         await processarFila();
