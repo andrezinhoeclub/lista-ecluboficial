@@ -994,9 +994,16 @@
     function getSetorById(id) { return setores.find(s => s.id === id) || null; }
 
     function getSetorEdicaoSeguro(atendimento) {
-      const valorSelect = $('editSetor') ? $('editSetor').value : '';
+      const select = $('editSetor');
+      const valorSelect = select ? select.value : '';
       const selecionado = getSetorById(valorSelect);
       if (selecionado) return { id: selecionado.id, nome: selecionado.nome };
+      if (valorSelect === '__MANTER_SETOR_ATUAL__') {
+        return {
+          id: (atendimento && atendimento.setor_id) || (select && select.dataset.currentSetorId) || '',
+          nome: (atendimento && atendimento.setor_nome) || (select && select.dataset.currentSetorNome) || ''
+        };
+      }
       return {
         id: atendimento && atendimento.setor_id ? atendimento.setor_id : '',
         nome: atendimento && atendimento.setor_nome ? atendimento.setor_nome : ''
@@ -1005,16 +1012,27 @@
 
     function garantirSetorAtualNoEditor(atendimento) {
       const select = $('editSetor');
-      if (!select || !atendimento || (!atendimento.setor_id && !atendimento.setor_nome)) return;
-      const valor = atendimento.setor_id || '__setor_atual__';
-      const existe = Array.from(select.options).some(opt => opt.value === valor);
-      if (!existe) {
+      if (!select || !atendimento) return;
+
+      const setorNomeAtual = normalize(atendimento.setor_nome || '');
+      const setorIdAtual = atendimento.setor_id || '';
+      select.dataset.currentSetorId = setorIdAtual;
+      select.dataset.currentSetorNome = setorNomeAtual;
+
+      Array.from(select.options)
+        .filter(opt => opt.value === '__MANTER_SETOR_ATUAL__')
+        .forEach(opt => opt.remove());
+
+      if (setorNomeAtual || setorIdAtual) {
         const opt = document.createElement('option');
-        opt.value = valor;
-        opt.textContent = atendimento.setor_nome || 'SETOR ATUAL';
-        select.appendChild(opt);
+        opt.value = '__MANTER_SETOR_ATUAL__';
+        opt.textContent = `MANTER SETOR ATUAL: ${setorNomeAtual || setorIdAtual}`;
+        select.insertBefore(opt, select.firstChild);
+        select.value = '__MANTER_SETOR_ATUAL__';
+        return;
       }
-      select.value = valor;
+
+      select.value = '';
     }
 
     function idTexto(prefixo, nome) {
@@ -1504,7 +1522,6 @@
       const obsBase = normalize($('editObs').value);
       const quando = agoraISO();
       const operador = getOperador();
-      const obsFinal = obsBase;
 
       const patch = {
         status: 'OCORRENCIA',
@@ -1518,7 +1535,7 @@
         vaga: normalize($('editVaga').value),
         cliente_nome: normalize($('editClienteNome').value),
         cliente_tel: $('editClienteTel').value.trim(),
-        obs: obsFinal,
+        obs: obsBase,
         ocorrencia_texto: ocorrencia,
         ocorrencia_em: quando,
         operador_ocorrencia: operador,
@@ -1526,41 +1543,53 @@
         operador_edicao: operador,
         ultima_alteracao_em: quando,
         ultima_alteracao_operador: operador,
+        operador_ultima_acao: operador,
+        atualizado_em: quando,
         modelo_precisa_revisao: modeloRevisao(modelo),
         cor_precisa_revisao: corRevisao(cor)
       };
 
-      await atualizarAtendimento(id, patch, 'OCORRENCIA', ocorrencia);
-      atendimentoEdicaoAtivaId = null;
-      $('modalEdicao').classList.remove('show');
-      await carregarLocal();
-      renderTudo();
+      const novo = { ...a, ...patch };
 
-      const veiculoId = 'placa_' + placa;
-      const antigoVeiculo = veiculos.find(v => v.id === veiculoId) || {};
-      const veiculo = {
-        ...antigoVeiculo,
-        id: veiculoId,
-        placa,
-        placa_norm: placa,
-        modelo,
-        cor,
-        cliente_nome: patch.cliente_nome,
-        cliente_tel: patch.cliente_tel,
-        obs: obsFinal,
-        modelo_precisa_revisao: patch.modelo_precisa_revisao,
-        cor_precisa_revisao: patch.cor_precisa_revisao,
-        atualizado_em: quando,
-        ultima_visita: quando,
-        origem_dispositivo: deviceId()
-      };
-      await put(STORE_VEICULO, veiculo);
-      await queueSet('vallet_veiculos', veiculo.id, veiculo);
+      try {
+        await put(STORE_ATEND, novo);
 
-      atendimentoEdicaoAtivaId = null;
-      $('modalEdicao').classList.remove('show');
-      await carregarLocal(); renderTudo();
-      toast('Ocorrência registrada e edição salva.', true);
+        atendimentoEdicaoAtivaId = null;
+        $('modalEdicao').classList.remove('show');
+        await carregarLocal();
+        renderTudo();
+        toast('Ocorrência registrada, edição salva e tela fechada.', true);
+
+        await queueSet('vallet_atendimentos', novo.id, novo);
+        await criarMovimento(novo, 'OCORRENCIA', ocorrencia);
+
+        const veiculoId = 'placa_' + placa;
+        const antigoVeiculo = veiculos.find(v => v.id === veiculoId) || {};
+        const veiculo = {
+          ...antigoVeiculo,
+          id: veiculoId,
+          placa,
+          placa_norm: placa,
+          modelo,
+          cor,
+          cliente_nome: patch.cliente_nome,
+          cliente_tel: patch.cliente_tel,
+          obs: obsBase,
+          modelo_precisa_revisao: patch.modelo_precisa_revisao,
+          cor_precisa_revisao: patch.cor_precisa_revisao,
+          atualizado_em: quando,
+          ultima_visita: quando,
+          origem_dispositivo: deviceId()
+        };
+        await put(STORE_VEICULO, veiculo);
+        await queueSet('vallet_veiculos', veiculo.id, veiculo);
+
+        await carregarLocal();
+        renderTudo();
+      } catch (e) {
+        console.warn('Falha ao registrar ocorrência', e);
+        toast('Erro ao registrar ocorrência. Tente novamente.');
+      }
     }
 
     async function registrarOcorrenciaEditando(id) {
