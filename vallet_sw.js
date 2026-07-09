@@ -1,7 +1,7 @@
-const CACHE_NAME = 'eclub-vallet-v26';
+const CACHE_NAME = 'eclub-vallet-v27';
 const APP_SHELL = [
   './vallet_eclub.html',
-  './vallet_eclub.html?v=26',
+  './vallet_eclub.html?v=27',
   './vallet_manifest.json'
 ];
 
@@ -31,8 +31,6 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
 
-  // Para navegação, busca primeiro a versão atual na rede.
-  // Sem internet, usa a versão v26 salva no aparelho.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request, { cache: 'no-store' })
@@ -46,14 +44,13 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(async () => {
           return (await caches.match(request))
-            || (await caches.match('./vallet_eclub.html?v=26'))
+            || (await caches.match('./vallet_eclub.html?v=27'))
             || (await caches.match('./vallet_eclub.html'));
         })
     );
     return;
   }
 
-  // Para os demais arquivos locais, usa cache com atualização em segundo plano.
   if (new URL(request.url).origin === self.location.origin) {
     event.respondWith(
       caches.match(request).then((cached) => {
