@@ -1134,17 +1134,92 @@
     function getOperador() { return normalize($('operador')?.value || localStorage.getItem(OPERADOR_KEY) || 'OPERADOR'); }
     function salvarOperadorLocal() { localStorage.setItem(OPERADOR_KEY, $('operador').value.trim()); }
 
-    async function proximoTicket() {
-      const dia = dataLocal().replace(/-/g, '');
-      const key = 'ticket_' + dia;
-      const atual = Number(await lerMeta(key) || 0) + 1;
-      await salvarMeta(key, atual);
-      return String(atual).padStart(3, '0');
+    function maiorTicketLocalDoDia() {
+      const hoje = dataLocal();
+      return atendimentos
+        .filter(a => String(a.data_operacao || '') === hoje)
+        .reduce((maior, a) => {
+          const numero = Number.parseInt(String(a.ticket || '').replace(/\D/g, ''), 10);
+          return Number.isFinite(numero) ? Math.max(maior, numero) : maior;
+        }, 0);
     }
+
+    function chaveContadorTicket() {
+      return 'ticket_' + dataLocal().replace(/-/g, '');
+    }
+
+    async function lerContadorTicketGlobal() {
+      if (!navigator.onLine) return 0;
+      const fb = await initFirebase();
+      if (!fb) return 0;
+      try {
+        const refContador = fb.doc(fb.db, 'vallet_contadores', chaveContadorTicket());
+        const snap = await fb.getDoc(refContador);
+        return snap.exists() ? Number(snap.data()?.ultimo_ticket || 0) : 0;
+      } catch (e) {
+        console.warn('Não foi possível consultar o contador global de tickets.', e);
+        return 0;
+      }
+    }
+
+    async function proximoTicket() {
+      const key = chaveContadorTicket();
+      const maiorLocal = Math.max(
+        maiorTicketLocalDoDia(),
+        Number(await lerMeta(key) || 0)
+      );
+
+      // Com internet, o número é reservado em uma transação no Firebase.
+      // Isso impede que dois terminais online emitam o mesmo ticket.
+      if (navigator.onLine) {
+        const fb = await initFirebase();
+        if (!fb) throw new Error('Não foi possível conectar ao contador central de tickets. Tente novamente.');
+
+        try {
+          const refContador = fb.doc(fb.db, 'vallet_contadores', key);
+          const proximo = await fb.runTransaction(fb.db, async (transaction) => {
+            const snap = await transaction.get(refContador);
+            const ultimoGlobal = snap.exists() ? Number(snap.data()?.ultimo_ticket || 0) : 0;
+            const numero = Math.max(ultimoGlobal, maiorLocal) + 1;
+
+            transaction.set(refContador, {
+              data_operacao: dataLocal(),
+              ultimo_ticket: numero,
+              atualizado_em: agoraISO(),
+              ultimo_dispositivo: deviceId(),
+              ultimo_operador: getOperador()
+            }, { merge: true });
+
+            return numero;
+          });
+
+          await salvarMeta(key, proximo);
+          return String(proximo).padStart(3, '0');
+        } catch (e) {
+          console.error('Falha ao reservar ticket global.', e);
+          throw new Error('Não foi possível reservar o próximo ticket global. Verifique a internet e tente novamente.');
+        }
+      }
+
+      // Sem internet, usa a maior numeração já conhecida neste aparelho.
+      // A sequência entre aparelhos diferentes só pode ser garantida quando eles estão online.
+      const proximoLocal = maiorLocal + 1;
+      await salvarMeta(key, proximoLocal);
+      return String(proximoLocal).padStart(3, '0');
+    }
+
     async function atualizarTicketPreview() {
-      const dia = dataLocal().replace(/-/g, '');
-      const atual = Number(await lerMeta('ticket_' + dia) || 0) + 1;
-      $('ticketPreview').value = String(atual).padStart(3, '0');
+      const key = chaveContadorTicket();
+      const [metaLocal, contadorGlobal] = await Promise.all([
+        lerMeta(key),
+        lerContadorTicketGlobal()
+      ]);
+      const base = Math.max(
+        maiorTicketLocalDoDia(),
+        Number(metaLocal || 0),
+        Number(contadorGlobal || 0)
+      );
+      $('ticketPreview').value = String(base + 1).padStart(3, '0');
     }
 
     function getSetorById(id) { return setores.find(s => s.id === id) || null; }
@@ -2097,6 +2172,15 @@
       $('operador').value = localStorage.getItem(OPERADOR_KEY) || '';
       await bootstrapPadrao();
       await carregarLocal();
+
+      // Antes de mostrar o próximo ticket, busca os atendimentos e o contador
+      // compartilhado para que um terminal novo continue a sequência existente.
+      if (navigator.onLine) {
+        await processarFila();
+        await puxarFirebase();
+        await carregarLocal();
+      }
+
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
@@ -2107,20 +2191,19 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=29', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=30', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
-      if (navigator.onLine) {
-        await processarFila();
-        await puxarFirebase();
-        await carregarLocal();
-        renderTudo();
-      }
-      setInterval(async () => { if (navigator.onLine) await processarFila(); }, 30000);
+      setInterval(async () => {
+        if (navigator.onLine) {
+          await processarFila();
+          await atualizarTicketPreview();
+        }
+      }, 30000);
     }
 
-    window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); });
+    window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await atualizarTicketPreview(); });
     window.addEventListener('offline', () => { atualizarStatus(); toast('Sem internet. Salvando neste aparelho.'); });
     window.addEventListener('afterprint', () => { const t = document.getElementById('ticketImpressao'); if (t) t.setAttribute('aria-hidden', 'true'); });
     window.addEventListener('DOMContentLoaded', iniciar);
