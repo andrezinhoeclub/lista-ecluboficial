@@ -993,6 +993,29 @@
 
     function getSetorById(id) { return setores.find(s => s.id === id) || null; }
 
+    function getSetorEdicaoSeguro(atendimento) {
+      const valorSelect = $('editSetor') ? $('editSetor').value : '';
+      const selecionado = getSetorById(valorSelect);
+      if (selecionado) return { id: selecionado.id, nome: selecionado.nome };
+      return {
+        id: atendimento && atendimento.setor_id ? atendimento.setor_id : '',
+        nome: atendimento && atendimento.setor_nome ? atendimento.setor_nome : ''
+      };
+    }
+
+    function garantirSetorAtualNoEditor(atendimento) {
+      const select = $('editSetor');
+      if (!select || !atendimento || (!atendimento.setor_id && !atendimento.setor_nome)) return;
+      const valor = atendimento.setor_id || '__setor_atual__';
+      const existe = Array.from(select.options).some(opt => opt.value === valor);
+      if (!existe) {
+        const opt = document.createElement('option');
+        opt.value = valor;
+        opt.textContent = atendimento.setor_nome || 'SETOR ATUAL';
+        select.appendChild(opt);
+      }
+      select.value = valor;
+    }
 
     function idTexto(prefixo, nome) {
       return prefixo + '_' + normalize(nome).replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase();
@@ -1375,11 +1398,12 @@
       const a = atendimentos.find(x => x.id === id);
       if (!a) return;
       atendimentoEdicaoAtivaId = id;
+      montarSelectSetores();
       $('editAtendimentoId').value = id;
       $('editPlaca').value = a.placa || '';
       $('editModelo').value = a.modelo || '';
       $('editCor').value = a.cor || '';
-      $('editSetor').value = a.setor_id || '';
+      garantirSetorAtualNoEditor(a);
       $('editVaga').value = a.vaga || '';
       $('editClienteNome').value = a.cliente_nome || '';
       $('editClienteTel').value = a.cliente_tel || '';
@@ -1405,7 +1429,7 @@
       const duplicada = atendimentos.find(x => x.id !== id && normPlaca(x.placa_norm || x.placa) === placa && x.ativo !== false && x.status !== 'ENTREGUE');
       if (duplicada) return toast(`Esta placa já está ativa no ticket ${duplicada.ticket}.`);
 
-      const setor = getSetorById($('editSetor').value);
+      const setor = getSetorEdicaoSeguro(a);
       const modelo = normalize($('editModelo').value);
       const cor = normalize($('editCor').value);
       const quando = agoraISO();
@@ -1416,8 +1440,8 @@
         placa_norm: placa,
         modelo,
         cor,
-        setor_id: setor ? setor.id : '',
-        setor_nome: setor ? setor.nome : '',
+        setor_id: setor.id || '',
+        setor_nome: setor.nome || '',
         vaga: normalize($('editVaga').value),
         cliente_nome: normalize($('editClienteNome').value),
         cliente_tel: $('editClienteTel').value.trim(),
@@ -1474,13 +1498,13 @@
       const duplicada = atendimentos.find(x => x.id !== id && normPlaca(x.placa_norm || x.placa) === placa && x.ativo !== false && x.status !== 'ENTREGUE');
       if (duplicada) return toast(`Esta placa já está ativa no ticket ${duplicada.ticket}.`);
 
-      const setor = getSetorById($('editSetor').value);
+      const setor = getSetorEdicaoSeguro(a);
       const modelo = normalize($('editModelo').value);
       const cor = normalize($('editCor').value);
       const obsBase = normalize($('editObs').value);
       const quando = agoraISO();
       const operador = getOperador();
-      const obsComOcorrencia = normalize(obsBase ? `${obsBase} | OCORRÊNCIA: ${ocorrencia}` : `OCORRÊNCIA: ${ocorrencia}`);
+      const obsFinal = obsBase;
 
       const patch = {
         status: 'OCORRENCIA',
@@ -1489,12 +1513,12 @@
         placa_norm: placa,
         modelo,
         cor,
-        setor_id: setor ? setor.id : '',
-        setor_nome: setor ? setor.nome : '',
+        setor_id: setor.id || '',
+        setor_nome: setor.nome || '',
         vaga: normalize($('editVaga').value),
         cliente_nome: normalize($('editClienteNome').value),
         cliente_tel: $('editClienteTel').value.trim(),
-        obs: obsComOcorrencia,
+        obs: obsFinal,
         ocorrencia_texto: ocorrencia,
         ocorrencia_em: quando,
         operador_ocorrencia: operador,
@@ -1507,6 +1531,10 @@
       };
 
       await atualizarAtendimento(id, patch, 'OCORRENCIA', ocorrencia);
+      atendimentoEdicaoAtivaId = null;
+      $('modalEdicao').classList.remove('show');
+      await carregarLocal();
+      renderTudo();
 
       const veiculoId = 'placa_' + placa;
       const antigoVeiculo = veiculos.find(v => v.id === veiculoId) || {};
@@ -1519,7 +1547,7 @@
         cor,
         cliente_nome: patch.cliente_nome,
         cliente_tel: patch.cliente_tel,
-        obs: obsComOcorrencia,
+        obs: obsFinal,
         modelo_precisa_revisao: patch.modelo_precisa_revisao,
         cor_precisa_revisao: patch.cor_precisa_revisao,
         atualizado_em: quando,
