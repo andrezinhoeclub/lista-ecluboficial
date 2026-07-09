@@ -464,7 +464,7 @@
           </div>
 
           <div id="avisoVeiculoNovo" class="notice hidden">Veículo ainda não cadastrado. Ao receber, ele será salvo na base de veículos.</div>
-          <div id="avisoVeiculoEncontrado" class="historyBox hidden">Veículo encontrado. Dados carregados para atendimento.</div>
+          <div id="avisoVeiculoEncontrado" class="historyBox hidden">Veículo encontrado • Histórico da placa</div>
 
           <div class="row two">
             <div>
@@ -1235,16 +1235,11 @@
       if (!v) return '';
       const h = historicoAgregadoPlaca(v.placa_norm || v.placa || v.id, v);
       const partes = ['<div class="historyTitle">VEÍCULO ENCONTRADO • HISTÓRICO DA PLACA</div>'];
-      partes.push('<div><b>Dados carregados:</b> modelo, cor, cliente, telefone e observações da base.</div>');
-      if (h.ultimaVisita) partes.push(`<div><b>Última visita:</b> ${formatarDataHoraCurta(h.ultimaVisita)}</div>`);
-      if (h.ultimaEntrega) partes.push(`<div><b>Última entrega ao cliente:</b> ${formatarDataHoraCurta(h.ultimaEntrega)}</div>`);
-      if (h.observacoes.length) {
-        partes.push(`<div><b>Observações gravadas:</b> ${h.observacoes.slice(0, 4).map(o => `${o.texto}${o.em ? ` <span class="mutedLine">(${formatarDataHoraCurta(o.em)}${o.operador ? ' • ' + o.operador : ''})</span>` : ''}`).join(' / ')}</div>`);
+      if (h.ultimaVisita || h.ultimaEntrega) {
+        partes.push(`<div><b>Últ. visita:</b> ${h.ultimaVisita ? formatarDataHoraCurta(h.ultimaVisita) : '---'} <span class="mutedLine">•</span> <b>Últ. entrega:</b> ${h.ultimaEntrega ? formatarDataHoraCurta(h.ultimaEntrega) : '---'}</div>`);
+      } else {
+        partes.push('<div>Sem visitas anteriores registradas nesta placa.</div>');
       }
-      if (!h.ultimaVisita && !h.ultimaEntrega && !h.observacoes.length) {
-        partes.push('<div>Sem visitas ou observações anteriores registradas nesta placa.</div>');
-      }
-      partes.push('<div class="mutedLine">Selecione o setor atual deste novo atendimento antes de receber o veículo.</div>');
       return partes.join('');
     }
 
