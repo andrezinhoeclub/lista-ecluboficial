@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050508" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>E-CLUB | Vallet</title>
+  <link rel="manifest" href="vallet_manifest.json" />
+  <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
+  <style>
+    :root {
+      --bg: #050508;
+      --card: rgba(18, 18, 24, .88);
+      --card2: rgba(255,255,255,.04);
+      --border: rgba(255,255,255,.10);
+      --muted: #8b8b98;
+      --text: #f8fafc;
+      --yellow: #eab308;
+      --green: #22c55e;
+      --red: #ef4444;
+      --blue: #38bdf8;
+      --purple: #a855f7;
+      --orange: #f97316;
+      --pink: #ec4899;
+      --radius: 28px;
+      --shadow: 0 24px 80px rgba(0,0,0,.38);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(234,179,8,.12), transparent 34%),
+        radial-gradient(circle at 100% 10%, rgba(168,85,247,.14), transparent 35%),
+        var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; border: 0; }
+    input, select, textarea {
+      width: 100%;
+      background: #0d0d14;
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--text);
+      border-radius: 18px;
+      padding: 15px 16px;
+      outline: none;
+      font-weight: 800;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    textarea { min-height: 88px; resize: vertical; text-transform: uppercase; }
+    input:focus, select:focus, textarea:focus { border-color: var(--yellow); box-shadow: 0 0 0 3px rgba(234,179,8,.12); }
+    input::placeholder, textarea::placeholder { color: #5b5b66; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin: 8px 0 18px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand img { width: 42px; height: 42px; object-fit: contain; }
+    .brand h1 { margin: 0; line-height: .9; font-size: 21px; font-weight: 950; letter-spacing: -.04em; color: var(--yellow); font-style: italic; text-transform: uppercase; }
+    .brand p { margin: 4px 0 0; font-size: 8px; letter-spacing: .18em; color: var(--muted); font-weight: 950; text-transform: uppercase; }
+    .statusBox { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .pill {
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 9px 11px;
+      font-size: 9px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      white-space: nowrap;
+    }
+    .pill.online { color: #86efac; border-color: rgba(34,197,94,.3); background: rgba(34,197,94,.08); }
+    .pill.offline { color: #fca5a5; border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.08); }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 6px;
+      border: 1px solid var(--border);
+      background: rgba(12,12,18,.70);
+      border-radius: 22px;
+      margin-bottom: 18px;
+    }
+    .tabBtn {
+      background: transparent;
+      color: #858590;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .tabBtn.active { background: var(--yellow); color: #050505; box-shadow: 0 8px 28px rgba(234,179,8,.20); }
+    .grid { display: grid; gap: 16px; }
+    .grid2 { grid-template-columns: 1.05fr .95fr; }
+    .grid3 { grid-template-columns: repeat(3, 1fr); }
+    .grid4 { grid-template-columns: repeat(4, 1fr); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+    .card.soft { background: rgba(255,255,255,.035); box-shadow: none; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .title { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+    .title h2 { margin: 0; font-size: 18px; font-weight: 950; text-transform: uppercase; letter-spacing: -.04em; font-style: italic; }
+    .title p { margin: 5px 0 0; font-size: 9px; color: var(--muted); font-weight: 850; text-transform: uppercase; letter-spacing: .08em; line-height: 1.45; }
+    .fieldLabel { display: block; color: var(--muted); font-size: 8px; font-weight: 950; text-transform: uppercase; margin: 0 0 7px 8px; letter-spacing: .12em; }
+    .row { display: grid; gap: 10px; margin-bottom: 10px; }
+    .two { grid-template-columns: repeat(2, 1fr); }
+    .three { grid-template-columns: repeat(3, 1fr); }
+    .btn {
+      border-radius: 18px;
+      padding: 15px 16px;
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: #fff;
+      background: #27272a;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn.yellow { background: var(--yellow); color: #050505; }
+    .btn.green { background: var(--green); color: #03130a; }
+    .btn.red { background: var(--red); }
+    .btn.blue { background: #0284c7; }
+    .btn.purple { background: var(--purple); }
+    .btn.orange { background: var(--orange); }
+    .btn.ghost { background: rgba(255,255,255,.04); color: #d4d4d8; border: 1px solid var(--border); }
+    .btn.full { width: 100%; }
+    .quickStats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 22px; padding: 16px; text-align: center; }
+    .stat small { display: block; color: var(--muted); font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+    .stat strong { display: block; margin-top: 4px; font-size: 24px; font-weight: 950; }
+    .list { display: grid; gap: 10px; }
+    .vehicleCard {
+      background: rgba(255,255,255,.035);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 24px;
+      padding: 16px;
+    }
+    .vehicleTop { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .plate {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 11px;
+      border-radius: 12px;
+      background: #f8fafc;
+      color: #08080a;
+      font-weight: 950;
+      letter-spacing: .08em;
+      font-size: 15px;
+      min-width: 92px;
+      text-align: center;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.12);
+    }
+    .ticket { font-size: 22px; font-weight: 950; color: var(--yellow); line-height: 1; }
+    .meta { color: #d4d4d8; font-size: 11px; font-weight: 800; text-transform: uppercase; line-height: 1.5; margin-top: 8px; }
+    .muted { color: var(--muted); }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 8px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      white-space: nowrap;
+    }
+    .tag.RECEBIDO { color: #fde68a; background: rgba(234,179,8,.10); border-color: rgba(234,179,8,.25); }
+    .tag.ESTACIONADO { color: #93c5fd; background: rgba(59,130,246,.10); border-color: rgba(59,130,246,.25); }
+    .tag.SOLICITADO { color: #fdba74; background: rgba(249,115,22,.10); border-color: rgba(249,115,22,.25); }
+    .tag.ENTREGUE { color: #86efac; background: rgba(34,197,94,.10); border-color: rgba(34,197,94,.25); }
+    .tag.OCORRENCIA { color: #fda4af; background: rgba(244,63,94,.10); border-color: rgba(244,63,94,.25); }
+    .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+    .tinyBtn { border-radius: 14px; padding: 11px 9px; font-size: 8px; font-weight: 950; text-transform: uppercase; color: #fff; background: #27272a; }
+    .tinyBtn.blue { background: #0369a1; }
+    .tinyBtn.orange { background: #c2410c; }
+    .tinyBtn.green { background: #16a34a; color: #06140b; }
+    .tinyBtn.red { background: #dc2626; }
+    .empty { text-align: center; padding: 34px 18px; color: #5f5f69; font-size: 11px; font-weight: 950; text-transform: uppercase; border: 1px dashed rgba(255,255,255,.11); border-radius: 24px; }
+    .notice { border: 1px solid rgba(234,179,8,.22); background: rgba(234,179,8,.08); border-radius: 20px; padding: 13px; color: #fde68a; font-size: 10px; font-weight: 850; text-transform: uppercase; line-height: 1.45; margin: 10px 0; }
+    .toast {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translate(-50%, -120px);
+      z-index: 9999;
+      opacity: 0;
+      transition: .25s ease;
+      width: min(92vw, 420px);
+      border-radius: 20px;
+      padding: 15px 18px;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      box-shadow: 0 20px 50px rgba(0,0,0,.42);
+      background: #dc2626;
+      text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.ok { background: #16a34a; color: #03130a; }
+    .drawer {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,.72);
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+    }
+    .drawer.show { display: flex; }
+    .drawerBox {
+      width: min(100%, 560px);
+      background: #0b0b11;
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .hidden { display: none !important; }
+    .syncItem { padding: 12px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--border); font-size: 10px; color: #d4d4d8; font-weight: 800; text-transform: uppercase; line-height: 1.45; }
+    .smallText { font-size: 9px; color: var(--muted); font-weight: 850; text-transform: uppercase; line-height: 1.5; }
+    .dangerText { color: #fecaca; }
+    @media (max-width: 860px) {
+      body { padding: 12px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .statusBox { justify-content: flex-start; }
+      .grid2, .grid3, .grid4, .two, .three, .quickStats { grid-template-columns: 1fr; }
+      .actions { grid-template-columns: repeat(2, 1fr); }
+      .card { padding: 18px; border-radius: 24px; }
+      .title { flex-direction: column; }
+      .brand h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
+        <div>
+          <h1>Vallet E-Club</h1>
+          <p>Operação online/offline</p>
+        </div>
+      </div>
+      <div class="statusBox">
+        <span id="netStatus" class="pill">Verificando...</span>
+        <span id="syncStatus" class="pill">0 pendentes</span>
+        <button class="pill" onclick="forcarSincronizacao()">Sincronizar</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tabBtn active" data-tab="atendimento" onclick="trocarTab('atendimento', this)">Atendimento</button>
+      <button class="tabBtn" data-tab="veiculos" onclick="trocarTab('veiculos', this)">Veículos</button>
+      <button class="tabBtn" data-tab="setores" onclick="trocarTab('setores', this)">Setores</button>
+      <button class="tabBtn" data-tab="sincronizacao" onclick="trocarTab('sincronizacao', this)">Sincronização</button>
+    </nav>
+
+    <section id="tab-atendimento" class="section active">
+      <div class="quickStats">
+        <div class="stat"><small>Recebidos</small><strong id="kpiRecebido">0</strong></div>
+        <div class="stat"><small>Estacionados</small><strong id="kpiEstacionado">0</strong></div>
+        <div class="stat"><small>Solicitados</small><strong id="kpiSolicitado">0</strong></div>
+        <div class="stat"><small>Entregues hoje</small><strong id="kpiEntregue">0</strong></div>
+      </div>
+
+      <div class="grid grid2">
+        <div class="card">
+          <div class="title">
+            <div>
+              <h2>Receber veículo</h2>
+              <p>Se a placa não existir, o veículo será cadastrado automaticamente.</p>
+            </div>
+            <span class="tag RECEBIDO">Entrada</span>
+          </div>
+
+          <div class="row two">
+            <div>
+              <label class="fieldLabel">Operador</label>
+              <input id="operador" placeholder="NOME DO FUNCIONÁRIO" oninput="salvarOperadorLocal()" />
+            </div>
+            <div>
+              <label class="fieldLabel">Ticket automático</label>
+              <input id="ticketPreview" readonly />
+            </div>
+          </div>
+
+          <div class="row two">
+            <div>
+              <label class="fieldLabel">Placa</label>
+              <input id="placa" placeholder="ABC1D23" oninput="aoDigitarPlaca()" maxlength="8" />
+            </div>
+            <div>
+              <label class="fieldLabel">Telefone cliente</label>
+              <input id="clienteTel" placeholder="(41) 99999-9999" oninput="maskTel(this)" />
+            </div>
+          </div>
+
+          <div id="avisoVeiculoNovo" class="notice hidden">Veículo ainda não cadastrado. Ao receber, ele será salvo na base de veículos.</div>
+          <div id="avisoVeiculoEncontrado" class="notice hidden">Veículo encontrado. Dados carregados para atendimento.</div>
+
+          <div class="row two">
+            <div>
+              <label class="fieldLabel">Modelo</label>
+              <input id="modelo" placeholder="EX: COROLLA, CIVIC, COMPASS" />
+            </div>
+            <div>
+              <label class="fieldLabel">Cor</label>
+              <input id="cor" placeholder="EX: PRETO, BRANCO, PRATA" />
+            </div>
+          </div>
+
+          <div class="row two">
+            <div>
+              <label class="fieldLabel">Nome do cliente</label>
+              <input id="clienteNome" placeholder="NOME DO CLIENTE" />
+            </div>
+            <div>
+              <label class="fieldLabel">Setor onde ficará estacionado</label>
+              <select id="setorAtendimento"></select>
+            </div>
+          </div>
+
+          <div class="row two">
+            <div>
+              <label class="fieldLabel">Vaga / referência</label>
+              <input id="vaga" placeholder="EX: A12, FUNDO, RAMPA" />
+            </div>
+            <div>
+              <label class="fieldLabel">Observação rápida</label>
+              <input id="obs" placeholder="EX: ARRANHÃO, CHAVE COM CONTROLE" />
+            </div>
+          </div>
+
+          <button class="btn yellow full" onclick="receberVeiculo()">Receber e cadastrar</button>
+        </div>
+
+        <div class="card">
+          <div class="title">
+            <div>
+              <h2>Buscar na operação</h2>
+              <p>Pesquise por ticket, placa, modelo, setor ou nome do cliente.</p>
+            </div>
+          </div>
+          <div class="row">
+            <input id="buscaAtendimentos" placeholder="BUSCAR TICKET / PLACA / CLIENTE / SETOR" oninput="renderTudo()" />
+          </div>
+          <div class="row two">
+            <select id="filtroStatus" onchange="renderTudo()">
+              <option value="ativos">Ativos</option>
+              <option value="todos">Todos de hoje</option>
+              <option value="RECEBIDO">Recebidos</option>
+              <option value="ESTACIONADO">Estacionados</option>
+              <option value="SOLICITADO">Solicitados</option>
+              <option value="ENTREGUE">Entregues</option>
+              <option value="OCORRENCIA">Ocorrência</option>
+            </select>
+            <button class="btn ghost" onclick="limparBuscaAtendimento()">Limpar busca</button>
+          </div>
+          <div class="smallText">Todos os registros ficam neste aparelho quando não houver internet. Ao voltar a conexão, a sincronização é feita automaticamente.</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div class="title">
+          <div>
+            <h2>Veículos da operação</h2>
+            <p>Status e localização em tempo real local, com envio posterior ao Firebase.</p>
+          </div>
+        </div>
+        <div id="listaAtendimentos" class="list"></div>
+      </div>
+    </section>
+
+    <section id="tab-veiculos" class="section">
+      <div class="grid grid2">
+        <div class="card">
+          <div class="title"><div><h2>Cadastrar veículo</h2><p>Base de veículos reaproveitada nos próximos atendimentos.</p></div></div>
+          <div class="row two">
+            <input id="cadPlaca" placeholder="PLACA" maxlength="8" />
+            <input id="cadClienteTel" placeholder="TELEFONE" oninput="maskTel(this)" />
+          </div>
+          <div class="row two">
+            <input id="cadModelo" placeholder="MODELO" />
+            <input id="cadCor" placeholder="COR" />
+          </div>
+          <div class="row">
+            <input id="cadClienteNome" placeholder="NOME DO CLIENTE" />
+          </div>
+          <div class="row">
+            <textarea id="cadObs" placeholder="OBSERVAÇÕES DO VEÍCULO"></textarea>
+          </div>
+          <button class="btn blue full" onclick="salvarVeiculoManual()">Salvar veículo</button>
+        </div>
+        <div class="card">
+          <div class="title"><div><h2>Consulta</h2><p>Busca por placa, modelo, cor, nome ou telefone.</p></div></div>
+          <input id="buscaVeiculos" placeholder="BUSCAR VEÍCULO" oninput="renderTudo()" />
+          <div id="listaVeiculos" class="list" style="margin-top:14px;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-setores" class="section">
+      <div class="grid grid2">
+        <div class="card">
+          <div class="title"><div><h2>Cadastrar setor</h2><p>Exemplos: estacionamento interno, externo, setor A, setor B, rua lateral.</p></div></div>
+          <div class="row two">
+            <input id="setorNome" placeholder="NOME DO SETOR" />
+            <select id="setorTipo">
+              <option value="INTERNO">Interno</option>
+              <option value="EXTERNO">Externo</option>
+              <option value="RUA">Rua / Apoio</option>
+              <option value="VIP">VIP</option>
+              <option value="OUTRO">Outro</option>
+            </select>
+          </div>
+          <div class="row">
+            <textarea id="setorObs" placeholder="OBSERVAÇÃO DO SETOR"></textarea>
+          </div>
+          <button class="btn purple full" onclick="salvarSetor()">Salvar setor</button>
+        </div>
+        <div class="card">
+          <div class="title"><div><h2>Setores ativos</h2><p>Usados no atendimento para indicar onde o veículo ficou estacionado.</p></div></div>
+          <div id="listaSetores" class="list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-sincronizacao" class="section">
+      <div class="grid grid2">
+        <div class="card">
+          <div class="title"><div><h2>Status de sincronização</h2><p>Fila local enviada ao Firebase quando houver internet.</p></div></div>
+          <div class="row two">
+            <button class="btn green" onclick="forcarSincronizacao()">Forçar sincronização</button>
+            <button class="btn ghost" onclick="exportarBackupLocal()">Exportar backup local</button>
+          </div>
+          <p id="syncResumo" class="smallText"></p>
+          <div class="notice">Não use “limpar dados do navegador” no aparelho antes de sincronizar. Registros offline ficam salvos no IndexedDB deste dispositivo.</div>
+        </div>
+        <div class="card">
+          <div class="title"><div><h2>Fila pendente</h2><p>Itens ainda não confirmados na nuvem.</p></div></div>
+          <div id="listaQueue" class="list"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="modalLocalizacao" class="drawer">
+    <div class="drawerBox">
+      <div class="title"><div><h2>Atualizar localização</h2><p>Informe onde o veículo está ou para onde foi movido.</p></div></div>
+      <input type="hidden" id="modalAtendimentoId" />
+      <div class="row two">
+        <select id="modalSetor"></select>
+        <input id="modalVaga" placeholder="VAGA / REFERÊNCIA" />
+      </div>
+      <div class="row">
+        <input id="modalObs" placeholder="OBSERVAÇÃO" />
+      </div>
+      <div class="row two">
+        <button class="btn blue" onclick="confirmarEstacionado()">Marcar estacionado</button>
+        <button class="btn ghost" onclick="fecharModalLocalizacao()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+      authDomain: "teste-de-reserva.firebaseapp.com",
+      projectId: "teste-de-reserva",
+      storageBucket: "teste-de-reserva.firebasestorage.app",
+      messagingSenderId: "163395694876",
+      appId: "1:163395694876:web:8b1116a0483af951548ad9"
+    };
+
+    const DB_NAME = 'eclub_vallet_v1';
+    const DB_VERSION = 1;
+    const STORE_SETOR = 'setores';
+    const STORE_VEICULO = 'veiculos';
+    const STORE_ATEND = 'atendimentos';
+    const STORE_QUEUE = 'queue';
+    const STORE_META = 'meta';
+    const DEVICE_ID_KEY = 'eclub_vallet_device_id';
+    const OPERADOR_KEY = 'eclub_vallet_operador';
+
+    let idb = null;
+    let firebase = null;
+    let setores = [];
+    let veiculos = [];
+    let atendimentos = [];
+    let fila = [];
+    let sincronizando = false;
+
+    const $ = (id) => document.getElementById(id);
+    const agoraISO = () => new Date().toISOString();
+    const dataLocal = () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+    const horaLocal = () => new Date().toLocaleString('pt-BR');
+    const normalize = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim();
+    const normPlaca = (v) => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().substring(0, 8);
+    const deviceId = () => {
+      let id = localStorage.getItem(DEVICE_ID_KEY);
+      if (!id) {
+        id = 'dev_' + Math.random().toString(36).slice(2, 8) + '_' + Date.now().toString(36);
+        localStorage.setItem(DEVICE_ID_KEY, id);
+      }
+      return id;
+    };
+
+    function toast(msg, ok=false) {
+      const el = $('toast');
+      el.textContent = msg;
+      el.className = 'toast show' + (ok ? ' ok' : '');
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => el.className = 'toast', 3400);
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(STORE_SETOR)) db.createObjectStore(STORE_SETOR, { keyPath: 'id' });
+          if (!db.objectStoreNames.contains(STORE_VEICULO)) db.createObjectStore(STORE_VEICULO, { keyPath: 'id' });
+          if (!db.objectStoreNames.contains(STORE_ATEND)) db.createObjectStore(STORE_ATEND, { keyPath: 'id' });
+          if (!db.objectStoreNames.contains(STORE_QUEUE)) db.createObjectStore(STORE_QUEUE, { keyPath: 'id' });
+          if (!db.objectStoreNames.contains(STORE_META)) db.createObjectStore(STORE_META, { keyPath: 'id' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function tx(store, mode='readonly') {
+      return idb.transaction(store, mode).objectStore(store);
+    }
+    function put(store, data) {
+      return new Promise((resolve, reject) => {
+        const req = tx(store, 'readwrite').put(data);
+        req.onsuccess = () => resolve(data);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    function del(store, key) {
+      return new Promise((resolve, reject) => {
+        const req = tx(store, 'readwrite').delete(key);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+    function getAll(store) {
+      return new Promise((resolve, reject) => {
+        const req = tx(store).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    function getOne(store, key) {
+      return new Promise((resolve, reject) => {
+        const req = tx(store).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function queueSet(collectionName, docId, data) {
+      const item = {
+        id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        action: 'set',
+        collectionName,
+        docId,
+        data,
+        created_at: agoraISO()
+      };
+      await put(STORE_QUEUE, item);
+      await carregarLocal();
+      atualizarStatus();
+      if (navigator.onLine) processarFila();
+    }
+
+    async function carregarLocal() {
+      setores = (await getAll(STORE_SETOR)).sort((a,b) => String(a.nome).localeCompare(String(b.nome)));
+      veiculos = (await getAll(STORE_VEICULO)).sort((a,b) => String(a.placa).localeCompare(String(b.placa)));
+      atendimentos = (await getAll(STORE_ATEND)).sort((a,b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')));
+      fila = (await getAll(STORE_QUEUE)).sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
+    }
+
+    async function salvarMeta(key, value) { await put(STORE_META, { id: key, value }); }
+    async function lerMeta(key) { const m = await getOne(STORE_META, key); return m ? m.value : null; }
+
+    async function initFirebase() {
+      if (firebase || !navigator.onLine) return firebase;
+      try {
+        const appMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+        const fsMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+        const app = appMod.initializeApp(FIREBASE_CONFIG);
+        const db = fsMod.getFirestore(app);
+        firebase = { db, ...fsMod };
+        return firebase;
+      } catch (e) {
+        console.warn('Firebase indisponível', e);
+        firebase = null;
+        return null;
+      }
+    }
+
+    async function processarFila() {
+      if (sincronizando || !navigator.onLine) return;
+      sincronizando = true;
+      atualizarStatus('Sincronizando...');
+      try {
+        const fb = await initFirebase();
+        if (!fb) throw new Error('Firebase não carregou');
+        await carregarLocal();
+        for (const item of fila) {
+          await fb.setDoc(fb.doc(fb.db, item.collectionName, item.docId), {
+            ...item.data,
+            sync_origem: deviceId(),
+            sync_at: agoraISO()
+          }, { merge: true });
+          await del(STORE_QUEUE, item.id);
+        }
+        await salvarMeta('last_sync', horaLocal());
+        await puxarFirebase();
+      } catch (e) {
+        console.warn('Falha na sincronização', e);
+      } finally {
+        sincronizando = false;
+        await carregarLocal();
+        renderTudo();
+        atualizarStatus();
+      }
+    }
+
+    async function puxarFirebase() {
+      if (!navigator.onLine) return;
+      const fb = await initFirebase();
+      if (!fb) return;
+      try {
+        const [setSnap, veiSnap, atSnap] = await Promise.all([
+          fb.getDocs(fb.collection(fb.db, 'vallet_setores')),
+          fb.getDocs(fb.collection(fb.db, 'vallet_veiculos')),
+          fb.getDocs(fb.collection(fb.db, 'vallet_atendimentos'))
+        ]);
+        const puts = [];
+        setSnap.forEach(d => puts.push(put(STORE_SETOR, { id: d.id, ...d.data() })));
+        veiSnap.forEach(d => puts.push(put(STORE_VEICULO, { id: d.id, ...d.data() })));
+        atSnap.forEach(d => {
+          const data = { id: d.id, ...d.data() };
+          if (data.data_operacao === dataLocal() || data.ativo === true) puts.push(put(STORE_ATEND, data));
+        });
+        await Promise.all(puts);
+      } catch (e) {
+        console.warn('Falha ao puxar Firebase', e);
+      }
+    }
+
+    async function criarMovimento(atendimento, tipo, descricao='') {
+      const movimento = {
+        id: `${atendimento.id}_${tipo}_${Date.now()}`,
+        atendimento_id: atendimento.id,
+        ticket: atendimento.ticket,
+        placa: atendimento.placa,
+        placa_norm: atendimento.placa_norm,
+        tipo,
+        status: atendimento.status,
+        setor_id: atendimento.setor_id || '',
+        setor_nome: atendimento.setor_nome || '',
+        vaga: atendimento.vaga || '',
+        descricao,
+        operador: getOperador(),
+        data_hora: agoraISO(),
+        data_operacao: dataLocal(),
+        origem_dispositivo: deviceId()
+      };
+      await queueSet('vallet_movimentos', movimento.id, movimento);
+    }
+
+    function getOperador() { return normalize($('operador')?.value || localStorage.getItem(OPERADOR_KEY) || 'OPERADOR'); }
+    function salvarOperadorLocal() { localStorage.setItem(OPERADOR_KEY, $('operador').value.trim()); }
+
+    async function proximoTicket() {
+      const dia = dataLocal().replace(/-/g, '');
+      const key = 'ticket_' + dia;
+      const atual = Number(await lerMeta(key) || 0) + 1;
+      await salvarMeta(key, atual);
+      return String(atual).padStart(3, '0');
+    }
+    async function atualizarTicketPreview() {
+      const dia = dataLocal().replace(/-/g, '');
+      const atual = Number(await lerMeta('ticket_' + dia) || 0) + 1;
+      $('ticketPreview').value = String(atual).padStart(3, '0');
+    }
+
+    function getSetorById(id) { return setores.find(s => s.id === id) || null; }
+
+    async function salvarSetor() {
+      const nome = normalize($('setorNome').value);
+      if (!nome) return toast('Informe o nome do setor.');
+      const id = 'setor_' + nome.replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase();
+      const setor = {
+        id,
+        nome,
+        tipo: normalize($('setorTipo').value || 'OUTRO'),
+        obs: normalize($('setorObs').value),
+        ativo: true,
+        criado_em: agoraISO(),
+        atualizado_em: agoraISO(),
+        origem_dispositivo: deviceId()
+      };
+      await put(STORE_SETOR, setor);
+      await queueSet('vallet_setores', id, setor);
+      $('setorNome').value = ''; $('setorObs').value = '';
+      await carregarLocal(); renderTudo();
+      toast('Setor salvo.', true);
+    }
+
+    async function alternarSetor(id, ativo) {
+      const setor = setores.find(s => s.id === id);
+      if (!setor) return;
+      setor.ativo = ativo;
+      setor.atualizado_em = agoraISO();
+      await put(STORE_SETOR, setor);
+      await queueSet('vallet_setores', id, setor);
+      await carregarLocal(); renderTudo();
+    }
+
+    async function salvarVeiculoBase(data) {
+      const placa = normPlaca(data.placa);
+      if (!placa) throw new Error('Placa inválida.');
+      const antigo = veiculos.find(v => v.id === placa) || {};
+      const veiculo = {
+        id: placa,
+        placa,
+        modelo: normalize(data.modelo || antigo.modelo),
+        cor: normalize(data.cor || antigo.cor),
+        cliente_nome: normalize(data.cliente_nome || antigo.cliente_nome),
+        cliente_tel: String(data.cliente_tel || antigo.cliente_tel || '').trim(),
+        obs: normalize(data.obs || antigo.obs),
+        criado_em: antigo.criado_em || agoraISO(),
+        atualizado_em: agoraISO(),
+        origem_dispositivo: deviceId()
+      };
+      await put(STORE_VEICULO, veiculo);
+      await queueSet('vallet_veiculos', veiculo.id, veiculo);
+      return veiculo;
+    }
+
+    async function salvarVeiculoManual() {
+      try {
+        const veiculo = await salvarVeiculoBase({
+          placa: $('cadPlaca').value,
+          modelo: $('cadModelo').value,
+          cor: $('cadCor').value,
+          cliente_nome: $('cadClienteNome').value,
+          cliente_tel: $('cadClienteTel').value,
+          obs: $('cadObs').value
+        });
+        ['cadPlaca','cadModelo','cadCor','cadClienteNome','cadClienteTel','cadObs'].forEach(id => $(id).value = '');
+        await carregarLocal(); renderTudo();
+        toast(`Veículo ${veiculo.placa} salvo.`, true);
+      } catch (e) { toast(e.message); }
+    }
+
+    function aoDigitarPlaca() {
+      const placa = normPlaca($('placa').value);
+      $('placa').value = placa;
+      $('avisoVeiculoNovo').classList.add('hidden');
+      $('avisoVeiculoEncontrado').classList.add('hidden');
+      if (placa.length < 7) return;
+      const v = veiculos.find(x => x.id === placa);
+      if (v) {
+        $('modelo').value = v.modelo || '';
+        $('cor').value = v.cor || '';
+        $('clienteNome').value = v.cliente_nome || '';
+        $('clienteTel').value = v.cliente_tel || '';
+        $('obs').value = v.obs || '';
+        $('avisoVeiculoEncontrado').classList.remove('hidden');
+      } else {
+        $('avisoVeiculoNovo').classList.remove('hidden');
+      }
+    }
+
+    async function receberVeiculo() {
+      const placa = normPlaca($('placa').value);
+      if (!placa || placa.length < 7) return toast('Informe uma placa válida.');
+      if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador.');
+      const setor = getSetorById($('setorAtendimento').value);
+      if (!setor) return toast('Selecione o setor onde o veículo ficará.');
+
+      try {
+        const veiculo = await salvarVeiculoBase({
+          placa,
+          modelo: $('modelo').value,
+          cor: $('cor').value,
+          cliente_nome: $('clienteNome').value,
+          cliente_tel: $('clienteTel').value,
+          obs: $('obs').value
+        });
+        const ticket = await proximoTicket();
+        const id = `${dataLocal().replace(/-/g,'')}_${deviceId()}_${ticket}`;
+        const atendimento = {
+          id,
+          ticket,
+          data_operacao: dataLocal(),
+          placa,
+          placa_norm: placa,
+          modelo: veiculo.modelo || normalize($('modelo').value),
+          cor: veiculo.cor || normalize($('cor').value),
+          cliente_nome: veiculo.cliente_nome || normalize($('clienteNome').value),
+          cliente_tel: veiculo.cliente_tel || $('clienteTel').value.trim(),
+          setor_id: setor.id,
+          setor_nome: setor.nome,
+          vaga: normalize($('vaga').value),
+          obs: normalize($('obs').value),
+          status: 'RECEBIDO',
+          ativo: true,
+          operador_recebimento: getOperador(),
+          recebido_em: agoraISO(),
+          criado_em: agoraISO(),
+          atualizado_em: agoraISO(),
+          origem_dispositivo: deviceId()
+        };
+        await put(STORE_ATEND, atendimento);
+        await queueSet('vallet_atendimentos', atendimento.id, atendimento);
+        await criarMovimento(atendimento, 'RECEBIDO', 'Veículo recebido no vallet');
+        limparFormularioAtendimento();
+        await carregarLocal(); renderTudo(); atualizarTicketPreview();
+        toast(`Ticket ${ticket} recebido.`, true);
+      } catch (e) { toast(e.message || 'Erro ao receber veículo.'); }
+    }
+
+    function limparFormularioAtendimento() {
+      ['placa','modelo','cor','clienteNome','clienteTel','vaga','obs'].forEach(id => $(id).value = '');
+      $('avisoVeiculoNovo').classList.add('hidden');
+      $('avisoVeiculoEncontrado').classList.add('hidden');
+    }
+
+    async function atualizarAtendimento(id, patch, movimentoTipo, descricao='') {
+      const a = atendimentos.find(x => x.id === id);
+      if (!a) return;
+      const novo = { ...a, ...patch, atualizado_em: agoraISO(), operador_ultima_acao: getOperador() };
+      await put(STORE_ATEND, novo);
+      await queueSet('vallet_atendimentos', novo.id, novo);
+      if (movimentoTipo) await criarMovimento(novo, movimentoTipo, descricao);
+      await carregarLocal(); renderTudo();
+      toast('Atendimento atualizado.', true);
+    }
+
+    function abrirModalLocalizacao(id) {
+      const a = atendimentos.find(x => x.id === id);
+      if (!a) return;
+      $('modalAtendimentoId').value = id;
+      $('modalSetor').value = a.setor_id || '';
+      $('modalVaga').value = a.vaga || '';
+      $('modalObs').value = a.obs || '';
+      $('modalLocalizacao').classList.add('show');
+    }
+    function fecharModalLocalizacao() { $('modalLocalizacao').classList.remove('show'); }
+
+    async function confirmarEstacionado() {
+      const id = $('modalAtendimentoId').value;
+      const setor = getSetorById($('modalSetor').value);
+      if (!setor) return toast('Selecione um setor.');
+      await atualizarAtendimento(id, {
+        status: 'ESTACIONADO',
+        setor_id: setor.id,
+        setor_nome: setor.nome,
+        vaga: normalize($('modalVaga').value),
+        obs: normalize($('modalObs').value),
+        estacionado_em: agoraISO()
+      }, 'ESTACIONADO', 'Veículo estacionado/localização atualizada');
+      fecharModalLocalizacao();
+    }
+
+    async function solicitarVeiculo(id) {
+      await atualizarAtendimento(id, { status: 'SOLICITADO', solicitado_em: agoraISO() }, 'SOLICITADO', 'Cliente solicitou o veículo');
+    }
+    async function entregarVeiculo(id) {
+      if (!confirm('Confirmar entrega do veículo?')) return;
+      await atualizarAtendimento(id, { status: 'ENTREGUE', ativo: false, entregue_em: agoraISO() }, 'ENTREGUE', 'Veículo entregue ao cliente');
+    }
+    async function registrarOcorrencia(id) {
+      const texto = prompt('Descreva a ocorrência:');
+      if (!texto) return;
+      const a = atendimentos.find(x => x.id === id);
+      await atualizarAtendimento(id, { status: 'OCORRENCIA', obs: normalize((a.obs || '') + ' | OCORRÊNCIA: ' + texto), ocorrencia_em: agoraISO() }, 'OCORRENCIA', texto);
+    }
+
+    function montarSelectSetores() {
+      const ativos = setores.filter(s => s.ativo !== false);
+      const html = ativos.length
+        ? '<option value="">SELECIONE O SETOR</option>' + ativos.map(s => `<option value="${s.id}">${s.nome} • ${s.tipo || ''}</option>`).join('')
+        : '<option value="">CADASTRE UM SETOR PRIMEIRO</option>';
+      $('setorAtendimento').innerHTML = html;
+      $('modalSetor').innerHTML = html;
+    }
+
+    function renderSetores() {
+      const box = $('listaSetores');
+      if (!setores.length) { box.innerHTML = '<div class="empty">Nenhum setor cadastrado.</div>'; return; }
+      box.innerHTML = setores.map(s => `<div class="vehicleCard">
+        <div class="vehicleTop"><div><strong>${s.nome}</strong><div class="meta muted">${s.tipo || 'OUTRO'}${s.obs ? ' • ' + s.obs : ''}</div></div><span class="tag ${s.ativo === false ? 'OCORRENCIA' : 'ENTREGUE'}">${s.ativo === false ? 'Inativo' : 'Ativo'}</span></div>
+        <div class="actions" style="grid-template-columns:repeat(2,1fr);">
+          <button class="tinyBtn green" onclick="alternarSetor('${s.id}', true)">Ativar</button>
+          <button class="tinyBtn red" onclick="alternarSetor('${s.id}', false)">Inativar</button>
+        </div>
+      </div>`).join('');
+    }
+
+    function renderVeiculos() {
+      const q = normalize($('buscaVeiculos').value);
+      const lista = veiculos.filter(v => !q || [v.placa, v.modelo, v.cor, v.cliente_nome, v.cliente_tel].some(x => normalize(x).includes(q))).slice(0, 80);
+      const box = $('listaVeiculos');
+      if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum veículo encontrado.</div>'; return; }
+      box.innerHTML = lista.map(v => `<div class="vehicleCard">
+        <div class="vehicleTop"><span class="plate">${v.placa}</span><span class="tag">Cadastro</span></div>
+        <div class="meta"><strong>${v.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${v.cor || 'COR NÃO INFORMADA'}<br><span class="muted">${v.cliente_nome || 'CLIENTE NÃO INFORMADO'} ${v.cliente_tel ? '• ' + v.cliente_tel : ''}</span>${v.obs ? '<br><span class="muted">OBS: '+v.obs+'</span>' : ''}</div>
+      </div>`).join('');
+    }
+
+    function renderAtendimentos() {
+      const q = normalize($('buscaAtendimentos').value);
+      const filtro = $('filtroStatus').value;
+      const hoje = dataLocal();
+      let lista = atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
+      if (filtro === 'ativos') lista = lista.filter(a => a.ativo !== false && a.status !== 'ENTREGUE');
+      else if (filtro !== 'todos') lista = lista.filter(a => a.status === filtro);
+      if (q) lista = lista.filter(a => [a.ticket, a.placa, a.modelo, a.cor, a.cliente_nome, a.cliente_tel, a.setor_nome, a.vaga, a.status].some(x => normalize(x).includes(q)));
+
+      const ordem = { SOLICITADO: 1, OCORRENCIA: 2, RECEBIDO: 3, ESTACIONADO: 4, ENTREGUE: 9 };
+      lista.sort((a,b) => (ordem[a.status] || 8) - (ordem[b.status] || 8) || String(b.atualizado_em).localeCompare(String(a.atualizado_em)));
+
+      const box = $('listaAtendimentos');
+      if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum veículo na operação.</div>'; return; }
+      box.innerHTML = lista.map(a => `<div class="vehicleCard">
+        <div class="vehicleTop">
+          <div><div class="ticket">#${a.ticket}</div><div style="margin-top:8px;"><span class="plate">${a.placa}</span></div></div>
+          <span class="tag ${a.status}">${a.status}</span>
+        </div>
+        <div class="meta">
+          <strong>${a.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${a.cor || 'COR NÃO INFORMADA'}<br>
+          <span class="muted">CLIENTE: ${a.cliente_nome || '---'} ${a.cliente_tel ? '• ' + a.cliente_tel : ''}</span><br>
+          <span class="muted">LOCAL: ${a.setor_nome || '---'} ${a.vaga ? '• ' + a.vaga : ''}</span><br>
+          <span class="muted">OPERADOR: ${a.operador_recebimento || a.operador_ultima_acao || '---'}</span>
+          ${a.obs ? '<br><span class="dangerText">OBS: '+a.obs+'</span>' : ''}
+        </div>
+        <div class="actions">
+          <button class="tinyBtn blue" onclick="abrirModalLocalizacao('${a.id}')">Estacionar</button>
+          <button class="tinyBtn orange" onclick="solicitarVeiculo('${a.id}')">Solicitado</button>
+          <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
+          <button class="tinyBtn red" onclick="registrarOcorrencia('${a.id}')">Ocorrência</button>
+        </div>
+      </div>`).join('');
+    }
+
+    function renderKpis() {
+      const hoje = dataLocal();
+      const lista = atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
+      $('kpiRecebido').textContent = lista.filter(a => a.status === 'RECEBIDO').length;
+      $('kpiEstacionado').textContent = lista.filter(a => a.status === 'ESTACIONADO').length;
+      $('kpiSolicitado').textContent = lista.filter(a => a.status === 'SOLICITADO' || a.status === 'OCORRENCIA').length;
+      $('kpiEntregue').textContent = lista.filter(a => a.status === 'ENTREGUE').length;
+    }
+
+    function renderQueue() {
+      $('syncResumo').textContent = `Status: ${navigator.onLine ? 'online' : 'offline'} • Pendentes: ${fila.length} • Última sincronização: carregando...`;
+      lerMeta('last_sync').then(last => $('syncResumo').textContent = `Status: ${navigator.onLine ? 'online' : 'offline'} • Pendentes: ${fila.length} • Última sincronização: ${last || 'ainda não sincronizou'}`);
+      const box = $('listaQueue');
+      if (!fila.length) { box.innerHTML = '<div class="empty">Nada pendente. Tudo sincronizado neste aparelho.</div>'; return; }
+      box.innerHTML = fila.slice(0, 50).map(q => `<div class="syncItem">${q.collectionName}<br><span class="muted">${q.docId}</span><br>${new Date(q.created_at).toLocaleString('pt-BR')}</div>`).join('');
+    }
+
+    function renderTudo() {
+      montarSelectSetores();
+      renderKpis();
+      renderAtendimentos();
+      renderVeiculos();
+      renderSetores();
+      renderQueue();
+      atualizarStatus();
+    }
+
+    function atualizarStatus(msg='') {
+      const online = navigator.onLine;
+      $('netStatus').textContent = online ? '🟢 Online' : '🔴 Offline';
+      $('netStatus').className = 'pill ' + (online ? 'online' : 'offline');
+      $('syncStatus').textContent = msg || `${fila.length} pendente${fila.length === 1 ? '' : 's'}`;
+      $('syncStatus').className = 'pill ' + (fila.length ? 'offline' : 'online');
+    }
+
+    function trocarTab(tab, btn) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+      $('tab-' + tab).classList.add('active');
+      btn.classList.add('active');
+      renderTudo();
+    }
+
+    function limparBuscaAtendimento() { $('buscaAtendimentos').value = ''; $('filtroStatus').value = 'ativos'; renderTudo(); }
+
+    async function forcarSincronizacao() {
+      await processarFila();
+      if (!fila.length) toast('Sincronização concluída.', true);
+      else toast('Ainda existem pendências. Verifique a internet.');
+    }
+
+    async function exportarBackupLocal() {
+      await carregarLocal();
+      const payload = { gerado_em: agoraISO(), device_id: deviceId(), setores, veiculos, atendimentos, fila };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_vallet_${dataLocal()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function maskTel(i) {
+      let v = i.value.replace(/\D/g, '').substring(0, 11);
+      if (v.length > 0) v = '(' + v;
+      if (v.length > 3) v = v.substring(0, 3) + ') ' + v.substring(3);
+      if (v.length > 10) v = v.substring(0, 10) + '-' + v.substring(10);
+      i.value = v;
+    }
+
+    async function bootstrapPadrao() {
+      const existentes = await getAll(STORE_SETOR);
+      if (existentes.length) return;
+      const defaults = [
+        { id: 'setor_interno', nome: 'ESTACIONAMENTO INTERNO', tipo: 'INTERNO', obs: '', ativo: true },
+        { id: 'setor_externo', nome: 'ESTACIONAMENTO EXTERNO', tipo: 'EXTERNO', obs: '', ativo: true },
+        { id: 'setor_a', nome: 'SETOR A', tipo: 'INTERNO', obs: '', ativo: true },
+        { id: 'setor_b', nome: 'SETOR B', tipo: 'INTERNO', obs: '', ativo: true }
+      ];
+      for (const s of defaults) {
+        const setor = { ...s, criado_em: agoraISO(), atualizado_em: agoraISO(), origem_dispositivo: deviceId() };
+        await put(STORE_SETOR, setor);
+        await queueSet('vallet_setores', setor.id, setor);
+      }
+    }
+
+    async function iniciar() {
+      idb = await openDB();
+      deviceId();
+      $('operador').value = localStorage.getItem(OPERADOR_KEY) || '';
+      await bootstrapPadrao();
+      await carregarLocal();
+      await atualizarTicketPreview();
+      renderTudo();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('vallet_sw.js').catch(() => {});
+      }
+      if (navigator.onLine) {
+        await processarFila();
+        await puxarFirebase();
+        await carregarLocal();
+        renderTudo();
+      }
+      setInterval(async () => { if (navigator.onLine) await processarFila(); }, 30000);
+    }
+
+    window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); });
+    window.addEventListener('offline', () => { atualizarStatus(); toast('Sem internet. Salvando neste aparelho.'); });
+    window.addEventListener('DOMContentLoaded', iniciar);
+  </script>
+</body>
+</html>
