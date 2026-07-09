@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v19: busca operacional rápida com resultado no painel -->
+  <!-- E-CLUB Vallet v21: exclusão definitiva de modelos e cores -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -893,6 +893,20 @@
       if (navigator.onLine) processarFila();
     }
 
+    async function queueDelete(collectionName, docId) {
+      const item = {
+        id: 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        action: 'delete',
+        collectionName,
+        docId,
+        created_at: agoraISO()
+      };
+      await put(STORE_QUEUE, item);
+      await carregarLocal();
+      atualizarStatus();
+      if (navigator.onLine) processarFila();
+    }
+
     async function carregarLocal() {
       setores = (await getAll(STORE_SETOR)).sort((a,b) => String(a.nome).localeCompare(String(b.nome)));
       modelos = (await getAll(STORE_MODELO)).sort((a,b) => String(a.nome).localeCompare(String(b.nome)));
@@ -940,11 +954,16 @@
         if (!fb) throw new Error('Firebase não carregou');
         await carregarLocal();
         for (const item of fila) {
-          await fb.setDoc(fb.doc(fb.db, item.collectionName, item.docId), {
-            ...item.data,
-            sync_origem: deviceId(),
-            sync_at: agoraISO()
-          }, { merge: true });
+          const refDoc = fb.doc(fb.db, item.collectionName, item.docId);
+          if (item.action === 'delete') {
+            await fb.deleteDoc(refDoc);
+          } else {
+            await fb.setDoc(refDoc, {
+              ...item.data,
+              sync_origem: deviceId(),
+              sync_at: agoraISO()
+            }, { merge: true });
+          }
           await del(STORE_QUEUE, item.id);
         }
         await salvarMeta('last_sync', horaLocal());
@@ -1104,14 +1123,15 @@
       toast('Modelo salvo.', true);
     }
 
-    async function alternarModelo(id, ativo) {
+    async function excluirModelo(id) {
       const modelo = modelos.find(m => m.id === id);
       if (!modelo) return;
-      modelo.ativo = ativo;
-      modelo.atualizado_em = agoraISO();
-      await put(STORE_MODELO, modelo);
-      await queueSet('vallet_modelos', id, modelo);
-      await carregarLocal(); renderTudo();
+      if (!confirm(`Excluir definitivamente o modelo ${modelo.nome}? Os atendimentos já registrados não serão alterados.`)) return;
+      await del(STORE_MODELO, id);
+      await queueDelete('vallet_modelos', id);
+      await carregarLocal();
+      renderTudo();
+      toast('Modelo excluído.', true);
     }
 
     async function salvarCor() {
@@ -1136,14 +1156,15 @@
       toast('Cor salva.', true);
     }
 
-    async function alternarCor(id, ativo) {
+    async function excluirCor(id) {
       const cor = cores.find(c => c.id === id);
       if (!cor) return;
-      cor.ativo = ativo;
-      cor.atualizado_em = agoraISO();
-      await put(STORE_COR, cor);
-      await queueSet('vallet_cores', id, cor);
-      await carregarLocal(); renderTudo();
+      if (!confirm(`Excluir definitivamente a cor ${cor.nome}? Os atendimentos já registrados não serão alterados.`)) return;
+      await del(STORE_COR, id);
+      await queueDelete('vallet_cores', id);
+      await carregarLocal();
+      renderTudo();
+      toast('Cor excluída.', true);
     }
 
     function safeArg(v) { return String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
@@ -1676,10 +1697,9 @@
       if (!box) return;
       if (!modelos.length) { box.innerHTML = '<div class="empty">Nenhum modelo cadastrado.</div>'; return; }
       box.innerHTML = modelos.map(m => `<div class="vehicleCard">
-        <div class="vehicleTop"><div><strong>${m.nome}</strong><div class="meta muted">${m.categoria || 'CARRO'}</div></div><span class="tag ${m.ativo === false ? 'OCORRENCIA' : 'ENTREGUE'}">${m.ativo === false ? 'Inativo' : 'Ativo'}</span></div>
-        <div class="actions" style="grid-template-columns:repeat(2,1fr);">
-          <button class="tinyBtn green" onclick="alternarModelo('${m.id}', true)">Ativar</button>
-          <button class="tinyBtn red" onclick="alternarModelo('${m.id}', false)">Inativar</button>
+        <div class="vehicleTop"><div><strong>${m.nome}</strong><div class="meta muted">${m.categoria || 'CARRO'}</div></div></div>
+        <div class="actions" style="grid-template-columns:1fr;">
+          <button class="tinyBtn red" onclick="excluirModelo('${m.id}')">Excluir</button>
         </div>
       </div>`).join('');
     }
@@ -1689,10 +1709,9 @@
       if (!box) return;
       if (!cores.length) { box.innerHTML = '<div class="empty">Nenhuma cor cadastrada.</div>'; return; }
       box.innerHTML = cores.map(c => `<div class="vehicleCard">
-        <div class="vehicleTop"><div><strong><span class="colorDot" style="--dot:${c.hex || corHexPadrao(c.nome)}"></span> ${c.nome}</strong><div class="meta muted">${c.hex || corHexPadrao(c.nome)}</div></div><span class="tag ${c.ativo === false ? 'OCORRENCIA' : 'ENTREGUE'}">${c.ativo === false ? 'Inativa' : 'Ativa'}</span></div>
-        <div class="actions" style="grid-template-columns:repeat(2,1fr);">
-          <button class="tinyBtn green" onclick="alternarCor('${c.id}', true)">Ativar</button>
-          <button class="tinyBtn red" onclick="alternarCor('${c.id}', false)">Inativar</button>
+        <div class="vehicleTop"><div><strong><span class="colorDot" style="--dot:${c.hex || corHexPadrao(c.nome)}"></span> ${c.nome}</strong><div class="meta muted">${c.hex || corHexPadrao(c.nome)}</div></div></div>
+        <div class="actions" style="grid-template-columns:1fr;">
+          <button class="tinyBtn red" onclick="excluirCor('${c.id}')">Excluir</button>
         </div>
       </div>`).join('');
     }
@@ -1930,7 +1949,8 @@
       }
 
       const modelosExistentes = await getAll(STORE_MODELO);
-      if (!modelosExistentes.length) {
+      const modelosInicializados = await lerMeta('catalogo_modelos_inicializado');
+      if (!modelosExistentes.length && !modelosInicializados) {
         const defaultsModelos = ['COROLLA','CIVIC','ONIX','HB20','COMPASS','HILUX','TORO','TRACKER','T-CROSS','GOL','POLO','CRETA','RENEGADE','SW4','JETTA','S10','RANGER','AMAROK','KWID','ARGO','CRONOS','KICKS','HR-V','NIVUS','MOTO'];
         for (const nome of defaultsModelos) {
           const modelo = { id: idTexto('modelo', nome), nome, categoria: nome === 'MOTO' ? 'MOTO' : 'CARRO', ativo: true, criado_em: agoraISO(), atualizado_em: agoraISO(), origem_dispositivo: deviceId() };
@@ -1938,9 +1958,11 @@
           await queueSet('vallet_modelos', modelo.id, modelo);
         }
       }
+      if (!modelosInicializados) await salvarMeta('catalogo_modelos_inicializado', true);
 
       const coresExistentes = await getAll(STORE_COR);
-      if (!coresExistentes.length) {
+      const coresInicializadas = await lerMeta('catalogo_cores_inicializado');
+      if (!coresExistentes.length && !coresInicializadas) {
         const defaultsCores = ['PRETO','BRANCO','PRATA','CINZA','VERMELHO','AZUL','MARROM','BEGE','VERDE','AMARELO','VINHO','DOURADO'];
         for (const nome of defaultsCores) {
           const cor = { id: idTexto('cor', nome), nome, hex: corHexPadrao(nome), ativo: true, criado_em: agoraISO(), atualizado_em: agoraISO(), origem_dispositivo: deviceId() };
@@ -1948,6 +1970,7 @@
           await queueSet('vallet_cores', cor.id, cor);
         }
       }
+      if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
     async function iniciar() {
@@ -1960,7 +1983,7 @@
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('vallet_sw.js?v=19').catch(() => {});
+        navigator.serviceWorker.register('vallet_sw.js?v=21').catch(() => {});
       }
       if (navigator.onLine) {
         await processarFila();
