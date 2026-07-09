@@ -609,11 +609,9 @@
           <div class="row two">
             <div>
               <input id="cadModelo" list="datalistModelos" placeholder="MODELO" oninput="aoEditarModelo('cadModelo')" />
-              <div id="chipsModelosCadastro" class="chips"></div>
             </div>
             <div>
               <input id="cadCor" list="datalistCores" placeholder="COR" oninput="aoEditarCor('cadCor')" />
-              <div id="chipsCoresCadastro" class="chips"></div>
             </div>
           </div>
           <div class="row">
@@ -652,7 +650,7 @@
           <button class="btn purple full" onclick="salvarSetor()">Salvar setor</button>
         </div>
         <div class="card">
-          <div class="title"><div><h2>Setores ativos</h2><p>Usados no atendimento para indicar onde o veículo ficou estacionado.</p></div></div>
+          <div class="title"><div><h2>Setores cadastrados</h2><p>Exclua os setores que não serão mais usados na operação.</p></div></div>
           <div id="listaSetores" class="list"></div>
         </div>
       </div>
@@ -1381,14 +1379,15 @@
       toast('Setor salvo.', true);
     }
 
-    async function alternarSetor(id, ativo) {
+    async function excluirSetor(id) {
       const setor = setores.find(s => s.id === id);
       if (!setor) return;
-      setor.ativo = ativo;
-      setor.atualizado_em = agoraISO();
-      await put(STORE_SETOR, setor);
-      await queueSet('vallet_setores', id, setor);
-      await carregarLocal(); renderTudo();
+      if (!confirm(`Excluir definitivamente o setor ${setor.nome}? Os atendimentos já registrados manterão o nome do setor no histórico.`)) return;
+      await del(STORE_SETOR, id);
+      await queueDelete('vallet_setores', id);
+      await carregarLocal();
+      renderTudo();
+      toast('Setor excluído.', true);
     }
 
     async function salvarVeiculoBase(data) {
@@ -1720,10 +1719,9 @@
       const box = $('listaSetores');
       if (!setores.length) { box.innerHTML = '<div class="empty">Nenhum setor cadastrado.</div>'; return; }
       box.innerHTML = setores.map(s => `<div class="vehicleCard">
-        <div class="vehicleTop"><div><strong>${s.nome}</strong><div class="meta muted">${s.tipo || 'OUTRO'}${s.obs ? ' • ' + s.obs : ''}</div></div><span class="tag ${s.ativo === false ? 'OCORRENCIA' : 'ENTREGUE'}">${s.ativo === false ? 'Inativo' : 'Ativo'}</span></div>
-        <div class="actions" style="grid-template-columns:repeat(2,1fr);">
-          <button class="tinyBtn green" onclick="alternarSetor('${s.id}', true)">Ativar</button>
-          <button class="tinyBtn red" onclick="alternarSetor('${s.id}', false)">Inativar</button>
+        <div class="vehicleTop"><div><strong>${s.nome}</strong><div class="meta muted">${s.tipo || 'OUTRO'}${s.obs ? ' • ' + s.obs : ''}</div></div></div>
+        <div class="actions" style="grid-template-columns:1fr;">
+          <button class="tinyBtn red" onclick="excluirSetor('${s.id}')">Excluir</button>
         </div>
       </div>`).join('');
     }

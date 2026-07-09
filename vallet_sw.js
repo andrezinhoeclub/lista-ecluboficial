@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eclub-vallet-v21';
+const CACHE_NAME = 'eclub-vallet-v22';
 const APP_SHELL = [
   './vallet_eclub.html',
   './vallet_manifest.json'
