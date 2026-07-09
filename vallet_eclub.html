@@ -248,6 +248,67 @@
     .syncItem { padding: 12px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--border); font-size: 10px; color: #d4d4d8; font-weight: 800; text-transform: uppercase; line-height: 1.45; }
     .smallText { font-size: 9px; color: var(--muted); font-weight: 850; text-transform: uppercase; line-height: 1.5; }
     .dangerText { color: #fecaca; }
+    .themeToggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 35px;
+    }
+    body.theme-light {
+      --bg: #f4f6fb;
+      --card: rgba(255, 255, 255, .92);
+      --card2: rgba(15, 23, 42, .04);
+      --border: rgba(15, 23, 42, .13);
+      --muted: #667085;
+      --text: #111827;
+      --shadow: 0 20px 55px rgba(15, 23, 42, .10);
+      background:
+        radial-gradient(circle at 20% 0%, rgba(234,179,8,.14), transparent 34%),
+        radial-gradient(circle at 100% 10%, rgba(56,189,248,.16), transparent 35%),
+        var(--bg);
+      color: var(--text);
+    }
+    body.theme-light input,
+    body.theme-light select,
+    body.theme-light textarea {
+      background: #ffffff;
+      border-color: rgba(15,23,42,.16);
+      color: #111827;
+    }
+    body.theme-light input:focus,
+    body.theme-light select:focus,
+    body.theme-light textarea:focus {
+      border-color: var(--yellow);
+      box-shadow: 0 0 0 3px rgba(234,179,8,.20);
+    }
+    body.theme-light input::placeholder,
+    body.theme-light textarea::placeholder { color: #98a2b3; }
+    body.theme-light .tabs { background: rgba(255,255,255,.78); border-color: var(--border); }
+    body.theme-light .tabBtn { color: #667085; }
+    body.theme-light .tabBtn.active { color: #050505; }
+    body.theme-light .pill {
+      background: rgba(255,255,255,.82);
+      color: #475467;
+      border-color: rgba(15,23,42,.13);
+    }
+    body.theme-light .pill.online { color: #027a48; border-color: rgba(2,122,72,.22); background: rgba(236,253,243,.95); }
+    body.theme-light .pill.offline { color: #b42318; border-color: rgba(180,35,24,.20); background: rgba(254,243,242,.95); }
+    body.theme-light .card.soft,
+    body.theme-light .vehicleCard,
+    body.theme-light .stat,
+    body.theme-light .syncItem {
+      background: rgba(255,255,255,.78);
+      border-color: rgba(15,23,42,.12);
+    }
+    body.theme-light .meta { color: #344054; }
+    body.theme-light .empty { color: #98a2b3; border-color: rgba(15,23,42,.18); background: rgba(255,255,255,.45); }
+    body.theme-light .notice { background: rgba(255,251,235,.95); color: #92400e; border-color: rgba(234,179,8,.35); }
+    body.theme-light .drawer { background: rgba(15,23,42,.36); }
+    body.theme-light .drawerBox { background: #ffffff; border-color: rgba(15,23,42,.14); }
+    body.theme-light .btn.ghost { background: rgba(255,255,255,.86); color: #344054; border-color: rgba(15,23,42,.14); }
+    body.theme-light .smallText { color: #667085; }
+    body.theme-light .dangerText { color: #b42318; }
     @media (max-width: 860px) {
       body { padding: 12px; }
       .topbar { align-items: flex-start; flex-direction: column; }
@@ -274,6 +335,7 @@
       <div class="statusBox">
         <span id="netStatus" class="pill">Verificando...</span>
         <span id="syncStatus" class="pill">0 pendentes</span>
+        <button id="themeToggle" class="pill themeToggle" onclick="alternarTema()" type="button" aria-label="Alternar tema">☀️ Modo claro</button>
         <button class="pill" onclick="forcarSincronizacao()">Sincronizar</button>
       </div>
     </header>
@@ -511,6 +573,27 @@
     const STORE_META = 'meta';
     const DEVICE_ID_KEY = 'eclub_vallet_device_id';
     const OPERADOR_KEY = 'eclub_vallet_operador';
+    const THEME_KEY = 'eclub_vallet_theme';
+
+    function aplicarTema(tema) {
+      const modoClaro = tema === 'light';
+      document.body.classList.toggle('theme-light', modoClaro);
+      document.documentElement.style.colorScheme = modoClaro ? 'light' : 'dark';
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) metaTheme.setAttribute('content', modoClaro ? '#f4f6fb' : '#050508');
+      const btn = document.getElementById('themeToggle');
+      if (btn) {
+        btn.textContent = modoClaro ? '🌙 Modo escuro' : '☀️ Modo claro';
+        btn.setAttribute('aria-label', modoClaro ? 'Usar modo escuro' : 'Usar modo claro');
+      }
+    }
+
+    function alternarTema() {
+      const atual = document.body.classList.contains('theme-light') ? 'light' : 'dark';
+      const proximo = atual === 'light' ? 'dark' : 'light';
+      localStorage.setItem(THEME_KEY, proximo);
+      aplicarTema(proximo);
+    }
 
     let idb = null;
     let firebase = null;
@@ -1075,6 +1158,7 @@
     }
 
     async function iniciar() {
+      aplicarTema(localStorage.getItem(THEME_KEY) || 'dark');
       idb = await openDB();
       deviceId();
       $('operador').value = localStorage.getItem(OPERADOR_KEY) || '';
