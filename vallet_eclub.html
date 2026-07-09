@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v17: sem campo de ocorrências, apenas observações -->
+  <!-- E-CLUB Vallet v19: busca operacional rápida com resultado no painel -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -521,15 +521,15 @@
           </div>
           <div class="row two">
             <select id="filtroStatus" onchange="renderTudo()">
-              <option value="ativos">Ativos</option>
-              <option value="todos">Todos de hoje</option>
-              <option value="RECEBIDO">Recebidos</option>
+              <option value="ativos">Ativos na operação</option>
               <option value="SOLICITADO">Solicitados</option>
-              <option value="ENTREGUE">Entregues</option>
+              <option value="ENTREGUE">Entregues hoje</option>
+              <option value="todos">Todos de hoje</option>
             </select>
             <button class="btn ghost" onclick="limparBuscaAtendimento()">Limpar busca</button>
           </div>
-          <div class="smallText">Todos os registros ficam neste aparelho quando não houver internet. Ao voltar a conexão, a sincronização é feita automaticamente.</div>
+          <div id="resultadoBuscaOperacao" class="list" style="margin-top:12px;"></div>
+          <div class="smallText">Digite ticket, placa, nome, telefone, modelo, cor ou setor. O resultado aparece aqui sem precisar rolar até a lista inferior.</div>
         </div>
       </div>
 
@@ -1708,30 +1708,50 @@
       }).join('');
     }
 
-    function renderAtendimentos() {
-      const q = normalize($('buscaAtendimentos').value);
+    function getAtendimentosFiltrados({ usarBusca = true } = {}) {
+      const q = usarBusca ? normalize($('buscaAtendimentos').value) : '';
       const filtro = $('filtroStatus').value;
       const hoje = dataLocal();
       let lista = atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
+
       if (filtro === 'ativos') lista = lista.filter(a => a.ativo !== false && a.status !== 'ENTREGUE');
+      else if (filtro === 'ENTREGUE') lista = lista.filter(a => a.status === 'ENTREGUE' && a.data_operacao === hoje);
       else if (filtro !== 'todos') lista = lista.filter(a => a.status === filtro);
-      if (q) lista = lista.filter(a => [a.ticket, a.placa, a.modelo, a.cor, a.cliente_nome, a.cliente_tel, a.setor_nome, a.vaga, a.status].some(x => normalize(x).includes(q)));
+
+      if (q) {
+        lista = lista.filter(a => [
+          a.ticket,
+          a.placa,
+          a.modelo,
+          a.cor,
+          a.cliente_nome,
+          a.cliente_tel,
+          String(a.cliente_tel || '').replace(/\D/g, ''),
+          a.setor_nome,
+          a.vaga,
+          a.status,
+          a.obs
+        ].some(x => normalize(x).includes(q)));
+      }
 
       const ordem = { SOLICITADO: 1, RECEBIDO: 2, ESTACIONADO: 3, ENTREGUE: 9 };
       lista.sort((a,b) => (ordem[a.status] || 8) - (ordem[b.status] || 8) || String(b.atualizado_em).localeCompare(String(a.atualizado_em)));
+      return lista;
+    }
 
-      const box = $('listaAtendimentos');
-      if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum veículo na operação.</div>'; return; }
-      box.innerHTML = lista.map(a => {
-        const dataCadastro = formatarDataHoraCurta(a.recebido_em || a.criado_em);
-        const dataUltima = formatarDataHoraCurta(getDataUltimaAcao(a));
-        const operadorCadastro = a.operador_recebimento || '---';
-        const operadorUltima = getOperadorUltimaAcao(a);
-        const textoLiberacao = a.entregue_em
-          ? `<span><b>Liberação:</b> ${formatarDataHoraCurta(a.entregue_em)} • ${operadorUltima}</span>`
-          : `<span><b>Última ação:</b> ${dataUltima} • ${operadorUltima}</span>`;
-        const vHist = getVeiculoPorPlaca(a.placa);
-        return `<div class="vehicleCard operationCard">
+    function montarCardAtendimento(a, compactoBusca = false) {
+      const dataCadastro = formatarDataHoraCurta(a.recebido_em || a.criado_em);
+      const dataUltima = formatarDataHoraCurta(getDataUltimaAcao(a));
+      const operadorCadastro = a.operador_recebimento || '---';
+      const operadorUltima = getOperadorUltimaAcao(a);
+      const textoLiberacao = a.entregue_em
+        ? `<span><b>Liberação:</b> ${formatarDataHoraCurta(a.entregue_em)} • ${operadorUltima}</span>`
+        : `<span><b>Última ação:</b> ${dataUltima} • ${operadorUltima}</span>`;
+      const vHist = getVeiculoPorPlaca(a.placa);
+      const tagStatus = a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status;
+      const tituloBusca = compactoBusca ? `<div class="smallText" style="margin-bottom:8px;color:var(--yellow);">Resultado rápido da busca</div>` : '';
+
+      return `${tituloBusca}<div class="vehicleCard operationCard">
         <div class="operationHeader">
           <div class="operationMain">
             <div class="ticket">#${a.ticket}</div>
@@ -1741,7 +1761,7 @@
               <span class="muted">${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
             </div>
           </div>
-          <span class="tag ${a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status}">${a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status}</span>
+          <span class="tag ${tagStatus}">${tagStatus}</span>
         </div>
         <div class="operationInfo">
           <span><b>Cliente:</b> ${a.cliente_nome || '---'}${a.cliente_tel ? ' • ' + a.cliente_tel : ''}</span>
@@ -1759,7 +1779,30 @@
           <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
         </div>
       </div>`;
-      }).join('');
+    }
+
+    function renderBuscaOperacao() {
+      const box = $('resultadoBuscaOperacao');
+      if (!box) return;
+      const q = normalize($('buscaAtendimentos').value);
+      if (!q) {
+        box.innerHTML = '<div class="empty" style="padding:18px;">Digite para localizar um veículo sem rolar a tela.</div>';
+        return;
+      }
+      const lista = getAtendimentosFiltrados({ usarBusca: true }).slice(0, 12);
+      if (!lista.length) {
+        box.innerHTML = '<div class="empty" style="padding:18px;">Nenhum veículo encontrado para essa busca.</div>';
+        return;
+      }
+      const resumo = `<div class="smallText" style="margin:4px 0 8px;">${lista.length} resultado${lista.length === 1 ? '' : 's'} encontrado${lista.length === 1 ? '' : 's'} para a busca.</div>`;
+      box.innerHTML = resumo + lista.map(a => montarCardAtendimento(a, true)).join('');
+    }
+
+    function renderAtendimentos() {
+      const lista = getAtendimentosFiltrados({ usarBusca: true });
+      const box = $('listaAtendimentos');
+      if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum veículo na operação.</div>'; return; }
+      box.innerHTML = lista.map(a => montarCardAtendimento(a, false)).join('');
     }
 
     function renderKpis() {
@@ -1785,6 +1828,7 @@
       renderModelos();
       renderCores();
       renderKpis();
+      renderBuscaOperacao();
       renderAtendimentos();
       renderVeiculos();
       renderSetores();
@@ -1885,7 +1929,7 @@
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('vallet_sw.js?v=17').catch(() => {});
+        navigator.serviceWorker.register('vallet_sw.js?v=19').catch(() => {});
       }
       if (navigator.onLine) {
         await processarFila();
