@@ -68,6 +68,17 @@
     .brand img { width: 42px; height: 42px; object-fit: contain; }
     .brand h1 { margin: 0; line-height: .9; font-size: 21px; font-weight: 950; letter-spacing: -.04em; color: var(--yellow); font-style: italic; text-transform: uppercase; }
     .brand p { margin: 4px 0 0; font-size: 8px; letter-spacing: .18em; color: var(--muted); font-weight: 950; text-transform: uppercase; }
+    .operatorHeader { margin-top: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .operatorHeader span { color: var(--muted); font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .12em; }
+    .operatorHeader input { width: 190px; max-width: 70vw; padding: 9px 12px; border-radius: 999px; font-size: 10px; background: rgba(255,255,255,.045); }
+    .titleRight { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    .ticketCorner { min-width: 138px; border: 1px solid rgba(234,179,8,.32); background: rgba(234,179,8,.075); border-radius: 18px; padding: 10px 12px; text-align: center; }
+    .ticketCorner span { display: block; color: var(--muted); font-size: 7px; font-weight: 950; text-transform: uppercase; letter-spacing: .14em; margin-bottom: 5px; }
+    .ticketCorner input { padding: 0; border: 0; background: transparent; color: var(--yellow); text-align: center; font-size: 28px; font-weight: 950; letter-spacing: .08em; pointer-events: none; cursor: default; }
+    .placaGrande { font-size: clamp(30px, 7vw, 54px); letter-spacing: .12em; text-align: center; padding: 22px 18px; border-radius: 24px; font-weight: 950; }
+    .buscaGrande { font-size: clamp(15px, 3vw, 20px); padding: 20px 18px; border-radius: 22px; }
+    .obsGrande { min-height: 104px; }
+
     .statusBox { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .pill {
       border: 1px solid var(--border);
@@ -339,6 +350,10 @@
     body.theme-light .drawer { background: rgba(15,23,42,.36); }
     body.theme-light .drawerBox { background: #ffffff; border-color: rgba(15,23,42,.14); }
     body.theme-light .btn.ghost { background: rgba(255,255,255,.86); color: #344054; border-color: rgba(15,23,42,.14); }
+    body.theme-light .operatorHeader input { background: rgba(255,255,255,.92); color: #101828; border-color: rgba(15,23,42,.16); }
+    body.theme-light .ticketCorner { background: rgba(255,251,235,.96); border-color: rgba(234,179,8,.38); }
+    body.theme-light .ticketCorner input { color: #92400e; }
+
     body.theme-light .smallText { color: #667085; }
     body.theme-light .dangerText { color: #b42318; }
     @media (max-width: 860px) {
@@ -349,6 +364,8 @@
       .actions { grid-template-columns: repeat(2, 1fr); }
       .card { padding: 18px; border-radius: 24px; }
       .title { flex-direction: column; }
+      .titleRight { align-items: flex-start; width: 100%; }
+      .ticketCorner { width: 100%; }
       .brand h1 { font-size: 20px; }
     }
   </style>
@@ -362,6 +379,10 @@
         <div>
           <h1>Vallet E-Club</h1>
           <p>Operação online/offline</p>
+          <div class="operatorHeader">
+            <span>Operador</span>
+            <input id="operador" placeholder="NOME DO FUNCIONÁRIO" oninput="salvarOperadorLocal()" />
+          </div>
         </div>
       </div>
       <div class="statusBox">
@@ -397,28 +418,19 @@
               <h2>Receber veículo</h2>
               <p>Se a placa não existir, o veículo será cadastrado automaticamente.</p>
             </div>
-            <span class="tag RECEBIDO">Entrada</span>
-          </div>
-
-          <div class="row two">
-            <div>
-              <label class="fieldLabel">Operador</label>
-              <input id="operador" placeholder="NOME DO FUNCIONÁRIO" oninput="salvarOperadorLocal()" />
-            </div>
-            <div>
-              <label class="fieldLabel">Ticket automático</label>
-              <input id="ticketPreview" readonly />
+            <div class="titleRight">
+              <span class="tag RECEBIDO">Entrada</span>
+              <div class="ticketCorner" title="Ticket automático bloqueado">
+                <span>Ticket automático</span>
+                <input id="ticketPreview" readonly tabindex="-1" aria-label="Ticket automático" />
+              </div>
             </div>
           </div>
 
-          <div class="row two">
+          <div class="row">
             <div>
               <label class="fieldLabel">Placa</label>
-              <input id="placa" placeholder="ABC1D23" oninput="aoDigitarPlaca()" maxlength="8" />
-            </div>
-            <div>
-              <label class="fieldLabel">Telefone cliente</label>
-              <input id="clienteTel" placeholder="(41) 99999-9999" oninput="maskTel(this)" />
+              <input id="placa" class="placaGrande" placeholder="ABC1D23" oninput="aoDigitarPlaca()" maxlength="8" />
             </div>
           </div>
 
@@ -438,23 +450,30 @@
 
           <div class="row two">
             <div>
-              <label class="fieldLabel">Nome do cliente</label>
-              <input id="clienteNome" placeholder="NOME DO CLIENTE" />
-            </div>
-            <div>
               <label class="fieldLabel">Setor onde ficará estacionado</label>
               <select id="setorAtendimento"></select>
+            </div>
+            <div>
+              <label class="fieldLabel">Vaga / referência</label>
+              <input id="vaga" placeholder="EX: A12, FUNDO, RAMPA" />
             </div>
           </div>
 
           <div class="row two">
             <div>
-              <label class="fieldLabel">Vaga / referência</label>
-              <input id="vaga" placeholder="EX: A12, FUNDO, RAMPA" />
+              <label class="fieldLabel">Nome do cliente</label>
+              <input id="clienteNome" placeholder="NOME DO CLIENTE" />
             </div>
             <div>
-              <label class="fieldLabel">Observação rápida</label>
-              <input id="obs" placeholder="EX: ARRANHÃO, CHAVE COM CONTROLE" />
+              <label class="fieldLabel">Telefone cliente</label>
+              <input id="clienteTel" placeholder="(41) 99999-9999" oninput="maskTel(this)" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label class="fieldLabel">Observações sobre o carro</label>
+              <textarea id="obs" class="obsGrande" placeholder="EX: ARRANHÃO, CHAVE COM CONTROLE, SEM ESTEPE, OBJETO NO PORTA-MALAS"></textarea>
             </div>
           </div>
 
@@ -469,7 +488,7 @@
             </div>
           </div>
           <div class="row">
-            <input id="buscaAtendimentos" placeholder="BUSCAR TICKET / PLACA / CLIENTE / SETOR" oninput="renderTudo()" />
+            <input id="buscaAtendimentos" class="buscaGrande" placeholder="BUSCAR TICKET / PLACA / CLIENTE / SETOR" oninput="renderTudo()" />
           </div>
           <div class="row two">
             <select id="filtroStatus" onchange="renderTudo()">
@@ -1471,7 +1490,7 @@
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('vallet_sw.js?v=6').catch(() => {});
+        navigator.serviceWorker.register('vallet_sw.js?v=7').catch(() => {});
       }
       if (navigator.onLine) {
         await processarFila();
