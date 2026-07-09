@@ -184,6 +184,14 @@
     .operationInfo b { color: var(--text); font-weight: 950; }
     .operationCard .actions { margin-top: 10px; }
     .operationCard .ticket { min-width: 66px; }
+    .buscaQuickCard { padding: 18px; }
+    .buscaQuickMain { display: grid; grid-template-columns: auto auto 1fr; gap: 14px; align-items: center; }
+    .buscaQuickCard .buscaTicket { font-size: 34px; min-width: 86px; }
+    .buscaQuickCard .buscaPlate { font-size: 24px; padding: 10px 17px; min-width: 150px; border-radius: 16px; }
+    .buscaQuickText { display: flex; flex-direction: column; gap: 3px; min-width: 0; text-transform: uppercase; }
+    .buscaQuickText strong { color: var(--text); font-size: 25px; font-weight: 950; line-height: 1.05; }
+    .buscaQuickText span { color: var(--muted); font-size: 19px; font-weight: 950; line-height: 1.15; }
+    .buscaQuickActions { grid-template-columns: repeat(3,1fr); margin-top: 16px !important; }
     .plate {
       display: inline-flex;
       align-items: center;
@@ -390,6 +398,12 @@
       .actions { grid-template-columns: repeat(2, 1fr); }
       .operationInfo { grid-template-columns: 1fr; }
       .operationHeader { flex-direction: column; }
+      .buscaQuickMain { grid-template-columns: 1fr; align-items: start; gap: 10px; }
+      .buscaQuickCard .buscaTicket { font-size: 34px; }
+      .buscaQuickCard .buscaPlate { font-size: 22px; min-width: 0; width: max-content; max-width: 100%; }
+      .buscaQuickText strong { font-size: 20px; }
+      .buscaQuickText span { font-size: 15px; }
+      .buscaQuickActions { grid-template-columns: 1fr; }
       .operationText { min-width: 0; width: 100%; }
       .card { padding: 18px; border-radius: 24px; }
       .title { flex-direction: column; }
@@ -1749,9 +1763,26 @@
         : `<span><b>Última ação:</b> ${dataUltima} • ${operadorUltima}</span>`;
       const vHist = getVeiculoPorPlaca(a.placa);
       const tagStatus = a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status;
-      const tituloBusca = compactoBusca ? `<div class="smallText" style="margin-bottom:8px;color:var(--yellow);">Resultado rápido da busca</div>` : '';
 
-      return `${tituloBusca}<div class="vehicleCard operationCard">
+      if (compactoBusca) {
+        return `<div class="vehicleCard operationCard buscaQuickCard">
+          <div class="buscaQuickMain">
+            <div class="ticket buscaTicket">#${a.ticket}</div>
+            <span class="plate buscaPlate">${a.placa}</span>
+            <div class="buscaQuickText">
+              <strong>${a.modelo || 'MODELO NÃO INFORMADO'} • ${a.cor || 'COR NÃO INFORMADA'}</strong>
+              <span>${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
+            </div>
+          </div>
+          <div class="actions buscaQuickActions">
+            <button class="tinyBtn purple" onclick="abrirModalEdicao('${a.id}')">Editar</button>
+            <button class="tinyBtn orange" onclick="solicitarVeiculo('${a.id}')">Solicitado</button>
+            <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')">Entregar</button>
+          </div>
+        </div>`;
+      }
+
+      return `<div class="vehicleCard operationCard">
         <div class="operationHeader">
           <div class="operationMain">
             <div class="ticket">#${a.ticket}</div>
