@@ -248,6 +248,38 @@
     .syncItem { padding: 12px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--border); font-size: 10px; color: #d4d4d8; font-weight: 800; text-transform: uppercase; line-height: 1.45; }
     .smallText { font-size: 9px; color: var(--muted); font-weight: 850; text-transform: uppercase; line-height: 1.5; }
     .dangerText { color: #fecaca; }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+    .chipBtn {
+      border-radius: 999px;
+      padding: 10px 12px;
+      font-size: 9px;
+      font-weight: 950;
+      text-transform: uppercase;
+      color: #d4d4d8;
+      background: rgba(255,255,255,.055);
+      border: 1px solid var(--border);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .chipBtn.active { background: var(--yellow); color: #050505; border-color: var(--yellow); }
+    .colorDot {
+      width: 13px;
+      height: 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.35);
+      background: var(--dot, #777);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+    }
+    .cadastroGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    body.theme-light .chipBtn { background: rgba(255,255,255,.86); color: #344054; border-color: rgba(15,23,42,.14); }
+    body.theme-light .chipBtn.active { background: var(--yellow); color: #050505; border-color: var(--yellow); }
+    body.theme-light .colorDot { border-color: rgba(15,23,42,.22); }
     .themeToggle {
       display: inline-flex;
       align-items: center;
@@ -313,7 +345,7 @@
       body { padding: 12px; }
       .topbar { align-items: flex-start; flex-direction: column; }
       .statusBox { justify-content: flex-start; }
-      .grid2, .grid3, .grid4, .two, .three, .quickStats { grid-template-columns: 1fr; }
+      .grid2, .grid3, .grid4, .two, .three, .quickStats, .cadastroGrid { grid-template-columns: 1fr; }
       .actions { grid-template-columns: repeat(2, 1fr); }
       .card { padding: 18px; border-radius: 24px; }
       .title { flex-direction: column; }
@@ -342,10 +374,14 @@
 
     <nav class="tabs">
       <button class="tabBtn active" data-tab="atendimento" onclick="trocarTab('atendimento', this)">Atendimento</button>
+      <button class="tabBtn" data-tab="cadastros" onclick="trocarTab('cadastros', this)">Cadastros</button>
       <button class="tabBtn" data-tab="veiculos" onclick="trocarTab('veiculos', this)">Veículos</button>
       <button class="tabBtn" data-tab="setores" onclick="trocarTab('setores', this)">Setores</button>
       <button class="tabBtn" data-tab="sincronizacao" onclick="trocarTab('sincronizacao', this)">Sincronização</button>
     </nav>
+
+    <datalist id="datalistModelos"></datalist>
+    <datalist id="datalistCores"></datalist>
 
     <section id="tab-atendimento" class="section active">
       <div class="quickStats">
@@ -393,11 +429,13 @@
           <div class="row two">
             <div>
               <label class="fieldLabel">Modelo</label>
-              <input id="modelo" placeholder="EX: COROLLA, CIVIC, COMPASS" />
+              <input id="modelo" list="datalistModelos" placeholder="BUSQUE OU ESCOLHA O MODELO" oninput="aoEditarModelo('modelo')" />
+              <div id="chipsModelosAtendimento" class="chips"></div>
             </div>
             <div>
               <label class="fieldLabel">Cor</label>
-              <input id="cor" placeholder="EX: PRETO, BRANCO, PRATA" />
+              <input id="cor" list="datalistCores" placeholder="ESCOLHA A COR" oninput="aoEditarCor('cor')" />
+              <div id="chipsCoresAtendimento" class="chips"></div>
             </div>
           </div>
 
@@ -463,6 +501,46 @@
       </div>
     </section>
 
+    <section id="tab-cadastros" class="section">
+      <div class="card" style="margin-bottom:16px;">
+        <div class="title">
+          <div>
+            <h2>Cadastros rápidos</h2>
+            <p>Use listas padronizadas para reduzir erro de digitação no atendimento.</p>
+          </div>
+        </div>
+        <div class="notice">Modelos e cores ficam salvos no aparelho e sincronizam com o Firebase quando houver internet. Na correria, o operador escolhe por botão ou busca, em vez de digitar livremente.</div>
+      </div>
+
+      <div class="cadastroGrid">
+        <div class="card">
+          <div class="title"><div><h2>Modelos de veículos</h2><p>Exemplos: Corolla, Civic, Onix, HB20, Compass.</p></div></div>
+          <div class="row two">
+            <input id="modeloNome" placeholder="NOME DO MODELO" />
+            <select id="modeloCategoria">
+              <option value="CARRO">Carro</option>
+              <option value="SUV">SUV</option>
+              <option value="CAMINHONETE">Caminhonete</option>
+              <option value="MOTO">Moto</option>
+              <option value="OUTRO">Outro</option>
+            </select>
+          </div>
+          <button class="btn blue full" onclick="salvarModelo()">Salvar modelo</button>
+          <div id="listaModelos" class="list" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="card">
+          <div class="title"><div><h2>Cores padronizadas</h2><p>Evita variações como preto, pretto, pt, cinza/chumbo.</p></div></div>
+          <div class="row two">
+            <input id="corNome" placeholder="NOME DA COR" />
+            <input id="corHex" type="color" value="#777777" title="Cor visual" />
+          </div>
+          <button class="btn purple full" onclick="salvarCor()">Salvar cor</button>
+          <div id="listaCores" class="list" style="margin-top:14px;"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="tab-veiculos" class="section">
       <div class="grid grid2">
         <div class="card">
@@ -472,8 +550,14 @@
             <input id="cadClienteTel" placeholder="TELEFONE" oninput="maskTel(this)" />
           </div>
           <div class="row two">
-            <input id="cadModelo" placeholder="MODELO" />
-            <input id="cadCor" placeholder="COR" />
+            <div>
+              <input id="cadModelo" list="datalistModelos" placeholder="MODELO" oninput="aoEditarModelo('cadModelo')" />
+              <div id="chipsModelosCadastro" class="chips"></div>
+            </div>
+            <div>
+              <input id="cadCor" list="datalistCores" placeholder="COR" oninput="aoEditarCor('cadCor')" />
+              <div id="chipsCoresCadastro" class="chips"></div>
+            </div>
           </div>
           <div class="row">
             <input id="cadClienteNome" placeholder="NOME DO CLIENTE" />
@@ -565,8 +649,10 @@
     };
 
     const DB_NAME = 'eclub_vallet_v1';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     const STORE_SETOR = 'setores';
+    const STORE_MODELO = 'modelos';
+    const STORE_COR = 'cores';
     const STORE_VEICULO = 'veiculos';
     const STORE_ATEND = 'atendimentos';
     const STORE_QUEUE = 'queue';
@@ -598,6 +684,8 @@
     let idb = null;
     let firebase = null;
     let setores = [];
+    let modelos = [];
+    let cores = [];
     let veiculos = [];
     let atendimentos = [];
     let fila = [];
@@ -635,6 +723,8 @@
         req.onupgradeneeded = () => {
           const db = req.result;
           if (!db.objectStoreNames.contains(STORE_SETOR)) db.createObjectStore(STORE_SETOR, { keyPath: 'id' });
+          if (!db.objectStoreNames.contains(STORE_MODELO)) db.createObjectStore(STORE_MODELO, { keyPath: 'id' });
+          if (!db.objectStoreNames.contains(STORE_COR)) db.createObjectStore(STORE_COR, { keyPath: 'id' });
           if (!db.objectStoreNames.contains(STORE_VEICULO)) db.createObjectStore(STORE_VEICULO, { keyPath: 'id' });
           if (!db.objectStoreNames.contains(STORE_ATEND)) db.createObjectStore(STORE_ATEND, { keyPath: 'id' });
           if (!db.objectStoreNames.contains(STORE_QUEUE)) db.createObjectStore(STORE_QUEUE, { keyPath: 'id' });
@@ -694,6 +784,8 @@
 
     async function carregarLocal() {
       setores = (await getAll(STORE_SETOR)).sort((a,b) => String(a.nome).localeCompare(String(b.nome)));
+      modelos = (await getAll(STORE_MODELO)).sort((a,b) => String(a.nome).localeCompare(String(b.nome)));
+      cores = (await getAll(STORE_COR)).sort((a,b) => String(a.nome).localeCompare(String(b.nome)));
       veiculos = (await getAll(STORE_VEICULO)).sort((a,b) => String(a.placa).localeCompare(String(b.placa)));
       atendimentos = (await getAll(STORE_ATEND)).sort((a,b) => String(b.criado_em || '').localeCompare(String(a.criado_em || '')));
       fila = (await getAll(STORE_QUEUE)).sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
@@ -751,13 +843,17 @@
       const fb = await initFirebase();
       if (!fb) return;
       try {
-        const [setSnap, veiSnap, atSnap] = await Promise.all([
+        const [setSnap, modSnap, corSnap, veiSnap, atSnap] = await Promise.all([
           fb.getDocs(fb.collection(fb.db, 'vallet_setores')),
+          fb.getDocs(fb.collection(fb.db, 'vallet_modelos')),
+          fb.getDocs(fb.collection(fb.db, 'vallet_cores')),
           fb.getDocs(fb.collection(fb.db, 'vallet_veiculos')),
           fb.getDocs(fb.collection(fb.db, 'vallet_atendimentos'))
         ]);
         const puts = [];
         setSnap.forEach(d => puts.push(put(STORE_SETOR, { id: d.id, ...d.data() })));
+        modSnap.forEach(d => puts.push(put(STORE_MODELO, { id: d.id, ...d.data() })));
+        corSnap.forEach(d => puts.push(put(STORE_COR, { id: d.id, ...d.data() })));
         veiSnap.forEach(d => puts.push(put(STORE_VEICULO, { id: d.id, ...d.data() })));
         atSnap.forEach(d => {
           const data = { id: d.id, ...d.data() };
@@ -808,6 +904,120 @@
 
     function getSetorById(id) { return setores.find(s => s.id === id) || null; }
 
+
+    function idTexto(prefixo, nome) {
+      return prefixo + '_' + normalize(nome).replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').toLowerCase();
+    }
+    function corHexPadrao(nome) {
+      const n = normalize(nome);
+      const mapa = {
+        PRETO: '#111111', BRANCO: '#ffffff', PRATA: '#c0c0c0', CINZA: '#808080',
+        VERMELHO: '#dc2626', AZUL: '#2563eb', MARROM: '#78350f', BEGE: '#d6b98c',
+        VERDE: '#16a34a', AMARELO: '#eab308', VINHO: '#7f1d1d', LARANJA: '#f97316',
+        DOURADO: '#d4af37', ROXO: '#7e22ce', ROSA: '#ec4899'
+      };
+      return mapa[n] || '#777777';
+    }
+    function existeModelo(nome) { const n = normalize(nome); return modelos.some(m => m.ativo !== false && normalize(m.nome) === n); }
+    function existeCor(nome) { const n = normalize(nome); return cores.some(c => c.ativo !== false && normalize(c.nome) === n); }
+
+    async function salvarModelo() {
+      const nome = normalize($('modeloNome').value);
+      if (!nome) return toast('Informe o nome do modelo.');
+      const id = idTexto('modelo', nome);
+      const antigo = modelos.find(m => m.id === id) || {};
+      const modelo = {
+        id,
+        nome,
+        categoria: normalize($('modeloCategoria').value || antigo.categoria || 'CARRO'),
+        ativo: true,
+        criado_em: antigo.criado_em || agoraISO(),
+        atualizado_em: agoraISO(),
+        origem_dispositivo: deviceId()
+      };
+      await put(STORE_MODELO, modelo);
+      await queueSet('vallet_modelos', id, modelo);
+      $('modeloNome').value = '';
+      await carregarLocal(); renderTudo();
+      toast('Modelo salvo.', true);
+    }
+
+    async function alternarModelo(id, ativo) {
+      const modelo = modelos.find(m => m.id === id);
+      if (!modelo) return;
+      modelo.ativo = ativo;
+      modelo.atualizado_em = agoraISO();
+      await put(STORE_MODELO, modelo);
+      await queueSet('vallet_modelos', id, modelo);
+      await carregarLocal(); renderTudo();
+    }
+
+    async function salvarCor() {
+      const nome = normalize($('corNome').value);
+      if (!nome) return toast('Informe o nome da cor.');
+      const id = idTexto('cor', nome);
+      const antigo = cores.find(c => c.id === id) || {};
+      const cor = {
+        id,
+        nome,
+        hex: $('corHex').value || antigo.hex || corHexPadrao(nome),
+        ativo: true,
+        criado_em: antigo.criado_em || agoraISO(),
+        atualizado_em: agoraISO(),
+        origem_dispositivo: deviceId()
+      };
+      await put(STORE_COR, cor);
+      await queueSet('vallet_cores', id, cor);
+      $('corNome').value = '';
+      $('corHex').value = '#777777';
+      await carregarLocal(); renderTudo();
+      toast('Cor salva.', true);
+    }
+
+    async function alternarCor(id, ativo) {
+      const cor = cores.find(c => c.id === id);
+      if (!cor) return;
+      cor.ativo = ativo;
+      cor.atualizado_em = agoraISO();
+      await put(STORE_COR, cor);
+      await queueSet('vallet_cores', id, cor);
+      await carregarLocal(); renderTudo();
+    }
+
+    function safeArg(v) { return String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+    function setModeloCampo(campoId, nome) {
+      const el = $(campoId);
+      if (!el) return;
+      el.value = normalize(nome);
+      aoEditarModelo(campoId);
+    }
+    function setCorCampo(campoId, nome) {
+      const el = $(campoId);
+      if (!el) return;
+      el.value = normalize(nome);
+      aoEditarCor(campoId);
+    }
+    function aoEditarModelo(campoId) {
+      const el = $(campoId);
+      if (!el) return;
+      el.value = normalize(el.value);
+      renderChipsModeloCampo(campoId);
+    }
+    function aoEditarCor(campoId) {
+      const el = $(campoId);
+      if (!el) return;
+      el.value = normalize(el.value);
+      renderChipsCorCampo(campoId);
+    }
+    function modeloRevisao(valor) {
+      const v = normalize(valor);
+      return v && !existeModelo(v);
+    }
+    function corRevisao(valor) {
+      const v = normalize(valor);
+      return v && !existeCor(v);
+    }
+
     async function salvarSetor() {
       const nome = normalize($('setorNome').value);
       if (!nome) return toast('Informe o nome do setor.');
@@ -848,6 +1058,8 @@
         placa,
         modelo: normalize(data.modelo || antigo.modelo),
         cor: normalize(data.cor || antigo.cor),
+        modelo_precisa_revisao: modeloRevisao(data.modelo || antigo.modelo),
+        cor_precisa_revisao: corRevisao(data.cor || antigo.cor),
         cliente_nome: normalize(data.cliente_nome || antigo.cliente_nome),
         cliente_tel: String(data.cliente_tel || antigo.cliente_tel || '').trim(),
         obs: normalize(data.obs || antigo.obs),
@@ -893,6 +1105,7 @@
       } else {
         $('avisoVeiculoNovo').classList.remove('hidden');
       }
+      renderChipsPadrao();
     }
 
     async function receberVeiculo() {
@@ -901,6 +1114,8 @@
       if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador.');
       const setor = getSetorById($('setorAtendimento').value);
       if (!setor) return toast('Selecione o setor onde o veículo ficará.');
+      if (!normalize($('modelo').value)) return toast('Escolha ou informe o modelo do veículo.');
+      if (!normalize($('cor').value)) return toast('Escolha a cor do veículo.');
 
       try {
         const veiculo = await salvarVeiculoBase({
@@ -921,6 +1136,8 @@
           placa_norm: placa,
           modelo: veiculo.modelo || normalize($('modelo').value),
           cor: veiculo.cor || normalize($('cor').value),
+          modelo_precisa_revisao: modeloRevisao(veiculo.modelo || $('modelo').value),
+          cor_precisa_revisao: corRevisao(veiculo.cor || $('cor').value),
           cliente_nome: veiculo.cliente_nome || normalize($('clienteNome').value),
           cliente_tel: veiculo.cliente_tel || $('clienteTel').value.trim(),
           setor_id: setor.id,
@@ -1010,6 +1227,72 @@
       $('modalSetor').innerHTML = html;
     }
 
+    function renderDatalists() {
+      const modelosAtivos = modelos.filter(m => m.ativo !== false);
+      const coresAtivas = cores.filter(c => c.ativo !== false);
+      $('datalistModelos').innerHTML = modelosAtivos.map(m => `<option value="${m.nome}"></option>`).join('');
+      $('datalistCores').innerHTML = coresAtivas.map(c => `<option value="${c.nome}"></option>`).join('');
+    }
+
+    function renderChipsModeloCampo(campoId) {
+      const alvo = campoId === 'modelo' ? $('chipsModelosAtendimento') : $('chipsModelosCadastro');
+      if (!alvo) return;
+      const campo = $(campoId);
+      const selecionado = normalize(campo ? campo.value : '');
+      const maisUsados = modelos.filter(m => m.ativo !== false).slice(0, 12);
+      if (!maisUsados.length) {
+        alvo.innerHTML = '<span class="smallText">Cadastre modelos na aba Cadastros.</span>';
+        return;
+      }
+      alvo.innerHTML = maisUsados.map(m => `<button type="button" class="chipBtn ${normalize(m.nome) === selecionado ? 'active' : ''}" onclick="setModeloCampo('${campoId}', '${safeArg(m.nome)}')">${m.nome}</button>`).join('');
+    }
+
+    function renderChipsCorCampo(campoId) {
+      const alvo = campoId === 'cor' ? $('chipsCoresAtendimento') : $('chipsCoresCadastro');
+      if (!alvo) return;
+      const campo = $(campoId);
+      const selecionado = normalize(campo ? campo.value : '');
+      const lista = cores.filter(c => c.ativo !== false).slice(0, 14);
+      if (!lista.length) {
+        alvo.innerHTML = '<span class="smallText">Cadastre cores na aba Cadastros.</span>';
+        return;
+      }
+      alvo.innerHTML = lista.map(c => `<button type="button" class="chipBtn ${normalize(c.nome) === selecionado ? 'active' : ''}" onclick="setCorCampo('${campoId}', '${safeArg(c.nome)}')"><span class="colorDot" style="--dot:${c.hex || corHexPadrao(c.nome)}"></span>${c.nome}</button>`).join('');
+    }
+
+    function renderChipsPadrao() {
+      renderChipsModeloCampo('modelo');
+      renderChipsModeloCampo('cadModelo');
+      renderChipsCorCampo('cor');
+      renderChipsCorCampo('cadCor');
+    }
+
+    function renderModelos() {
+      const box = $('listaModelos');
+      if (!box) return;
+      if (!modelos.length) { box.innerHTML = '<div class="empty">Nenhum modelo cadastrado.</div>'; return; }
+      box.innerHTML = modelos.map(m => `<div class="vehicleCard">
+        <div class="vehicleTop"><div><strong>${m.nome}</strong><div class="meta muted">${m.categoria || 'CARRO'}</div></div><span class="tag ${m.ativo === false ? 'OCORRENCIA' : 'ENTREGUE'}">${m.ativo === false ? 'Inativo' : 'Ativo'}</span></div>
+        <div class="actions" style="grid-template-columns:repeat(2,1fr);">
+          <button class="tinyBtn green" onclick="alternarModelo('${m.id}', true)">Ativar</button>
+          <button class="tinyBtn red" onclick="alternarModelo('${m.id}', false)">Inativar</button>
+        </div>
+      </div>`).join('');
+    }
+
+    function renderCores() {
+      const box = $('listaCores');
+      if (!box) return;
+      if (!cores.length) { box.innerHTML = '<div class="empty">Nenhuma cor cadastrada.</div>'; return; }
+      box.innerHTML = cores.map(c => `<div class="vehicleCard">
+        <div class="vehicleTop"><div><strong><span class="colorDot" style="--dot:${c.hex || corHexPadrao(c.nome)}"></span> ${c.nome}</strong><div class="meta muted">${c.hex || corHexPadrao(c.nome)}</div></div><span class="tag ${c.ativo === false ? 'OCORRENCIA' : 'ENTREGUE'}">${c.ativo === false ? 'Inativa' : 'Ativa'}</span></div>
+        <div class="actions" style="grid-template-columns:repeat(2,1fr);">
+          <button class="tinyBtn green" onclick="alternarCor('${c.id}', true)">Ativar</button>
+          <button class="tinyBtn red" onclick="alternarCor('${c.id}', false)">Inativar</button>
+        </div>
+      </div>`).join('');
+    }
+
     function renderSetores() {
       const box = $('listaSetores');
       if (!setores.length) { box.innerHTML = '<div class="empty">Nenhum setor cadastrado.</div>'; return; }
@@ -1029,7 +1312,7 @@
       if (!lista.length) { box.innerHTML = '<div class="empty">Nenhum veículo encontrado.</div>'; return; }
       box.innerHTML = lista.map(v => `<div class="vehicleCard">
         <div class="vehicleTop"><span class="plate">${v.placa}</span><span class="tag">Cadastro</span></div>
-        <div class="meta"><strong>${v.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${v.cor || 'COR NÃO INFORMADA'}<br><span class="muted">${v.cliente_nome || 'CLIENTE NÃO INFORMADO'} ${v.cliente_tel ? '• ' + v.cliente_tel : ''}</span>${v.obs ? '<br><span class="muted">OBS: '+v.obs+'</span>' : ''}</div>
+        <div class="meta"><strong>${v.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${v.cor || 'COR NÃO INFORMADA'}<br><span class="muted">${v.cliente_nome || 'CLIENTE NÃO INFORMADO'} ${v.cliente_tel ? '• ' + v.cliente_tel : ''}</span>${(v.modelo_precisa_revisao || v.cor_precisa_revisao) ? '<br><span class="dangerText">REVISAR CADASTRO: MODELO/COR FORA DA LISTA PADRÃO</span>' : ''}${v.obs ? '<br><span class="muted">OBS: '+v.obs+'</span>' : ''}</div>
       </div>`).join('');
     }
 
@@ -1057,6 +1340,7 @@
           <span class="muted">CLIENTE: ${a.cliente_nome || '---'} ${a.cliente_tel ? '• ' + a.cliente_tel : ''}</span><br>
           <span class="muted">LOCAL: ${a.setor_nome || '---'} ${a.vaga ? '• ' + a.vaga : ''}</span><br>
           <span class="muted">OPERADOR: ${a.operador_recebimento || a.operador_ultima_acao || '---'}</span>
+          ${(a.modelo_precisa_revisao || a.cor_precisa_revisao) ? '<br><span class="dangerText">REVISAR: MODELO/COR FORA DA LISTA PADRÃO</span>' : ''}
           ${a.obs ? '<br><span class="dangerText">OBS: '+a.obs+'</span>' : ''}
         </div>
         <div class="actions">
@@ -1087,6 +1371,10 @@
 
     function renderTudo() {
       montarSelectSetores();
+      renderDatalists();
+      renderChipsPadrao();
+      renderModelos();
+      renderCores();
       renderKpis();
       renderAtendimentos();
       renderVeiculos();
@@ -1121,7 +1409,7 @@
 
     async function exportarBackupLocal() {
       await carregarLocal();
-      const payload = { gerado_em: agoraISO(), device_id: deviceId(), setores, veiculos, atendimentos, fila };
+      const payload = { gerado_em: agoraISO(), device_id: deviceId(), setores, modelos, cores, veiculos, atendimentos, fila };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1142,18 +1430,39 @@
     }
 
     async function bootstrapPadrao() {
-      const existentes = await getAll(STORE_SETOR);
-      if (existentes.length) return;
-      const defaults = [
-        { id: 'setor_interno', nome: 'ESTACIONAMENTO INTERNO', tipo: 'INTERNO', obs: '', ativo: true },
-        { id: 'setor_externo', nome: 'ESTACIONAMENTO EXTERNO', tipo: 'EXTERNO', obs: '', ativo: true },
-        { id: 'setor_a', nome: 'SETOR A', tipo: 'INTERNO', obs: '', ativo: true },
-        { id: 'setor_b', nome: 'SETOR B', tipo: 'INTERNO', obs: '', ativo: true }
-      ];
-      for (const s of defaults) {
-        const setor = { ...s, criado_em: agoraISO(), atualizado_em: agoraISO(), origem_dispositivo: deviceId() };
-        await put(STORE_SETOR, setor);
-        await queueSet('vallet_setores', setor.id, setor);
+      const setoresExistentes = await getAll(STORE_SETOR);
+      if (!setoresExistentes.length) {
+        const defaultsSetores = [
+          { id: 'setor_interno', nome: 'ESTACIONAMENTO INTERNO', tipo: 'INTERNO', obs: '', ativo: true },
+          { id: 'setor_externo', nome: 'ESTACIONAMENTO EXTERNO', tipo: 'EXTERNO', obs: '', ativo: true },
+          { id: 'setor_a', nome: 'SETOR A', tipo: 'INTERNO', obs: '', ativo: true },
+          { id: 'setor_b', nome: 'SETOR B', tipo: 'INTERNO', obs: '', ativo: true }
+        ];
+        for (const s of defaultsSetores) {
+          const setor = { ...s, criado_em: agoraISO(), atualizado_em: agoraISO(), origem_dispositivo: deviceId() };
+          await put(STORE_SETOR, setor);
+          await queueSet('vallet_setores', setor.id, setor);
+        }
+      }
+
+      const modelosExistentes = await getAll(STORE_MODELO);
+      if (!modelosExistentes.length) {
+        const defaultsModelos = ['COROLLA','CIVIC','ONIX','HB20','COMPASS','HILUX','TORO','TRACKER','T-CROSS','GOL','POLO','CRETA','RENEGADE','SW4','JETTA','S10','RANGER','AMAROK','KWID','ARGO','CRONOS','KICKS','HR-V','NIVUS','MOTO'];
+        for (const nome of defaultsModelos) {
+          const modelo = { id: idTexto('modelo', nome), nome, categoria: nome === 'MOTO' ? 'MOTO' : 'CARRO', ativo: true, criado_em: agoraISO(), atualizado_em: agoraISO(), origem_dispositivo: deviceId() };
+          await put(STORE_MODELO, modelo);
+          await queueSet('vallet_modelos', modelo.id, modelo);
+        }
+      }
+
+      const coresExistentes = await getAll(STORE_COR);
+      if (!coresExistentes.length) {
+        const defaultsCores = ['PRETO','BRANCO','PRATA','CINZA','VERMELHO','AZUL','MARROM','BEGE','VERDE','AMARELO','VINHO','DOURADO'];
+        for (const nome of defaultsCores) {
+          const cor = { id: idTexto('cor', nome), nome, hex: corHexPadrao(nome), ativo: true, criado_em: agoraISO(), atualizado_em: agoraISO(), origem_dispositivo: deviceId() };
+          await put(STORE_COR, cor);
+          await queueSet('vallet_cores', cor.id, cor);
+        }
       }
     }
 
