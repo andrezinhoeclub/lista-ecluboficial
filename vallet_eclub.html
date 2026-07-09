@@ -717,7 +717,7 @@
           <textarea id="editObs" class="obsGrande" placeholder="EX: ARRANHÃO, CHAVE COM CONTROLE, SEM ESTEPE"></textarea>
         </div>
       </div>
-      <div class="notice">A ocorrência fica liberada apenas após abrir a edição deste atendimento.</div>
+      <div class="notice">Ao registrar uma ocorrência, a edição será salva, a tela será fechada e o status ficará como OCORRÊNCIA.</div>
       <div class="row three">
         <button class="btn green" onclick="salvarEdicaoAtendimento()">Salvar edição</button>
         <button class="btn red" onclick="registrarOcorrenciaDoEditor()">Registrar ocorrência</button>
@@ -1363,6 +1363,7 @@
         status: 'OCORRENCIA',
         ativo: true,
         obs: normalize((a.obs || '') + ' | OCORRÊNCIA: ' + texto),
+        ocorrencia_texto: normalize(texto),
         ocorrencia_em: quando,
         operador_ocorrencia: operador,
         ultima_alteracao_em: quando,
@@ -1460,8 +1461,78 @@
 
     async function registrarOcorrenciaDoEditor() {
       const id = $('editAtendimentoId').value;
-      if (!id) return toast('Abra um atendimento para editar.');
-      await registrarOcorrencia(id);
+      const a = atendimentos.find(x => x.id === id);
+      if (!id || !a) return toast('Abra um atendimento para editar.');
+      if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador para registrar a ocorrência.');
+
+      const texto = prompt('Descreva a ocorrência:');
+      const ocorrencia = normalize(texto || '');
+      if (!ocorrencia) return;
+
+      const placa = normPlaca($('editPlaca').value);
+      if (!placa || placa.length < 7) return toast('Informe uma placa válida.');
+      const duplicada = atendimentos.find(x => x.id !== id && normPlaca(x.placa_norm || x.placa) === placa && x.ativo !== false && x.status !== 'ENTREGUE');
+      if (duplicada) return toast(`Esta placa já está ativa no ticket ${duplicada.ticket}.`);
+
+      const setor = getSetorById($('editSetor').value);
+      const modelo = normalize($('editModelo').value);
+      const cor = normalize($('editCor').value);
+      const obsBase = normalize($('editObs').value);
+      const quando = agoraISO();
+      const operador = getOperador();
+      const obsComOcorrencia = normalize(obsBase ? `${obsBase} | OCORRÊNCIA: ${ocorrencia}` : `OCORRÊNCIA: ${ocorrencia}`);
+
+      const patch = {
+        status: 'OCORRENCIA',
+        ativo: true,
+        placa,
+        placa_norm: placa,
+        modelo,
+        cor,
+        setor_id: setor ? setor.id : '',
+        setor_nome: setor ? setor.nome : '',
+        vaga: normalize($('editVaga').value),
+        cliente_nome: normalize($('editClienteNome').value),
+        cliente_tel: $('editClienteTel').value.trim(),
+        obs: obsComOcorrencia,
+        ocorrencia_texto: ocorrencia,
+        ocorrencia_em: quando,
+        operador_ocorrencia: operador,
+        editado_em: quando,
+        operador_edicao: operador,
+        ultima_alteracao_em: quando,
+        ultima_alteracao_operador: operador,
+        modelo_precisa_revisao: modeloRevisao(modelo),
+        cor_precisa_revisao: corRevisao(cor)
+      };
+
+      await atualizarAtendimento(id, patch, 'OCORRENCIA', ocorrencia);
+
+      const veiculoId = 'placa_' + placa;
+      const antigoVeiculo = veiculos.find(v => v.id === veiculoId) || {};
+      const veiculo = {
+        ...antigoVeiculo,
+        id: veiculoId,
+        placa,
+        placa_norm: placa,
+        modelo,
+        cor,
+        cliente_nome: patch.cliente_nome,
+        cliente_tel: patch.cliente_tel,
+        obs: obsComOcorrencia,
+        modelo_precisa_revisao: patch.modelo_precisa_revisao,
+        cor_precisa_revisao: patch.cor_precisa_revisao,
+        atualizado_em: quando,
+        ultima_visita: quando,
+        origem_dispositivo: deviceId()
+      };
+      await put(STORE_VEICULO, veiculo);
+      await queueSet('vallet_veiculos', veiculo.id, veiculo);
+
+      atendimentoEdicaoAtivaId = null;
+      $('modalEdicao').classList.remove('show');
+      await carregarLocal(); renderTudo();
+      toast('Ocorrência registrada e edição salva.', true);
     }
 
     async function registrarOcorrenciaEditando(id) {
@@ -1607,7 +1678,7 @@
           <span><b>Cadastro:</b> ${dataCadastro} • ${operadorCadastro}</span>
           ${textoLiberacao}
           ${a.editado_em ? `<span><b>Última edição:</b> ${formatarDataHoraCurta(a.editado_em)} • ${a.operador_edicao || a.ultima_alteracao_operador || '---'}</span>` : ''}
-          ${a.ocorrencia_em ? `<span class="dangerText"><b>Ocorrência registrada:</b> ${formatarDataHoraCurta(a.ocorrencia_em)} • ${a.operador_ocorrencia || a.operador_ultima_acao || '---'}</span>` : ''}
+          ${a.ocorrencia_em ? `<span class="dangerText"><b>Ocorrência registrada:</b> ${formatarDataHoraCurta(a.ocorrencia_em)} • ${a.operador_ocorrencia || a.operador_ultima_acao || '---'}${a.ocorrencia_texto ? ' • ' + a.ocorrencia_texto : ''}</span>` : ''}
           ${(a.modelo_precisa_revisao || a.cor_precisa_revisao) ? '<span class="dangerText"><b>Revisar:</b> modelo/cor fora da lista padrão</span>' : ''}
           ${a.obs ? '<span class="dangerText"><b>Obs:</b> '+a.obs+'</span>' : ''}
         </div>
@@ -1743,7 +1814,7 @@
       await atualizarTicketPreview();
       renderTudo();
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('vallet_sw.js?v=9').catch(() => {});
+        navigator.serviceWorker.register('vallet_sw.js?v=11').catch(() => {});
       }
       if (navigator.onLine) {
         await processarFila();
