@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB MASTER | Command Center</title>
+    <!-- Dashboard v39: Resumo gerencial com check-ins do Vallet por evento -->
     <!-- Dashboard E-Club v34: relatório financeiro simplificado do Vallet -->
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1648,19 +1649,37 @@
             txt += `Ingressos vendidos (E Solteiras)\n\n`;
             
             const dS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
+            // Conta cada entrada real do Vallet vinculada ao evento.
+            // Atendimentos realizados no Modo Teste Vallet não entram no financeiro.
+            const totalCarrosValletPorEvento = (ev) => dadosValletAtendimentos.filter(a => {
+                if (!a || a.modo_teste_vallet === true) return false;
+                const eventoAtendimento = eventoDoAtendimentoRelatorioVallet(a);
+                if (!eventoAtendimento) return false;
+
+                if (ev.id && eventoAtendimento.id && String(ev.id) === String(eventoAtendimento.id)) return true;
+
+                const nomeEvento = normalizarBuscaRelatorioVallet(ev.nome || '');
+                const nomeAtendimento = normalizarBuscaRelatorioVallet(eventoAtendimento.nome || a.evento_nome || '');
+                const dataEvento = String(ev.data || '');
+                const dataAtendimento = String(eventoAtendimento.data || a.evento_data || '');
+                return nomeEvento === nomeAtendimento && dataEvento === dataAtendimento;
+            }).length;
             
             at.forEach(ev => {
                 const rE = val.filter(r => (r.evento || '').trim().toUpperCase() === (ev.nome||'').trim().toUpperCase());
                 const px = rE.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP'));
                 const cQ = px.filter(r => r.tipo_entrada === 'CASAL').length; const ccQ = px.filter(r => r.tipo_entrada === 'CASAL CONSUMAÇÃO').length; const sQ = px.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
                 const solts = getSolteirasParaEvento(ev);
+                const carrosVallet = totalCarrosValletPorEvento(ev);
                 
-                if (cQ > 0 || ccQ > 0 || sQ > 0 || solts.length > 0) { 
+                if (cQ > 0 || ccQ > 0 || sQ > 0 || solts.length > 0 || carrosVallet > 0) { 
                     txt += `*${dS[new Date(ev.data + "T12:00:00Z").getDay()]}*\n`;
                     if(cQ > 0) txt += `Casal Seco - ${cQ}\n`;
                     if(ccQ > 0) txt += `Casal Consumação - ${ccQ}\n`;
                     if(sQ > 0) txt += `Solteiro Seco - ${sQ}\n`;
                     if(solts.length > 0) txt += `Solteiras - ${solts.length}\n`;
+                    txt += `Carros - ${carrosVallet}\n`;
                     txt += `\n`; 
                 }
             });
@@ -1679,6 +1698,14 @@
                     txt += `\n`; 
                 }
             });
+
+            txt += `> Vallet\n\n`;
+            at.forEach(ev => {
+                const carrosVallet = totalCarrosValletPorEvento(ev);
+                const diaEvento = dS[new Date(ev.data + "T12:00:00Z").getDay()];
+                txt += `${diaEvento} - ${carrosVallet} ${carrosVallet === 1 ? 'carro' : 'carros'}\n`;
+            });
+
             tA.value = txt.trim();
         };
 
