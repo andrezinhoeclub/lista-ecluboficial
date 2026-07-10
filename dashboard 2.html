@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-CLUB MASTER | Command Center</title>
+    <!-- Dashboard v39: Resumo gerencial com check-ins do Vallet por evento -->
+    <!-- Dashboard E-Club v34: relatório financeiro simplificado do Vallet -->
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e4e4e7; overflow-x: hidden; }
+        .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; }
+        .btn-menu { background: #18181b; border: 1px solid #27272a; transition: 0.3s; color: #71717a; }
+        .btn-menu.active { background: #eab308; color: #000; font-weight: 800; border-color: #fbbf24; box-shadow: 0 0 20px rgba(234, 179, 8, 0.2); }
+        .btn-menu.active-danger { background: #ef4444; color: #fff; font-weight: 800; border-color: #f87171; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+        .btn-menu.active-success { background: #10b981; color: #000; font-weight: 800; border-color: #34d399; box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+        .btn-menu.active-pink { background: #db2777; color: #fff; font-weight: 800; border-color: #f472b6; box-shadow: 0 0 20px rgba(219, 39, 119, 0.4); }
+        .btn-menu.active-blue { background: #2563eb; color: #fff; font-weight: 800; border-color: #60a5fa; box-shadow: 0 0 20px rgba(37, 99, 235, 0.35); }
+        .scroll-x { display: flex; overflow-x: auto; gap: 1rem; padding: 10px 5px 20px 5px; scroll-behavior: smooth; }
+        .scroll-x::-webkit-scrollbar { height: 6px; }
+        .scroll-x::-webkit-scrollbar-thumb { background: #eab308; border-radius: 10px; }
+        .event-bubble { flex: 0 0 auto; width: 360px; background: #0c0c0e; border: 1px solid #1a1a1c; border-radius: 2rem; transition: 0.3s; }
+        input, select, textarea { background-color: #0c0c0e !important; border: 1px solid #27272a !important; color: white !important; outline: none; transition: 0.3s; cursor: pointer; }
+        input:focus, select:focus, textarea:focus { border-color: #eab308 !important; }
+        .mini-capa { width: 100%; height: 100px; object-fit: cover; border-bottom: 1px solid #1a1a1c; border-radius: 1.5rem; opacity: 0.8; margin-bottom: 1rem; }
+        .check-camarote { width: 1.2rem; height: 1.2rem; accent-color: #22d3ee; cursor: pointer; }
+        input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; padding: 5px; }
+</style>
+</head>
+<body class="p-4 md:p-8 relative">
+
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
+        <span id="toast-icon" class="text-lg">⚠️</span>
+        <span id="toast-msg">Mensagem de erro</span>
+    </div>
+
+
+
+    <div id="dashboard-login" class="fixed inset-0 z-[99999] bg-[#050505] flex items-center justify-center p-6 text-white">
+        <form onsubmit="desbloquearDashboard(event)" class="w-full max-w-sm glass-card p-8 md:p-10 text-center border border-yellow-500/20 shadow-[0_0_50px_rgba(234,179,8,0.10)]">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8" alt="E-Club">
+            <p class="text-[9px] font-black uppercase tracking-[0.3em] text-yellow-500 mb-2">Acesso Restrito</p>
+            <h1 class="text-2xl font-black uppercase italic tracking-tighter text-white mb-8">Command Center</h1>
+            <input type="text" name="username" value="dashboard-eclub" autocomplete="username" class="hidden" tabindex="-1" aria-hidden="true">
+            <input type="password" id="senha-dashboard" name="password" autocomplete="current-password" placeholder="SENHA DO DASHBOARD" class="w-full p-5 rounded-2xl text-center font-black text-xs tracking-widest uppercase mb-4" required>
+            <label class="flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-5 select-none cursor-pointer">
+                <input type="checkbox" id="lembrar-dashboard" class="w-4 h-4 accent-yellow-500 cursor-pointer">
+                manter acesso neste aparelho
+            </label>
+            <button type="submit" id="btn-login-dashboard" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">Entrar</button>
+            <p id="erro-login-dashboard" class="hidden mt-5 text-red-500 text-[9px] font-black uppercase tracking-widest">Senha incorreta.</p>
+            <p class="mt-6 text-[8px] text-zinc-600 font-bold uppercase leading-relaxed">No celular, você pode salvar a senha no navegador/gerenciador de senhas e usar a biometria do aparelho para preencher automaticamente.</p>
+        </form>
+    </div>
+    <div id="painel-dashboard" class="max-w-7xl mx-auto hidden">
+        <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+            <div class="flex items-center gap-4">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 w-auto">
+                <div>
+                    <h1 class="text-2xl font-black uppercase italic tracking-tighter text-yellow-500 leading-none">Command Center</h1>
+                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 italic">E-CLUB MANAGEMENT</p>
+                </div>
+            </div>
+            <nav class="flex bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800 overflow-x-auto">
+                <button onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu active px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Relatórios</button>
+                <button onclick="trocarAba('aba-auditoria', this, 'success')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-emerald-400">Auditoria</button>
+                <button onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Eventos</button>
+                <button onclick="trocarAba('aba-solteiras', this, 'pink')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-pink-500">Carona</button>
+                <button onclick="trocarAba('aba-equipe', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Equipe</button>
+                <button onclick="trocarAba('aba-vallet', this, 'blue')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-blue-400">Vallet</button>
+                <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-cyan-400">Listas/Cams</button>
+                <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
+            </nav>
+        </header>
+
+        <section id="aba-relatorios" class="space-y-8">
+            <div class="glass-card p-8">
+                <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-6 tracking-widest">Performance e Financeiro</h2>
+                <div id="container-bolhas" class="scroll-x"></div>
+            </div>
+            
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass-card p-8 border-t-4 border-t-yellow-500 text-center">
+                    <h2 class="text-xs font-black uppercase text-yellow-500 italic mb-8 tracking-widest">🏆 Pódio de Reservas</h2>
+                    <div id="lista-ranking-reservas" class="space-y-4 text-left"></div>
+                </div>
+                <div class="glass-card p-8 border-t-4 border-t-green-500 text-center">
+                    <h2 class="text-xs font-black uppercase text-green-500 italic mb-8 tracking-widest">🔥 Pódio de Check-ins</h2>
+                    <div id="lista-ranking-checkins" class="space-y-4 text-left"></div>
+                </div>
+                <div class="glass-card p-8 border-t-4 border-t-blue-600 flex flex-col">
+                    <h2 class="text-[10px] font-black uppercase text-blue-400 mb-4 tracking-widest">Exportar Dados</h2>
+                    <select id="filtro-promoter-excel" class="w-full bg-[#0a0a0f] border border-zinc-800 p-3 rounded-xl text-[10px] font-black uppercase mb-4 text-white outline-none"></select>
+                    <div class="flex flex-col gap-2 mb-4">
+                        <button onclick="gerarRelatorioGerencial()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">Resumo Gerencial</button>
+                        <button onclick="gerarApenasCheckins()" class="w-full bg-green-600/20 text-green-400 border border-green-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-green-600 hover:text-white transition-all">Extrair Check-ins Pagantes</button>
+                        <button onclick="gerarApenasSolteiras()" class="w-full bg-pink-600/20 text-pink-400 border border-pink-500/30 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-pink-600 hover:text-white transition-all">Extrair Solteiras Presentes</button>
+                    </div>
+                    <textarea id="output-excel" readonly class="w-full h-40 rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 flex-grow bg-[#0a0a0f] border-zinc-800" placeholder="Selecione a opção desejada..."></textarea>
+                    <button onclick="copiarOutput()" class="w-full bg-blue-600 text-[11px] text-white font-black py-4 rounded-xl uppercase hover:bg-blue-500 transition-all">📋 Copiar p/ WhatsApp</button>
+                </div>
+            </div>
+        </section>
+
+                <section id="aba-auditoria" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-emerald-500">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-emerald-500 font-black uppercase italic text-xl tracking-tighter">Conferência & Auditoria Live</h2>
+                    <span class="bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-emerald-500 uppercase animate-pulse">● Tempo Real</span>
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-4 mb-8">
+                    <div class="relative flex-grow">
+                        <span class="absolute left-5 top-5 text-lg text-zinc-500">🔍</span>
+                        <input type="text" id="busca-auditoria" oninput="renderAuditoria()" placeholder="BUSQUE POR NOME, EVENTO, PROMOTER, DATA OU OPERADOR..." class="w-full p-5 pl-14 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-sm font-bold uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg">
+                    </div>
+                    <select id="filtro-status-auditoria" onchange="renderAuditoria()" class="p-5 rounded-2xl bg-[#0a0a0f] border border-zinc-800 text-[11px] font-black uppercase text-white outline-none focus:border-emerald-500 transition-all shadow-lg min-w-[180px]">
+                        <option value="todos">Todos os Status</option>
+                        <option value="entrou">✓ Fizeram Check-in</option>
+                        <option value="aguardando">○ Aguardando Entrada</option>
+                        <option value="pix_entrou">🟢 PIX - Fizeram Check-in</option>
+                        <option value="pix_aguardando">🟡 PIX - Aguardando (Pago)</option>
+                        <option value="pix_cancelado">🔴 PIX - Pendente/Cancelado</option>
+                    </select>
+                    <button onclick="exportarAuditoriaExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[10px] px-8 py-5 rounded-2xl transition-all shadow-[0_0_15px_rgba(16,185,129,0.3)] whitespace-nowrap flex items-center justify-center gap-2">
+                        <span class="text-sm">📥</span> Exportar Excel
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-zinc-800/50">
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Data/Hora (Reserva)</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Cliente</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Evento</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Promoter / Origem</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Tipo</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Status / Check-in</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-auditoria-body" class="divide-y divide-zinc-800">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-solteiras" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-pink-500 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div>
+                    <h2 class="text-pink-500 font-black uppercase italic text-2xl tracking-tighter">Gestão de Caronas e Base VIP</h2>
+                    <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Base imune à limpeza de eventos (Retenção de 90 dias)</p>
+                </div>
+                <div class="bg-[#0a0a0f] border border-pink-500/30 px-10 py-5 rounded-3xl text-center shadow-[0_0_30px_rgba(219,39,119,0.15)] min-w-[200px]">
+                    <p class="text-[10px] font-black text-pink-500 uppercase tracking-widest mb-1">Cadastradas no Sistema</p>
+                    <p id="total-solteiras-badge" class="text-4xl font-black text-white leading-none">0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="flex flex-col gap-8">
+                    <div class="glass-card p-8 border-t-4 border-t-purple-500 flex flex-col h-full">
+                        <h2 class="text-purple-500 font-black uppercase italic text-xl tracking-tighter mb-2">🚗 Configurar Caronas VIP</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Defina as regras para a página das solteiras.</p>
+                        
+                        <div class="space-y-6 flex-grow">
+                            <div>
+                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">⏰ Horário Limite (Dia do Evento)</label>
+                                <input type="time" id="config_hora_carona" class="w-full p-4 rounded-2xl font-bold text-xs" required>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">🗺️ Bairros Atendidos (Separados por vírgula)</label>
+                                <textarea id="config_bairros_carona" placeholder="Ex: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-xs h-32 resize-none uppercase"></textarea>
+                            </div>
+                        </div>
+                        <button onclick="salvarConfigCaronas()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg mt-6">💾 Salvar Regras de Logística</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-8">
+                    <div class="glass-card p-8 border-t-4 border-t-blue-500 flex flex-col">
+                        <h2 class="text-blue-500 font-black uppercase italic text-xl tracking-tighter mb-2">🗺️ Gerador de Rotas</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Exporte a lista ordenada por bairros para o motorista.</p>
+                        
+                        <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full bg-[#0a0a0f] border border-zinc-800 p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none">
+                            <option value="">Selecione o Evento...</option>
+                        </select>
+                        
+                        <textarea id="output-rotas-carona" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-40 bg-[#0a0a0f] border-zinc-800 border resize-none" placeholder="Aguardando seleção do evento..."></textarea>
+                        
+                        <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para o Motorista</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 border-t-4 border-t-pink-500 flex flex-col mt-4">
+                <h2 class="text-pink-500 font-black uppercase italic text-xl tracking-tighter mb-2">📲 Base de Clientes (Transmissão)</h2>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Gere a lista de todas as solteiras cadastradas, ordenadas da visita mais recente para a mais antiga.</p>
+                
+                <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="w-full bg-pink-900/40 hover:bg-pink-800/60 border border-pink-500/50 text-pink-300 font-black uppercase text-[10px] py-4 rounded-xl transition-colors mb-4">🔄 Carregar Cadastradas</button>
+                
+                <textarea id="output-marketing" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-48 bg-[#0a0a0f] border-zinc-800 border resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
+                
+                <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para WhatsApp</button>
+            </div>
+        </section>
+
+        <section id="aba-festas" class="hidden space-y-8">
+            
+            <div class="glass-card p-8 border-l-4 border-l-fuchsia-500 mb-8">
+                <h2 class="text-fuchsia-500 font-black uppercase italic text-xl mb-4 tracking-tighter">Meus Modelos de Festa</h2>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Salve um evento já configurado como modelo. O modelo copia valores, camarotes, benefícios e demais regras, mas não copia nome do evento, data, horário nem arte.</p>
+                <div id="grid-modelos" class="flex gap-4 overflow-x-auto pb-4 scroll-x">
+                    <p class="text-zinc-500 text-xs italic uppercase font-bold">Carregando modelos...</p>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 border-l-4 border-l-blue-500 mb-8" id="formEventoContainer">
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurar Evento & Camarotes</h2>
+                <form id="formEvento" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <input type="hidden" id="edit_evento_id">
+                    <input type="hidden" id="url_imagem_atual">
+                    
+                    <input type="text" id="nome_festa" placeholder="NOME DO EVENTO" class="p-4 rounded-2xl font-bold md:col-span-3" required>
+                    
+                    <div class="md:col-span-2 flex flex-col gap-1">
+                        <label class="text-[8px] font-black text-zinc-500 ml-2 uppercase">Data da Festa</label>
+                        <input type="date" id="data_festa" onclick="this.showPicker()" class="p-4 rounded-2xl font-bold uppercase text-xs w-full">
+                    </div>
+
+                    <div class="md:col-span-1 flex flex-col gap-1">
+                        <label class="text-[8px] font-black text-blue-400 ml-2 uppercase">Horário</label>
+                        <input type="time" id="hora_inicio" onclick="this.showPicker()" class="p-4 rounded-2xl font-bold uppercase text-xs w-full">
+                    </div>
+
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="valor_casal" placeholder="CASAL PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
+                        <input type="text" id="valor_solteiro" placeholder="SOLTEIRO PORTARIA R$" class="p-4 rounded-2xl font-bold border-zinc-800 text-[10px]">
+                    </div>
+
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="desc_casal" placeholder="CASAL ANIV. R$" class="p-4 rounded-2xl font-bold text-cyan-400 border-cyan-900/30 text-[10px]">
+                        <input type="text" id="desc_solteiro" placeholder="SOLTEIRO ANIV. R$" class="p-4 rounded-2xl font-bold text-cyan-400 border-cyan-900/30 text-[10px]">
+                    </div>
+
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-3 gap-4 bg-green-500/5 p-4 rounded-3xl border border-green-500/10 mb-4">
+                        <div class="md:col-span-3 text-[10px] font-black text-green-500 uppercase tracking-widest ml-2 mb-2">Valores Pix Antecipado (Pista)</div>
+                        <input type="text" id="ant_casal" placeholder="CASAL SECO PIX R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30 text-[10px]">
+                        <input type="text" id="ant_casal_cons" placeholder="CASAL CONSUMA PIX R$" class="p-4 rounded-2xl font-bold text-fuchsia-400 border-fuchsia-900/50 text-[10px]">
+                        <input type="text" id="ant_solteiro" placeholder="SOLTEIRO PIX R$" class="p-4 rounded-2xl font-bold text-green-400 border-green-900/30 text-[10px]">
+                    </div>
+
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-yellow-500/5 p-4 rounded-3xl border border-yellow-500/10 mb-4">
+                        <div class="md:col-span-2 text-[10px] font-black text-yellow-500 uppercase tracking-widest ml-2 mb-2">Valores Fidelidade (Desconto Sábado)</div>
+                        <input type="text" id="valor_recorrente_casal" placeholder="CASAL FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
+                        <input type="text" id="valor_recorrente_solteiro" placeholder="SOLTEIRO FIDELIDADE R$" class="p-4 rounded-2xl font-bold text-yellow-400 border-yellow-900/30 text-[10px]">
+                    </div>
+
+                    <div class="md:col-span-6 bg-zinc-900/40 p-6 rounded-[2rem] border border-white/5 mb-4">
+                        <label class="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-4 block ml-2">🖼️ Capa do Evento (Upload Seguro)</label>
+                        <input type="file" id="upload_capa" accept="image/*" class="w-full text-xs text-zinc-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-yellow-600 file:text-black hover:file:bg-yellow-500 cursor-pointer">
+                    </div>
+
+                    <div class="md:col-span-6 bg-cyan-900/10 p-6 rounded-[2rem] border border-cyan-500/20 mb-4">
+                        <div class="text-[10px] font-black text-cyan-400 uppercase tracking-widest mb-4 ml-2">💎 Configuração de Camarotes (Selecione para Ativar)</div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="grid-camarotes-inputs"></div>
+                    </div>
+
+                    <button type="submit" id="btnSalvarEvento" class="md:col-span-6 bg-blue-600 text-white font-black py-5 rounded-3xl uppercase text-sm hover:bg-blue-500 transition-all">Salvar Evento Completo</button>
+                </form>
+            </div>
+            
+            <div id="grid-eventos-config" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <section id="aba-equipe" class="hidden space-y-12">
+            <div class="glass-card p-8 border-l-4 border-l-yellow-500">
+                <h2 class="text-yellow-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Promoters</h2>
+                <form id="formPromoter" class="flex flex-col md:flex-row gap-3 mb-10">
+                    <input type="text" id="nome_promoter" placeholder="NOME DO PROMOTER" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
+                    <select id="tipo_promoter" class="p-4 rounded-2xl font-bold text-xs">
+                        <option value="padrao">LISTA PADRÃO</option>
+                        <option value="aniversario">LISTA ANIVERSÁRIO</option>
+                        <option value="visualizar">APENAS VISUALIZAR</option>
+                    </select>
+                    <button type="submit" class="bg-yellow-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-black transition-all hover:bg-yellow-500">Adicionar</button>
+                </form>
+                <div id="lista-promoters" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+            <div class="glass-card p-8 border-l-4 border-l-green-500">
+                <h2 class="text-green-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Gestão de Portaria</h2>
+                <form id="formPortaria" class="flex flex-col md:flex-row gap-3 mb-10">
+                    <input type="text" id="login_portaria" placeholder="NOME DO OPERADOR" class="flex-grow p-4 rounded-2xl font-bold text-sm" required>
+                    <button type="submit" class="bg-green-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-green-500 transition-all">Cadastrar</button>
+                </form>
+                <div id="lista-portaria" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-8">
+                    <div>
+                        <h2 class="text-blue-500 font-black uppercase italic text-xl tracking-tighter">Gestão de Vallet</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Cadastre o funcionário. No primeiro acesso ele cria a própria senha.</p>
+                    </div>
+                    <span class="bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-blue-400 uppercase">Acesso ao Vallet</span>
+                </div>
+                <form id="formVallet" class="flex flex-col md:flex-row gap-3 mb-10">
+                    <input type="text" id="nome_vallet" placeholder="NOME DO FUNCIONÁRIO" class="flex-grow p-4 rounded-2xl font-bold text-sm uppercase" required>
+                    <button type="submit" class="bg-blue-600 px-10 py-4 rounded-2xl font-black uppercase text-xs text-white hover:bg-blue-500 transition-all">Cadastrar</button>
+                </form>
+                <div id="lista-vallet" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </section>
+
+
+        <section id="aba-vallet" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <p class="text-[9px] font-black uppercase tracking-[0.25em] text-blue-400 mb-2">Controle operacional</p>
+                <h2 class="text-blue-500 font-black uppercase italic text-2xl tracking-tighter">Relatórios do Vallet</h2>
+                <p class="text-[10px] text-zinc-400 font-bold uppercase mt-2 tracking-widest leading-relaxed">Veículos atualmente no pátio e entradas contabilizadas por evento.</p>
+            </div>
+
+            <div class="max-w-md">
+                <div class="glass-card p-8 border-t-4 border-t-blue-500 text-center">
+                    <p class="text-[9px] text-zinc-500 font-black uppercase tracking-widest">Veículos no pátio agora</p>
+                    <p id="vallet-kpi-patio" class="text-5xl font-black text-blue-400 mt-3">0</p>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 border-l-4 border-l-purple-500">
+                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-7">
+                    <div>
+                        <h3 class="text-purple-400 font-black uppercase italic text-xl tracking-tighter">Entradas por evento</h3>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Cada veículo recebido é contabilizado como uma entrada para o relatório financeiro.</p>
+                    </div>
+                    <input id="busca-relatorio-vallet" oninput="renderRelatorioVallet()" type="text" placeholder="BUSCAR EVENTO OU PLACA" class="p-4 rounded-2xl font-bold text-[10px] uppercase md:max-w-xs">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[9px] text-zinc-500 font-black uppercase border-b border-white/5">
+                                <th class="pb-4 pl-3">Data</th>
+                                <th class="pb-4">Evento</th>
+                                <th class="pb-4 text-center">Entradas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-vallet-eventos" class="divide-y divide-zinc-800"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 border-l-4 border-l-cyan-500">
+                <div class="mb-7">
+                    <h3 class="text-cyan-400 font-black uppercase italic text-xl tracking-tighter">Últimos check-ins do Vallet</h3>
+                    <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">A placa só pode receber um novo atendimento após a entrega do atendimento ativo.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[9px] text-zinc-500 font-black uppercase border-b border-white/5">
+                                <th class="pb-4 pl-3">Entrada</th>
+                                <th class="pb-4">Ticket</th>
+                                <th class="pb-4">Placa</th>
+                                <th class="pb-4">Evento</th>
+                                <th class="pb-4">Operador</th>
+                                <th class="pb-4 text-right pr-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-vallet-recentes" class="divide-y divide-zinc-800"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <section id="aba-aniversarios" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-cyan-500">
+                <h2 class="text-cyan-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Listas de Aniversariantes</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Data</th><th class="pb-4">Promoter</th><th class="pb-4">Aniversariante</th><th class="pb-4 text-center">Reservas</th><th class="pb-4 text-right pr-4">Ações</th></tr></thead>
+                        <tbody id="tabela-aniversarios-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="box-migracao-camarote" class="glass-card p-8 border-l-4 border-l-purple-500">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                    <div>
+                        <h2 class="text-purple-500 font-black uppercase italic text-xl tracking-tighter">Migrar Camarote</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Transfere cliente, pagamento, valor e status para outro evento/camarote sem cancelar a compra.</p>
+                    </div>
+                    <span class="bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-purple-400 uppercase">Administração</span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                    <div class="lg:col-span-2">
+                        <label class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Buscar cliente / evento / camarote</label>
+                        <input type="text" id="busca-migracao-camarote" oninput="renderMigracaoCamarotes()" placeholder="NOME, TELEFONE, EVENTO OU CAMAROTE" class="w-full p-4 rounded-2xl font-bold text-[10px] uppercase">
+                    </div>
+                    <div class="lg:col-span-3">
+                        <label class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Camarote vendido/cortesia de origem</label>
+                        <select id="select-migracao-origem" onchange="renderCamarotesDestinoMigracao(); atualizarPreviewMigracaoCamarote();" class="w-full p-4 rounded-2xl font-bold text-[10px] uppercase"></select>
+                    </div>
+                    <div class="lg:col-span-3">
+                        <label class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Evento de destino</label>
+                        <select id="select-migracao-evento" onchange="renderCamarotesDestinoMigracao(); atualizarPreviewMigracaoCamarote();" class="w-full p-4 rounded-2xl font-bold text-[10px] uppercase"></select>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Camarote de destino</label>
+                        <select id="select-migracao-camarote" onchange="atualizarPreviewMigracaoCamarote()" class="w-full p-4 rounded-2xl font-bold text-[10px] uppercase"></select>
+                    </div>
+                    <div class="lg:col-span-4 bg-black/30 border border-white/5 rounded-2xl p-4 min-h-[86px]" id="preview-migracao-camarote">
+                        <p class="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Selecione o camarote de origem e o destino para conferir a migração.</p>
+                    </div>
+                    <div class="lg:col-span-1 flex items-stretch">
+                        <button onclick="confirmarMigracaoCamarote()" class="w-full bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-black py-4 rounded-2xl uppercase transition-all shadow-lg">Migrar Camarote</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card p-8 border-l-4 border-l-blue-500">
+                <h2 class="text-blue-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Gestão de Camarotes (Ativos/Ocupados)</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Evento</th><th class="pb-4">Camarote</th><th class="pb-4">Cliente / Info</th><th class="pb-4 text-center">Status</th><th class="pb-4 text-right pr-4">Ação</th></tr></thead>
+                        <tbody id="tabela-camarotes-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-config" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-red-500">
+                <h2 class="text-red-500 font-black uppercase italic text-xl mb-8 tracking-tighter">Configurações</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                    <div class="bg-blue-500/10 border border-blue-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-blue-400 font-black uppercase tracking-widest text-[11px] mb-2">Modo Teste Portaria</h3>
+                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto">🔓 LIBERAR TESTE</button>
+                    </div>
+                    <div class="bg-cyan-500/10 border border-cyan-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-cyan-400 font-black uppercase tracking-widest text-[11px] mb-2">Modo Teste Vallet</h3>
+                        <button id="btnModoTesteVallet" onclick="toggleModoTesteVallet()" class="w-full bg-cyan-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-cyan-500 transition-all">🔓 LIBERAR TESTE</button>
+                    </div>
+                    <div class="bg-red-500/5 border border-red-500/20 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-red-400 font-black uppercase tracking-widest text-[11px] mb-2">Limpar Clientes</h3>
+                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto" title="Não apaga as Solteiras cadastradas.">Limpar Base</button>
+                    </div>
+                    <div class="bg-red-500/10 border border-red-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-red-500 font-black uppercase tracking-widest text-[11px] mb-2">Zerar Sistema</h3>
+                        <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto" title="Não apaga as Solteiras cadastradas nem os Modelos.">⚠️ ZERAR TUDO</button>
+                    </div>
+                    <div class="bg-yellow-500/10 border border-yellow-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
+                        <h3 class="text-yellow-500 font-black uppercase tracking-widest text-[11px] mb-4">Taxa de Serviço PIX</h3>
+                        <div class="flex gap-2 mb-4">
+                            <select id="tipo_taxa" class="flex-1 bg-[#0a0a0f] border border-yellow-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
+                                <option value="desativado">Sem Taxa</option>
+                                <option value="fixo">Fixo (R$)</option>
+                                <option value="porcentagem">Porcentagem (%)</option>
+                            </select>
+                            <input type="number" id="valor_taxa" placeholder="VALOR/PORC." class="flex-1 bg-[#0a0a0f] border border-yellow-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
+                        </div>
+                        <button onclick="salvarTaxaPix()" class="w-full bg-yellow-600 text-black text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-yellow-500 transition-all">Salvar Taxa</button>
+                    </div>
+                    
+                    <div class="bg-indigo-500/10 border border-indigo-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
+                        <h3 class="text-indigo-400 font-black uppercase tracking-widest text-[11px] mb-4">Custo Fixo do Sistema</h3>
+                        <div class="flex gap-2 mb-4">
+                            <span class="bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-zinc-500">R$</span>
+                            <input type="number" id="custo_sistema" placeholder="VALOR MENSALIDADE" class="flex-1 bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
+                        </div>
+                        <button onclick="salvarCustoSistema()" class="w-full bg-indigo-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-indigo-500 transition-all">Salvar Custo</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script type="text/plain" id="codigo-principal-dashboard">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        
+        let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = []; let dadosValletOperadores = [];
+        let dadosValletAtendimentos = []; let dadosValletVeiculos = []; let configSistemaDashboard = {};
+        let valletAtendimentosCarregados = false; let valletVeiculosCarregados = false; let limpezaValletEmAndamento = false;
+        let dadosSolteiras = []; let modoTesteAtivo = false; let modoTesteValletAtivo = false; let custoSistemaGlobal = 125.00;
+        const getPromoterName = (p) => {
+            if (!p) return 'SITE DIRETO';
+            const clean = String(p).toUpperCase().trim();
+            if (clean === 'UNDEFINED' || clean === 'NULL' || clean === '') return 'SITE DIRETO';
+            return clean;
+        };
+
+        const normalizarNomeVallet = (valor) => String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const criarUsuarioVallet = (nome) => normalizarNomeVallet(nome)
+            .replace(/[^A-Z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .substring(0, 50);
+
+        const isEventoModeloAntigo = (ev) => {
+            const nome = String(ev?.nome || '').toUpperCase();
+            return ev?.is_modelo === true || nome.includes('MODELO');
+        };
+
+        const CAMPOS_IGNORADOS_MODELO = new Set([
+            'id', 'nome', 'data', 'hora', 'imagem', 'ativo',
+            'modelo_nome', 'origem_evento_id', 'criado_em', 'atualizado_em', 'is_modelo'
+        ]);
+
+        const montarDadosModelo = (ev) => {
+            const modelo = {};
+            Object.keys(ev || {}).forEach(campo => {
+                if (!CAMPOS_IGNORADOS_MODELO.has(campo)) modelo[campo] = ev[campo];
+            });
+            modelo.origem_evento_id = ev.id || '';
+            modelo.criado_em = new Date().toISOString();
+            modelo.atualizado_em = new Date().toISOString();
+            return modelo;
+        };
+
+        const parseVisita = (val) => {
+            if (!val) return null;
+            if (typeof val.toDate === 'function') return val.toDate();
+            if (typeof val === 'string') {
+                if (val.includes('/')) {
+                    const p = val.split(/[/\s:]+/);
+                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]);
+                }
+                return new Date(val);
+            }
+            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000));
+            return null;
+        };
+
+        const parseVisitaUniversal = (val) => {
+            if (!val) return 0;
+            if (typeof val.toDate === 'function') return val.toDate().getTime();
+            if (typeof val === 'string') {
+                const d = new Date(val);
+                if (!isNaN(d)) return d.getTime();
+                if (val.includes('/')) {
+                    const p = val.split(/[/\s:]+/);
+                    if (p.length >= 3 && p[2].length === 4) return new Date(p[2], p[1]-1, p[0]).getTime();
+                }
+            }
+            if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000)).getTime();
+            return 0;
+        };
+
+        const getSolteirasParaEvento = (ev) => {
+            if (!ev || !ev.data) return [];
+            const partesData = ev.data.split('-');
+            if(partesData.length < 3) return [];
+            const inicioEvento = new Date(partesData[0], partesData[1] - 1, partesData[2], 12, 0, 0);
+            const fimEvento = new Date(inicioEvento);
+            fimEvento.setDate(fimEvento.getDate() + 1);
+            fimEvento.setHours(6, 0, 0, 0);
+
+            const presPortaria = dadosSolteiras.filter(s => {
+                let d = parseVisita(s.ultima_visita);
+                return d && !isNaN(d) && d >= inicioEvento && d <= fimEvento;
+            });
+
+            const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
+            const presSite = dadosReservas.filter(r => {
+                if (!r.entrou) return false;
+                if (String(r.evento || '').trim().toUpperCase() !== evNomeLimpo) return false;
+                return String(r.tipo_entrada).toUpperCase().includes('SOLTEIRA');
+            });
+
+            const unicas = []; const map = new Map();
+            for (const c of [...presPortaria, ...presSite]) {
+                const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
+                if (!map.has(tel) && tel.length > 5) { map.set(tel, true); unicas.push(c); }
+            }
+            return unicas;
+        };
+
+
+        window.mostrarAviso = (msg, isSucesso = false) => {
+            const toast = document.getElementById('toast-aviso');
+            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            const icon = isSucesso ? '✅' : '⚠️';
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            document.getElementById('toast-icon').innerText = icon; document.getElementById('toast-msg').innerText = msg;
+            setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
+            setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
+        };
+
+        window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
+
+        const normalizarTextoMigracao = (v) => String(v || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const nomeCamaroteSistemaMigracao = (num) => {
+            const n = Number(num);
+            if (n === 7) return 'VIP 1';
+            if (n === 8) return 'VIP 2';
+            return `CAMAROTE ${n}`;
+        };
+
+        const nomeCamaroteVisualMigracao = (num) => {
+            const n = Number(num);
+            if (n === 7) return 'VIP 1';
+            if (n === 8) return 'VIP 2';
+            return `CAMAROTE 0${n}`;
+        };
+
+        const tipoEntradaCorrespondeCamaroteMigracao = (tipo, num) => {
+            const n = Number(num);
+            const t = normalizarTextoMigracao(tipo);
+            const aliases = [
+                nomeCamaroteSistemaMigracao(n),
+                `CAMAROTE ${n}`,
+                `CAMAROTE 0${n}`
+            ].map(v => normalizarTextoMigracao(v));
+            return aliases.includes(t);
+        };
+
+        const numeroCamarotePorTipoMigracao = (tipo) => {
+            for (let i = 1; i <= 8; i++) {
+                if (tipoEntradaCorrespondeCamaroteMigracao(tipo, i)) return i;
+            }
+            return null;
+        };
+
+        const eventoMesmoNomeMigracao = (a, b) => normalizarTextoMigracao(a) === normalizarTextoMigracao(b);
+
+        const isReservaCamaroteMigravel = (r) => {
+            if (!r) return false;
+            const numero = numeroCamarotePorTipoMigracao(r.tipo_entrada);
+            if (!numero) return false;
+            return r.pago === true || r.cortesia === true;
+        };
+
+        const isReservaAguardandoPixAtivo = (r) => {
+            if (!r || r.pago === true || r.cortesia === true || !r.data_reserva) return false;
+            const dataReserva = new Date(r.data_reserva);
+            if (isNaN(dataReserva)) return false;
+            const diffMins = (new Date() - dataReserva) / 60000;
+            return diffMins >= 0 && diffMins < 5;
+        };
+
+        const getOcupanteCamaroteMigracao = (eventoNome, num, ignorarId = '') => {
+            return dadosReservas.find(r => {
+                if (!r || r.id === ignorarId) return false;
+                if (!eventoMesmoNomeMigracao(r.evento, eventoNome)) return false;
+                if (!tipoEntradaCorrespondeCamaroteMigracao(r.tipo_entrada, num)) return false;
+                return r.pago === true || r.cortesia === true || isReservaAguardandoPixAtivo(r);
+            }) || null;
+        };
+
+        const getEventosDestinoMigracao = () => {
+            return [...dadosEventos]
+                .filter(ev => ev && !isEventoModeloAntigo(ev) && ev.ativo !== false)
+                .sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')) || String(a.nome || '').localeCompare(String(b.nome || '')));
+        };
+
+        const getReservasCamarotesMigraveis = () => {
+            return [...dadosReservas]
+                .filter(isReservaCamaroteMigravel)
+                .sort((a, b) => String(a.evento || '').localeCompare(String(b.evento || '')) || String(a.tipo_entrada || '').localeCompare(String(b.tipo_entrada || '')) || String(a.nome || '').localeCompare(String(b.nome || '')));
+        };
+
+        window.renderMigracaoCamarotes = () => {
+            const selOrigem = document.getElementById('select-migracao-origem');
+            const selEvento = document.getElementById('select-migracao-evento');
+            if (!selOrigem || !selEvento) return;
+
+            const origemAtual = selOrigem.value;
+            const eventoAtual = selEvento.value;
+            const busca = normalizarTextoMigracao(document.getElementById('busca-migracao-camarote')?.value || '');
+
+            let reservas = getReservasCamarotesMigraveis();
+            if (busca.length > 1) {
+                reservas = reservas.filter(r => {
+                    const str = normalizarTextoMigracao(`${r.nome || ''} ${r.tel || r.telefone || ''} ${r.evento || ''} ${r.tipo_entrada || ''} ${r.valor_pago || ''}`);
+                    return busca.split(/\s+/).every(t => str.includes(t));
+                });
+            }
+
+            selOrigem.innerHTML = '<option value="">Selecione o camarote de origem...</option>' + reservas.map(r => {
+                const status = r.cortesia === true ? 'CORTESIA' : 'VENDIDO/PAGO';
+                const valor = r.valor_pago ? ` - R$ ${String(r.valor_pago).replace('R$', '').trim()}` : '';
+                return `<option value="${r.id}">${r.evento || 'SEM EVENTO'} | ${r.tipo_entrada || 'CAMAROTE'} | ${r.nome || 'SEM NOME'} | ${status}${valor}</option>`;
+            }).join('');
+            if (reservas.some(r => r.id === origemAtual)) selOrigem.value = origemAtual;
+
+            const eventos = getEventosDestinoMigracao();
+            selEvento.innerHTML = '<option value="">Selecione o evento de destino...</option>' + eventos.map(ev => {
+                const data = ev.data ? ev.data.split('-').reverse().join('/') : 'S/D';
+                return `<option value="${ev.id}">${data} | ${ev.nome || 'SEM NOME'}</option>`;
+            }).join('');
+            if (eventos.some(ev => ev.id === eventoAtual)) selEvento.value = eventoAtual;
+
+            renderCamarotesDestinoMigracao();
+            atualizarPreviewMigracaoCamarote();
+        };
+
+        window.renderCamarotesDestinoMigracao = () => {
+            const selDestino = document.getElementById('select-migracao-camarote');
+            if (!selDestino) return;
+
+            const origemId = document.getElementById('select-migracao-origem')?.value || '';
+            const eventoId = document.getElementById('select-migracao-evento')?.value || '';
+            const destinoAtual = selDestino.value;
+            const ev = dadosEventos.find(e => e.id === eventoId);
+
+            if (!ev) {
+                selDestino.innerHTML = '<option value="">Selecione primeiro o evento...</option>';
+                atualizarPreviewMigracaoCamarote();
+                return;
+            }
+
+            let html = '<option value="">Selecione o camarote de destino...</option>';
+            let livres = [];
+            for (let i = 1; i <= 8; i++) {
+                if (ev[`cam${i}_ativo`] !== true) continue;
+                const ocupante = getOcupanteCamaroteMigracao(ev.nome, i, origemId);
+                const nome = nomeCamaroteVisualMigracao(i);
+                if (ocupante) {
+                    const status = ocupante.pago === true || ocupante.cortesia === true ? 'OCUPADO' : 'AGUARDANDO PIX';
+                    html += `<option value="${i}" disabled>${nome} - ${status}</option>`;
+                } else {
+                    livres.push(String(i));
+                    html += `<option value="${i}">${nome} - LIVRE</option>`;
+                }
+            }
+
+            if (!livres.length) html += '<option value="" disabled>Nenhum camarote ativo livre neste evento</option>';
+            selDestino.innerHTML = html;
+            if (livres.includes(destinoAtual)) selDestino.value = destinoAtual;
+            atualizarPreviewMigracaoCamarote();
+        };
+
+        window.atualizarPreviewMigracaoCamarote = () => {
+            const box = document.getElementById('preview-migracao-camarote');
+            if (!box) return;
+
+            const origemId = document.getElementById('select-migracao-origem')?.value || '';
+            const eventoId = document.getElementById('select-migracao-evento')?.value || '';
+            const camDestino = document.getElementById('select-migracao-camarote')?.value || '';
+            const origem = dadosReservas.find(r => r.id === origemId);
+            const destino = dadosEventos.find(e => e.id === eventoId);
+
+            if (!origem || !destino || !camDestino) {
+                box.innerHTML = `<p class="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Selecione o camarote de origem e o destino para conferir a migração.</p>`;
+                return;
+            }
+
+            const valor = origem.valor_pago ? ` | Valor: R$ ${String(origem.valor_pago).replace('R$', '').trim()}` : '';
+            const status = origem.cortesia === true ? 'CORTESIA' : 'VENDIDO/PAGO';
+            box.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[10px] font-bold uppercase">
+                    <div class="bg-red-500/5 border border-red-500/20 rounded-xl p-3">
+                        <p class="text-red-400 font-black mb-1">ORIGEM</p>
+                        <p class="text-white">${origem.nome || 'SEM NOME'}</p>
+                        <p class="text-zinc-400">${origem.evento || 'SEM EVENTO'} — ${origem.tipo_entrada || 'SEM CAMAROTE'}</p>
+                        <p class="text-yellow-400">${status}${valor}</p>
+                    </div>
+                    <div class="bg-green-500/5 border border-green-500/20 rounded-xl p-3">
+                        <p class="text-green-400 font-black mb-1">DESTINO</p>
+                        <p class="text-white">${destino.nome || 'SEM EVENTO'}</p>
+                        <p class="text-zinc-400">${nomeCamaroteVisualMigracao(camDestino)}</p>
+                        <p class="text-emerald-400">Mantém cliente, PIX/cortesia, valor, promoter e dados originais.</p>
+                    </div>
+                </div>`;
+        };
+
+        window.prepararMigracaoCamarote = (id) => {
+            const busca = document.getElementById('busca-migracao-camarote');
+            if (busca) busca.value = '';
+            renderMigracaoCamarotes();
+            const sel = document.getElementById('select-migracao-origem');
+            if (sel) sel.value = id;
+            renderCamarotesDestinoMigracao();
+            atualizarPreviewMigracaoCamarote();
+            document.getElementById('box-migracao-camarote')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            mostrarAviso('Escolha o evento e camarote de destino.', true);
+        };
+
+        window.confirmarMigracaoCamarote = async () => {
+            const origemId = document.getElementById('select-migracao-origem')?.value || '';
+            const eventoId = document.getElementById('select-migracao-evento')?.value || '';
+            const camDestinoRaw = document.getElementById('select-migracao-camarote')?.value || '';
+            const origem = dadosReservas.find(r => r.id === origemId);
+            const destino = dadosEventos.find(e => e.id === eventoId);
+            const camDestino = Number(camDestinoRaw);
+
+            if (!origem) return mostrarAviso('Selecione o camarote de origem.');
+            if (!isReservaCamaroteMigravel(origem)) return mostrarAviso('Só é possível migrar camarote vendido/pago ou cortesia.');
+            if (origem.entrou === true) return mostrarAviso('Este camarote já tem check-in. Não migrei para evitar erro de portaria.');
+            if (!destino) return mostrarAviso('Selecione o evento de destino.');
+            if (!camDestino || camDestino < 1 || camDestino > 8) return mostrarAviso('Selecione o camarote de destino.');
+            if (destino[`cam${camDestino}_ativo`] !== true) return mostrarAviso('O camarote de destino não está ativo neste evento.');
+
+            const origemNum = numeroCamarotePorTipoMigracao(origem.tipo_entrada);
+            if (eventoMesmoNomeMigracao(origem.evento, destino.nome) && origemNum === camDestino) {
+                return mostrarAviso('Origem e destino são o mesmo camarote. Escolha outro.');
+            }
+
+            const ocupante = getOcupanteCamaroteMigracao(destino.nome, camDestino, origem.id);
+            if (ocupante) {
+                return mostrarAviso(`Destino ocupado por ${ocupante.nome || 'outro cliente'}.`);
+            }
+
+            const novoTipo = nomeCamaroteSistemaMigracao(camDestino);
+            const agoraIso = new Date().toISOString();
+            const valor = origem.valor_pago ? `\nValor mantido: R$ ${String(origem.valor_pago).replace('R$', '').trim()}` : '';
+            const ok = confirm(
+                `CONFIRMAR MIGRAÇÃO DE CAMAROTE?\n\n` +
+                `Cliente: ${origem.nome || 'SEM NOME'}\n` +
+                `De: ${origem.evento || 'SEM EVENTO'} / ${origem.tipo_entrada || 'SEM CAMAROTE'}\n` +
+                `Para: ${destino.nome || 'SEM EVENTO'} / ${novoTipo}${valor}\n\n` +
+                `Pagamento, valor, telefone, CPF e promoter serão mantidos. O camarote antigo ficará livre automaticamente.`
+            );
+            if (!ok) return;
+
+            const historicoAtual = Array.isArray(origem.historico_migracoes) ? origem.historico_migracoes : [];
+            const itemHistorico = {
+                de_evento: origem.evento || '',
+                de_tipo: origem.tipo_entrada || '',
+                para_evento: destino.nome || '',
+                para_tipo: novoTipo,
+                data: agoraIso,
+                admin: 'DASHBOARD'
+            };
+
+            try {
+                await updateDoc(doc(db, 'lista_eventos', origem.id), {
+                    evento: destino.nome,
+                    tipo_entrada: novoTipo,
+                    migrado_camarote: true,
+                    evento_original: origem.evento_original || origem.evento || '',
+                    tipo_entrada_original: origem.tipo_entrada_original || origem.tipo_entrada || '',
+                    evento_migrado_para: destino.nome || '',
+                    tipo_migrado_para: novoTipo,
+                    data_migracao: agoraIso,
+                    admin_migracao: 'DASHBOARD',
+                    migracao_ultima: itemHistorico,
+                    historico_migracoes: [...historicoAtual, itemHistorico]
+                });
+
+                mostrarAviso('Camarote migrado com sucesso!', true);
+                document.getElementById('select-migracao-origem').value = '';
+                atualizarPreviewMigracaoCamarote();
+            } catch (e) {
+                console.error('Erro ao migrar camarote:', e);
+                mostrarAviso('Erro ao migrar. Verifique as permissões do Firestore.');
+            }
+        };
+
+        const gridCamarotes = document.getElementById('grid-camarotes-inputs');
+        for(let i=1; i<=8; i++) {
+            let nFil = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `Cam 0${i}`;
+            gridCamarotes.innerHTML += `<div class="bg-black/30 p-3 rounded-2xl border border-white/5 flex flex-col items-center gap-2"><label class="flex items-center gap-2 w-full cursor-pointer justify-center"><input type="checkbox" id="cam${i}_ativo" class="check-camarote"><span class="text-[10px] font-black uppercase text-zinc-400">${nFil}</span></label><input type="text" id="v_cam${i}" placeholder="Valor (R$)" class="w-full p-2 rounded-xl text-center text-xs font-bold bg-[#0c0c0e] border border-zinc-800 text-cyan-400 outline-none"><input type="text" id="obs_cam${i}" placeholder="Benefícios" class="w-full p-2 rounded-xl text-center text-[9px] font-bold bg-[#0c0c0e] border border-zinc-800 text-zinc-400 outline-none"></div>`;
+        }
+
+        window.trocarAba = (id, btn, type) => { 
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden')); 
+            document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active', 'active-danger', 'active-success', 'active-pink', 'active-blue')); 
+            document.getElementById(id).classList.remove('hidden'); 
+            if (type === 'danger') btn.classList.add('active-danger'); 
+            else if (type === 'success') btn.classList.add('active-success');
+            else if (type === 'pink') btn.classList.add('active-pink');
+            else if (type === 'blue') btn.classList.add('active-blue');
+            else btn.classList.add('active'); 
+        };
+
+        onSnapshot(collection(db, "configuracoes"), snap => {
+            const sys = snap.docs.find(d => d.id === "sistema");
+            if (sys) {
+                const data = sys.data() || {};
+                configSistemaDashboard = data;
+                modoTesteAtivo = data.modo_teste === true;
+                modoTesteValletAtivo = data.modo_teste_vallet === true;
+                const btn = document.getElementById('btnModoTeste');
+                if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
+                const btnVallet = document.getElementById('btnModoTesteVallet');
+                if (btnVallet) btnVallet.innerHTML = modoTesteValletAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
+                if (document.getElementById('tipo_taxa')) { document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado'; document.getElementById('valor_taxa').value = data.taxa_valor || ''; }
+                if (document.getElementById('config_hora_carona')) { document.getElementById('config_hora_carona').value = data.carona_hora_limite || '18:00'; document.getElementById('config_bairros_carona').value = data.carona_bairros || ''; }
+                
+                if (document.getElementById('custo_sistema')) { document.getElementById('custo_sistema').value = data.custo_sistema !== undefined ? data.custo_sistema : 125; }
+                custoSistemaGlobal = data.custo_sistema !== undefined ? parseFloat(data.custo_sistema) : 125.00;
+            }
+            dadosOperadores = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(d => d.id !== "sistema");
+            renderEquipe();
+            renderRelatorioVallet();
+            
+        });
+
+        onSnapshot(collection(db, "vallet_operadores"), snap => {
+            dadosValletOperadores = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .sort((a, b) => String(a.nome || a.usuario || a.id).localeCompare(String(b.nome || b.usuario || b.id), 'pt-BR'));
+            renderEquipe();
+        });
+
+
+        const normalizarPlacaRelatorioVallet = (v) => String(v || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7);
+        const normalizarBuscaRelatorioVallet = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+        const escaparHtmlRelatorioVallet = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+        const parseDataRelatorioVallet = (valor) => {
+            if (!valor) return null;
+            if (typeof valor.toDate === 'function') return valor.toDate();
+            if (valor.seconds !== undefined) return new Date(Number(valor.seconds) * 1000);
+            if (valor instanceof Date) return isNaN(valor) ? null : valor;
+            const d = new Date(valor);
+            return isNaN(d) ? null : d;
+        };
+
+        const eventoRealRelatorioVallet = (ev) => ev && !isEventoModeloAntigo(ev) && ev.data;
+
+        const janelaEventoRelatorioVallet = (ev) => {
+            if (!eventoRealRelatorioVallet(ev)) return null;
+            const partes = String(ev.data).split('-').map(Number);
+            if (partes.length !== 3 || partes.some(n => !Number.isFinite(n))) return null;
+            const inicio = new Date(partes[0], partes[1] - 1, partes[2], 21, 0, 0, 0);
+            const fim = new Date(partes[0], partes[1] - 1, partes[2] + 1, 8, 0, 0, 0);
+            return { inicio, fim };
+        };
+
+        const eventoDoAtendimentoRelatorioVallet = (a) => {
+            if (!a) return null;
+            if (a.evento_id) {
+                const porId = dadosEventos.find(ev => ev.id === a.evento_id);
+                if (porId) return porId;
+            }
+            if (a.evento_nome || a.evento_data) {
+                const porDados = dadosEventos.find(ev =>
+                    (!a.evento_data || String(ev.data || '') === String(a.evento_data)) &&
+                    (!a.evento_nome || normalizarBuscaRelatorioVallet(ev.nome) === normalizarBuscaRelatorioVallet(a.evento_nome))
+                );
+                if (porDados) return porDados;
+                return {
+                    id: `historico_${a.evento_data || 'sem-data'}_${normalizarBuscaRelatorioVallet(a.evento_nome || 'EVENTO')}`,
+                    nome: a.evento_nome || 'EVENTO DO VALLET',
+                    data: a.evento_data || ''
+                };
+            }
+            const entrada = parseDataRelatorioVallet(a.recebido_em || a.criado_em || a.atualizado_em);
+            if (!entrada) return null;
+            return dadosEventos.find(ev => {
+                const janela = janelaEventoRelatorioVallet(ev);
+                return janela && entrada >= janela.inicio && entrada < janela.fim;
+            }) || null;
+        };
+
+        const dataBrRelatorioVallet = (dataIso) => {
+            const p = String(dataIso || '').split('-');
+            return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : 'SEM DATA';
+        };
+
+        const atendimentoAtivoRelatorioVallet = (a) => a && a.ativo !== false && String(a.status || '').toUpperCase() !== 'ENTREGUE';
+
+        const mapaUltimoCheckinPorPlacaVallet = () => {
+            const mapa = new Map();
+            dadosValletAtendimentos.forEach(a => {
+                const placa = normalizarPlacaRelatorioVallet(a.placa_norm || a.placa);
+                const data = parseDataRelatorioVallet(a.recebido_em || a.criado_em || a.atualizado_em);
+                if (!placa || !data) return;
+                const atual = mapa.get(placa);
+                if (!atual || data > atual) mapa.set(placa, data);
+            });
+            return mapa;
+        };
+
+        const analisarBaseVeiculosVallet = () => {
+            const ativos = new Set(dadosValletAtendimentos.filter(atendimentoAtivoRelatorioVallet).map(a => normalizarPlacaRelatorioVallet(a.placa_norm || a.placa)).filter(Boolean));
+            const ultimoCheckin = mapaUltimoCheckinPorPlacaVallet();
+            const grupos = new Map();
+            dadosValletVeiculos.forEach(v => {
+                const placa = normalizarPlacaRelatorioVallet(v.placa_norm || v.placa || v.id);
+                if (!placa) return;
+                if (!grupos.has(placa)) grupos.set(placa, []);
+                grupos.get(placa).push(v);
+            });
+
+            const idsDuplicados = [];
+            const canonicos = [];
+            grupos.forEach((lista, placa) => {
+                lista.sort((a, b) => {
+                    const aCanon = a.id === placa ? 1 : 0;
+                    const bCanon = b.id === placa ? 1 : 0;
+                    if (aCanon !== bCanon) return bCanon - aCanon;
+                    const da = parseDataRelatorioVallet(a.atualizado_em || a.ultima_visita || a.criado_em)?.getTime() || 0;
+                    const dbv = parseDataRelatorioVallet(b.atualizado_em || b.ultima_visita || b.criado_em)?.getTime() || 0;
+                    return dbv - da;
+                });
+                canonicos.push({ placa, veiculo: lista[0] });
+                lista.slice(1).forEach(v => idsDuplicados.push(v.id));
+            });
+
+            const limite = Date.now() - (180 * 24 * 60 * 60 * 1000);
+            const idsExpirados = [];
+            canonicos.forEach(({ placa, veiculo }) => {
+                if (ativos.has(placa)) return;
+                const datas = [
+                    parseDataRelatorioVallet(veiculo.ultima_visita),
+                    ultimoCheckin.get(placa),
+                    parseDataRelatorioVallet(veiculo.criado_em || veiculo.data_cadastro || veiculo.atualizado_em)
+                ].filter(Boolean);
+                if (!datas.length) return;
+                const referencia = new Date(Math.max(...datas.map(d => d.getTime())));
+                if (referencia.getTime() < limite) idsExpirados.push(veiculo.id);
+            });
+
+            return {
+                totalPlacasUnicas: grupos.size,
+                idsDuplicados: [...new Set(idsDuplicados)],
+                idsExpirados: [...new Set(idsExpirados)],
+                idsParaExcluir: [...new Set([...idsDuplicados, ...idsExpirados])]
+            };
+        };
+
+        window.renderRelatorioVallet = () => {
+            const ativos = dadosValletAtendimentos.filter(atendimentoAtivoRelatorioVallet);
+            const atendimentosFinanceiros = dadosValletAtendimentos.filter(a => a.modo_teste_vallet !== true);
+            const solicitados = ativos.filter(a => String(a.status || '').toUpperCase() === 'SOLICITADO');
+            const analiseBase = analisarBaseVeiculosVallet();
+
+            const grupos = new Map();
+            dadosEventos.filter(eventoRealRelatorioVallet).forEach(ev => {
+                grupos.set(ev.id, { evento: ev, atendimentos: [] });
+            });
+            const semEvento = [];
+            atendimentosFinanceiros.forEach(a => {
+                const ev = eventoDoAtendimentoRelatorioVallet(a);
+                if (!ev) { semEvento.push(a); return; }
+                const chave = ev.id || `${ev.data || ''}_${normalizarBuscaRelatorioVallet(ev.nome)}`;
+                if (!grupos.has(chave)) grupos.set(chave, { evento: ev, atendimentos: [] });
+                grupos.get(chave).atendimentos.push(a);
+            });
+            if (semEvento.length) grupos.set('__sem_evento__', { evento: { id: '__sem_evento__', nome: 'SEM EVENTO VINCULADO', data: '' }, atendimentos: semEvento });
+
+            const gruposLista = [...grupos.values()]
+                .filter(g => g.atendimentos.length > 0)
+                .sort((a, b) => String(b.evento.data || '').localeCompare(String(a.evento.data || '')) || String(b.evento.nome || '').localeCompare(String(a.evento.nome || ''), 'pt-BR'));
+            const eventosAtendidos = gruposLista.filter(g => g.evento.id !== '__sem_evento__' && g.atendimentos.length > 0).length;
+
+            const setText = (id, valor) => { const el = document.getElementById(id); if (el) el.textContent = valor; };
+            setText('vallet-kpi-patio', ativos.length);
+            setText('vallet-kpi-solicitados', solicitados.length);
+            setText('vallet-kpi-cadastrados', analiseBase.totalPlacasUnicas);
+            setText('vallet-kpi-checkins', atendimentosFinanceiros.length);
+            setText('vallet-kpi-eventos', eventosAtendidos);
+            setText('vallet-kpi-expirados', analiseBase.idsParaExcluir.length);
+
+            const termo = normalizarBuscaRelatorioVallet(document.getElementById('busca-relatorio-vallet')?.value || '');
+            const linhasEvento = gruposLista.filter(g => {
+                if (!termo) return true;
+                const placas = g.atendimentos.map(a => a.placa || '').join(' ');
+                return normalizarBuscaRelatorioVallet(`${g.evento.nome || ''} ${g.evento.data || ''} ${placas}`).includes(termo);
+            }).slice(0, 80).map(g => `<tr class="hover:bg-white/[0.02]">
+                <td class="py-4 pl-3 text-[10px] text-zinc-400 font-bold whitespace-nowrap">${dataBrRelatorioVallet(g.evento.data)}</td>
+                <td class="py-4 text-[10px] text-white font-black uppercase">${escaparHtmlRelatorioVallet(g.evento.nome || 'SEM EVENTO')}</td>
+                <td class="py-4 text-center text-base text-purple-400 font-black">${g.atendimentos.length}</td>
+            </tr>`).join('');
+            const corpoEventos = document.getElementById('tabela-vallet-eventos');
+            if (corpoEventos) corpoEventos.innerHTML = linhasEvento || `<tr><td colspan="3" class="py-10 text-center text-[9px] text-zinc-600 font-black uppercase">Nenhuma entrada encontrada.</td></tr>`;
+
+            const recentes = [...dadosValletAtendimentos].sort((a,b) => {
+                const da = parseDataRelatorioVallet(a.recebido_em || a.criado_em)?.getTime() || 0;
+                const dbv = parseDataRelatorioVallet(b.recebido_em || b.criado_em)?.getTime() || 0;
+                return dbv - da;
+            }).filter(a => {
+                if (!termo) return true;
+                const ev = eventoDoAtendimentoRelatorioVallet(a);
+                return normalizarBuscaRelatorioVallet(`${a.placa || ''} ${a.ticket || ''} ${ev?.nome || a.evento_nome || ''} ${a.operador_recebimento || ''}`).includes(termo);
+            }).slice(0, 100);
+            const linhasRecentes = recentes.map(a => {
+                const ev = eventoDoAtendimentoRelatorioVallet(a);
+                const entrada = parseDataRelatorioVallet(a.recebido_em || a.criado_em);
+                const status = String(a.status || 'RECEBIDO').toUpperCase();
+                const cor = status === 'ENTREGUE' ? 'text-emerald-400' : status === 'SOLICITADO' ? 'text-orange-400' : 'text-blue-400';
+                return `<tr class="hover:bg-white/[0.02]">
+                    <td class="py-4 pl-3 text-[9px] text-zinc-400 font-bold whitespace-nowrap">${entrada ? entrada.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '---'}</td>
+                    <td class="py-4 text-[10px] text-yellow-400 font-black">#${escaparHtmlRelatorioVallet(a.ticket || '---')}</td>
+                    <td class="py-4 text-xs text-white font-black tracking-widest">${escaparHtmlRelatorioVallet(a.placa || '---')}</td>
+                    <td class="py-4 text-[9px] text-zinc-300 font-bold uppercase">${escaparHtmlRelatorioVallet(ev?.nome || a.evento_nome || 'SEM EVENTO')}</td>
+                    <td class="py-4 text-[9px] text-zinc-400 font-bold uppercase">${escaparHtmlRelatorioVallet(a.operador_recebimento || '---')}</td>
+                    <td class="py-4 pr-3 text-right text-[9px] ${cor} font-black uppercase">${escaparHtmlRelatorioVallet(status)}</td>
+                </tr>`;
+            }).join('');
+            const corpoRecentes = document.getElementById('tabela-vallet-recentes');
+            if (corpoRecentes) corpoRecentes.innerHTML = linhasRecentes || `<tr><td colspan="6" class="py-10 text-center text-[9px] text-zinc-600 font-black uppercase">Nenhum check-in registrado.</td></tr>`;
+
+        };
+
+        window.executarLimpezaVallet180Dias = async (manual = false) => {
+            if (limpezaValletEmAndamento || !valletAtendimentosCarregados || !valletVeiculosCarregados) return;
+            const analise = analisarBaseVeiculosVallet();
+            if (manual && analise.idsParaExcluir.length && !confirm(`Excluir ${analise.idsParaExcluir.length} cadastro(s) de veículo?\n\nSerão removidos perfis duplicados e veículos sem check-in há mais de 180 dias. O histórico de atendimentos será preservado.`)) return;
+            limpezaValletEmAndamento = true;
+            const btn = document.getElementById('btn-limpeza-vallet');
+            if (btn) { btn.disabled = true; btn.textContent = 'LIMPANDO...'; }
+            try {
+                const ids = analise.idsParaExcluir;
+                for (let i = 0; i < ids.length; i += 400) {
+                    const batch = writeBatch(db);
+                    ids.slice(i, i + 400).forEach(id => batch.delete(doc(db, 'vallet_veiculos', id)));
+                    await batch.commit();
+                }
+                const agoraIso = new Date().toISOString();
+                await setDoc(doc(db, 'configuracoes', 'sistema'), {
+                    vallet_ultima_limpeza: agoraIso,
+                    vallet_ultima_limpeza_qtd: ids.length,
+                    vallet_regra_inatividade_dias: 180
+                }, { merge: true });
+                localStorage.setItem('eclub_vallet_limpeza_dashboard_dia', agoraIso.slice(0, 10));
+                if (manual) mostrarAviso(ids.length ? `${ids.length} cadastro(s) removido(s). Histórico preservado.` : 'Nenhum veículo precisava ser removido.', true);
+            } catch (e) {
+                console.error('Erro na limpeza do Vallet:', e);
+                if (manual) mostrarAviso('Erro ao limpar a base do Vallet. Verifique as permissões do Firestore.');
+            } finally {
+                limpezaValletEmAndamento = false;
+                if (btn) { btn.disabled = false; btn.textContent = 'EXECUTAR LIMPEZA AGORA'; }
+                renderRelatorioVallet();
+            }
+        };
+
+        const agendarLimpezaAutomaticaVallet = () => {
+            if (!valletAtendimentosCarregados || !valletVeiculosCarregados || limpezaValletEmAndamento) return;
+            const hoje = new Date().toISOString().slice(0, 10);
+            if (localStorage.getItem('eclub_vallet_limpeza_dashboard_dia') === hoje) return;
+            setTimeout(() => executarLimpezaVallet180Dias(false), 500);
+        };
+
+        onSnapshot(collection(db, 'vallet_atendimentos'), snap => {
+            dadosValletAtendimentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            valletAtendimentosCarregados = true;
+            renderRelatorioVallet();
+            agendarLimpezaAutomaticaVallet();
+        });
+
+        onSnapshot(collection(db, 'vallet_veiculos'), snap => {
+            dadosValletVeiculos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            valletVeiculosCarregados = true;
+            renderRelatorioVallet();
+            agendarLimpezaAutomaticaVallet();
+        });
+
+        window.salvarTaxaPix = async () => {
+            const tipo = document.getElementById('tipo_taxa').value;
+            const valor = parseFloat(document.getElementById('valor_taxa').value) || 0;
+            try { await setDoc(doc(db, "configuracoes", "sistema"), { taxa_tipo: tipo, taxa_valor: valor }, { merge: true }); mostrarAviso("Taxa atualizada com sucesso!", true); } 
+            catch(e) { mostrarAviso("Erro ao salvar taxa."); }
+        };
+
+        window.salvarCustoSistema = async () => {
+            const valor = parseFloat(document.getElementById('custo_sistema').value) || 0;
+            try { await setDoc(doc(db, "configuracoes", "sistema"), { custo_sistema: valor }, { merge: true }); mostrarAviso("Custo do sistema salvo com sucesso!", true); } 
+            catch(e) { mostrarAviso("Erro ao salvar custo."); }
+        };
+
+        window.salvarConfigCaronas = async () => {
+            const h = document.getElementById('config_hora_carona').value;
+            const b = document.getElementById('config_bairros_carona').value.toUpperCase();
+            try { await setDoc(doc(db, "configuracoes", "sistema"), { carona_hora_limite: h, carona_bairros: b }, { merge: true }); mostrarAviso("Regras salvas!", true); } 
+            catch(e) { mostrarAviso("Erro ao salvar configurações."); }
+        };
+
+        window.gerarRelatorioCaronas = () => {
+            const eventoNome = document.getElementById('filtro-evento-carona').value;
+            const textarea = document.getElementById('output-rotas-carona');
+            if(!eventoNome) { textarea.value = "Aguardando seleção do evento..."; return; }
+            const passageiras = dadosReservas.filter(r => r.evento === eventoNome && r.carona === true);
+            if(passageiras.length === 0) { textarea.value = `Nenhuma solicitação de carona para ${eventoNome}.`; return; }
+            const grupos = {};
+            passageiras.forEach(p => { const b = (p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase(); if(!grupos[b]) grupos[b] = []; grupos[b].push(p); });
+            let texto = `📍 ROTA DE CARONAS - ${eventoNome}\n\n`; let cont = 1;
+            Object.keys(grupos).sort().forEach(bairro => {
+                texto += `🛑 BAIRRO: ${bairro}\n`;
+                grupos[bairro].forEach(p => { texto += `${cont}. ${p.nome} - ${p.tel || 'S/N'}\nEndereço: ${p.endereco || 'S/E'} - CEP: ${p.cep || '---'}\n`; cont++; });
+                texto += `\n`;
+            });
+            textarea.value = texto.trim();
+        };
+
+        window.copiarRotasCarona = () => { document.getElementById('output-rotas-carona').select(); document.execCommand('copy'); mostrarAviso("Rotas copiadas!", true); };
+
+        window.exportarAuditoriaExcel = () => {
+            const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
+            const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
+            
+            let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP').sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
+            
+            if (fStat === 'entrou') res = res.filter(r => r.entrou === true); 
+            else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true);
+            else if (fStat === 'pix_entrou') res = res.filter(r => r.metodo === 'pix_antecipado' && r.entrou === true);
+            else if (fStat === 'pix_aguardando') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && r.entrou !== true);
+            else if (fStat === 'pix_cancelado') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago !== true);
+            
+            if (termo.length > 1) {
+                const terms = termo.split(/\s+/);
+                res = res.filter(r => {
+                    const dF = isNaN(new Date(r.data_reserva)) ? '' : new Date(r.data_reserva).toLocaleDateString('pt-BR');
+                    const str = `${r.nome || ''} ${r.tel || ''} ${getPromoterName(r.promoter)} ${r.evento || ''} ${r.cpf || ''} ${dF} ${r.porteiro || ''}`.toUpperCase();
+                    return terms.every(t => str.includes(t));
+                });
+            }
+            
+            if (res.length === 0) {
+                mostrarAviso("Nenhum dado na tela para exportar.");
+                return;
+            }
+
+            let csvContent = "DATA RESERVA;CLIENTE;TELEFONE;EVENTO;PROMOTER;TIPO;STATUS;HORA CHECK-IN;OPERADOR\n";
+            
+            res.forEach(r => {
+                const dtRes = isNaN(new Date(r.data_reserva)) ? '---' : new Date(r.data_reserva).toLocaleDateString('pt-BR') + ' ' + new Date(r.data_reserva).toLocaleTimeString('pt-BR');
+                const cliente = (r.nome || '---').replace(/;/g, '');
+                const tel = (r.tel || '---').replace(/;/g, '');
+                const evento = (r.evento || '---').replace(/;/g, '');
+                const promoter = getPromoterName(r.promoter).replace(/;/g, '');
+                const tipo = (r.tipo_entrada || '---').replace(/;/g, '');
+                const status = r.entrou ? 'ENTROU' : 'AGUARDANDO';
+                let dtEntrada = '---';
+                let op = '---';
+                
+                if (r.entrou) {
+                    dtEntrada = r.data_entrada && !isNaN(new Date(r.data_entrada)) ? new Date(r.data_entrada).toLocaleDateString('pt-BR') + ' ' + new Date(r.data_entrada).toLocaleTimeString('pt-BR') : '---';
+                    op = (r.porteiro || 'Sistema').replace(/;/g, '');
+                }
+                
+                csvContent += `${dtRes};${cliente};${tel};${evento};${promoter};${tipo};${status};${dtEntrada};${op}\n`;
+            });
+
+            const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Auditoria_E-Club_${fStat}_${new Date().getTime()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            mostrarAviso("Excel baixado com sucesso!", true);
+        };
+
+        window.gerarListaMarketing = () => {
+            const btn = document.getElementById('btn-gerar-lista');
+            const textarea = document.getElementById('output-marketing');
+            
+            if (dadosSolteiras.length === 0) {
+                textarea.value = "Nenhuma solteira encontrada na base.";
+                return;
+            }
+            
+            const ordenadas = [...dadosSolteiras].sort((a, b) => {
+                const valA = parseVisitaUniversal(a.ultima_visita) || parseVisitaUniversal(a.data_cadastro) || 0;
+                const valB = parseVisitaUniversal(b.ultima_visita) || parseVisitaUniversal(b.data_cadastro) || 0;
+                return valB - valA;
+            });
+
+            let txt = "";
+            ordenadas.forEach(c => {
+                const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
+                if (tel.length >= 8) {
+                    let d = parseVisitaUniversal(c.ultima_visita) || parseVisitaUniversal(c.data_cadastro);
+                    let strData = 'Sem Data';
+                    if (d && !isNaN(d) && d > 0) {
+                        const dataObj = new Date(d);
+                        strData = String(dataObj.getDate()).padStart(2, '0') + '/' + 
+                                  String(dataObj.getMonth() + 1).padStart(2, '0') + '/' + 
+                                  dataObj.getFullYear();
+                    }
+                    txt += `${strData} - ${tel} - ${c.nome}\n`; 
+                }
+            });
+            
+            textarea.value = txt.trim();
+            mostrarAviso("Lista gerada com sucesso!", true);
+        };
+
+        window.copiarMarketing = () => {
+            const t = document.getElementById('output-marketing');
+            if(!t.value || t.value.includes("Clique no botão")) return mostrarAviso("Gere a lista primeiro!");
+            t.select(); document.execCommand('copy');
+            mostrarAviso("Lista copiada! Pronta para colar no WhatsApp.", true);
+        };
+
+        window.duplicarEvento = (id, origem = 'modelos') => {
+            const ev = origem === 'eventos' ? dadosEventos.find(e => e.id === id) : dadosModelosEventos.find(e => e.id === id);
+            if (!ev) return mostrarAviso("Modelo não encontrado.");
+
+            document.getElementById('edit_evento_id').value = "";
+            document.getElementById('nome_festa').value = "";
+            document.getElementById('data_festa').value = "";
+            document.getElementById('hora_inicio').value = "";
+            document.getElementById('url_imagem_atual').value = "";
+            if(document.getElementById('upload_capa')) document.getElementById('upload_capa').value = "";
+
+            document.getElementById('valor_casal').value = ev.valor_casal || "";
+            document.getElementById('valor_solteiro').value = ev.valor_solteiro || "";
+            document.getElementById('desc_casal').value = ev.desc_casal || "";
+            document.getElementById('desc_solteiro').value = ev.desc_solteiro || "";
+            document.getElementById('ant_casal').value = ev.ant_casal || "";
+            document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || "";
+            document.getElementById('ant_solteiro').value = ev.ant_solteiro || "";
+            document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || "";
+            document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || "";
+            if(document.getElementById('diferenciais_noite')) document.getElementById('diferenciais_noite').value = ev.diferenciais_noite || "";
+
+            if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
+
+            for(let i=1; i<=8; i++) {
+                document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false;
+                document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || "";
+                document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || "";
+            }
+
+            mostrarAviso("Modelo carregado! Preencha NOME, DATA, HORÁRIO e IMAGEM.", true);
+            document.getElementById('formEventoContainer').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('nome_festa').focus();
+        };
+
+        window.salvarEventoComoModelo = async (id) => {
+            const ev = dadosEventos.find(e => e.id === id);
+            if (!ev) return mostrarAviso("Evento não encontrado para virar modelo.");
+
+            const nomeModelo = prompt("Dê um nome interno para este modelo (ex: Festa Pista + 8 Camarotes):");
+            if (!nomeModelo || !nomeModelo.trim()) return;
+
+            try {
+                const modelo = montarDadosModelo(ev);
+                modelo.modelo_nome = nomeModelo.trim().toUpperCase();
+                await addDoc(collection(db, "modelos_eventos"), modelo);
+                mostrarAviso("Modelo salvo sem nome, data, horário e arte do evento.", true);
+            } catch(e) {
+                mostrarAviso("Erro ao salvar modelo.");
+            }
+        };
+
+        window.removerModeloEvento = async (id) => {
+            if(!confirm("Excluir este modelo? Os eventos reais não serão afetados.")) return;
+            try {
+                await deleteDoc(doc(db, "modelos_eventos", id));
+                mostrarAviso("Modelo removido com sucesso!", true);
+            } catch(e) {
+                mostrarAviso("Erro ao remover modelo.");
+            }
+        };
+
+        onSnapshot(collection(db, "solteiras"), snap => {
+            const agora = new Date(); const batch = writeBatch(db); let del = false;
+            dadosSolteiras = snap.docs.map(d => {
+                const data = d.data(); 
+                let ref = parseVisita(data.ultima_visita) || parseVisita(data.data_cadastro);
+                if (ref && !isNaN(ref) && (agora - ref) / (1000 * 60 * 60 * 24) > 90) { batch.delete(d.ref); del = true; return null; }
+                return { id: d.id, ...data };
+            }).filter(s => s !== null);
+            if(del) batch.commit(); 
+            renderSolteiras();
+            
+        });
+
+        onSnapshot(collection(db, "lista_eventos"), snap => { 
+            dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderAuditoria(); renderSolteiras(); 
+            const sCarona = document.getElementById('filtro-evento-carona');
+            const evtAtuais = [...new Set(dadosReservas.filter(r=>r.carona===true).map(r=>r.evento))];
+            if(sCarona) {
+                const vAtual = sCarona.value;
+                sCarona.innerHTML = '<option value="">Selecione o Evento com Caronas...</option>' + evtAtuais.map(e => `<option value="${e}">${e}</option>`).join('');
+                if(evtAtuais.includes(vAtual)) sCarona.value = vAtual;
+            }
+        });
+
+        onSnapshot(collection(db, "eventos"), snap => { 
+            dadosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderRelatorios(); renderGridConfig(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderSolteiras(); renderRelatorioVallet(); 
+        });
+
+        onSnapshot(collection(db, "modelos_eventos"), snap => {
+            dadosModelosEventos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderGridConfig();
+        });
+
+        onSnapshot(collection(db, "promoters"), snap => { 
+            dadosPromoters = snap.docs.map(d => ({id: d.id, ...d.data()})); 
+            document.getElementById('filtro-promoter-excel').innerHTML = '<option value="">Filtrar Por Promoter (Todos)</option>' + dadosPromoters.map(p => `<option value="${p.id.toUpperCase()}">${p.nome || p.id}</option>`).join('');
+            renderEquipe();
+            
+        });
+
+        onSnapshot(collection(db, "links_aniversario"), snap => {
+            dadosAniv = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderAniversarios();
+        });
+
+        window.renderSolteiras = () => {
+            const bCount = document.getElementById('total-solteiras-badge');
+            if(bCount) bCount.innerText = `${dadosSolteiras.length}`;
+        };
+
+        const normalizarAuditoria = (v) => String(v || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const apenasNumerosAuditoria = (v) => String(v || '').replace(/\D/g, '');
+
+        const parseMoedaAuditoria = (valor) => {
+            if (valor === undefined || valor === null || valor === '') return null;
+            if (typeof valor === 'number') return Number.isFinite(valor) ? valor : null;
+            let v = String(valor).trim().replace(/R\$/gi, '').replace(/\s/g, '').replace(/[^0-9,.-]/g, '');
+            if (!v) return null;
+            if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
+            const n = Number(v);
+            return Number.isFinite(n) ? n : null;
+        };
+
+        const formatarMoedaAuditoria = (valor) => {
+            const n = parseMoedaAuditoria(valor);
+            if (n === null || n <= 0) return 'VALOR NÃO INF.';
+            return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        };
+
+        const montarTipoAuditoria = (r) => {
+            const tipo = r.tipo_entrada || '---';
+            const tipoUpper = String(tipo).toUpperCase();
+            const isPix = r.metodo === 'pix_antecipado';
+            const isCamarote = tipoUpper.includes('CAMAROTE') || tipoUpper.includes('VIP');
+
+            if (!isPix) {
+                return `<span class="text-[9px] font-black uppercase text-cyan-400">${tipo}</span>`;
+            }
+
+            if (isCamarote) {
+                return `<div class="flex flex-col gap-1 items-start"><span class="text-[9px] font-black uppercase text-cyan-400">${tipo}</span><span class="text-[8px] font-black uppercase text-fuchsia-400 bg-fuchsia-500/10 border border-fuchsia-500/20 px-2 py-1 rounded-lg">💎 PIX CAMAROTE</span></div>`;
+            }
+
+            const valor = formatarMoedaAuditoria(r.valor_pago ?? r.valor_pix ?? r.valor_total ?? r.valor ?? r.preco);
+            const label = r.pago === true ? 'PIX PAGO' : 'PIX A PAGAR';
+            const cls = r.pago === true
+                ? 'text-green-400 bg-green-500/10 border-green-500/20'
+                : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+            return `<div class="flex flex-col gap-1 items-start"><span class="text-[9px] font-black uppercase text-cyan-400">${tipo}</span><span class="text-[8px] font-black uppercase ${cls} border px-2 py-1 rounded-lg">💸 ${label}: ${valor}</span></div>`;
+        };
+
+        const mesmaPessoaNoMesmoEvento = (base, item) => {
+            if (!base || !item) return false;
+            if (base.id && item.id && base.id === item.id) return true;
+
+            const eventoBase = normalizarAuditoria(base.evento);
+            const eventoItem = normalizarAuditoria(item.evento);
+            if (eventoBase && eventoItem && eventoBase !== eventoItem) return false;
+
+            const telBase = apenasNumerosAuditoria(base.tel || base.telefone);
+            const telItem = apenasNumerosAuditoria(item.tel || item.telefone);
+            if (telBase.length >= 8 && telBase === telItem) return true;
+
+            const cpfBase = apenasNumerosAuditoria(base.cpf);
+            const cpfItem = apenasNumerosAuditoria(item.cpf);
+            if (cpfBase.length >= 11 && cpfBase === cpfItem) return true;
+
+            const nomeBase = normalizarAuditoria(base.nome);
+            const nomeItem = normalizarAuditoria(item.nome);
+            const tipoBase = normalizarAuditoria(base.tipo_entrada);
+            const tipoItem = normalizarAuditoria(item.tipo_entrada);
+            return nomeBase.length > 2 && nomeBase === nomeItem && (!tipoBase || !tipoItem || tipoBase === tipoItem);
+        };
+
+        window.excluirClienteAuditoria = async (id) => {
+            const reserva = dadosReservas.find(r => r.id === id);
+            if (!reserva) {
+                mostrarAviso("Cliente não encontrado na auditoria.");
+                return;
+            }
+
+            const nome = reserva.nome || 'Cliente sem nome';
+            const evento = reserva.evento || 'Evento não informado';
+            const tipo = reserva.tipo_entrada || 'Tipo não informado';
+            const pixInfo = reserva.metodo === 'pix_antecipado'
+                ? `\n\nPIX: ${reserva.pago === true ? 'PAGO - será removido dos antecipados/financeiro.' : 'PENDENTE/CANCELADO - será removido da auditoria.'}`
+                : '';
+
+            const ok = confirm(
+                `EXCLUIR CLIENTE DA AUDITORIA?\n\n` +
+                `Cliente: ${nome}\n` +
+                `Evento: ${evento}\n` +
+                `Tipo: ${tipo}${pixInfo}\n\n` +
+                `Esta ação remove a reserva/interação da lista do evento, dos relatórios e da portaria. Não é possível desfazer.`
+            );
+            if (!ok) return;
+
+            try {
+                const batch = writeBatch(db);
+                let removidos = 0;
+
+                if (reserva.evento) {
+                    const qClienteEvento = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", reserva.evento)));
+                    qClienteEvento.forEach(d => {
+                        const item = { id: d.id, ...d.data() };
+                        if (mesmaPessoaNoMesmoEvento(reserva, item)) {
+                            batch.delete(d.ref);
+                            removidos++;
+                        }
+                    });
+                }
+
+                if (removidos === 0) {
+                    batch.delete(doc(db, "lista_eventos", id));
+                    removidos = 1;
+                }
+
+                await batch.commit();
+                mostrarAviso(`${removidos} registro(s) do cliente removido(s). Relatórios e portaria atualizados.`, true);
+            } catch (e) {
+                console.error("Erro ao excluir cliente pela auditoria:", e);
+                mostrarAviso("Erro ao excluir cliente. Verifique as permissões do Firestore.");
+            }
+        };
+
+        window.renderAuditoria = () => {
+            const tbody = document.getElementById('tabela-auditoria-body'); if(!tbody) return;
+            const termo = document.getElementById('busca-auditoria') ? document.getElementById('busca-auditoria').value.trim().toUpperCase() : '';
+            const fStat = document.getElementById('filtro-status-auditoria') ? document.getElementById('filtro-status-auditoria').value : 'todos';
+            
+            let res = [...dadosReservas].filter(r => r.tipo_entrada !== 'SOLTEIRA VIP').sort((a,b) => new Date(b.data_reserva) - new Date(a.data_reserva));
+            if (fStat === 'entrou') res = res.filter(r => r.entrou === true); 
+            else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true);
+            else if (fStat === 'pix_entrou') res = res.filter(r => r.metodo === 'pix_antecipado' && r.entrou === true);
+            else if (fStat === 'pix_aguardando') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && r.entrou !== true);
+            else if (fStat === 'pix_cancelado') res = res.filter(r => r.metodo === 'pix_antecipado' && r.pago !== true);
+
+            if (termo.length > 1) {
+                const terms = termo.split(/\s+/);
+                res = res.filter(r => {
+                    const dF = isNaN(new Date(r.data_reserva)) ? '' : new Date(r.data_reserva).toLocaleDateString('pt-BR');
+                    const str = `${r.nome || ''} ${r.tel || ''} ${getPromoterName(r.promoter)} ${r.evento || ''} ${r.cpf || ''} ${dF} ${r.porteiro || ''}`.toUpperCase();
+                    return terms.every(t => str.includes(t));
+                });
+            } else { res = res.slice(0, 100); }
+
+            if (res.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr>`; return; }
+            tbody.innerHTML = res.map(r => {
+                const df = isNaN(new Date(r.data_reserva)) ? '---' : new Date(r.data_reserva).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' - ' + new Date(r.data_reserva).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                let st = `<span class="text-[9px] font-black uppercase text-zinc-500 flex items-center justify-end gap-1">○ Aguardando</span>`;
+                if (r.metodo === 'pix_antecipado' && r.pago !== true) { st = `<div class="flex flex-col items-end gap-1"><span class="text-[9px] font-black uppercase text-red-500">🚫 PIX PENDENTE</span><span class="text-[7px] text-zinc-500">(ABANDONADO)</span></div>`; } 
+                else if (r.entrou) {
+                    let dent = '---'; if (r.data_entrada && !isNaN(new Date(r.data_entrada))) dent = new Date(r.data_entrada).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'}) + ' ' + new Date(r.data_entrada).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+                    st = `<div class="flex flex-col items-end gap-1"><span class="text-[10px] font-black uppercase text-green-500">✓ Entrou</span><span class="text-[8px] text-yellow-500 font-black uppercase tracking-widest">👤 ${r.porteiro || 'Sistema'}</span><span class="text-[8px] text-zinc-500 font-mono">🕒 ${dent}</span></div>`;
+                }
+                const nomePromoter = getPromoterName(r.promoter);
+                const tipoAuditoria = montarTipoAuditoria(r);
+                return `<tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500"><td class="p-4 font-mono text-[10px] text-zinc-400">${df}</td><td class="p-4"><p class="text-xs font-black text-white uppercase">${r.nome}</p><p class="text-[9px] text-zinc-500 font-bold">${r.tel || '---'}</p></td><td class="p-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${r.evento}</span></td><td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${nomePromoter}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${r.aniversariante}</span>` : ''}</div></td><td class="p-4">${tipoAuditoria}</td><td class="p-4 text-right">${st}</td><td class="p-4 text-right"><button onclick="excluirClienteAuditoria('${r.id}')" class="bg-red-600/15 hover:bg-red-600 border border-red-500/40 text-red-400 hover:text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all" title="Excluir cliente da lista, relatórios e portaria">Excluir</button></td></tr>`;
+            }).join('');
+        };
+
+        window.renderRelatorios = () => {
+            const container = document.getElementById('container-bolhas'); if(!container) return;
+            const ativos = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => new Date(a.data) - new Date(b.data));
+            container.innerHTML = ativos.map(ev => {
+                const evN = (ev.nome || '').trim().toLowerCase();
+                const solteirasDoEvento = getSolteirasParaEvento(ev);
+                const todas = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.evento || '').trim().toLowerCase() === evN);
+                const val = todas.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
+                const pM = (v) => Number(String(v || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                
+                const px = val.filter(r => r.metodo === 'pix_antecipado' && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP'));
+                const pCQ = px.filter(r => r.tipo_entrada === 'CASAL').length; const pCCQ = px.filter(r => r.tipo_entrada === 'CASAL CONSUMAÇÃO').length; const pSQ = px.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
+                
+                const recCam = val.filter(r => (r.tipo_entrada?.toUpperCase().includes('CAMAROTE') || r.tipo_entrada?.toUpperCase().includes('VIP')) && r.pago === true && !r.cortesia).reduce((tot, r) => tot + pM(r.valor_pago), 0);
+                const totPis = val.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP')).reduce((tot, r) => tot + pM(r.valor_pago), 0);
+                const totGer = (totPis + recCam).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                
+                let lCam = '';
+                for(let n=1; n<=8; n++) {
+                    if (!ev[`cam${n}_ativo`]) { lCam += `<div class="w-full h-2 rounded-full bg-zinc-800 border border-white/5"></div>`; continue; }
+                    const nBusca = (n === 7) ? "VIP 1" : (n === 8) ? "VIP 2" : `CAMAROTE ${n}`;
+                    const resCam = todas.filter(r => r.tipo_entrada?.toUpperCase() === nBusca || r.tipo_entrada?.toUpperCase() === `CAMAROTE 0${n}`);
+                    let st = 'livre';
+                    if (resCam.some(r => r.cortesia === true)) st = 'cortesia'; else if (resCam.some(r => r.pago === true)) st = 'vendido'; else if (resCam.filter(r => !r.pago && !r.cortesia).some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 5)) st = 'aguardando';
+                    if (st === 'cortesia') lCam += `<div class="w-full h-2 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div>`; else if (st === 'vendido') lCam += `<div class="w-full h-2 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></div>`; else if (st === 'aguardando') lCam += `<div class="w-full h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_#eab308] animate-pulse"></div>`; else lCam += `<div class="w-full h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]"></div>`; 
+                }
+                
+                return `<div class="event-bubble p-6 flex flex-col justify-between"><div><div class="flex justify-between items-start mb-4"><p class="text-[9px] font-black text-yellow-500 uppercase italic mt-1">${ev.data ? ev.data.split('-').reverse().join('/') : 'S/D'}</p><div class="bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-lg flex flex-col items-end"><span class="text-[7px] font-black text-green-500 uppercase tracking-widest">💰 Total Arrecadado</span><span class="text-sm font-black text-white">${totGer}</span></div></div><h4 class="text-sm font-black uppercase text-white mb-4 leading-tight">${ev.nome}</h4></div><div class="bg-cyan-900/10 border border-cyan-500/20 p-4 rounded-2xl mb-4"><div class="flex flex-col gap-2 text-[10px]"><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Seco Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCCQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2 text-fuchsia-400">Casais Consuma Pix</span></div><div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div></div><div class="grid grid-cols-8 gap-1.5 mt-4">${lCam}</div></div><div class="flex justify-between border-t border-white/5 pt-4"><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista VIP/Pagante</p><p class="text-lg font-black text-white">${val.length}</p></div><div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins Pagantes</p><p class="text-lg font-black text-green-500">${val.filter(r => r.entrou === true).length}</p></div><div class="text-center border-l border-white/5 pl-4"><p class="text-[7px] text-pink-500 uppercase font-black">Solteiras</p><p class="text-lg font-black text-pink-400">${solteirasDoEvento.length}</p></div></div></div>`;
+            }).join('');
+            window.renderPodios();
+        };
+
+        window.renderPodios = () => {
+            const st = {};
+            dadosReservas.forEach(r => { 
+                if (r.tipo_entrada === 'SOLTEIRA VIP' || (r.metodo === 'pix_antecipado' && r.pago !== true)) return; 
+                const p = getPromoterName(r.promoter); 
+                if(!st[p]) st[p] = { r: 0, c: 0 }; st[p].r++; if(r.entrou === true) st[p].c++; 
+            });
+            const med = ['🥇', '🥈', '🥉'];
+            const rR = Object.entries(st).sort((a,b) => b[1].r - a[1].r).slice(0,5); const rC = Object.entries(st).sort((a,b) => b[1].c - a[1].c).slice(0,5);
+            document.getElementById('lista-ranking-reservas').innerHTML = rR.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-yellow-500">${d.r}</p></div>`).join('');
+            document.getElementById('lista-ranking-checkins').innerHTML = rC.map(([n, d], i) => `<div class="bg-black/40 p-4 rounded-2xl flex justify-between items-center border border-white/5 mb-2"><div><span class="mr-2">${med[i] || '👤'}</span><span class="text-[10px] font-black uppercase text-white">${n}</span></div><p class="text-xl font-black text-green-500">${d.c}</p></div>`).join('');
+        };
+
+        window.gerarRelatorioGerencial = () => {
+            const tA = document.getElementById('output-excel');
+            const val = dadosReservas.filter(r => r.tipo_entrada !== 'SOLTEIRA VIP' && (r.metodo !== 'pix_antecipado' || r.pago === true));
+            if (val.length === 0) { tA.value = "Sem reservas de pagantes."; return; }
+            const at = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => a.data.localeCompare(b.data)); let cab = "";
+            if (at.length > 0) {
+                const mes = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+                const dI = new Date(at[0].data + "T12:00:00Z"); const dF = new Date(at[at.length-1].data + "T12:00:00Z");
+                cab = `**De ${String(dI.getDate()).padStart(2, '0')} de ${mes[dI.getMonth()]} a ${String(dF.getDate()).padStart(2, '0')} de ${mes[dF.getMonth()]} de ${dF.getFullYear()}**\n\n`;
+            }
+            const ck = val.filter(r => r.entrou === true).length; const perc = val.length > 0 ? ((ck / val.length) * 100).toFixed(2).replace('.', ',') : "0,00";
+            let txt = cab + `*FEITO ${val.length} RESERVAS DE PAGANTES*\n-> *ENTROU ${perc}%* <-\n\n`;
+            const pst = {}; val.filter(r => r.entrou === true).forEach(r => { const p = getPromoterName(r.promoter); pst[p] = (pst[p] || 0) + 1; });
+            Object.keys(pst).sort().forEach(p => { txt += `${p} - ${pst[p]}\n`; });
+            const pM = (v) => Number(String(v || '0').replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
+            const tPx = val.filter(r => r.metodo === 'pix_antecipado' && r.pago === true).reduce((acc, r) => acc + pM(r.valor_pago), 0);
+            
+            const taxaSistema = custoSistemaGlobal || 0;
+            const saldoLiquido = tPx - taxaSistema;
+            
+            txt += `\n--------------------------------\n\n**Enviado pra conta PAGSEGURO**\n`;
+            txt += `Entradas PIX: R$ ${tPx.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
+            txt += `Desconto Sistema: - R$ ${taxaSistema.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
+            txt += `> Saldo Final Enviado: R$ ${saldoLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n\n`;
+            
+            txt += `Ingressos vendidos (E Solteiras)\n\n`;
+            
+            const dS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+
+            // Conta cada entrada real do Vallet vinculada ao evento.
+            // Atendimentos realizados no Modo Teste Vallet não entram no financeiro.
+            const totalCarrosValletPorEvento = (ev) => dadosValletAtendimentos.filter(a => {
+                if (!a || a.modo_teste_vallet === true) return false;
+                const eventoAtendimento = eventoDoAtendimentoRelatorioVallet(a);
+                if (!eventoAtendimento) return false;
+
+                if (ev.id && eventoAtendimento.id && String(ev.id) === String(eventoAtendimento.id)) return true;
+
+                const nomeEvento = normalizarBuscaRelatorioVallet(ev.nome || '');
+                const nomeAtendimento = normalizarBuscaRelatorioVallet(eventoAtendimento.nome || a.evento_nome || '');
+                const dataEvento = String(ev.data || '');
+                const dataAtendimento = String(eventoAtendimento.data || a.evento_data || '');
+                return nomeEvento === nomeAtendimento && dataEvento === dataAtendimento;
+            }).length;
+            
+            at.forEach(ev => {
+                const rE = val.filter(r => (r.evento || '').trim().toUpperCase() === (ev.nome||'').trim().toUpperCase());
+                const px = rE.filter(r => r.metodo === 'pix_antecipado' && r.pago === true && !r.tipo_entrada?.toUpperCase().includes('CAMAROTE') && !r.tipo_entrada?.toUpperCase().includes('VIP'));
+                const cQ = px.filter(r => r.tipo_entrada === 'CASAL').length; const ccQ = px.filter(r => r.tipo_entrada === 'CASAL CONSUMAÇÃO').length; const sQ = px.filter(r => r.tipo_entrada === 'SOLTEIRO').length;
+                const solts = getSolteirasParaEvento(ev);
+                const carrosVallet = totalCarrosValletPorEvento(ev);
+                
+                if (cQ > 0 || ccQ > 0 || sQ > 0 || solts.length > 0 || carrosVallet > 0) { 
+                    txt += `*${dS[new Date(ev.data + "T12:00:00Z").getDay()]}*\n`;
+                    if(cQ > 0) txt += `Casal Seco - ${cQ}\n`;
+                    if(ccQ > 0) txt += `Casal Consumação - ${ccQ}\n`;
+                    if(sQ > 0) txt += `Solteiro Seco - ${sQ}\n`;
+                    if(solts.length > 0) txt += `Solteiras - ${solts.length}\n`;
+                    txt += `Carros - ${carrosVallet}\n`;
+                    txt += `\n`; 
+                }
+            });
+            txt += `> Camarotes Antecipados\n\n`;
+            at.forEach(ev => {
+                const cA = val.filter(r => (r.evento || '').trim().toUpperCase() === (ev.nome||'').trim().toUpperCase() && (r.tipo_entrada?.toUpperCase().includes('CAMAROTE') || r.tipo_entrada?.toUpperCase().includes('VIP')) && (r.pago === true || r.cortesia === true));
+                if (cA.length > 0) { 
+                    txt += `*${dS[new Date(ev.data + "T12:00:00Z").getDay()]}*\n`; 
+                    cA.sort((a,b) => a.tipo_entrada.localeCompare(b.tipo_entrada)).forEach(c => { 
+                        if (c.cortesia) {
+                            txt += `${c.tipo_entrada} - Cortesia (${getPromoterName(c.promoter)})\n`;
+                        } else {
+                            txt += `${c.tipo_entrada} - Vendido (${c.nome})\n`;
+                        }
+                    }); 
+                    txt += `\n`; 
+                }
+            });
+
+            txt += `> Vallet\n\n`;
+            at.forEach(ev => {
+                const carrosVallet = totalCarrosValletPorEvento(ev);
+                const diaEvento = dS[new Date(ev.data + "T12:00:00Z").getDay()];
+                txt += `${diaEvento} - ${carrosVallet} ${carrosVallet === 1 ? 'carro' : 'carros'}\n`;
+            });
+
+            tA.value = txt.trim();
+        };
+
+        window.gerarApenasCheckins = () => {
+            const f = document.getElementById('filtro-promoter-excel').value; const tA = document.getElementById('output-excel');
+            let res = dadosReservas.filter(r => r.entrou === true && r.tipo_entrada !== 'SOLTEIRA VIP');
+            if (f) res = res.filter(r => getPromoterName(r.promoter) === f);
+            if (res.length === 0) { tA.value = "Nenhum check-in."; return; }
+            tA.value = "NOME\tTELEFONE\n" + res.map(r => `${r.nome}\t${r.tel || '---'}`).join('\n');
+        };
+
+        window.gerarApenasSolteiras = () => {
+            const tA = document.getElementById('output-excel');
+            const ativos = dadosEventos.filter(e => e.ativo && !isEventoModeloAntigo(e));
+            if (ativos.length === 0) { tA.value = "Nenhum evento ativo no momento."; return; }
+            let unicas = []; let mapa = new Map();
+            ativos.forEach(ev => {
+                const solts = getSolteirasParaEvento(ev);
+                solts.forEach(s => {
+                    const t = String(s.tel || s.telefone || '').replace(/\D/g, '');
+                    if(!mapa.has(t) && t.length > 5) { mapa.set(t, true); unicas.push(s); }
+                });
+            });
+            if (unicas.length === 0) { tA.value = "Nenhuma solteira detectada nos eventos ativos."; return; }
+            tA.value = "NOME\tTELEFONE\n" + unicas.map(r => `${r.nome}\t${r.tel || '---'}`).join('\n');
+        };
+
+        window.copiarOutput = () => { document.getElementById('output-excel').select(); document.execCommand('copy'); mostrarAviso("Copiado!", true); };
+
+        document.getElementById('formPromoter').addEventListener('submit', async e => {
+            e.preventDefault(); const n = document.getElementById('nome_promoter').value.trim(); const t = document.getElementById('tipo_promoter').value;
+            if(!n) return; 
+            try { await setDoc(doc(db, "promoters", n.toLowerCase()), { nome: n, tipo: t, ativo: true }, { merge: true }); e.target.reset(); mostrarAviso("Salvo!", true); } 
+            catch(err) { mostrarAviso("Erro."); }
+        });
+
+        document.getElementById('formPortaria').addEventListener('submit', async e => {
+            e.preventDefault(); const n = document.getElementById('login_portaria').value.trim().toLowerCase();
+            if(!n) return; 
+            try { await setDoc(doc(db, "configuracoes", n), { login: n, ativo: true }, { merge: true }); e.target.reset(); mostrarAviso("Salvo!", true); } 
+            catch(err) { mostrarAviso("Erro."); }
+        });
+
+        document.getElementById('formVallet').addEventListener('submit', async e => {
+            e.preventDefault();
+            const nome = normalizarNomeVallet(document.getElementById('nome_vallet').value);
+            const usuario = criarUsuarioVallet(nome);
+            if (!nome || !usuario) return mostrarAviso("Informe o nome do funcionário.");
+
+            try {
+                const operadorRef = doc(db, "vallet_operadores", usuario);
+                const existente = await getDoc(operadorRef);
+                const agora = new Date().toISOString();
+                const dados = {
+                    usuario,
+                    nome,
+                    perfil: 'OPERADOR',
+                    ativo: true,
+                    atualizado_em: agora,
+                    origem_cadastro: 'DASHBOARD'
+                };
+                if (!existente.exists()) dados.criado_em = agora;
+                await setDoc(operadorRef, dados, { merge: true });
+                e.target.reset();
+                mostrarAviso("Funcionário do Vallet cadastrado!", true);
+            } catch(err) {
+                console.error(err);
+                mostrarAviso("Erro ao cadastrar funcionário do Vallet.");
+            }
+        });
+
+        window.editarPromoter = async (id) => {
+            const op = prompt(`1-PADRÃO, 2-ANIVERSÁRIO, 3-VISUALIZAR, 4-SENHA`);
+            if (!op) return;
+
+            let up = {};
+            if (op === '1') up.tipo = 'padrao';
+            if (op === '2') up.tipo = 'aniversario';
+            if (op === '3') up.tipo = 'visualizar';
+            if (op === '4') {
+                const ns = prompt("Nova senha:\n\nDigite uma nova senha ou deixe em branco e clique OK para apagar a senha atual.\n\nQuando a senha estiver apagada, o promoter será obrigado a cadastrar uma nova senha no próximo acesso.");
+                if (ns === null) return;
+                up.senha = ns.trim();
+                up.session_token = "";
+            }
+
+            if (Object.keys(up).length > 0) {
+                try {
+                    await updateDoc(doc(db, "promoters", id), up);
+                    if (op === '4' && up.senha === "") mostrarAviso("Senha apagada. O promoter criará uma nova no próximo acesso.", true);
+                    else mostrarAviso("Atualizado!", true);
+                } catch(e) {
+                    mostrarAviso("Erro ao atualizar promoter.");
+                }
+            }
+        };
+
+        window.editarOperador = async (id) => {
+            const ns = prompt("Nova senha:\n\nDigite uma nova senha ou deixe em branco e clique OK para apagar a senha atual.\n\nQuando a senha estiver apagada, o operador será obrigado a cadastrar uma nova senha no próximo acesso.");
+            if (ns === null) return;
+
+            const novaSenha = ns.trim();
+            try {
+                await updateDoc(doc(db, "configuracoes", id), { senha: novaSenha, session_token: "" });
+                if (novaSenha === "") mostrarAviso("Senha apagada. O operador criará uma nova no próximo acesso.", true);
+                else mostrarAviso("Senha atualizada!", true);
+            } catch(e) {
+                mostrarAviso("Erro ao atualizar senha.");
+            }
+        };
+
+        window.editarOperadorVallet = async (id) => {
+            const operador = dadosValletOperadores.find(op => op.id === id);
+            if (!operador) return mostrarAviso("Funcionário não encontrado.");
+            const novoNomeRaw = prompt("Nome do funcionário do Vallet:", operador.nome || operador.usuario || id);
+            if (novoNomeRaw === null) return;
+            const novoNome = normalizarNomeVallet(novoNomeRaw);
+            if (!novoNome) return mostrarAviso("O nome não pode ficar vazio.");
+            try {
+                await updateDoc(doc(db, "vallet_operadores", id), {
+                    nome: novoNome,
+                    atualizado_em: new Date().toISOString()
+                });
+                mostrarAviso("Nome atualizado!", true);
+            } catch (e) {
+                mostrarAviso("Erro ao atualizar funcionário.");
+            }
+        };
+
+        window.resetarSenhaVallet = async (id) => {
+            const operador = dadosValletOperadores.find(op => op.id === id);
+            if (!operador) return mostrarAviso("Funcionário não encontrado.");
+            if (!confirm(`RESETAR A SENHA DE ${operador.nome || operador.usuario || id}?
+
+No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
+            try {
+                await setDoc(doc(db, "vallet_operadores", id), {
+                    senha_hash: '',
+                    senha_salt: '',
+                    session_token: '',
+                    atualizado_em: new Date().toISOString()
+                }, { merge: true });
+                mostrarAviso("Senha resetada. O funcionário criará outra no próximo acesso.", true);
+            } catch (e) {
+                mostrarAviso("Erro ao resetar senha.");
+            }
+        };
+
+        function renderEquipe() {
+            const fT = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') + ' ' + new Date(iso).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : 'NUNCA';
+            if (document.getElementById('lista-promoters')) document.getElementById('lista-promoters').innerHTML = dadosPromoters.map(p => `<div class="glass-card p-6 border-l-4 border-l-yellow-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${p.nome || p.id}</p><p class="text-[9px] text-yellow-500 font-bold mt-1 italic">SENHA: ${p.senha || '---'}</p><p class="text-[8px] text-zinc-500 font-black mt-1 uppercase">${p.tipo==='aniversario'?'ANIV':p.tipo==='visualizar'?'VIS':'PADRÃO'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(p.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarPromoter('${p.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('promoters', '${p.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
+            if (document.getElementById('lista-portaria')) document.getElementById('lista-portaria').innerHTML = dadosOperadores.map(op => `<div class="glass-card p-6 border-l-4 border-l-green-500 mb-2"><div class="flex justify-between items-start"><div><p class="text-xs font-black uppercase text-white">${op.login || op.id}</p><p class="text-[9px] text-green-500 font-bold mt-1 italic">SENHA: ${op.senha || '---'}</p><p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(op.ultimo_login)}</span></p></div><div class="flex gap-3"><button onclick="editarOperador('${op.id}')" class="text-blue-400 text-[9px] font-black uppercase">EDITAR</button><button onclick="removerItem('configuracoes', '${op.id}')" class="text-red-500 text-[9px] font-black uppercase">✕</button></div></div></div>`).join('');
+
+            const listaVallet = document.getElementById('lista-vallet');
+            if (listaVallet) {
+                if (!dadosValletOperadores.length) {
+                    listaVallet.innerHTML = `<div class="md:col-span-2 lg:col-span-3 border border-dashed border-blue-500/20 rounded-3xl p-8 text-center text-[9px] text-zinc-600 font-black uppercase tracking-widest">Nenhum funcionário do Vallet cadastrado</div>`;
+                } else {
+                    listaVallet.innerHTML = dadosValletOperadores.map(op => {
+                        const configurada = Boolean(op.senha_hash);
+                        const statusClass = configurada ? 'text-emerald-400' : 'text-yellow-400';
+                        const status = configurada ? 'SENHA CONFIGURADA' : 'AGUARDANDO PRIMEIRO ACESSO';
+                        return `<div class="glass-card p-6 border-l-4 border-l-blue-500 mb-2">
+                            <div class="flex justify-between items-start gap-4">
+                                <div class="min-w-0">
+                                    <p class="text-xs font-black uppercase text-white break-words">${op.nome || op.usuario || op.id}</p>
+                                    <p class="text-[8px] text-blue-400 font-black mt-2 uppercase tracking-widest break-all">USUÁRIO: <span class="text-white">${op.usuario || op.id}</span></p>
+                                    <p class="text-[8px] ${statusClass} font-black mt-2 uppercase tracking-widest">● ${status}</p>
+                                    <p class="text-[8px] text-sky-400 font-black mt-2 uppercase tracking-widest">🕒 Últ. Login: <span class="text-white">${fT(op.ultimo_login)}</span></p>
+                                </div>
+                                <button onclick="removerItem('vallet_operadores', '${op.id}')" class="text-red-500 text-[11px] font-black uppercase" title="Excluir funcionário">✕</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 mt-5 border-t border-white/5 pt-4">
+                                <button onclick="editarOperadorVallet('${op.id}')" class="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[8px] font-black uppercase py-3 rounded-xl hover:bg-blue-600 hover:text-white transition-all">Editar nome</button>
+                                <button onclick="resetarSenhaVallet('${op.id}')" class="bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 text-[8px] font-black uppercase py-3 rounded-xl hover:bg-yellow-500 hover:text-black transition-all">Resetar senha</button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            }
+        }
+
+        window.gerarCopyMeta = (dadosEvento) => {
+            const dataObj = new Date(dadosEvento.data + "T12:00:00Z");
+            const diasSemana = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+            const diaDaSemana = diasSemana[dataObj.getDay()];
+            const dataBr = dataObj.toLocaleDateString('pt-BR');
+            const nomeFestaHashtag = dadosEvento.nome.replace(/\s+/g, '');
+            const diaSemanaHashtag = diaDaSemana.split('-')[0]; 
+            let dptoInfo = ""; if (dadosEvento.diferenciais_noite && dadosEvento.diferenciais_noite.trim() !== '') { dptoInfo = `\n\n✨ Diferenciais da Noite:\n${dadosEvento.diferenciais_noite}`; }
+            const copyText = `👑 ${dadosEvento.nome.toUpperCase()} — A noite onde você dita as regras na E-Club! 🌹✨\n\nNeste(a) ${diaDaSemana.toLowerCase()}, a nossa festa ganha um tom mais ousado e sofisticado. O evento ${dadosEvento.nome} é um convite especial para celebrar a sua essência em sua forma mais livre e envolvente. Porque você merece um momento para se desconectar da rotina e despertar o seu lado mais magnético.\n\nPrepare-se para uma atmosfera de reverência à liberdade, atitude e beleza. Um ambiente de total entrega e respeito, onde a única regra é se sentir incrível. Afinal, o que acontece na eclub, fica na eclub.\n\n🎧 No comando da trilha sonora:\nNosso residente DJ Neto e o convidado especial DJ Andrezinho assumem a cabine com aquele set feito sob medida para dominar a pista, elevar a energia lá no alto e não deixar ninguém parado!${dptoInfo}\n\n🔥 Uma noite desenhada para exaltar a liberdade de ser a sua melhor e mais sedutora versão. Deixe o seu brilho guiar a festa.\n\n🗓️ Programe-se:\nQuando: ${diaDaSemana} (${dataBr})\nHorário: Abertura da casa às ${dadosEvento.hora || '22h'}\nLocal: Rua Aníbal Goulart Maia Filho, 81 — Bairro Alto.\n\nViva a sua essência. Viva a E-Club.\n\n👉 Siga-nos no Instagram: @eclubswingdance\n📞 Reservas VIPs e Infos (WhatsApp): (41) 99504-0506\n🌐 Garanta seu nome na lista e PIX Antecipado pelo link na bio!\n\n🔞 Aviso Importante: Evento exclusivo para maiores de 18 anos. Indispensável a apresentação de documento oficial com foto.\n\n#${nomeFestaHashtag} #eclub #${diaSemanaHashtag}Curitiba #Lifestyle #MundoLiberal #andrezinhoeclub #DJNeto #CuritibaNight #BairroAlto #eclubswingdance #Liberdade #NoiteCuritibana`;
+            const painel = document.getElementById('painel-copy-marketing'); const textArea = document.getElementById('texto-copy-gerado');
+            if(textArea) { textArea.value = copyText; if(painel) painel.classList.remove('hidden'); }
+        };
+
+        window.copiarTextoMarketing = () => { document.getElementById('texto-copy-gerado').select(); document.execCommand('copy'); mostrarAviso("Copy de vendas copiado!", true); };
+
+        document.getElementById('formEvento').addEventListener('submit', async e => {
+            e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
+            try {
+                const id = document.getElementById('edit_evento_id').value; const arq = document.getElementById('upload_capa').files[0]; let url = document.getElementById('url_imagem_atual').value;
+                if (arq) { const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); await uploadBytes(sr, arq); url = await getDownloadURL(sr); }
+                const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, hora: document.getElementById('hora_inicio').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value, diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '', imagem: url, ativo: true };
+                for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
+                if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
+                e.target.reset(); document.getElementById('edit_evento_id').value = ""; document.getElementById('url_imagem_atual').value = ""; mostrarAviso("Evento salvo com sucesso!", true);
+                if (document.getElementById('diferenciais_noite')) gerarCopyMeta(d);
+                document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
+            } catch(err) { mostrarAviso("Erro ao salvar evento."); } finally { btn.innerText = "Salvar Evento Completo"; btn.disabled = false; }
+        });
+
+        window.prepararEdicaoEvento = (id) => {
+            const ev = dadosEventos.find(e => e.id === id); document.getElementById('edit_evento_id').value = ev.id; document.getElementById('nome_festa').value = ev.nome; document.getElementById('data_festa').value = ev.data; document.getElementById('hora_inicio').value = ev.hora || ""; document.getElementById('valor_casal').value = ev.valor_casal || ""; document.getElementById('valor_solteiro').value = ev.valor_solteiro || ""; document.getElementById('desc_casal').value = ev.desc_casal || ""; document.getElementById('desc_solteiro').value = ev.desc_solteiro || ""; document.getElementById('ant_casal').value = ev.ant_casal || ""; document.getElementById('ant_casal_cons').value = ev.ant_casal_cons || ""; document.getElementById('ant_solteiro').value = ev.ant_solteiro || ""; document.getElementById('valor_recorrente_casal').value = ev.valor_recorrente_casal || ""; document.getElementById('valor_recorrente_solteiro').value = ev.valor_recorrente_solteiro || ""; document.getElementById('url_imagem_atual').value = ev.imagem || "";
+            if(document.getElementById('painel-copy-marketing')) document.getElementById('painel-copy-marketing').classList.add('hidden');
+            for(let i=1; i<=8; i++) { document.getElementById(`cam${i}_ativo`).checked = ev[`cam${i}_ativo`] || false; document.getElementById(`v_cam${i}`).value = ev[`v_cam${i}`] || ""; document.getElementById(`obs_cam${i}`).value = ev[`obs_cam${i}`] || ""; }
+            document.getElementById('aba-festas').scrollIntoView({ behavior: 'smooth' });
+        };
+
+        window.renderGridConfig = () => {
+            const gridModelos = document.getElementById('grid-modelos');
+            const gridEventos = document.getElementById('grid-eventos-config');
+            if(!gridEventos) return;
+
+            if(gridModelos) gridModelos.innerHTML = '';
+            gridEventos.innerHTML = '';
+
+            const modelos = [...dadosModelosEventos].sort((a,b) => String(a.modelo_nome || '').localeCompare(String(b.modelo_nome || '')));
+            const modelosAntigos = dadosEventos.filter(e => isEventoModeloAntigo(e));
+            const normais = dadosEventos.filter(e => !isEventoModeloAntigo(e)).sort((a,b) => new Date(a.data) - new Date(b.data));
+
+            if (gridModelos) {
+                let htmlModelos = '';
+
+                if (modelos.length > 0) {
+                    htmlModelos += modelos.map(ev => `
+                        <div class="bg-fuchsia-900/20 border border-fuchsia-500/30 p-4 rounded-2xl min-w-[280px] flex-none flex flex-col justify-between">
+                            <div>
+                                <p class="text-[8px] font-black uppercase text-fuchsia-300/70 tracking-widest mb-2">Modelo Salvo</p>
+                                <h4 class="text-sm font-black uppercase text-fuchsia-400 mb-4 leading-tight">${ev.modelo_nome || 'MODELO SEM NOME'}</h4>
+                                <p class="text-[8px] text-zinc-500 uppercase font-bold mb-4">Não contém nome, data, horário nem arte do evento.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="duplicarEvento('${ev.id}')" class="flex-1 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[9px] font-black uppercase py-2 rounded-xl transition-all shadow-md">Usar Modelo</button>
+                                <button onclick="removerModeloEvento('${ev.id}')" class="bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all">✕</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                if (modelosAntigos.length > 0) {
+                    htmlModelos += modelosAntigos.map(ev => `
+                        <div class="bg-yellow-900/20 border border-yellow-500/30 p-4 rounded-2xl min-w-[300px] flex-none flex flex-col justify-between">
+                            <div>
+                                <p class="text-[8px] font-black uppercase text-yellow-400 tracking-widest mb-2">Modelo antigo por nome</p>
+                                <h4 class="text-sm font-black uppercase text-yellow-300 mb-3 leading-tight">${ev.nome}</h4>
+                                <p class="text-[8px] text-zinc-500 uppercase font-bold mb-4">Use, converta para o novo formato ou exclua depois da conferência.</p>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="duplicarEvento('${ev.id}', 'eventos')" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-[8px] font-black uppercase py-2 rounded-xl transition-all">Usar</button>
+                                <button onclick="salvarEventoComoModelo('${ev.id}')" class="bg-yellow-600 hover:bg-yellow-500 text-black text-[8px] font-black uppercase py-2 rounded-xl transition-all">Converter</button>
+                                <button onclick="removerItem('eventos', '${ev.id}')" class="bg-red-600 hover:bg-red-500 text-white text-[8px] font-black uppercase py-2 rounded-xl transition-all">✕</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                if (!htmlModelos) {
+                    gridModelos.innerHTML = `<p class="text-zinc-500 text-xs italic uppercase font-bold">Nenhum modelo salvo ainda. Escolha um evento configurado abaixo e clique em “Salvar como Modelo”.</p>`;
+                } else {
+                    gridModelos.innerHTML = htmlModelos;
+                }
+            }
+
+            gridEventos.innerHTML = normais.map(ev => `
+                <div class="glass-card overflow-hidden border border-white/5 p-5">
+                    <img src="${ev.imagem || ''}" class="mini-capa bg-zinc-900 rounded-xl mb-4">
+                    <div class="flex justify-between mb-2">
+                        <p class="text-[9px] font-black text-yellow-500 uppercase">${ev.data ? ev.data.split('-').reverse().join('/') : 'S/D'} - ${ev.hora || '--:--'}</p>
+                        <span class="${ev.ativo ? 'text-green-500' : 'text-zinc-500'} text-[8px] font-black uppercase">${ev.ativo ? '● Ativo' : '○ Inativo'}</span>
+                    </div>
+                    <h4 class="text-xs font-black uppercase text-white truncate mb-4">${ev.nome}</h4>
+                    <div class="grid grid-cols-3 gap-2 mt-4 border-t border-white/10 pt-4">
+                        <button onclick="prepararEdicaoEvento('${ev.id}')" class="bg-blue-600/20 border border-blue-500/30 text-blue-400 font-black text-[8px] uppercase hover:bg-blue-600 hover:text-white transition-colors rounded-xl py-2">Editar</button>
+                        <button onclick="salvarEventoComoModelo('${ev.id}')" class="bg-fuchsia-600/20 border border-fuchsia-500/30 text-fuchsia-400 font-black text-[8px] uppercase hover:bg-fuchsia-600 hover:text-white transition-colors rounded-xl py-2">Salvar Modelo</button>
+                        <button onclick="removerItem('eventos', '${ev.id}')" class="bg-red-600/20 border border-red-500/30 text-red-500 font-black text-[8px] uppercase hover:bg-red-600 hover:text-white transition-colors rounded-xl py-2">Excluir</button>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        window.removerItem = async (colecao, id) => { 
+            if(!confirm("TEM CERTEZA? Isso vai apagar permanentemente o item.")) return; 
+            try { 
+                if(colecao === 'eventos') { const ev = dadosEventos.find(e => e.id === id); if(ev && ev.imagem && ev.imagem.includes('firebasestorage')) { await deleteObject(ref(storage, ev.imagem)).catch(()=>{}); } }
+                const batch = writeBatch(db); const docRef = doc(db, colecao, id); const snap = await getDoc(docRef); 
+                if (!snap.exists()) return; const d = snap.data(); 
+                if (colecao === 'eventos') { const qR = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", d.nome))); qR.forEach(x => batch.delete(x.ref)); const qA = await getDocs(query(collection(db, "links_aniversario"), where("festa", "==", d.nome))); qA.forEach(x => batch.delete(x.ref)); } 
+                if (colecao === 'links_aniversario') { const qC = await getDocs(query(collection(db, "lista_eventos"), where("aniversariante", "==", d.aniversariante), where("evento", "==", d.festa))); qC.forEach(x => batch.delete(x.ref)); } 
+                batch.delete(docRef); await batch.commit(); mostrarAviso("Excluído com sucesso!", true); 
+            } catch (e) { mostrarAviso("Erro ao excluir."); } 
+        };
+
+        window.renderCamarotesVendidos = () => {
+            const tb = document.getElementById('tabela-camarotes-body'); if(!tb) return;
+            const res = dadosReservas
+                .filter(r => isReservaCamaroteMigravel(r))
+                .sort((a,b) => String(a.evento || '').localeCompare(String(b.evento || '')) || String(a.tipo_entrada || '').localeCompare(String(b.tipo_entrada || '')));
+            if (res.length === 0) { tb.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-[10px] text-zinc-600 font-bold uppercase tracking-widest italic">Nenhum camarote/VIP ocupado no momento</td></tr>`; return; }
+            tb.innerHTML = res.map(r => {
+                const valor = r.valor_pago ? `<span class="text-[8px] text-yellow-500 font-black uppercase">R$ ${String(r.valor_pago).replace('R$', '').trim()}</span>` : '';
+                const migrado = r.migrado_camarote === true ? `<span class="inline-block mt-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-1 rounded-md text-[7px] font-black uppercase tracking-widest">Migrado</span>` : '';
+                return `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4 uppercase font-bold text-zinc-300">${r.evento}${migrado}</td><td class="py-4 font-black text-cyan-400 uppercase">${r.tipo_entrada}</td><td class="py-4 uppercase font-bold text-white">${r.nome} <br><span class="text-[9px] text-zinc-500 font-mono">${r.tel || r.telefone || '---'}</span><br>${valor}</td><td class="py-4 text-center">${r.cortesia ? `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Cortesia</span>` : `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Vendido</span>`}</td><td class="py-4 text-right pr-4"><div class="flex justify-end gap-2 flex-wrap"><button onclick="prepararMigracaoCamarote('${r.id}')" class="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-4 py-2 rounded-lg text-[8px] font-black uppercase hover:bg-purple-600 hover:text-white transition-all">Migrar</button><button onclick="liberarCamarote('${r.id}')" class="bg-red-500/10 text-red-500 border border-red-500/30 px-4 py-2 rounded-lg text-[8px] font-black uppercase hover:bg-red-600 hover:text-white transition-all">Liberar</button></div></td></tr>`;
+            }).join('');
+        };
+
+        window.liberarCamarote = async (id) => { if(confirm("Liberar o camarote?")) { try { await deleteDoc(doc(db, "lista_eventos", id)); mostrarAviso("Camarote liberado!", true); } catch(e) { mostrarAviso("Erro ao liberar."); } } };
+
+        window.renderAniversarios = () => {
+            if(!document.getElementById('tabela-aniversarios-body')) return;
+            document.getElementById('tabela-aniversarios-body').innerHTML = dadosAniv.map(l => {
+                const ev = dadosEventos.find(e => (e.nome || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase()); const dt = ev ? (ev.data ? ev.data.split('-').reverse().join('/') : 'S/D') : '---';
+                const q = dadosReservas.filter(r => (r.evento || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase() && (r.aniversariante || '').trim().toLowerCase() === (l.aniversariante || '').trim().toLowerCase()).length;
+                return `<tr class="border-b border-white/5 text-[11px]"><td class="py-4 pl-4">${dt}</td><td class="py-4 uppercase">${l.promoter}</td><td class="py-4 font-black text-cyan-400 uppercase">${l.aniversariante}</td><td class="py-4 text-center font-black text-white">${q}</td><td class="py-4 text-right pr-4"><button onclick="removerItem('links_aniversario', '${l.id}')" class="text-red-500">Remover</button></td></tr>`;
+            }).join('');
+        };
+
+        window.toggleModoTeste = async () => { await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true }); };
+
+        window.toggleModoTesteVallet = async () => {
+            try {
+                await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste_vallet: !modoTesteValletAtivo }, { merge: true });
+                mostrarAviso(!modoTesteValletAtivo ? "Modo teste do Vallet liberado." : "Modo teste do Vallet finalizado.", true);
+            } catch (e) {
+                mostrarAviso("Erro ao alterar o modo teste do Vallet.");
+            }
+        };
+
+        const normalizarTextoSeguro = (valor) => String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        // Antes de limpar a operação semanal, cada reserva é movida para um arquivo de segurança.
+        // O set e o delete são feitos no mesmo batch: se o arquivo falhar, a reserva ativa não é apagada.
+        const arquivarEExcluirReservas = async (docs, motivo) => {
+            const itens = Array.from(docs || []);
+            const LIMITE_POR_LOTE = 200; // 200 arquivos + 200 exclusões, abaixo do limite do Firestore.
+
+            for (let inicio = 0; inicio < itens.length; inicio += LIMITE_POR_LOTE) {
+                const lote = itens.slice(inicio, inicio + LIMITE_POR_LOTE);
+                const batch = writeBatch(db);
+
+                lote.forEach(snapReserva => {
+                    const reserva = snapReserva.data();
+                    const evento = dadosEventos.find(ev => normalizarTextoSeguro(ev.nome) === normalizarTextoSeguro(reserva.evento));
+                    const historicoRef = doc(db, "historico_reservas", snapReserva.id);
+
+                    batch.set(historicoRef, {
+                        ...reserva,
+                        origem_reserva_id: snapReserva.id,
+                        data_evento: reserva.data_evento || evento?.data || null,
+                        arquivado_em: new Date().toISOString(),
+                        motivo_arquivamento: motivo
+                    }, { merge: true });
+                    batch.delete(snapReserva.ref);
+                });
+
+                await batch.commit();
+            }
+            return itens.length;
+        };
+
+        const excluirColecaoEmLotes = async (nomeColecao) => {
+            const snap = await getDocs(collection(db, nomeColecao));
+            const itens = snap.docs;
+            const LIMITE_POR_LOTE = 400;
+            for (let inicio = 0; inicio < itens.length; inicio += LIMITE_POR_LOTE) {
+                const batch = writeBatch(db);
+                itens.slice(inicio, inicio + LIMITE_POR_LOTE).forEach(item => batch.delete(item.ref));
+                await batch.commit();
+            }
+        };
+        
+        window.limparBaseDeDados = async () => { 
+            const confirmarLimpeza = confirm(
+                "LIMPAR BASE OPERACIONAL?\n\n" +
+                "As reservas sairão das listas e da portaria, mantendo a segurança dos dados arquivados."
+            );
+            if (!confirmarLimpeza) return;
+
+            try {
+                const q = await getDocs(collection(db, "lista_eventos"));
+                const total = await arquivarEExcluirReservas(q.docs, "limpeza_base_operacional");
+                mostrarAviso(`${total} reserva(s) removida(s) da operação com segurança.`, true);
+            } catch (e) {
+                console.error("Erro ao arquivar a base:", e);
+                mostrarAviso("A limpeza foi cancelada por segurança.");
+            }
+        };
+        
+        window.zerarSistemaCompleto = async () => { 
+            const confirmarZerar = confirm(
+                "⚠️ TEM CERTEZA QUE DESEJA ZERAR EVENTOS E LISTAS?\n\n" +
+                "As Solteiras cadastradas, os pontos de fidelidade e os modelos salvos não serão afetados."
+            );
+            if (!confirmarZerar) return;
+
+            try {
+                const qReservas = await getDocs(collection(db, "lista_eventos"));
+                await arquivarEExcluirReservas(qReservas.docs, "zerar_sistema");
+                await excluirColecaoEmLotes("links_aniversario");
+                
+                // Apaga apenas eventos reais. Modelos novos ficam na coleção "modelos_eventos".
+                // Modelos antigos que ainda estavam salvos dentro de "eventos" também são preservados.
+                const qEv = await getDocs(collection(db, "eventos"));
+                const eventosReais = qEv.docs.filter(d => !isEventoModeloAntigo(d.data()));
+                for (let inicio = 0; inicio < eventosReais.length; inicio += 400) {
+                    const bEv = writeBatch(db);
+                    eventosReais.slice(inicio, inicio + 400).forEach(d => bEv.delete(d.ref));
+                    await bEv.commit();
+                }
+                
+                mostrarAviso("Sistema limpo com sucesso.", true);
+                setTimeout(() => location.reload(), 900);
+            } catch (e) {
+                console.error("Erro ao zerar sistema:", e);
+                mostrarAviso("A limpeza foi interrompida por segurança.");
+            }
+        };
+    </script>
+
+    <script>
+        (() => {
+            const SENHA_HASH = "c518721ef438f84b67e8320249c2a68b03f773e74c51c2b673dd9f6871657f7d";
+            const CHAVE_LEMBRAR = "eclub_dashboard_acesso_v1";
+            const CHAVE_SESSAO = "eclub_dashboard_sessao_v1";
+            const TEMPO_LEMBRAR_MS = 1000 * 60 * 60 * 24 * 30;
+            let sistemaCarregado = false;
+
+            const painel = () => document.getElementById('painel-dashboard');
+            const login = () => document.getElementById('dashboard-login');
+            const erro = () => document.getElementById('erro-login-dashboard');
+            const inputSenha = () => document.getElementById('senha-dashboard');
+            const btnLogin = () => document.getElementById('btn-login-dashboard');
+
+            async function sha256(texto) {
+                if (!window.crypto || !window.crypto.subtle) {
+                    throw new Error('Criptografia do navegador indisponível. Acesse por HTTPS.');
+                }
+                const bytes = new TextEncoder().encode(texto);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
+                return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+
+            function acessoSalvoValido() {
+                if (sessionStorage.getItem(CHAVE_SESSAO) === 'ok') return true;
+                try {
+                    const salvo = JSON.parse(localStorage.getItem(CHAVE_LEMBRAR) || 'null');
+                    return !!(salvo && salvo.ok === true && Number(salvo.expira || 0) > Date.now());
+                } catch (e) {
+                    localStorage.removeItem(CHAVE_LEMBRAR);
+                    return false;
+                }
+            }
+
+            function carregarSistema() {
+                if (sistemaCarregado) return;
+                sistemaCarregado = true;
+
+                if (login()) login().classList.add('hidden');
+                if (painel()) painel().classList.remove('hidden');
+
+                const codigo = document.getElementById('codigo-principal-dashboard');
+                if (codigo) {
+                    const script = document.createElement('script');
+                    script.type = 'module';
+                    script.textContent = codigo.textContent;
+                    document.body.appendChild(script);
+                }
+            }
+
+            window.desbloquearDashboard = async (event) => {
+                if (event) event.preventDefault();
+
+                const senha = inputSenha() ? inputSenha().value : '';
+                if (!senha) return;
+
+                if (btnLogin()) {
+                    btnLogin().disabled = true;
+                    btnLogin().innerText = 'VERIFICANDO...';
+                }
+                if (erro()) erro().classList.add('hidden');
+
+                try {
+                    const hashDigitado = await sha256(senha);
+                    if (hashDigitado !== SENHA_HASH) {
+                        if (erro()) erro().classList.remove('hidden');
+                        if (inputSenha()) {
+                            inputSenha().value = '';
+                            inputSenha().focus();
+                        }
+                        return;
+                    }
+
+                    sessionStorage.setItem(CHAVE_SESSAO, 'ok');
+
+                    if (document.getElementById('lembrar-dashboard')?.checked) {
+                        localStorage.setItem(CHAVE_LEMBRAR, JSON.stringify({ ok: true, expira: Date.now() + TEMPO_LEMBRAR_MS }));
+                    }
+
+                    carregarSistema();
+                } catch (e) {
+                    if (erro()) {
+                        erro().innerText = 'Erro de segurança. Acesse a página por HTTPS.';
+                        erro().classList.remove('hidden');
+                    }
+                } finally {
+                    if (btnLogin()) {
+                        btnLogin().disabled = false;
+                        btnLogin().innerText = 'ENTRAR';
+                    }
+                }
+            };
+
+            window.bloquearDashboard = () => {
+                sessionStorage.removeItem(CHAVE_SESSAO);
+                localStorage.removeItem(CHAVE_LEMBRAR);
+                location.reload();
+            };
+
+            document.addEventListener('DOMContentLoaded', () => {
+                if (acessoSalvoValido()) {
+                    carregarSistema();
+                } else {
+                    setTimeout(() => inputSenha()?.focus(), 200);
+                }
+            });
+        })();
+    </script>
+</body>
+</html>
