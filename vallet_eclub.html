@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v35: modo teste independente, eventos 21h-08h, placa ativa global e limpeza 180 dias -->
+  <!-- E-CLUB Vallet v36: bloqueio simplificado e atualização em tempo real do modo teste -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -127,11 +127,13 @@
       backdrop-filter: blur(18px);
     }
     .scheduleOverlay.show { display: flex; }
-    .scheduleCard { width: min(100%, 470px); background: rgba(14,14,20,.97); border: 1px solid rgba(59,130,246,.30); border-radius: 34px; padding: 32px; box-shadow: 0 30px 100px rgba(0,0,0,.58); text-align: center; }
-    .scheduleCard img { height: 58px; width: auto; margin-bottom: 18px; }
-    .scheduleCard h2 { margin: 8px 0; font-size: 25px; font-weight: 950; text-transform: uppercase; font-style: italic; letter-spacing: -.04em; }
-    .scheduleCard p { color: var(--muted); font-size: 10px; font-weight: 850; text-transform: uppercase; line-height: 1.6; }
-    .scheduleTime { margin: 20px 0; padding: 18px; border-radius: 22px; background: rgba(59,130,246,.09); border: 1px solid rgba(59,130,246,.22); color: #93c5fd; font-size: 15px; font-weight: 950; text-transform: uppercase; }
+    .scheduleCard { width: min(100%, 470px); background: rgba(14,14,20,.97); border: 1px solid rgba(59,130,246,.30); border-radius: 34px; padding: 38px 32px; box-shadow: 0 30px 100px rgba(0,0,0,.58); text-align: center; }
+    .scheduleCard img { height: 64px; width: auto; margin-bottom: 25px; }
+    .scheduleCard h2 { margin: 10px 0 12px; font-size: clamp(28px, 6vw, 38px); font-weight: 950; text-transform: uppercase; font-style: italic; letter-spacing: -.05em; color: var(--text); }
+    .scheduleCard p { margin: 0; color: var(--muted); font-size: 10px; font-weight: 850; text-transform: uppercase; line-height: 1.7; letter-spacing: .05em; }
+    .scheduleAutoStatus { display: inline-flex; align-items: center; justify-content: center; gap: 9px; margin-top: 25px; padding: 11px 15px; border-radius: 999px; background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.22); color: #93c5fd; font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .10em; }
+    .scheduleAutoDot { width: 8px; height: 8px; border-radius: 50%; background: #60a5fa; box-shadow: 0 0 0 0 rgba(96,165,250,.45); animation: schedulePulse 1.8s infinite; }
+    @keyframes schedulePulse { 0% { box-shadow: 0 0 0 0 rgba(96,165,250,.45); } 70% { box-shadow: 0 0 0 8px rgba(96,165,250,0); } 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); } }
     .operationScheduleBanner { margin-bottom: 16px; padding: 14px 17px; border-radius: 20px; border: 1px solid rgba(34,197,94,.25); background: rgba(34,197,94,.08); color: #86efac; font-size: 9px; font-weight: 950; text-transform: uppercase; line-height: 1.5; letter-spacing: .06em; }
     .operationScheduleBanner.exitOnly { border-color: rgba(249,115,22,.30); background: rgba(249,115,22,.09); color: #fdba74; }
     .btn[disabled], input[disabled], select[disabled], textarea[disabled] { opacity: .48; cursor: not-allowed; }
@@ -155,6 +157,7 @@
     .loginRemember input { width: 16px; height: 16px; accent-color: var(--yellow); }
     .loginHint { margin-top: 16px; color: #62626e; font-size: 8px; font-weight: 800; text-transform: uppercase; line-height: 1.5; }
     .loginModeNotice { margin-bottom: 15px; padding: 11px 13px; border-radius: 16px; background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.20); color: #7dd3fc; font-size: 8px; font-weight: 900; text-transform: uppercase; line-height: 1.45; }
+    .loginModeNotice.testActive { background: rgba(168,85,247,.12); border-color: rgba(168,85,247,.35); color: #d8b4fe; box-shadow: 0 0 24px rgba(168,85,247,.10); letter-spacing: .08em; }
     .setupBox { display: none; }
     .setupBox.active { display: block; }
     .loginBox.hidden { display: none; }
@@ -570,20 +573,20 @@
   <div id="vallet-horario-bloqueio" class="scheduleOverlay" aria-live="polite">
     <div class="scheduleCard">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
-      <div class="loginEyebrow">Vallet fora do horário</div>
-      <h2>Operação fechada</h2>
-      <div class="scheduleTime">Acesso das 21:00 às 08:00</div>
-      <p id="vallet-horario-mensagem">O Vallet é liberado somente nos dias com evento cadastrado.</p>
-      <button class="btn blue full" type="button" onclick="verificarHorarioAgora()" style="margin-top:18px">Verificar novamente</button>
+      <div class="loginEyebrow">Vallet E-Club</div>
+      <h2>Acesso indisponível</h2>
+      <p id="vallet-horario-mensagem">Aguarde a liberação do sistema.</p>
+      <div class="scheduleAutoStatus"><span class="scheduleAutoDot" aria-hidden="true"></span> Atualização automática ativa</div>
     </div>
   </div>
 
   <div id="vallet-login" class="loginOverlay">
     <div class="loginCard">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
-      <div class="loginEyebrow">Acesso restrito</div>
+      <div id="loginEyebrowVallet" class="loginEyebrow">Acesso restrito</div>
       <h2>Vallet E-Club</h2>
       <p class="loginSub">Entre com o usuário e a senha do operador.</p>
+      <div id="loginModoTesteVallet" class="loginModeNotice testActive hidden">🧪 Modo teste Vallet ativo • acesso liberado</div>
 
       <form id="loginBox" class="loginBox" onsubmit="fazerLogin(event)">
         <div id="loginOfflineNotice" class="loginModeNotice hidden">Modo offline: usando os operadores já salvos neste aparelho.</div>
@@ -1020,6 +1023,7 @@
 
     let idb = null;
     let firebase = null;
+    let unsubscribeConfigVallet = null;
     let setores = [];
     let modelos = [];
     let cores = [];
@@ -1275,6 +1279,7 @@
         if (configSnap.exists()) {
           modoTesteValletAtivo = configSnap.data()?.modo_teste_vallet === true;
           puts.push(salvarMeta('modo_teste_vallet', modoTesteValletAtivo));
+          atualizarIndicadorModoTesteLogin();
         }
         atSnap.forEach(d => {
           const data = { id: d.id, ...d.data() };
@@ -1408,8 +1413,8 @@
       const mensagem = $('vallet-horario-mensagem');
       const status = $('eventoValletStatus');
       const banner = $('operationScheduleBanner');
-      const proxima = getProximaJanelaVallet();
 
+      atualizarIndicadorModoTesteLogin();
       definirCamposRecepcaoHabilitados(Boolean(controle.janela));
 
       if (controle.emModoTeste) {
@@ -1447,7 +1452,7 @@
           status.textContent = '🔴 VALLET FECHADO';
           status.className = 'pill offline';
         }
-        if (mensagem) mensagem.textContent = proxima ? `PRÓXIMA ABERTURA: ${formatarJanelaVallet(proxima)}. O ACESSO SERÁ LIBERADO AUTOMATICAMENTE.` : 'NENHUM PRÓXIMO EVENTO ATIVO ESTÁ CADASTRADO NA DASHBOARD.';
+        if (mensagem) mensagem.textContent = 'AGUARDE A LIBERAÇÃO DO SISTEMA.';
         if (forcarTela || operadorAtual || !$('vallet-login')?.classList.contains('hidden')) {
           $('appPrincipal').hidden = true;
           $('vallet-login').classList.add('hidden');
@@ -1457,17 +1462,32 @@
       return controle;
     }
 
-    async function verificarHorarioAgora() {
-      if (navigator.onLine) {
-        await processarFila();
-        await puxarFirebase();
-        await carregarLocal();
-      }
-      const controle = atualizarControleHorarioVallet({ forcarTela: true });
-      if (controle.acessoPermitido) {
-        $('vallet-horario-bloqueio').classList.remove('show');
-        await iniciarAutenticacao();
-      } else toast('Vallet ainda fora do horário de funcionamento.');
+    async function iniciarMonitorConfiguracaoVallet() {
+      if (!navigator.onLine || unsubscribeConfigVallet) return;
+      const fb = await initFirebase();
+      if (!fb?.onSnapshot) return;
+
+      const configRef = fb.doc(fb.db, 'configuracoes', 'sistema');
+      unsubscribeConfigVallet = fb.onSnapshot(configRef, async (snap) => {
+        const novoModoTeste = snap.exists() && snap.data()?.modo_teste_vallet === true;
+        const mudou = novoModoTeste !== modoTesteValletAtivo;
+        modoTesteValletAtivo = novoModoTeste;
+        await salvarMeta('modo_teste_vallet', modoTesteValletAtivo).catch(() => {});
+        atualizarIndicadorModoTesteLogin();
+
+        const controle = atualizarControleHorarioVallet({ forcarTela: true });
+        if (controle.acessoPermitido) {
+          $('vallet-horario-bloqueio')?.classList.remove('show');
+          if (!operadorAtual || $('appPrincipal')?.hidden) await iniciarAutenticacao();
+        }
+
+        if (mudou) {
+          toast(modoTesteValletAtivo ? 'Modo teste Vallet ativado.' : 'Modo teste Vallet finalizado.', modoTesteValletAtivo);
+        }
+      }, (erro) => {
+        console.warn('Monitor do modo teste Vallet indisponível', erro);
+        unsubscribeConfigVallet = null;
+      });
     }
 
     function parseDataVallet(valor) {
@@ -1613,7 +1633,15 @@
       return primeiroAcesso;
     }
 
+    function atualizarIndicadorModoTesteLogin() {
+      const aviso = $('loginModoTesteVallet');
+      const eyebrow = $('loginEyebrowVallet');
+      aviso?.classList.toggle('hidden', !modoTesteValletAtivo);
+      if (eyebrow) eyebrow.textContent = modoTesteValletAtivo ? 'Modo teste ativo' : 'Acesso restrito';
+    }
+
     function atualizarTelaLogin() {
+      atualizarIndicadorModoTesteLogin();
       const semOperadores = operadoresAtivos().length === 0;
       $('loginBox').classList.toggle('hidden', semOperadores);
       $('setupBox').classList.toggle('active', semOperadores);
@@ -2833,6 +2861,7 @@
       $('loginUsuario')?.addEventListener('change', verificarPrimeiroAcessoVallet);
       await limparVeiculosInativos180Dias();
       atualizarControleHorarioVallet({ forcarTela: true });
+      await iniciarMonitorConfiguracaoVallet();
       await iniciarAutenticacao();
       if ('serviceWorker' in navigator) {
         let recarregandoPorAtualizacao = false;
@@ -2842,20 +2871,23 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=35', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=36', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
       setInterval(async () => {
         if (navigator.onLine) {
           await processarFila();
+          await puxarFirebase();
+          await carregarLocal();
           await atualizarTicketPreview();
+          await iniciarMonitorConfiguracaoVallet();
         }
         atualizarControleHorarioVallet({ forcarTela: true });
       }, 30000);
     }
 
-    window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await puxarFirebase(); await carregarLocal(); await atualizarTicketPreview(); atualizarControleHorarioVallet({ forcarTela: true }); });
+    window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await puxarFirebase(); await carregarLocal(); await iniciarMonitorConfiguracaoVallet(); await atualizarTicketPreview(); atualizarControleHorarioVallet({ forcarTela: true }); });
     window.addEventListener('offline', () => { atualizarStatus(); toast('Sem internet. Salvando neste aparelho.'); });
     window.addEventListener('afterprint', () => { const t = document.getElementById('ticketImpressao'); if (t) t.setAttribute('aria-hidden', 'true'); });
     window.addEventListener('DOMContentLoaded', iniciar);
