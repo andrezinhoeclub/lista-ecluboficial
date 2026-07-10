@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#050508" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v36: bloqueio simplificado e atualização em tempo real do modo teste -->
+  <title>E-CLUB Vallet • v38</title>
+  <!-- E-CLUB Vallet v38: acesso restrito a computador/notebook + bloqueio de celulares e tablets -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -115,6 +115,69 @@
       backdrop-filter: blur(18px);
     }
     .loginOverlay.hidden { display: none; }
+    .deviceOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 110000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 22px;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(239,68,68,.14), transparent 38%),
+        radial-gradient(circle at 100% 15%, rgba(59,130,246,.13), transparent 38%),
+        rgba(5,5,8,.99);
+      backdrop-filter: blur(20px);
+    }
+    .deviceCard {
+      width: min(100%, 470px);
+      background: rgba(14,14,20,.98);
+      border: 1px solid rgba(239,68,68,.32);
+      border-radius: 34px;
+      padding: 38px 32px;
+      box-shadow: 0 30px 100px rgba(0,0,0,.60);
+      text-align: center;
+    }
+    .deviceCard img { height: 64px; width: auto; margin-bottom: 25px; }
+    .deviceCard h2 {
+      margin: 10px 0 12px;
+      font-size: clamp(28px, 8vw, 38px);
+      font-weight: 950;
+      text-transform: uppercase;
+      font-style: italic;
+      letter-spacing: -.05em;
+      color: var(--text);
+    }
+    .deviceCard p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 850;
+      text-transform: uppercase;
+      line-height: 1.7;
+      letter-spacing: .05em;
+    }
+    .deviceBlockedBadge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 25px;
+      min-height: 54px;
+      padding: 13px 16px;
+      border-radius: 18px;
+      background: rgba(239,68,68,.10);
+      border: 1px solid rgba(239,68,68,.28);
+      color: #fca5a5;
+      font-size: 9px;
+      font-weight: 950;
+      text-transform: uppercase;
+      line-height: 1.45;
+      letter-spacing: .08em;
+    }
+    html.vallet-mobile-bloqueado,
+    html.vallet-mobile-bloqueado body { overflow: hidden !important; }
+    html.vallet-mobile-bloqueado #vallet-mobile-bloqueio { display: flex !important; }
+    html.vallet-mobile-bloqueado body > *:not(#vallet-mobile-bloqueio):not(script) { display: none !important; }
     .scheduleOverlay {
       position: fixed;
       inset: 0;
@@ -567,7 +630,29 @@
     }
   </style>
 </head>
-<body>
+<body data-build="38">
+  <div id="vallet-mobile-bloqueio" class="deviceOverlay" aria-live="assertive" role="alert">
+    <div class="deviceCard">
+      <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
+      <div class="loginEyebrow" style="color:#f87171">Acesso restrito</div>
+      <h2>Dispositivo não permitido</h2>
+      <p>O sistema Vallet E-Club está disponível somente em computador ou notebook.</p>
+      <div class="deviceBlockedBadge">Acesso por celular ou tablet bloqueado</div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const ua = navigator.userAgent || '';
+      const plataforma = navigator.platform || '';
+      const aparelhoMovelOuTablet = /Android|iPhone|iPad|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry|webOS|Mobile|Tablet|Silk|Kindle/i.test(ua);
+      const iPadEmModoDesktop = plataforma === 'MacIntel' && Number(navigator.maxTouchPoints || 0) > 1;
+      const bloqueado = aparelhoMovelOuTablet || iPadEmModoDesktop;
+      window.__VALLET_DISPOSITIVO_BLOQUEADO__ = bloqueado;
+      document.documentElement.classList.toggle('vallet-mobile-bloqueado', bloqueado);
+    })();
+  </script>
+
   <div id="toast" class="toast"></div>
 
   <div id="vallet-horario-bloqueio" class="scheduleOverlay" aria-live="polite">
@@ -2842,8 +2927,48 @@
       if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
+    const VALLET_BUILD_VERSION = '38';
+
+    async function prepararAtualizacaoPWA() {
+      try {
+        const chave = 'eclub_vallet_build_ativo';
+        const versaoAnterior = localStorage.getItem(chave);
+        if (versaoAnterior !== VALLET_BUILD_VERSION) {
+          localStorage.setItem(chave, VALLET_BUILD_VERSION);
+          if ('caches' in window) {
+            const nomes = await caches.keys();
+            await Promise.all(
+              nomes
+                .filter(nome => nome.startsWith('eclub-vallet-') && nome !== `eclub-vallet-v${VALLET_BUILD_VERSION}`)
+                .map(nome => caches.delete(nome))
+            );
+          }
+        }
+
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('v') !== VALLET_BUILD_VERSION) {
+          url.searchParams.set('v', VALLET_BUILD_VERSION);
+          window.history.replaceState({}, '', url.toString());
+        }
+      } catch (erro) {
+        console.warn('Não foi possível concluir a limpeza preventiva de cache.', erro);
+      }
+    }
+
     async function iniciar() {
+      await prepararAtualizacaoPWA();
       aplicarTema(localStorage.getItem(THEME_KEY) || 'dark');
+
+      if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
+        document.documentElement.classList.add('vallet-mobile-bloqueado');
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('vallet_sw.js?v=38', { updateViaCache: 'none' })
+            .then((registro) => registro.update())
+            .catch(() => {});
+        }
+        return;
+      }
+
       idb = await openDB();
       deviceId();
       await bootstrapPadrao();
@@ -2871,7 +2996,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=36', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=38', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
@@ -2884,7 +3009,7 @@
           await iniciarMonitorConfiguracaoVallet();
         }
         atualizarControleHorarioVallet({ forcarTela: true });
-      }, 30000);
+      }, 10000);
     }
 
     window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await puxarFirebase(); await carregarLocal(); await iniciarMonitorConfiguracaoVallet(); await atualizarTicketPreview(); atualizarControleHorarioVallet({ forcarTela: true }); });
