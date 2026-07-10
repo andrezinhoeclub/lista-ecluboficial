@@ -439,8 +439,12 @@
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
                     <div class="bg-blue-500/10 border border-blue-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
-                        <h3 class="text-blue-400 font-black uppercase tracking-widest text-[11px] mb-2">Modo Teste</h3>
+                        <h3 class="text-blue-400 font-black uppercase tracking-widest text-[11px] mb-2">Modo Teste Portaria</h3>
                         <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto">🔓 LIBERAR TESTE</button>
+                    </div>
+                    <div class="bg-cyan-500/10 border border-cyan-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-cyan-400 font-black uppercase tracking-widest text-[11px] mb-2">Modo Teste Vallet</h3>
+                        <button id="btnModoTesteVallet" onclick="toggleModoTesteVallet()" class="w-full bg-cyan-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-cyan-500 transition-all">🔓 LIBERAR TESTE</button>
                     </div>
                     <div class="bg-red-500/5 border border-red-500/20 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
                         <h3 class="text-red-400 font-black uppercase tracking-widest text-[11px] mb-2">Limpar Clientes</h3>
@@ -489,7 +493,7 @@
         let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = []; let dadosValletOperadores = [];
         let dadosValletAtendimentos = []; let dadosValletVeiculos = []; let configSistemaDashboard = {};
         let valletAtendimentosCarregados = false; let valletVeiculosCarregados = false; let limpezaValletEmAndamento = false;
-        let dadosSolteiras = []; let modoTesteAtivo = false; let custoSistemaGlobal = 125.00;
+        let dadosSolteiras = []; let modoTesteAtivo = false; let modoTesteValletAtivo = false; let custoSistemaGlobal = 125.00;
         const getPromoterName = (p) => {
             if (!p) return 'SITE DIRETO';
             const clean = String(p).toUpperCase().trim();
@@ -890,8 +894,11 @@
                 const data = sys.data() || {};
                 configSistemaDashboard = data;
                 modoTesteAtivo = data.modo_teste === true;
+                modoTesteValletAtivo = data.modo_teste_vallet === true;
                 const btn = document.getElementById('btnModoTeste');
                 if (btn) btn.innerHTML = modoTesteAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
+                const btnVallet = document.getElementById('btnModoTesteVallet');
+                if (btnVallet) btnVallet.innerHTML = modoTesteValletAtivo ? "🛑 FINALIZAR TESTE" : "🔓 LIBERAR TESTE";
                 if (document.getElementById('tipo_taxa')) { document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado'; document.getElementById('valor_taxa').value = data.taxa_valor || ''; }
                 if (document.getElementById('config_hora_carona')) { document.getElementById('config_hora_carona').value = data.carona_hora_limite || '18:00'; document.getElementById('config_bairros_carona').value = data.carona_bairros || ''; }
                 
@@ -1031,6 +1038,7 @@
 
         window.renderRelatorioVallet = () => {
             const ativos = dadosValletAtendimentos.filter(atendimentoAtivoRelatorioVallet);
+            const atendimentosFinanceiros = dadosValletAtendimentos.filter(a => a.modo_teste_vallet !== true);
             const solicitados = ativos.filter(a => String(a.status || '').toUpperCase() === 'SOLICITADO');
             const analiseBase = analisarBaseVeiculosVallet();
 
@@ -1039,7 +1047,7 @@
                 grupos.set(ev.id, { evento: ev, atendimentos: [] });
             });
             const semEvento = [];
-            dadosValletAtendimentos.forEach(a => {
+            atendimentosFinanceiros.forEach(a => {
                 const ev = eventoDoAtendimentoRelatorioVallet(a);
                 if (!ev) { semEvento.push(a); return; }
                 const chave = ev.id || `${ev.data || ''}_${normalizarBuscaRelatorioVallet(ev.nome)}`;
@@ -1057,7 +1065,7 @@
             setText('vallet-kpi-patio', ativos.length);
             setText('vallet-kpi-solicitados', solicitados.length);
             setText('vallet-kpi-cadastrados', analiseBase.totalPlacasUnicas);
-            setText('vallet-kpi-checkins', dadosValletAtendimentos.length);
+            setText('vallet-kpi-checkins', atendimentosFinanceiros.length);
             setText('vallet-kpi-eventos', eventosAtendidos);
             setText('vallet-kpi-expirados', analiseBase.idsParaExcluir.length);
 
@@ -1998,6 +2006,15 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
         };
 
         window.toggleModoTeste = async () => { await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste: !modoTesteAtivo }, { merge: true }); };
+
+        window.toggleModoTesteVallet = async () => {
+            try {
+                await setDoc(doc(db, "configuracoes", "sistema"), { modo_teste_vallet: !modoTesteValletAtivo }, { merge: true });
+                mostrarAviso(!modoTesteValletAtivo ? "Modo teste do Vallet liberado." : "Modo teste do Vallet finalizado.", true);
+            } catch (e) {
+                mostrarAviso("Erro ao alterar o modo teste do Vallet.");
+            }
+        };
 
         const normalizarTextoSeguro = (valor) => String(valor || '')
             .normalize('NFD')

@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB | Vallet</title>
-  <!-- E-CLUB Vallet v33: eventos 21h-08h, relatório por evento, placa ativa global e limpeza 180 dias -->
+  <!-- E-CLUB Vallet v35: modo teste independente, eventos 21h-08h, placa ativa global e limpeza 180 dias -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -1028,6 +1028,7 @@
     let fila = [];
     let operadores = [];
     let eventosCasa = [];
+    let modoTesteValletAtivo = false;
     let recepcaoValletLiberada = false;
     let modoSomenteSaidaVallet = false;
     let operadorAtual = null;
@@ -1193,6 +1194,7 @@
       fila = (await getAll(STORE_QUEUE)).sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
       operadores = (await getAll(STORE_OPERADOR)).sort((a,b) => String(a.nome || a.usuario).localeCompare(String(b.nome || b.usuario)));
       eventosCasa = (await getAll(STORE_EVENTO)).filter(e => e && e.data).sort((a,b) => String(a.data || '').localeCompare(String(b.data || '')));
+      modoTesteValletAtivo = (await lerMeta('modo_teste_vallet')) === true;
     }
 
     async function salvarMeta(key, value) { await put(STORE_META, { id: key, value }); }
@@ -1252,14 +1254,15 @@
       const fb = await initFirebase();
       if (!fb) return;
       try {
-        const [setSnap, modSnap, corSnap, veiSnap, atSnap, opSnap, evtSnap] = await Promise.all([
+        const [setSnap, modSnap, corSnap, veiSnap, atSnap, opSnap, evtSnap, configSnap] = await Promise.all([
           fb.getDocs(fb.collection(fb.db, 'vallet_setores')),
           fb.getDocs(fb.collection(fb.db, 'vallet_modelos')),
           fb.getDocs(fb.collection(fb.db, 'vallet_cores')),
           fb.getDocs(fb.collection(fb.db, 'vallet_veiculos')),
           fb.getDocs(fb.collection(fb.db, 'vallet_atendimentos')),
           fb.getDocs(fb.collection(fb.db, 'vallet_operadores')),
-          fb.getDocs(fb.collection(fb.db, 'eventos'))
+          fb.getDocs(fb.collection(fb.db, 'eventos')),
+          fb.getDoc(fb.doc(fb.db, 'configuracoes', 'sistema'))
         ]);
         const puts = [];
         setSnap.forEach(d => puts.push(put(STORE_SETOR, { id: d.id, ...d.data() })));
@@ -1269,6 +1272,10 @@
         opSnap.forEach(d => puts.push(put(STORE_OPERADOR, { id: d.id, ...d.data() })));
         await clearStore(STORE_EVENTO);
         evtSnap.forEach(d => puts.push(put(STORE_EVENTO, { id: d.id, ...d.data() })));
+        if (configSnap.exists()) {
+          modoTesteValletAtivo = configSnap.data()?.modo_teste_vallet === true;
+          puts.push(salvarMeta('modo_teste_vallet', modoTesteValletAtivo));
+        }
         atSnap.forEach(d => {
           const data = { id: d.id, ...d.data() };
           if (data.data_operacao === dataLocal() || data.ativo === true) puts.push(put(STORE_ATEND, data));
@@ -1338,8 +1345,32 @@
         .sort((a,b) => a.inicio - b.inicio)[0] || null;
     }
 
+    function janelaModoTesteVallet(referencia = new Date()) {
+      const inicio = new Date(referencia);
+      inicio.setHours(0, 0, 0, 0);
+      const fim = new Date(referencia);
+      fim.setHours(23, 59, 59, 999);
+      const data = `${referencia.getFullYear()}-${String(referencia.getMonth()+1).padStart(2,'0')}-${String(referencia.getDate()).padStart(2,'0')}`;
+      return {
+        evento: {
+          id: `modo_teste_vallet_${data.replace(/-/g, '')}`,
+          nome: 'MODO TESTE VALLET',
+          data,
+          ativo: true,
+          modo_teste_vallet: true
+        },
+        inicio,
+        fim,
+        modoTeste: true
+      };
+    }
+
+    function getJanelaValletOperacional(referencia = new Date()) {
+      return getJanelaValletAgora(referencia) || (modoTesteValletAtivo ? janelaModoTesteVallet(referencia) : null);
+    }
+
     function dataOperacaoAtual() {
-      return getJanelaValletAgora()?.evento?.data || dataLocal();
+      return getJanelaValletOperacional()?.evento?.data || dataLocal();
     }
 
     function atendimentosAtivosAgora() {
@@ -1362,11 +1393,13 @@
     }
 
     function avaliarControleHorarioVallet() {
-      const janela = getJanelaValletAgora();
+      const janelaReal = getJanelaValletAgora();
+      const janela = janelaReal || (modoTesteValletAtivo ? janelaModoTesteVallet() : null);
       const pendentes = atendimentosAtivosAgora();
+      const emModoTeste = Boolean(modoTesteValletAtivo && !janelaReal);
       recepcaoValletLiberada = Boolean(janela);
       modoSomenteSaidaVallet = !janela && pendentes.length > 0;
-      return { janela, pendentes, acessoPermitido: Boolean(janela || pendentes.length > 0) };
+      return { janela, janelaReal, pendentes, emModoTeste, acessoPermitido: Boolean(janela || pendentes.length > 0) };
     }
 
     function atualizarControleHorarioVallet({ forcarTela = false } = {}) {
@@ -1379,7 +1412,17 @@
 
       definirCamposRecepcaoHabilitados(Boolean(controle.janela));
 
-      if (controle.janela) {
+      if (controle.emModoTeste) {
+        overlay?.classList.remove('show');
+        if (status) {
+          status.textContent = '🧪 MODO TESTE VALLET';
+          status.className = 'pill online';
+        }
+        if (banner) {
+          banner.className = 'operationScheduleBanner';
+          banner.textContent = 'MODO TESTE ATIVO • ACESSO E NOVOS CHECK-INS LIBERADOS FORA DO HORÁRIO';
+        }
+      } else if (controle.janela) {
         overlay?.classList.remove('show');
         if (status) {
           status.textContent = `🔵 ${normalize(controle.janela.evento?.nome || 'EVENTO')}`;
@@ -2250,8 +2293,9 @@
     }
 
     async function receberVeiculo(imprimirAposSalvar = false) {
-      const janelaVallet = getJanelaValletAgora();
-      if (!janelaVallet) return toast('Novos check-ins são liberados somente no dia do evento, das 21:00 às 08:00.');
+      const janelaReal = getJanelaValletAgora();
+      const janelaVallet = getJanelaValletOperacional();
+      if (!janelaVallet) return toast('Novos check-ins são liberados somente no dia do evento, das 21:00 às 08:00, ou com o modo teste ativo.');
       const placa = obterPlacaValida($('placa').value);
       if (!placa) return;
       $('placa').value = placa;
@@ -2289,6 +2333,7 @@
           evento_data: janelaVallet.evento.data,
           janela_vallet_inicio: janelaVallet.inicio.toISOString(),
           janela_vallet_fim: janelaVallet.fim.toISOString(),
+          modo_teste_vallet: Boolean(modoTesteValletAtivo && !janelaReal),
           placa,
           placa_norm: placa,
           modelo: veiculo.modelo || normalize($('modelo').value),
@@ -2797,7 +2842,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=33', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=35', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
