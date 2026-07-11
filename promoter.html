@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- E-CLUB REGRA ÚNICA DE RESERVAS V41 -->
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -161,6 +162,56 @@
             return aliases.includes(t);
         };
 
+
+        // REGRA ÚNICA DE CONTAGEM E-CLUB
+        // A mesma regra é usada na Dashboard, Portaria e Promoter.
+        const normalizarChaveReservaEclub = (valor) => String(valor ?? '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const normalizarCodigoReservaEclub = (valor) => normalizarChaveReservaEclub(valor)
+            .replace(/[\s-]+/g, '_');
+
+        const valorBooleanoReservaEclub = (valor) =>
+            valor === true ||
+            valor === 1 ||
+            String(valor ?? '').trim().toLowerCase() === 'true' ||
+            String(valor ?? '').trim() === '1';
+
+        const isMetodoPixReservaEclub = (reserva) => {
+            const metodo = normalizarCodigoReservaEclub(reserva?.metodo);
+            return metodo === 'PIX' || metodo === 'PIX_ANTECIPADO' || metodo.startsWith('PIX_');
+        };
+
+        const isReservaValidaEclub = (reserva) => {
+            if (!reserva) return false;
+
+            const tipo = normalizarCodigoReservaEclub(reserva.tipo_entrada);
+            if (tipo === 'SOLTEIRA_VIP') return false;
+
+            const status = normalizarCodigoReservaEclub(reserva.status_reserva || reserva.status);
+            if (['CANCELADO', 'CANCELADA', 'EXCLUIDO', 'EXCLUIDA', 'INATIVO', 'INATIVA'].includes(status)) return false;
+
+            if (valorBooleanoReservaEclub(reserva.cortesia)) return true;
+            if (isMetodoPixReservaEclub(reserva)) return valorBooleanoReservaEclub(reserva.pago);
+
+            return true;
+        };
+
+        const isReservaPixPendenteRecenteEclub = (reserva, minutos = 5) => {
+            if (!reserva || !isMetodoPixReservaEclub(reserva) || isReservaValidaEclub(reserva) || !reserva.data_reserva) return false;
+            const dataReserva = new Date(reserva.data_reserva);
+            if (isNaN(dataReserva)) return false;
+            const diferenca = (Date.now() - dataReserva.getTime()) / 60000;
+            return diferenca >= 0 && diferenca < minutos;
+        };
+
+        const mesmaChaveReservaEclub = (a, b) =>
+            normalizarChaveReservaEclub(a) === normalizarChaveReservaEclub(b);
+
         // FUNÇÃO DE AVISO MODERNA (TOAST)
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -290,13 +341,13 @@
             const hojeLocal = f.split('/').reverse().join('-');
 
             const linksAtivos = linksAniv.filter(l => {
-                const ev = eventos.find(e => (e.nome || '').trim().toLowerCase() === (l.festa || '').trim().toLowerCase());
+                const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, l.festa));
                 if (!ev) return false;
                 return ev.data >= hojeLocal;
             });
 
             cont.innerHTML = linksAtivos.map(l => {
-                const count = reservas.filter(r => (r.evento || '').toLowerCase().trim() === (l.festa || '').toLowerCase().trim() && (r.aniversariante || '').toLowerCase().trim() === (l.aniversariante || '').toLowerCase().trim()).length;
+                const count = reservas.filter(r => isReservaValidaEclub(r) && mesmaChaveReservaEclub(r.evento, l.festa) && mesmaChaveReservaEclub(r.aniversariante, l.aniversariante)).length;
                 return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
             }).join('');
         }
@@ -319,12 +370,10 @@
             }
 
             const htmlEventos = eventos.map(ev => {
-                const evNomeLimpo = (ev.nome || '').trim().toLowerCase();
-                
-                const reservasDoEvento = reservas.filter(r => (r.evento || '').trim().toLowerCase() === evNomeLimpo);
-                const reservasValidas = reservasDoEvento.filter(r => r.metodo !== 'pix_antecipado' || r.pago === true);
+                const reservasDoEvento = reservas.filter(r => mesmaChaveReservaEclub(r.evento, ev.nome));
+                const reservasValidas = reservasDoEvento.filter(isReservaValidaEclub);
 
-                const minhas = reservasValidas.filter(r => (r.promoter || '').toLowerCase().trim() === logado).length;
+                const minhas = reservasValidas.filter(r => mesmaChaveReservaEclub(r.promoter, logado)).length;
                 const geral = reservasValidas.length;
                 
                 const camesGeral = reservasDoEvento.filter(r => {
@@ -423,7 +472,7 @@
         window.carregarCamarotesCortesia = () => {
             const nomeEv = document.getElementById('selEventoCortesia').value;
             if (!nomeEv) { document.getElementById('area-mapa-cortesia').classList.add('hidden'); return; }
-            const ev = eventos.find(e => e.nome === nomeEv); const resEvento = reservas.filter(r => r.evento === nomeEv);
+            const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, nomeEv)); const resEvento = reservas.filter(r => mesmaChaveReservaEclub(r.evento, nomeEv));
             document.getElementById('area-mapa-cortesia').classList.remove('hidden');
             const grid = document.getElementById('grid-camarotes-cortesia'); grid.innerHTML = '';
             for(let i=1; i<=8; i++) {
@@ -505,8 +554,8 @@
             
             if (!nomeEv) { areaCam.classList.add('hidden'); checkCam.checked = false; selCam.classList.add('hidden'); selCam.value = ""; return; }
             
-            const ev = eventos.find(e => e.nome === nomeEv);
-            const resEvento = reservas.filter(r => r.evento === nomeEv);
+            const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, nomeEv));
+            const resEvento = reservas.filter(r => mesmaChaveReservaEclub(r.evento, nomeEv));
 
             let options = '<option value="">SELECIONE O CAMAROTE</option>';
             let hasLivre = false;

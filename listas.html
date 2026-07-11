@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- E-CLUB REGRA ÚNICA DE RESERVAS V41 -->
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -189,6 +190,56 @@
         let taxaPixTipo = 'desativado';
         let taxaPixValor = 0;
 
+
+        // REGRA ÚNICA DE CONTAGEM E-CLUB
+        // A mesma regra é usada na Dashboard, Portaria e Promoter.
+        const normalizarChaveReservaEclub = (valor) => String(valor ?? '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const normalizarCodigoReservaEclub = (valor) => normalizarChaveReservaEclub(valor)
+            .replace(/[\s-]+/g, '_');
+
+        const valorBooleanoReservaEclub = (valor) =>
+            valor === true ||
+            valor === 1 ||
+            String(valor ?? '').trim().toLowerCase() === 'true' ||
+            String(valor ?? '').trim() === '1';
+
+        const isMetodoPixReservaEclub = (reserva) => {
+            const metodo = normalizarCodigoReservaEclub(reserva?.metodo);
+            return metodo === 'PIX' || metodo === 'PIX_ANTECIPADO' || metodo.startsWith('PIX_');
+        };
+
+        const isReservaValidaEclub = (reserva) => {
+            if (!reserva) return false;
+
+            const tipo = normalizarCodigoReservaEclub(reserva.tipo_entrada);
+            if (tipo === 'SOLTEIRA_VIP') return false;
+
+            const status = normalizarCodigoReservaEclub(reserva.status_reserva || reserva.status);
+            if (['CANCELADO', 'CANCELADA', 'EXCLUIDO', 'EXCLUIDA', 'INATIVO', 'INATIVA'].includes(status)) return false;
+
+            if (valorBooleanoReservaEclub(reserva.cortesia)) return true;
+            if (isMetodoPixReservaEclub(reserva)) return valorBooleanoReservaEclub(reserva.pago);
+
+            return true;
+        };
+
+        const isReservaPixPendenteRecenteEclub = (reserva, minutos = 5) => {
+            if (!reserva || !isMetodoPixReservaEclub(reserva) || isReservaValidaEclub(reserva) || !reserva.data_reserva) return false;
+            const dataReserva = new Date(reserva.data_reserva);
+            if (isNaN(dataReserva)) return false;
+            const diferenca = (Date.now() - dataReserva.getTime()) / 60000;
+            return diferenca >= 0 && diferenca < minutos;
+        };
+
+        const mesmaChaveReservaEclub = (a, b) =>
+            normalizarChaveReservaEclub(a) === normalizarChaveReservaEclub(b);
+
         const extrairValorNumerico = (v) => {
             if (!v) return 0;
             let limpo = String(v).replace('R$', '').replace(/\s/g, '').replace(',', '.');
@@ -290,10 +341,7 @@
             if (!snap.empty) {
                 const ativos = snap.docs.filter(d => {
                     const data = d.data();
-                    if (data.pago === true || data.cortesia === true || data.metodo === 'portaria') return true;
-                    if (!data.data_reserva) return false;
-                    const diffMins = (new Date() - new Date(data.data_reserva)) / 60000;
-                    return diffMins >= 0 && diffMins < 5;
+                    return isReservaValidaEclub(data) || isReservaPixPendenteRecenteEclub(data, 5);
                 });
                 return ativos.length > 0;
             }
@@ -646,7 +694,8 @@
                     tipo_entrada: aplicouDescontoFidelidade ? (tipoAtivo + " FIDELIDADE") : tipoAtivo, 
                     promoter: globalPromoter, aniversariante: globalAniversariante, 
                     data_reserva: new Date().toISOString(), entrou: false, pago: false, 
-                    metodo: eFluxoPix ? 'pix_antecipado' : 'portaria', 
+                    metodo: eFluxoPix ? 'pix_antecipado' : 'portaria',
+                    regra_contagem: 'RESERVA_VALIDA_V1',
                     valor_pago: valorPuroDB > 0 ? String(valorPuroDB) : String(valorRefRaw)
                 });
                 
@@ -794,7 +843,7 @@
                 let valPuroDB = extrairValorNumerico(valRawBase);
                 let valFinalCobrado = calcularComTaxa(valRawBase);
 
-                const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', valor_pago: valPuroDB });
+                const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', regra_contagem: 'RESERVA_VALIDA_V1', valor_pago: valPuroDB });
                 
                 const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valFinalCobrado.toFixed(2), titulo: `${nomeSalvar}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
                 const data = await resp.json();

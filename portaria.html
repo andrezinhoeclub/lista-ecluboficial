@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- E-CLUB REGRA ÚNICA DE RESERVAS V41 -->
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -233,6 +234,56 @@
 
         const isVipEspecialCamarote = (tipo) => tipoEntradaCorrespondeCamarote(tipo, 7) || tipoEntradaCorrespondeCamarote(tipo, 8);
 
+        // REGRA ÚNICA DE CONTAGEM E-CLUB
+        // A mesma regra é usada na Dashboard, Portaria e Promoter.
+        const normalizarChaveReservaEclub = (valor) => String(valor ?? '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const normalizarCodigoReservaEclub = (valor) => normalizarChaveReservaEclub(valor)
+            .replace(/[\s-]+/g, '_');
+
+        const valorBooleanoReservaEclub = (valor) =>
+            valor === true ||
+            valor === 1 ||
+            String(valor ?? '').trim().toLowerCase() === 'true' ||
+            String(valor ?? '').trim() === '1';
+
+        const isMetodoPixReservaEclub = (reserva) => {
+            const metodo = normalizarCodigoReservaEclub(reserva?.metodo);
+            return metodo === 'PIX' || metodo === 'PIX_ANTECIPADO' || metodo.startsWith('PIX_');
+        };
+
+        const isReservaValidaEclub = (reserva) => {
+            if (!reserva) return false;
+
+            const tipo = normalizarCodigoReservaEclub(reserva.tipo_entrada);
+            if (tipo === 'SOLTEIRA_VIP') return false;
+
+            const status = normalizarCodigoReservaEclub(reserva.status_reserva || reserva.status);
+            if (['CANCELADO', 'CANCELADA', 'EXCLUIDO', 'EXCLUIDA', 'INATIVO', 'INATIVA'].includes(status)) return false;
+
+            if (valorBooleanoReservaEclub(reserva.cortesia)) return true;
+            if (isMetodoPixReservaEclub(reserva)) return valorBooleanoReservaEclub(reserva.pago);
+
+            return true;
+        };
+
+        const isReservaPixPendenteRecenteEclub = (reserva, minutos = 5) => {
+            if (!reserva || !isMetodoPixReservaEclub(reserva) || isReservaValidaEclub(reserva) || !reserva.data_reserva) return false;
+            const dataReserva = new Date(reserva.data_reserva);
+            if (isNaN(dataReserva)) return false;
+            const diferenca = (Date.now() - dataReserva.getTime()) / 60000;
+            return diferenca >= 0 && diferenca < minutos;
+        };
+
+        const mesmaChaveReservaEclub = (a, b) =>
+            normalizarChaveReservaEclub(a) === normalizarChaveReservaEclub(b);
+
+
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
@@ -398,14 +449,14 @@
                     const hora = agora.getHours();
                     
                     if (isModoTeste) {
-                        totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && (agora - new Date(c.data_entrada)) / 3600000 <= 12 && c.tipo_entrada !== 'SOLTEIRA VIP').length;
+                        totalTurno = bancoClientes.filter(c => isReservaValidaEclub(c) && valorBooleanoReservaEclub(c.entrou) && c.data_entrada && (agora - new Date(c.data_entrada)) / 3600000 <= 12).length;
                     } else if (hora >= 5 && hora < 21) {
                         totalTurno = 0;
                     } else {
                         let inicioTurno = new Date(agora);
                         if (hora >= 21) inicioTurno.setHours(21, 0, 0, 0); 
                         else { inicioTurno.setDate(inicioTurno.getDate() - 1); inicioTurno.setHours(21, 0, 0, 0); } 
-                        totalTurno = bancoClientes.filter(c => c.entrou && c.data_entrada && new Date(c.data_entrada) >= inicioTurno && c.tipo_entrada !== 'SOLTEIRA VIP').length;
+                        totalTurno = bancoClientes.filter(c => isReservaValidaEclub(c) && valorBooleanoReservaEclub(c.entrou) && c.data_entrada && new Date(c.data_entrada) >= inicioTurno).length;
                     }
                     
                     document.getElementById('total-checkins').innerText = totalTurno;
@@ -425,7 +476,7 @@
                     const status = getStatusTurno(ev.data, ev.hora);
                     const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
                     
-                    const total = bancoClientes.filter(c => String(c.evento || '').trim().toUpperCase() === evNomeLimpo && (c.metodo !== 'pix_antecipado' || String(c.pago) === 'true') && c.tipo_entrada !== 'SOLTEIRA VIP').length;
+                    const total = bancoClientes.filter(c => mesmaChaveReservaEclub(c.evento, ev.nome) && isReservaValidaEclub(c)).length;
                     
                     cont.innerHTML += `
                         <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
@@ -468,16 +519,15 @@
             const termosBusca = buscaInput.split(/\s+/);
             
             const filtrados = bancoClientes.filter(c => {
-                if (c.tipo_entrada === 'SOLTEIRA VIP') return false;
+                if (!isReservaValidaEclub(c)) return false;
 
-                const evRel = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase());
+                const evRel = bancoEventos.find(e => mesmaChaveReservaEclub(e.nome, c.evento));
                 const eventoOnline = evRel && getStatusTurno(evRel.data, evRel.hora) === "ONLINE";
-                const pixPago = c.metodo === 'pix_antecipado' && String(c.pago) === 'true';
+                const pixPago = isMetodoPixReservaEclub(c) && valorBooleanoReservaEclub(c.pago);
 
                 // Mantém a regra atual da portaria: evento do turno aparece normalmente.
                 // Exceção: PIX pago aparece na busca mesmo se for de outro dia/evento, para a portaria conseguir localizar o cliente.
                 if (!isModoTeste && !eventoOnline && !pixPago) return false;
-                if (c.metodo === 'pix_antecipado' && String(c.pago) !== 'true') return false;
                 
                 const nomeString = String(c.nome || '').toUpperCase();
                 const telString = String(c.tel || '') + " " + String(c.telefone || '');
