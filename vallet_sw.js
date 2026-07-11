@@ -1,8 +1,8 @@
-const CACHE_NAME = 'eclub-vallet-v42';
-const FALLBACK_HTML = './vallet_eclub.html?v=42';
+const CACHE_NAME = 'eclub-vallet-v43';
+const FALLBACK_HTML = './vallet_eclub.html?v=43';
 const APP_SHELL = [
   FALLBACK_HTML,
-  './vallet_manifest.json?v=42'
+  './vallet_manifest.json?v=43'
 ];
 
 self.addEventListener('install', (event) => {

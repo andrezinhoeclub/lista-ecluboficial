@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#050508" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>E-CLUB Vallet • v42</title>
-  <!-- E-CLUB Vallet v42: vistoria visual de avarias por placa + histórico automático -->
+  <title>E-CLUB Vallet • v43</title>
+  <!-- E-CLUB Vallet v43: vistoria visual + baixa de avarias reparadas com histórico -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -570,7 +570,7 @@
     body.theme-light .smallText { color: #667085; }
 
 
-    /* Vistoria visual de avarias — v42 */
+    /* Vistoria visual de avarias — v43 */
     .inspectionSummary {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -637,8 +637,9 @@
     .carLight { fill: rgba(250,204,21,.34); stroke: #fde68a; stroke-width: 3; }
     .carTail { fill: rgba(239,68,68,.34); stroke: #fca5a5; stroke-width: 3; }
     .inspectionMarker { position: absolute; width: 34px; height: 34px; transform: translate(-50%, -50%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 950; border: 3px solid rgba(255,255,255,.88); box-shadow: 0 5px 18px rgba(0,0,0,.50); z-index: 3; }
-    .inspectionMarker.old { background: #ca8a04; cursor: help; }
+    .inspectionMarker.old { background: #ca8a04; cursor: pointer; }
     .inspectionMarker.new { background: #dc2626; cursor: pointer; animation: markerPop .18s ease-out; }
+    .inspectionMarker.repaired { background: #64748b; cursor: pointer; opacity: .68; border-style: dashed; }
     @keyframes markerPop { from { transform: translate(-50%, -50%) scale(.55); opacity: .2; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
     .inspectionMarker small { position: absolute; top: 31px; left: 50%; transform: translateX(-50%); padding: 3px 6px; border-radius: 7px; background: rgba(0,0,0,.76); color: #fff; font-size: 6px; font-weight: 950; white-space: nowrap; pointer-events: none; }
     .damageList { display: grid; gap: 8px; max-height: 360px; overflow-y: auto; }
@@ -646,14 +647,20 @@
     .damageDot { width: 12px; height: 12px; border-radius: 50%; }
     .damageDot.old { background: #eab308; }
     .damageDot.new { background: #ef4444; }
+    .damageDot.repaired { background: #64748b; }
+    .damageItem.repaired { opacity: .68; border-style: dashed; }
+    .damageItem.repaired strong { text-decoration: line-through; }
     .damageItem strong { display: block; color: var(--text); font-size: 9px; font-weight: 950; text-transform: uppercase; }
     .damageItem span { display: block; margin-top: 2px; color: var(--muted); font-size: 7px; font-weight: 850; text-transform: uppercase; }
-    .damageRemove { width: 31px; height: 31px; border-radius: 10px; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25); color: #fca5a5; font-size: 15px; font-weight: 950; }
+    .damageRemove, .damageRepair { min-width: 31px; height: 31px; padding: 0 9px; border-radius: 10px; font-size: 10px; font-weight: 950; text-transform: uppercase; white-space: nowrap; }
+    .damageRemove { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25); color: #fca5a5; font-size: 15px; }
+    .damageRepair { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.28); color: #86efac; }
+    .damageRepair.restore { background: rgba(100,116,139,.14); border-color: rgba(148,163,184,.30); color: #cbd5e1; }
     .inspectionEmpty { padding: 22px 12px; border-radius: 15px; border: 1px dashed var(--border); color: var(--muted); text-align: center; font-size: 8px; font-weight: 900; text-transform: uppercase; line-height: 1.5; }
     .inspectionLegend { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 10px; color: var(--muted); font-size: 7px; font-weight: 900; text-transform: uppercase; }
     .inspectionLegend span { display: inline-flex; align-items: center; gap: 5px; }
     .inspectionLegend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-    .inspectionFooter { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; margin-top: 15px; }
+    .inspectionFooter { display: grid; grid-template-columns: auto auto auto 1fr; gap: 10px; margin-top: 15px; }
     .inspectionFooter .confirm { min-height: 54px; }
     body.theme-light .inspectionSummary { background: linear-gradient(135deg, rgba(239,246,255,.96), rgba(250,245,255,.96)); border-color: rgba(37,99,235,.20); }
     body.theme-light .inspectionSummaryTitle { color: #175cd3; }
@@ -932,6 +939,7 @@
               <div class="inspectionBadges">
                 <span id="vistoriaBadgeHistoricas" class="inspectionBadge old">0 anteriores</span>
                 <span id="vistoriaBadgeNovas" class="inspectionBadge new">0 novas</span>
+                <span id="vistoriaBadgeReparadas" class="inspectionBadge">0 reparadas</span>
                 <span id="vistoriaBadgeStatus" class="inspectionBadge">Pendente</span>
               </div>
             </div>
@@ -1139,7 +1147,8 @@
           <div class="inspectionLegend">
             <span><i style="background:#eab308"></i> Avaria já conhecida</span>
             <span><i style="background:#ef4444"></i> Nova avaria desta entrada</span>
-            <span>Clique em uma marca vermelha para excluir</span>
+            <span><i style="background:#64748b"></i> Avaria marcada como reparada</span>
+            <span>Clique na marca amarela para dar baixa; clique novamente para restaurar</span>
           </div>
         </div>
 
@@ -1152,6 +1161,7 @@
       <div class="inspectionFooter">
         <button type="button" class="btn ghost" onclick="desfazerUltimaAvaria()">Desfazer última</button>
         <button type="button" class="btn red" onclick="limparNovasAvarias()">Limpar novas</button>
+        <button type="button" class="btn ghost" onclick="restaurarTodasAvariasReparadas()">Restaurar reparadas</button>
         <button id="btnConfirmarVistoria" type="button" class="btn green confirm" onclick="confirmarVistoriaAvarias()">Confirmar vistoria</button>
       </div>
     </div>
@@ -1314,6 +1324,7 @@
     let vistoriaTipoAtual = 'RISCO';
     let vistoriaAvariasHistoricas = [];
     let vistoriaAvariasNovas = [];
+    let vistoriaAvariasReparadas = [];
     let vistoriaConfirmada = false;
     let vistoriaRealizadaEm = '';
 
@@ -2462,6 +2473,10 @@
         ocorrencias: [],
         historico_observacoes: historicoObs,
         avarias_ativas: normalizarListaAvarias(atendimento.vistoria_avarias_ativas || antigo.avarias_ativas || []),
+        avarias_reparadas_historico: mesclarHistoricoAvariasReparadas(
+          antigo.avarias_reparadas_historico || [],
+          atendimento.vistoria_avarias_reparadas || []
+        ),
         vistoria_atualizada_em: atendimento.vistoria_realizada_em || antigo.vistoria_atualizada_em || '',
         vistoria_ultimo_operador: atendimento.vistoria_operador || antigo.vistoria_ultimo_operador || '',
         vistoria_ultimo_atendimento_id: atendimento.id || antigo.vistoria_ultimo_atendimento_id || '',
@@ -2559,6 +2574,9 @@
         cliente_tel: String(data.cliente_tel || antigo.cliente_tel || '').trim(),
         obs: normalize(data.obs || antigo.obs),
         avarias_ativas: Array.isArray(data.avarias_ativas) ? normalizarListaAvarias(data.avarias_ativas) : normalizarListaAvarias(antigo.avarias_ativas || []),
+        avarias_reparadas_historico: Array.isArray(data.avarias_reparadas_historico)
+          ? mesclarHistoricoAvariasReparadas(antigo.avarias_reparadas_historico || [], data.avarias_reparadas_historico)
+          : mesclarHistoricoAvariasReparadas(antigo.avarias_reparadas_historico || []),
         vistoria_atualizada_em: data.vistoria_atualizada_em || antigo.vistoria_atualizada_em || '',
         vistoria_ultimo_operador: data.vistoria_ultimo_operador || antigo.vistoria_ultimo_operador || '',
         criado_em: antigo.criado_em || agoraISO(),
@@ -2613,7 +2631,11 @@
         criado_em: a?.criado_em || '',
         operador: normalize(a?.operador || ''),
         atendimento_id: a?.atendimento_id || '',
-        ticket: a?.ticket || ''
+        ticket: a?.ticket || '',
+        reparada_em: a?.reparada_em || '',
+        reparada_por: normalize(a?.reparada_por || ''),
+        reparada_no_atendimento_id: a?.reparada_no_atendimento_id || '',
+        reparada_ticket: a?.reparada_ticket || ''
       }));
     }
 
@@ -2621,8 +2643,28 @@
       return normalizarListaAvarias(lista).map(a => ({ ...a }));
     }
 
+    function idsAvariasReparadas() {
+      return new Set(vistoriaAvariasReparadas.map(a => String(a.id)));
+    }
+
+    function avariasHistoricasAtivas() {
+      const reparadas = idsAvariasReparadas();
+      return copiarAvarias(vistoriaAvariasHistoricas).filter(a => !reparadas.has(String(a.id)));
+    }
+
     function todasAvariasVistoria() {
-      return [...copiarAvarias(vistoriaAvariasHistoricas), ...copiarAvarias(vistoriaAvariasNovas)];
+      return [...avariasHistoricasAtivas(), ...copiarAvarias(vistoriaAvariasNovas)];
+    }
+
+    function mesclarHistoricoAvariasReparadas(...listas) {
+      const mapa = new Map();
+      listas.flat().forEach(item => {
+        normalizarListaAvarias([item]).forEach(a => {
+          const chave = `${a.id}|${a.reparada_em || ''}|${a.reparada_no_atendimento_id || ''}`;
+          mapa.set(chave, a);
+        });
+      });
+      return [...mapa.values()];
     }
 
     function resetarVistoriaAvarias() {
@@ -2631,6 +2673,7 @@
       vistoriaTipoAtual = 'RISCO';
       vistoriaAvariasHistoricas = [];
       vistoriaAvariasNovas = [];
+      vistoriaAvariasReparadas = [];
       vistoriaConfirmada = false;
       vistoriaRealizadaEm = '';
       atualizarResumoVistoria();
@@ -2646,6 +2689,7 @@
       const origem = veiculo || getVeiculoPorPlaca(p) || {};
       vistoriaAvariasHistoricas = copiarAvarias(origem.avarias_ativas || origem.vistoria_avarias_ativas || []);
       vistoriaAvariasNovas = [];
+      vistoriaAvariasReparadas = [];
       vistoriaConfirmada = false;
       vistoriaRealizadaEm = '';
       atualizarResumoVistoria();
@@ -2655,21 +2699,27 @@
       const texto = $('vistoriaResumoTexto');
       const bOld = $('vistoriaBadgeHistoricas');
       const bNew = $('vistoriaBadgeNovas');
+      const bRepaired = $('vistoriaBadgeReparadas');
       const bStatus = $('vistoriaBadgeStatus');
       const btn = $('btnAbrirVistoria');
-      if (!texto || !bOld || !bNew || !bStatus || !btn) return;
+      if (!texto || !bOld || !bNew || !bRepaired || !bStatus || !btn) return;
       const placaCampo = formatarEntradaPlaca($('placa')?.value || '');
       const placaPronta = placaCampo.length === 7 && placaValida(placaCampo);
-      bOld.textContent = `${vistoriaAvariasHistoricas.length} anteriores`;
+      const anterioresAtivas = avariasHistoricasAtivas().length;
+      bOld.textContent = `${anterioresAtivas} anteriores`;
       bNew.textContent = `${vistoriaAvariasNovas.length} novas`;
+      bRepaired.textContent = `${vistoriaAvariasReparadas.length} reparadas`;
       bStatus.className = `inspectionBadge${vistoriaConfirmada ? ' ok' : ''}`;
       bStatus.textContent = vistoriaConfirmada ? 'Vistoria confirmada' : 'Vistoria pendente';
       btn.disabled = !placaPronta;
       if (!placaPronta) {
         texto.textContent = 'Informe uma placa válida para iniciar a vistoria.';
       } else if (vistoriaConfirmada) {
-        const total = vistoriaAvariasHistoricas.length + vistoriaAvariasNovas.length;
-        texto.textContent = total ? `${total} avaria(s) confirmada(s) para esta entrada.` : 'Vistoria confirmada sem avarias registradas.';
+        const total = todasAvariasVistoria().length;
+        const reparadas = vistoriaAvariasReparadas.length;
+        texto.textContent = total
+          ? `${total} avaria(s) ativa(s) confirmada(s)${reparadas ? ` • ${reparadas} reparada(s) baixada(s)` : ''}.`
+          : (reparadas ? `${reparadas} avaria(s) marcada(s) como reparada(s). Veículo sem avarias ativas.` : 'Vistoria confirmada sem avarias registradas.');
       } else if (vistoriaAvariasHistoricas.length) {
         texto.textContent = 'Avarias anteriores carregadas. Abra o desenho, confira e marque novas avarias.';
       } else {
@@ -2771,6 +2821,41 @@
       atualizarResumoVistoria();
     }
 
+    function alternarAvariaHistoricaReparada(id, event = null) {
+      if (event) event.stopPropagation();
+      const avaria = vistoriaAvariasHistoricas.find(a => String(a.id) === String(id));
+      if (!avaria) return toast('Avaria anterior não encontrada.');
+      const jaReparada = vistoriaAvariasReparadas.some(a => String(a.id) === String(id));
+      if (jaReparada) {
+        vistoriaAvariasReparadas = vistoriaAvariasReparadas.filter(a => String(a.id) !== String(id));
+        toast('Avaria restaurada como ativa.', true);
+      } else {
+        const rotulo = ROTULOS_TIPO_AVARIA[avaria.tipo] || avaria.tipo;
+        if (!confirm(`Marcar a avaria "${rotulo}" como reparada?
+
+Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continuará registrada no histórico.`)) return;
+        vistoriaAvariasReparadas.push({
+          ...avaria,
+          reparada_em: agoraISO(),
+          reparada_por: getOperador()
+        });
+        toast('Avaria marcada como reparada.', true);
+      }
+      vistoriaConfirmada = false;
+      renderVistoriaAvarias();
+      atualizarResumoVistoria();
+    }
+
+    function restaurarTodasAvariasReparadas() {
+      if (!vistoriaAvariasReparadas.length) return toast('Nenhuma avaria foi marcada como reparada.');
+      if (!confirm('Restaurar todas as avarias reparadas desta vistoria como ativas?')) return;
+      vistoriaAvariasReparadas = [];
+      vistoriaConfirmada = false;
+      renderVistoriaAvarias();
+      atualizarResumoVistoria();
+      toast('Avarias restauradas como ativas.', true);
+    }
+
     function desfazerUltimaAvaria() {
       if (!vistoriaAvariasNovas.length) return toast('Nenhuma nova avaria para desfazer.');
       vistoriaAvariasNovas.pop();
@@ -2796,8 +2881,11 @@
       vistoriaRealizadaEm = agoraISO();
       atualizarResumoVistoria();
       fecharVistoriaAvarias();
-      const total = vistoriaAvariasHistoricas.length + vistoriaAvariasNovas.length;
-      toast(total ? `Vistoria confirmada com ${total} avaria(s).` : 'Vistoria confirmada sem avarias.', true);
+      const total = todasAvariasVistoria().length;
+      const reparadas = vistoriaAvariasReparadas.length;
+      toast(total
+        ? `Vistoria confirmada com ${total} avaria(s) ativa(s)${reparadas ? ` e ${reparadas} reparada(s)` : ''}.`
+        : (reparadas ? `Vistoria confirmada. ${reparadas} avaria(s) marcada(s) como reparada(s).` : 'Vistoria confirmada sem avarias.'), true);
     }
 
     function renderVistoriaAvarias() {
@@ -2807,28 +2895,42 @@
       $('vistoriaTipoTitulo').textContent = `Marcando: ${(ROTULOS_TIPO_AVARIA[vistoriaTipoAtual] || vistoriaTipoAtual).toLowerCase()}`;
       $('vistoriaCarSvg').innerHTML = svgCarroVistoria(vistoriaVistaAtual);
 
+      const reparadasIds = idsAvariasReparadas();
       const historicasVista = vistoriaAvariasHistoricas.filter(a => a.vista === vistoriaVistaAtual);
       const novasVista = vistoriaAvariasNovas.filter(a => a.vista === vistoriaVistaAtual);
       const marcadores = [
-        ...historicasVista.map((a, i) => ({ ...a, origem: 'old', numero: i + 1 })),
+        ...historicasVista.map((a, i) => ({ ...a, origem: reparadasIds.has(String(a.id)) ? 'repaired' : 'old', numero: i + 1 })),
         ...novasVista.map((a, i) => ({ ...a, origem: 'new', numero: historicasVista.length + i + 1 }))
       ];
       $('vistoriaMarkers').innerHTML = marcadores.map(a => {
-        const titulo = `${ROTULOS_TIPO_AVARIA[a.tipo] || a.tipo} • ${a.origem === 'old' ? 'Avaria anterior' : 'Nova avaria'}`;
-        const acao = a.origem === 'new' ? `onclick="removerAvariaNova('${a.id}', event)"` : '';
-        return `<button type="button" class="inspectionMarker ${a.origem}" style="left:${a.x}%;top:${a.y}%" title="${titulo}" ${acao}>${a.numero}<small>${a.origem === 'old' ? 'ANTIGA' : 'NOVA'}</small></button>`;
+        const origemTexto = a.origem === 'new' ? 'Nova avaria' : (a.origem === 'repaired' ? 'Marcada como reparada' : 'Avaria anterior');
+        const titulo = `${ROTULOS_TIPO_AVARIA[a.tipo] || a.tipo} • ${origemTexto}`;
+        const acao = a.origem === 'new'
+          ? `onclick="removerAvariaNova('${a.id}', event)"`
+          : `onclick="alternarAvariaHistoricaReparada('${a.id}', event)"`;
+        const etiqueta = a.origem === 'new' ? 'NOVA' : (a.origem === 'repaired' ? 'REPARADA' : 'ANTIGA');
+        return `<button type="button" class="inspectionMarker ${a.origem}" style="left:${a.x}%;top:${a.y}%" title="${titulo}" ${acao}>${a.numero}<small>${etiqueta}</small></button>`;
       }).join('');
 
       const itens = marcadores;
-      $('vistoriaListaAvarias').innerHTML = itens.length ? itens.map(a => `
-        <div class="damageItem">
+      $('vistoriaListaAvarias').innerHTML = itens.length ? itens.map(a => {
+        const textoOrigem = a.origem === 'new' ? 'Nova nesta entrada' : (a.origem === 'repaired' ? 'Será retirada das avarias ativas' : 'Avaria já conhecida');
+        let acao = '';
+        if (a.origem === 'new') acao = `<button type="button" class="damageRemove" onclick="removerAvariaNova('${a.id}', event)" title="Excluir marca">×</button>`;
+        else if (a.origem === 'repaired') acao = `<button type="button" class="damageRepair restore" onclick="alternarAvariaHistoricaReparada('${a.id}', event)" title="Restaurar avaria">Restaurar</button>`;
+        else acao = `<button type="button" class="damageRepair" onclick="alternarAvariaHistoricaReparada('${a.id}', event)" title="Marcar como reparada">Reparada</button>`;
+        return `<div class="damageItem ${a.origem === 'repaired' ? 'repaired' : ''}">
           <i class="damageDot ${a.origem}"></i>
-          <div><strong>${ROTULOS_TIPO_AVARIA[a.tipo] || a.tipo}</strong><span>${a.origem === 'old' ? 'Avaria já conhecida' : 'Nova nesta entrada'}</span></div>
-          ${a.origem === 'new' ? `<button type="button" class="damageRemove" onclick="removerAvariaNova('${a.id}', event)" title="Excluir marca">×</button>` : '<span></span>'}
-        </div>`).join('') : '<div class="inspectionEmpty">Nenhuma avaria marcada nesta vista.</div>';
+          <div><strong>${ROTULOS_TIPO_AVARIA[a.tipo] || a.tipo}</strong><span>${textoOrigem}</span></div>
+          ${acao}
+        </div>`;
+      }).join('') : '<div class="inspectionEmpty">Nenhuma avaria marcada nesta vista.</div>';
 
-      const total = vistoriaAvariasHistoricas.length + vistoriaAvariasNovas.length;
-      $('btnConfirmarVistoria').textContent = total ? `Confirmar vistoria • ${total} avaria(s)` : 'Confirmar sem avarias';
+      const total = todasAvariasVistoria().length;
+      const reparadas = vistoriaAvariasReparadas.length;
+      $('btnConfirmarVistoria').textContent = total
+        ? `Confirmar • ${total} ativa(s)${reparadas ? ` • ${reparadas} reparada(s)` : ''}`
+        : (reparadas ? `Confirmar • ${reparadas} reparada(s)` : 'Confirmar sem avarias');
     }
 
     function aoDigitarPlaca() {
@@ -2887,6 +2989,15 @@
         const ticket = await proximoTicket();
         id = `${janelaVallet.evento.data.replace(/-/g,'')}_${deviceId()}_${ticket}`;
         reservaGlobal = await reservarPlacaAtivaGlobal(placa, id, janelaVallet);
+        const quandoVistoria = vistoriaRealizadaEm || agoraISO();
+        const avariasReparadasCheckin = copiarAvarias(vistoriaAvariasReparadas).map(a => ({
+          ...a,
+          reparada_em: a.reparada_em || quandoVistoria,
+          reparada_por: a.reparada_por || getOperador(),
+          reparada_no_atendimento_id: id,
+          reparada_ticket: ticket
+        }));
+        const veiculoAtual = getVeiculoPorPlaca(placa) || {};
         const veiculo = await salvarVeiculoBase({
           placa,
           modelo: $('modelo').value,
@@ -2895,7 +3006,8 @@
           cliente_tel: $('clienteTel').value,
           obs: $('obs').value,
           avarias_ativas: todasAvariasVistoria(),
-          vistoria_atualizada_em: vistoriaRealizadaEm || agoraISO(),
+          avarias_reparadas_historico: mesclarHistoricoAvariasReparadas(veiculoAtual.avarias_reparadas_historico || [], avariasReparadasCheckin),
+          vistoria_atualizada_em: quandoVistoria,
           vistoria_ultimo_operador: getOperador()
         });
         const atendimento = {
@@ -2925,10 +3037,13 @@
           vistoria_operador: getOperador(),
           vistoria_avarias_anteriores: copiarAvarias(vistoriaAvariasHistoricas),
           vistoria_avarias_novas: copiarAvarias(vistoriaAvariasNovas),
+          vistoria_avarias_reparadas: avariasReparadasCheckin,
           vistoria_avarias_ativas: todasAvariasVistoria(),
           vistoria_total_anteriores: vistoriaAvariasHistoricas.length,
+          vistoria_total_anteriores_ativas: avariasHistoricasAtivas().length,
           vistoria_total_novas: vistoriaAvariasNovas.length,
-          vistoria_total_avarias: vistoriaAvariasHistoricas.length + vistoriaAvariasNovas.length,
+          vistoria_total_reparadas: avariasReparadasCheckin.length,
+          vistoria_total_avarias: todasAvariasVistoria().length,
           status: 'RECEBIDO',
           ativo: true,
           operador_recebimento: getOperador(),
@@ -2939,7 +3054,7 @@
         };
         await put(STORE_ATEND, atendimento);
         await queueSet('vallet_atendimentos', atendimento.id, atendimento);
-        await criarMovimento(atendimento, 'RECEBIDO', 'Veículo recebido no vallet');
+        await criarMovimento(atendimento, 'RECEBIDO', avariasReparadasCheckin.length ? `Veículo recebido no vallet • ${avariasReparadasCheckin.length} avaria(s) marcada(s) como reparada(s)` : 'Veículo recebido no vallet');
         await salvarHistoricoVeiculoAtendimento(atendimento, { entrada: true, quando: atendimento.recebido_em });
         limparFormularioAtendimento();
         await carregarLocal(); renderTudo(); atualizarTicketPreview();
@@ -3433,7 +3548,7 @@
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=42', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=43', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -3467,7 +3582,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=42', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=43', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
