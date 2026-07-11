@@ -1,8 +1,8 @@
-const CACHE_NAME = 'eclub-vallet-v38';
-const FALLBACK_HTML = './vallet_eclub.html?v=38';
+const CACHE_NAME = 'eclub-vallet-v42';
+const FALLBACK_HTML = './vallet_eclub.html?v=42';
 const APP_SHELL = [
   FALLBACK_HTML,
-  './vallet_manifest.json?v=38'
+  './vallet_manifest.json?v=42'
 ];
 
 self.addEventListener('install', (event) => {
@@ -48,7 +48,6 @@ async function networkFirst(request, fallbackUrl) {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
-
   const url = new URL(request.url);
   const isSameOrigin = url.origin === self.location.origin;
   const isNavigation = request.mode === 'navigate';
@@ -57,12 +56,10 @@ self.addEventListener('fetch', (event) => {
     url.pathname.endsWith('/vallet_sw.js') ||
     url.pathname.endsWith('/vallet_manifest.json')
   );
-
   if (isNavigation || isCriticalFile) {
     event.respondWith(networkFirst(request, FALLBACK_HTML));
     return;
   }
-
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;

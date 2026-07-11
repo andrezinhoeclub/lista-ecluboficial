@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#050508" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>E-CLUB Vallet • v38</title>
-  <!-- E-CLUB Vallet v38: acesso restrito a computador/notebook + bloqueio de celulares e tablets -->
+  <title>E-CLUB Vallet • v42</title>
+  <!-- E-CLUB Vallet v42: vistoria visual de avarias por placa + histórico automático -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -568,6 +568,117 @@
     body.theme-light .ticketCorner input { color: #92400e; }
 
     body.theme-light .smallText { color: #667085; }
+
+
+    /* Vistoria visual de avarias — v42 */
+    .inspectionSummary {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      margin: 14px 0 10px;
+      padding: 16px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(56,189,248,.08), rgba(168,85,247,.07));
+      border: 1px solid rgba(56,189,248,.24);
+    }
+    .inspectionSummaryMain { min-width: 0; }
+    .inspectionSummaryTitle { color: #bae6fd; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .12em; }
+    .inspectionSummaryText { margin-top: 6px; color: var(--muted); font-size: 9px; font-weight: 850; text-transform: uppercase; line-height: 1.5; }
+    .inspectionBadges { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+    .inspectionBadge { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,.045); color: #d4d4d8; font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .06em; }
+    .inspectionBadge.old { color: #fde68a; border-color: rgba(234,179,8,.30); background: rgba(234,179,8,.08); }
+    .inspectionBadge.new { color: #fecaca; border-color: rgba(239,68,68,.30); background: rgba(239,68,68,.08); }
+    .inspectionBadge.ok { color: #86efac; border-color: rgba(34,197,94,.30); background: rgba(34,197,94,.08); }
+    .inspectionOpenBtn { min-width: 190px; min-height: 54px; }
+
+    .inspectionDrawer { align-items: center; padding: 18px; overflow-y: auto; }
+    .inspectionDrawerBox { width: min(100%, 1040px); max-height: calc(100vh - 36px); overflow-y: auto; background: #0a0a10; border: 1px solid rgba(56,189,248,.24); border-radius: 30px; padding: 22px; box-shadow: 0 28px 90px rgba(0,0,0,.58); }
+    .inspectionHeader { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+    .inspectionHeader h2 { margin: 0; font-size: 22px; font-weight: 950; text-transform: uppercase; font-style: italic; letter-spacing: -.04em; }
+    .inspectionHeader p { margin: 5px 0 0; color: var(--muted); font-size: 9px; font-weight: 850; text-transform: uppercase; line-height: 1.45; }
+    .inspectionPlate { display: inline-flex; align-items: center; justify-content: center; min-width: 155px; padding: 10px 15px; border-radius: 15px; background: #f8fafc; color: #08080a; box-shadow: inset 0 0 0 2px rgba(0,0,0,.14); font-size: 24px; font-weight: 950; letter-spacing: .10em; }
+    .inspectionGrid { display: grid; grid-template-columns: 210px 1fr 250px; gap: 14px; align-items: start; }
+    .inspectionPanel { border: 1px solid var(--border); background: rgba(255,255,255,.035); border-radius: 22px; padding: 14px; }
+    .inspectionPanelTitle { margin-bottom: 10px; color: var(--muted); font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .13em; }
+    .damageTypeGrid, .viewGrid { display: grid; gap: 8px; }
+    .damageTypeGrid { grid-template-columns: 1fr 1fr; }
+    .viewGrid { grid-template-columns: 1fr; }
+    .damageTypeBtn, .viewBtn { min-height: 42px; padding: 10px 9px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255,255,255,.04); color: #d4d4d8; font-size: 8px; font-weight: 950; text-transform: uppercase; line-height: 1.15; }
+    .damageTypeBtn.active { border-color: rgba(239,68,68,.58); background: rgba(239,68,68,.16); color: #fecaca; box-shadow: 0 0 0 2px rgba(239,68,68,.08); }
+    .viewBtn.active { border-color: rgba(56,189,248,.55); background: rgba(56,189,248,.14); color: #bae6fd; }
+    .inspectionCanvasWrap { min-width: 0; }
+    .inspectionCanvasHint { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 9px; color: var(--muted); font-size: 8px; font-weight: 900; text-transform: uppercase; line-height: 1.4; }
+    .inspectionCanvas {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 330px;
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(56,189,248,.22);
+      background:
+        linear-gradient(rgba(56,189,248,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,.055) 1px, transparent 1px),
+        radial-gradient(circle at center, rgba(56,189,248,.08), transparent 65%),
+        #07070c;
+      background-size: 28px 28px, 28px 28px, auto, auto;
+      cursor: crosshair;
+      user-select: none;
+    }
+    .inspectionCanvas::after { content: 'CLIQUE NO PONTO DA AVARIA'; position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); color: rgba(148,163,184,.55); font-size: 8px; font-weight: 950; letter-spacing: .18em; white-space: nowrap; pointer-events: none; }
+    .carSvgLayer, .inspectionMarkers { position: absolute; inset: 0; }
+    .carSvgLayer { display: flex; align-items: center; justify-content: center; pointer-events: none; padding: 20px; }
+    .carSvgLayer svg { width: 100%; height: 100%; filter: drop-shadow(0 16px 22px rgba(0,0,0,.30)); }
+    .carBodyFill { fill: rgba(148,163,184,.10); stroke: #94a3b8; stroke-width: 5; }
+    .carGlassFill { fill: rgba(56,189,248,.13); stroke: #7dd3fc; stroke-width: 4; }
+    .carDetail { fill: none; stroke: rgba(226,232,240,.72); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .carWheel { fill: #111827; stroke: #64748b; stroke-width: 4; }
+    .carLight { fill: rgba(250,204,21,.34); stroke: #fde68a; stroke-width: 3; }
+    .carTail { fill: rgba(239,68,68,.34); stroke: #fca5a5; stroke-width: 3; }
+    .inspectionMarker { position: absolute; width: 34px; height: 34px; transform: translate(-50%, -50%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 10px; font-weight: 950; border: 3px solid rgba(255,255,255,.88); box-shadow: 0 5px 18px rgba(0,0,0,.50); z-index: 3; }
+    .inspectionMarker.old { background: #ca8a04; cursor: help; }
+    .inspectionMarker.new { background: #dc2626; cursor: pointer; animation: markerPop .18s ease-out; }
+    @keyframes markerPop { from { transform: translate(-50%, -50%) scale(.55); opacity: .2; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+    .inspectionMarker small { position: absolute; top: 31px; left: 50%; transform: translateX(-50%); padding: 3px 6px; border-radius: 7px; background: rgba(0,0,0,.76); color: #fff; font-size: 6px; font-weight: 950; white-space: nowrap; pointer-events: none; }
+    .damageList { display: grid; gap: 8px; max-height: 360px; overflow-y: auto; }
+    .damageItem { display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: center; padding: 10px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255,255,255,.035); }
+    .damageDot { width: 12px; height: 12px; border-radius: 50%; }
+    .damageDot.old { background: #eab308; }
+    .damageDot.new { background: #ef4444; }
+    .damageItem strong { display: block; color: var(--text); font-size: 9px; font-weight: 950; text-transform: uppercase; }
+    .damageItem span { display: block; margin-top: 2px; color: var(--muted); font-size: 7px; font-weight: 850; text-transform: uppercase; }
+    .damageRemove { width: 31px; height: 31px; border-radius: 10px; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25); color: #fca5a5; font-size: 15px; font-weight: 950; }
+    .inspectionEmpty { padding: 22px 12px; border-radius: 15px; border: 1px dashed var(--border); color: var(--muted); text-align: center; font-size: 8px; font-weight: 900; text-transform: uppercase; line-height: 1.5; }
+    .inspectionLegend { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 10px; color: var(--muted); font-size: 7px; font-weight: 900; text-transform: uppercase; }
+    .inspectionLegend span { display: inline-flex; align-items: center; gap: 5px; }
+    .inspectionLegend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .inspectionFooter { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; margin-top: 15px; }
+    .inspectionFooter .confirm { min-height: 54px; }
+    body.theme-light .inspectionSummary { background: linear-gradient(135deg, rgba(239,246,255,.96), rgba(250,245,255,.96)); border-color: rgba(37,99,235,.20); }
+    body.theme-light .inspectionSummaryTitle { color: #175cd3; }
+    body.theme-light .inspectionDrawerBox { background: #fff; border-color: rgba(37,99,235,.20); }
+    body.theme-light .inspectionPanel, body.theme-light .damageItem { background: rgba(248,250,252,.92); }
+    body.theme-light .inspectionCanvas { background: linear-gradient(rgba(37,99,235,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(37,99,235,.06) 1px, transparent 1px), radial-gradient(circle at center, rgba(56,189,248,.09), transparent 65%), #f8fafc; background-size: 28px 28px, 28px 28px, auto, auto; }
+    body.theme-light .carBodyFill { fill: rgba(100,116,139,.09); stroke: #64748b; }
+    body.theme-light .carDetail { stroke: rgba(51,65,85,.68); }
+    body.theme-light .inspectionBadge { background: #fff; color: #344054; }
+    @media (max-width: 980px) {
+      .inspectionGrid { grid-template-columns: 1fr; }
+      .viewGrid { grid-template-columns: repeat(5, 1fr); }
+      .damageTypeGrid { grid-template-columns: repeat(3, 1fr); }
+      .damageList { max-height: 210px; }
+    }
+    @media (max-width: 650px) {
+      .inspectionSummary { grid-template-columns: 1fr; }
+      .inspectionOpenBtn { width: 100%; }
+      .inspectionHeader { flex-direction: column; }
+      .inspectionPlate { width: 100%; }
+      .viewGrid { grid-template-columns: repeat(2, 1fr); }
+      .damageTypeGrid { grid-template-columns: repeat(2, 1fr); }
+      .inspectionCanvas { min-height: 260px; }
+      .inspectionFooter { grid-template-columns: 1fr; }
+    }
     body.theme-light .dangerText { color: #b42318; }
     @media (max-width: 860px) {
       body { padding: 12px; }
@@ -630,7 +741,7 @@
     }
   </style>
 </head>
-<body data-build="38">
+<body data-build="42">
   <div id="vallet-mobile-bloqueio" class="deviceOverlay" aria-live="assertive" role="alert">
     <div class="deviceCard">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
@@ -814,6 +925,19 @@
             </div>
           </div>
 
+          <div id="vistoriaResumo" class="inspectionSummary">
+            <div class="inspectionSummaryMain">
+              <div class="inspectionSummaryTitle">Vistoria visual de avarias</div>
+              <div id="vistoriaResumoTexto" class="inspectionSummaryText">Informe uma placa válida para iniciar a vistoria.</div>
+              <div class="inspectionBadges">
+                <span id="vistoriaBadgeHistoricas" class="inspectionBadge old">0 anteriores</span>
+                <span id="vistoriaBadgeNovas" class="inspectionBadge new">0 novas</span>
+                <span id="vistoriaBadgeStatus" class="inspectionBadge">Pendente</span>
+              </div>
+            </div>
+            <button id="btnAbrirVistoria" type="button" class="btn blue inspectionOpenBtn" onclick="abrirVistoriaAvarias()">Abrir vistoria</button>
+          </div>
+
           <div class="row" style="margin-top:4px;">
             <button id="btnReceberImprimir" class="btn yellow full" onclick="receberVeiculo(true)">Receber e imprimir</button>
           </div>
@@ -971,6 +1095,68 @@
     </section>
   </div>
 
+  <div id="modalVistoriaAvarias" class="drawer inspectionDrawer" role="dialog" aria-modal="true" aria-labelledby="tituloVistoriaAvarias">
+    <div class="inspectionDrawerBox">
+      <div class="inspectionHeader">
+        <div>
+          <h2 id="tituloVistoriaAvarias">Vistoria de avarias</h2>
+          <p>Selecione o tipo e a vista. Depois clique no ponto exato do desenho.</p>
+        </div>
+        <div id="vistoriaModalPlaca" class="inspectionPlate">---</div>
+      </div>
+
+      <div class="inspectionGrid">
+        <div class="inspectionPanel">
+          <div class="inspectionPanelTitle">1. Tipo de avaria</div>
+          <div id="damageTypeGrid" class="damageTypeGrid">
+            <button type="button" class="damageTypeBtn active" data-damage-type="RISCO" onclick="selecionarTipoAvaria('RISCO')">〰️ Risco</button>
+            <button type="button" class="damageTypeBtn" data-damage-type="AMASSADO" onclick="selecionarTipoAvaria('AMASSADO')">◉ Amassado</button>
+            <button type="button" class="damageTypeBtn" data-damage-type="TRINCA" onclick="selecionarTipoAvaria('TRINCA')">⚡ Trinca</button>
+            <button type="button" class="damageTypeBtn" data-damage-type="QUEBRADO" onclick="selecionarTipoAvaria('QUEBRADO')">✖ Quebrado</button>
+            <button type="button" class="damageTypeBtn" data-damage-type="PINTURA" onclick="selecionarTipoAvaria('PINTURA')">🎨 Pintura</button>
+            <button type="button" class="damageTypeBtn" data-damage-type="OUTRO" onclick="selecionarTipoAvaria('OUTRO')">＋ Outro</button>
+          </div>
+
+          <div class="inspectionPanelTitle" style="margin-top:16px">2. Vista do veículo</div>
+          <div id="viewGrid" class="viewGrid">
+            <button type="button" class="viewBtn active" data-view="ESQUERDA" onclick="selecionarVistaVistoria('ESQUERDA')">Lateral esquerda</button>
+            <button type="button" class="viewBtn" data-view="DIREITA" onclick="selecionarVistaVistoria('DIREITA')">Lateral direita</button>
+            <button type="button" class="viewBtn" data-view="FRENTE" onclick="selecionarVistaVistoria('FRENTE')">Frente</button>
+            <button type="button" class="viewBtn" data-view="TRASEIRA" onclick="selecionarVistaVistoria('TRASEIRA')">Traseira</button>
+            <button type="button" class="viewBtn" data-view="SUPERIOR" onclick="selecionarVistaVistoria('SUPERIOR')">Vista superior</button>
+          </div>
+        </div>
+
+        <div class="inspectionCanvasWrap">
+          <div class="inspectionCanvasHint">
+            <span id="vistoriaVistaTitulo">Lateral esquerda</span>
+            <span id="vistoriaTipoTitulo">Marcando: risco</span>
+          </div>
+          <div id="vistoriaCanvas" class="inspectionCanvas" onclick="marcarAvariaNoDesenho(event)">
+            <div id="vistoriaCarSvg" class="carSvgLayer"></div>
+            <div id="vistoriaMarkers" class="inspectionMarkers"></div>
+          </div>
+          <div class="inspectionLegend">
+            <span><i style="background:#eab308"></i> Avaria já conhecida</span>
+            <span><i style="background:#ef4444"></i> Nova avaria desta entrada</span>
+            <span>Clique em uma marca vermelha para excluir</span>
+          </div>
+        </div>
+
+        <div class="inspectionPanel">
+          <div class="inspectionPanelTitle">Avarias nesta vista</div>
+          <div id="vistoriaListaAvarias" class="damageList"></div>
+        </div>
+      </div>
+
+      <div class="inspectionFooter">
+        <button type="button" class="btn ghost" onclick="desfazerUltimaAvaria()">Desfazer última</button>
+        <button type="button" class="btn red" onclick="limparNovasAvarias()">Limpar novas</button>
+        <button id="btnConfirmarVistoria" type="button" class="btn green confirm" onclick="confirmarVistoriaAvarias()">Confirmar vistoria</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modalLocalizacao" class="drawer">
     <div class="drawerBox">
       <div class="title"><div><h2>Atualizar localização</h2><p>Informe onde o veículo está ou para onde foi movido.</p></div></div>
@@ -1123,6 +1309,13 @@
     let operadorAtual = null;
     let sincronizando = false;
     let atendimentoEdicaoAtivaId = null;
+    let vistoriaPlacaAtual = '';
+    let vistoriaVistaAtual = 'ESQUERDA';
+    let vistoriaTipoAtual = 'RISCO';
+    let vistoriaAvariasHistoricas = [];
+    let vistoriaAvariasNovas = [];
+    let vistoriaConfirmada = false;
+    let vistoriaRealizadaEm = '';
 
     const $ = (id) => document.getElementById(id);
     const agoraISO = () => new Date().toISOString();
@@ -2224,6 +2417,9 @@
       } else {
         partes.push('<div>Sem visitas anteriores registradas nesta placa.</div>');
       }
+      const avariasAtivas = normalizarListaAvarias(v.avarias_ativas || v.vistoria_avarias_ativas || []);
+      if (avariasAtivas.length) partes.push(`<div class="dangerLine"><b>Avarias conhecidas:</b> ${avariasAtivas.length} • carregadas automaticamente na vistoria.</div>`);
+      else partes.push('<div><b>Avarias conhecidas:</b> nenhuma registrada.</div>');
       return partes.join('');
     }
 
@@ -2265,6 +2461,10 @@
         ultima_ocorrencia_operador: '',
         ocorrencias: [],
         historico_observacoes: historicoObs,
+        avarias_ativas: normalizarListaAvarias(atendimento.vistoria_avarias_ativas || antigo.avarias_ativas || []),
+        vistoria_atualizada_em: atendimento.vistoria_realizada_em || antigo.vistoria_atualizada_em || '',
+        vistoria_ultimo_operador: atendimento.vistoria_operador || antigo.vistoria_ultimo_operador || '',
+        vistoria_ultimo_atendimento_id: atendimento.id || antigo.vistoria_ultimo_atendimento_id || '',
         atualizado_em: quando,
         origem_dispositivo: deviceId()
       };
@@ -2358,6 +2558,9 @@
         cliente_nome: normalize(data.cliente_nome || antigo.cliente_nome),
         cliente_tel: String(data.cliente_tel || antigo.cliente_tel || '').trim(),
         obs: normalize(data.obs || antigo.obs),
+        avarias_ativas: Array.isArray(data.avarias_ativas) ? normalizarListaAvarias(data.avarias_ativas) : normalizarListaAvarias(antigo.avarias_ativas || []),
+        vistoria_atualizada_em: data.vistoria_atualizada_em || antigo.vistoria_atualizada_em || '',
+        vistoria_ultimo_operador: data.vistoria_ultimo_operador || antigo.vistoria_ultimo_operador || '',
         criado_em: antigo.criado_em || agoraISO(),
         atualizado_em: agoraISO(),
         origem_dispositivo: deviceId()
@@ -2383,14 +2586,263 @@
       } catch (e) { toast(e.message); }
     }
 
+    const ROTULOS_VISTA_AVARIA = {
+      ESQUERDA: 'Lateral esquerda',
+      DIREITA: 'Lateral direita',
+      FRENTE: 'Frente',
+      TRASEIRA: 'Traseira',
+      SUPERIOR: 'Vista superior'
+    };
+    const ROTULOS_TIPO_AVARIA = {
+      RISCO: 'Risco',
+      AMASSADO: 'Amassado',
+      TRINCA: 'Trinca',
+      QUEBRADO: 'Quebrado',
+      PINTURA: 'Pintura danificada',
+      OUTRO: 'Outra avaria'
+    };
+
+    function normalizarListaAvarias(lista) {
+      if (!Array.isArray(lista)) return [];
+      return lista.map((a, indice) => ({
+        id: String(a?.id || `av_${Date.now()}_${indice}_${Math.random().toString(36).slice(2,6)}`),
+        vista: ROTULOS_VISTA_AVARIA[normalize(a?.vista)] ? normalize(a.vista) : 'ESQUERDA',
+        tipo: ROTULOS_TIPO_AVARIA[normalize(a?.tipo)] ? normalize(a.tipo) : 'OUTRO',
+        x: Math.max(2, Math.min(98, Number(a?.x) || 50)),
+        y: Math.max(4, Math.min(94, Number(a?.y) || 50)),
+        criado_em: a?.criado_em || '',
+        operador: normalize(a?.operador || ''),
+        atendimento_id: a?.atendimento_id || '',
+        ticket: a?.ticket || ''
+      }));
+    }
+
+    function copiarAvarias(lista) {
+      return normalizarListaAvarias(lista).map(a => ({ ...a }));
+    }
+
+    function todasAvariasVistoria() {
+      return [...copiarAvarias(vistoriaAvariasHistoricas), ...copiarAvarias(vistoriaAvariasNovas)];
+    }
+
+    function resetarVistoriaAvarias() {
+      vistoriaPlacaAtual = '';
+      vistoriaVistaAtual = 'ESQUERDA';
+      vistoriaTipoAtual = 'RISCO';
+      vistoriaAvariasHistoricas = [];
+      vistoriaAvariasNovas = [];
+      vistoriaConfirmada = false;
+      vistoriaRealizadaEm = '';
+      atualizarResumoVistoria();
+    }
+
+    function prepararVistoriaPlaca(placa, veiculo = null) {
+      const p = normPlaca(placa);
+      if (!p) return resetarVistoriaAvarias();
+      if (vistoriaPlacaAtual === p) return atualizarResumoVistoria();
+      vistoriaPlacaAtual = p;
+      vistoriaVistaAtual = 'ESQUERDA';
+      vistoriaTipoAtual = 'RISCO';
+      const origem = veiculo || getVeiculoPorPlaca(p) || {};
+      vistoriaAvariasHistoricas = copiarAvarias(origem.avarias_ativas || origem.vistoria_avarias_ativas || []);
+      vistoriaAvariasNovas = [];
+      vistoriaConfirmada = false;
+      vistoriaRealizadaEm = '';
+      atualizarResumoVistoria();
+    }
+
+    function atualizarResumoVistoria() {
+      const texto = $('vistoriaResumoTexto');
+      const bOld = $('vistoriaBadgeHistoricas');
+      const bNew = $('vistoriaBadgeNovas');
+      const bStatus = $('vistoriaBadgeStatus');
+      const btn = $('btnAbrirVistoria');
+      if (!texto || !bOld || !bNew || !bStatus || !btn) return;
+      const placaCampo = formatarEntradaPlaca($('placa')?.value || '');
+      const placaPronta = placaCampo.length === 7 && placaValida(placaCampo);
+      bOld.textContent = `${vistoriaAvariasHistoricas.length} anteriores`;
+      bNew.textContent = `${vistoriaAvariasNovas.length} novas`;
+      bStatus.className = `inspectionBadge${vistoriaConfirmada ? ' ok' : ''}`;
+      bStatus.textContent = vistoriaConfirmada ? 'Vistoria confirmada' : 'Vistoria pendente';
+      btn.disabled = !placaPronta;
+      if (!placaPronta) {
+        texto.textContent = 'Informe uma placa válida para iniciar a vistoria.';
+      } else if (vistoriaConfirmada) {
+        const total = vistoriaAvariasHistoricas.length + vistoriaAvariasNovas.length;
+        texto.textContent = total ? `${total} avaria(s) confirmada(s) para esta entrada.` : 'Vistoria confirmada sem avarias registradas.';
+      } else if (vistoriaAvariasHistoricas.length) {
+        texto.textContent = 'Avarias anteriores carregadas. Abra o desenho, confira e marque novas avarias.';
+      } else {
+        texto.textContent = 'Abra o desenho para registrar avarias ou confirmar que o veículo está sem avarias.';
+      }
+    }
+
+    function svgCarroVistoria(vista) {
+      if (vista === 'FRENTE' || vista === 'TRASEIRA') {
+        const traseira = vista === 'TRASEIRA';
+        return `<svg viewBox="0 0 700 380" role="img" aria-label="${ROTULOS_VISTA_AVARIA[vista]}">
+          <path class="carBodyFill" d="M145 298 Q126 286 132 252 L166 124 Q176 86 218 72 Q350 35 482 72 Q524 86 534 124 L568 252 Q574 286 555 298 Q350 337 145 298 Z"/>
+          <path class="carGlassFill" d="M215 101 Q350 64 485 101 L507 178 Q350 151 193 178 Z"/>
+          <path class="carDetail" d="M174 211 Q350 181 526 211 M183 270 Q350 295 517 270 M350 76 L350 177"/>
+          <rect class="${traseira ? 'carTail' : 'carLight'}" x="158" y="215" width="104" height="42" rx="18"/>
+          <rect class="${traseira ? 'carTail' : 'carLight'}" x="438" y="215" width="104" height="42" rx="18"/>
+          <rect class="carDetail" x="310" y="238" width="80" height="35" rx="8"/>
+          <path class="carDetail" d="M145 300 L115 316 M555 300 L585 316"/>
+        </svg>`;
+      }
+      if (vista === 'SUPERIOR') {
+        return `<svg viewBox="0 0 700 380" role="img" aria-label="Vista superior">
+          <path class="carBodyFill" d="M180 49 Q350 15 520 49 Q565 60 579 108 L603 269 Q609 315 562 332 Q350 373 138 332 Q91 315 97 269 L121 108 Q135 60 180 49 Z"/>
+          <path class="carGlassFill" d="M226 75 Q350 49 474 75 L497 143 Q350 123 203 143 Z"/>
+          <path class="carGlassFill" d="M203 237 Q350 257 497 237 L474 306 Q350 332 226 306 Z"/>
+          <path class="carDetail" d="M196 158 L504 158 M196 222 L504 222 M350 55 L350 326"/>
+          <path class="carDetail" d="M146 113 L184 135 M554 113 L516 135 M146 269 L184 247 M554 269 L516 247"/>
+        </svg>`;
+      }
+      const direita = vista === 'DIREITA';
+      return `<svg viewBox="0 0 760 380" role="img" aria-label="${ROTULOS_VISTA_AVARIA[vista]}">
+        <g ${direita ? 'transform="translate(760 0) scale(-1 1)"' : ''}>
+          <path class="carBodyFill" d="M88 266 Q78 245 99 221 L152 190 L231 102 Q251 79 285 75 L454 75 Q488 78 513 101 L575 174 L662 202 Q692 212 698 241 L696 278 L628 290 Q610 332 561 332 Q513 332 492 291 L255 291 Q235 332 186 332 Q136 332 119 291 L89 286 Z"/>
+          <path class="carGlassFill" d="M267 102 L359 98 L357 181 L198 181 Z"/>
+          <path class="carGlassFill" d="M379 98 L447 99 Q468 101 485 119 L533 178 L380 181 Z"/>
+          <circle class="carWheel" cx="187" cy="290" r="52"/>
+          <circle class="carWheel" cx="562" cy="290" r="52"/>
+          <circle class="carDetail" cx="187" cy="290" r="24"/>
+          <circle class="carDetail" cx="562" cy="290" r="24"/>
+          <path class="carDetail" d="M359 98 L359 263 M379 98 L379 263 M153 190 L575 174 M255 263 L492 263"/>
+          <rect class="carLight" x="625" y="207" width="55" height="31" rx="12"/>
+          <rect class="carTail" x="99" y="219" width="48" height="32" rx="11"/>
+          <path class="carDetail" d="M402 203 L447 203"/>
+        </g>
+      </svg>`;
+    }
+
+    function abrirVistoriaAvarias() {
+      const placa = obterPlacaValida($('placa').value);
+      if (!placa) return;
+      $('placa').value = placa;
+      prepararVistoriaPlaca(placa, getVeiculoPorPlaca(placa));
+      $('vistoriaModalPlaca').textContent = placa;
+      $('modalVistoriaAvarias').classList.add('show');
+      renderVistoriaAvarias();
+    }
+
+    function fecharVistoriaAvarias() {
+      $('modalVistoriaAvarias').classList.remove('show');
+    }
+
+    function selecionarTipoAvaria(tipo) {
+      vistoriaTipoAtual = ROTULOS_TIPO_AVARIA[normalize(tipo)] ? normalize(tipo) : 'OUTRO';
+      renderVistoriaAvarias();
+    }
+
+    function selecionarVistaVistoria(vista) {
+      vistoriaVistaAtual = ROTULOS_VISTA_AVARIA[normalize(vista)] ? normalize(vista) : 'ESQUERDA';
+      renderVistoriaAvarias();
+    }
+
+    function marcarAvariaNoDesenho(event) {
+      if (event.target.closest('.inspectionMarker')) return;
+      const canvas = $('vistoriaCanvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const x = Math.max(2, Math.min(98, ((event.clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(4, Math.min(94, ((event.clientY - rect.top) / rect.height) * 100));
+      vistoriaAvariasNovas.push({
+        id: `av_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+        vista: vistoriaVistaAtual,
+        tipo: vistoriaTipoAtual,
+        x: Number(x.toFixed(2)),
+        y: Number(y.toFixed(2)),
+        criado_em: agoraISO(),
+        operador: getOperador()
+      });
+      vistoriaConfirmada = false;
+      renderVistoriaAvarias();
+      atualizarResumoVistoria();
+    }
+
+    function removerAvariaNova(id, event = null) {
+      if (event) event.stopPropagation();
+      vistoriaAvariasNovas = vistoriaAvariasNovas.filter(a => a.id !== id);
+      vistoriaConfirmada = false;
+      renderVistoriaAvarias();
+      atualizarResumoVistoria();
+    }
+
+    function desfazerUltimaAvaria() {
+      if (!vistoriaAvariasNovas.length) return toast('Nenhuma nova avaria para desfazer.');
+      vistoriaAvariasNovas.pop();
+      vistoriaConfirmada = false;
+      renderVistoriaAvarias();
+      atualizarResumoVistoria();
+    }
+
+    function limparNovasAvarias() {
+      if (!vistoriaAvariasNovas.length) return toast('Nenhuma nova avaria registrada.');
+      if (!confirm('Remover todas as novas avarias marcadas nesta vistoria?')) return;
+      vistoriaAvariasNovas = [];
+      vistoriaConfirmada = false;
+      renderVistoriaAvarias();
+      atualizarResumoVistoria();
+    }
+
+    function confirmarVistoriaAvarias() {
+      const placa = obterPlacaValida($('placa').value);
+      if (!placa) return;
+      if (placa !== vistoriaPlacaAtual) prepararVistoriaPlaca(placa, getVeiculoPorPlaca(placa));
+      vistoriaConfirmada = true;
+      vistoriaRealizadaEm = agoraISO();
+      atualizarResumoVistoria();
+      fecharVistoriaAvarias();
+      const total = vistoriaAvariasHistoricas.length + vistoriaAvariasNovas.length;
+      toast(total ? `Vistoria confirmada com ${total} avaria(s).` : 'Vistoria confirmada sem avarias.', true);
+    }
+
+    function renderVistoriaAvarias() {
+      document.querySelectorAll('[data-damage-type]').forEach(btn => btn.classList.toggle('active', btn.dataset.damageType === vistoriaTipoAtual));
+      document.querySelectorAll('[data-view]').forEach(btn => btn.classList.toggle('active', btn.dataset.view === vistoriaVistaAtual));
+      $('vistoriaVistaTitulo').textContent = ROTULOS_VISTA_AVARIA[vistoriaVistaAtual] || vistoriaVistaAtual;
+      $('vistoriaTipoTitulo').textContent = `Marcando: ${(ROTULOS_TIPO_AVARIA[vistoriaTipoAtual] || vistoriaTipoAtual).toLowerCase()}`;
+      $('vistoriaCarSvg').innerHTML = svgCarroVistoria(vistoriaVistaAtual);
+
+      const historicasVista = vistoriaAvariasHistoricas.filter(a => a.vista === vistoriaVistaAtual);
+      const novasVista = vistoriaAvariasNovas.filter(a => a.vista === vistoriaVistaAtual);
+      const marcadores = [
+        ...historicasVista.map((a, i) => ({ ...a, origem: 'old', numero: i + 1 })),
+        ...novasVista.map((a, i) => ({ ...a, origem: 'new', numero: historicasVista.length + i + 1 }))
+      ];
+      $('vistoriaMarkers').innerHTML = marcadores.map(a => {
+        const titulo = `${ROTULOS_TIPO_AVARIA[a.tipo] || a.tipo} • ${a.origem === 'old' ? 'Avaria anterior' : 'Nova avaria'}`;
+        const acao = a.origem === 'new' ? `onclick="removerAvariaNova('${a.id}', event)"` : '';
+        return `<button type="button" class="inspectionMarker ${a.origem}" style="left:${a.x}%;top:${a.y}%" title="${titulo}" ${acao}>${a.numero}<small>${a.origem === 'old' ? 'ANTIGA' : 'NOVA'}</small></button>`;
+      }).join('');
+
+      const itens = marcadores;
+      $('vistoriaListaAvarias').innerHTML = itens.length ? itens.map(a => `
+        <div class="damageItem">
+          <i class="damageDot ${a.origem}"></i>
+          <div><strong>${ROTULOS_TIPO_AVARIA[a.tipo] || a.tipo}</strong><span>${a.origem === 'old' ? 'Avaria já conhecida' : 'Nova nesta entrada'}</span></div>
+          ${a.origem === 'new' ? `<button type="button" class="damageRemove" onclick="removerAvariaNova('${a.id}', event)" title="Excluir marca">×</button>` : '<span></span>'}
+        </div>`).join('') : '<div class="inspectionEmpty">Nenhuma avaria marcada nesta vista.</div>';
+
+      const total = vistoriaAvariasHistoricas.length + vistoriaAvariasNovas.length;
+      $('btnConfirmarVistoria').textContent = total ? `Confirmar vistoria • ${total} avaria(s)` : 'Confirmar sem avarias';
+    }
+
     function aoDigitarPlaca() {
       normalizarCampoPlaca('placa');
       const placa = formatarEntradaPlaca($('placa').value);
       $('avisoVeiculoNovo').classList.add('hidden');
       $('avisoVeiculoEncontrado').classList.add('hidden');
-      if (placa.length < 7) return;
-      if (!placaValida(placa)) return;
+      if (placa.length < 7 || !placaValida(placa)) {
+        if (vistoriaPlacaAtual && vistoriaPlacaAtual !== placa) resetarVistoriaAvarias();
+        atualizarResumoVistoria();
+        return;
+      }
       const v = getVeiculoPorPlaca(placa);
+      prepararVistoriaPlaca(placa, v);
       if (v) {
         $('modelo').value = v.modelo || '';
         $('cor').value = v.cor || '';
@@ -2402,6 +2854,7 @@
       } else {
         $('avisoVeiculoNovo').classList.remove('hidden');
       }
+      atualizarResumoVistoria();
       renderChipsPadrao();
     }
 
@@ -2417,6 +2870,11 @@
       if (!setor) return toast('Selecione o setor onde o veículo ficará.');
       if (!normalize($('modelo').value)) return toast('Escolha ou informe o modelo do veículo.');
       if (!normalize($('cor').value)) return toast('Escolha a cor do veículo.');
+      if (vistoriaPlacaAtual !== placa) prepararVistoriaPlaca(placa, getVeiculoPorPlaca(placa));
+      if (!vistoriaConfirmada) {
+        abrirVistoriaAvarias();
+        return toast('Confirme a vistoria de avarias antes de receber e imprimir.');
+      }
 
       const duplicado = buscarAtendimentoAtivoPorPlaca(placa);
       if (duplicado) {
@@ -2435,7 +2893,10 @@
           cor: $('cor').value,
           cliente_nome: $('clienteNome').value,
           cliente_tel: $('clienteTel').value,
-          obs: $('obs').value
+          obs: $('obs').value,
+          avarias_ativas: todasAvariasVistoria(),
+          vistoria_atualizada_em: vistoriaRealizadaEm || agoraISO(),
+          vistoria_ultimo_operador: getOperador()
         });
         const atendimento = {
           id,
@@ -2459,6 +2920,15 @@
           setor_nome: setor.nome,
           vaga: normalize($('vaga').value),
           obs: normalize($('obs').value),
+          vistoria_confirmada: true,
+          vistoria_realizada_em: vistoriaRealizadaEm || agoraISO(),
+          vistoria_operador: getOperador(),
+          vistoria_avarias_anteriores: copiarAvarias(vistoriaAvariasHistoricas),
+          vistoria_avarias_novas: copiarAvarias(vistoriaAvariasNovas),
+          vistoria_avarias_ativas: todasAvariasVistoria(),
+          vistoria_total_anteriores: vistoriaAvariasHistoricas.length,
+          vistoria_total_novas: vistoriaAvariasNovas.length,
+          vistoria_total_avarias: vistoriaAvariasHistoricas.length + vistoriaAvariasNovas.length,
           status: 'RECEBIDO',
           ativo: true,
           operador_recebimento: getOperador(),
@@ -2487,6 +2957,7 @@
       ['placa','modelo','cor','clienteNome','clienteTel','vaga','obs'].forEach(id => $(id).value = '');
       $('avisoVeiculoNovo').classList.add('hidden');
       $('avisoVeiculoEncontrado').classList.add('hidden');
+      resetarVistoriaAvarias();
     }
 
     async function atualizarAtendimento(id, patch, movimentoTipo, descricao='') {
@@ -2927,7 +3398,7 @@
       if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
-    const VALLET_BUILD_VERSION = '38';
+    const VALLET_BUILD_VERSION = '42';
 
     async function prepararAtualizacaoPWA() {
       try {
@@ -2962,7 +3433,7 @@
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=38', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=42', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -2996,7 +3467,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=38', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=42', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
@@ -3015,6 +3486,13 @@
     window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await puxarFirebase(); await carregarLocal(); await iniciarMonitorConfiguracaoVallet(); await atualizarTicketPreview(); atualizarControleHorarioVallet({ forcarTela: true }); });
     window.addEventListener('offline', () => { atualizarStatus(); toast('Sem internet. Salvando neste aparelho.'); });
     window.addEventListener('afterprint', () => { const t = document.getElementById('ticketImpressao'); if (t) t.setAttribute('aria-hidden', 'true'); });
+    document.addEventListener('click', (event) => {
+      if (event.target === $('modalVistoriaAvarias')) fecharVistoriaAvarias();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && $('modalVistoriaAvarias')?.classList.contains('show')) fecharVistoriaAvarias();
+    });
+    window.addEventListener('DOMContentLoaded', () => atualizarResumoVistoria());
     window.addEventListener('DOMContentLoaded', iniciar);
   </script>
 </body>
