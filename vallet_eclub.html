@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB Vallet • v43</title>
-  <!-- E-CLUB Vallet v46: solicitados consultáveis + vistoria finaliza entrada e impressão -->
+  <!-- E-CLUB Vallet v48: vistoria automática, resumo oculto e vistas destacadas por avarias -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -611,6 +611,34 @@
     .inspectionBadge.new { color: #fecaca; border-color: rgba(239,68,68,.30); background: rgba(239,68,68,.08); }
     .inspectionBadge.ok { color: #86efac; border-color: rgba(34,197,94,.30); background: rgba(34,197,94,.08); }
     .inspectionOpenBtn { min-width: 190px; min-height: 54px; }
+    /* v48: o resumo de vistoria não aparece mais no formulário; a vistoria abre direto ao receber e imprimir. */
+    #vistoriaResumo { display: none !important; }
+
+    .viewBtn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+    .viewBtnLabel { display: block; }
+    .viewDamageBadges { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px; width: 100%; }
+    .viewDamageBadge { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; min-height: 18px; padding: 3px 7px; border-radius: 999px; font-size: 7px; font-weight: 950; letter-spacing: .04em; line-height: 1; color: #fff; border: 1px solid rgba(255,255,255,.18); }
+    .viewDamageBadge.old { background: #ca8a04; }
+    .viewDamageBadge.new { background: #dc2626; }
+    .viewDamageBadge.repaired { background: #64748b; }
+    .viewDamageEmpty { font-size: 6.5px; color: rgba(148,163,184,.68); letter-spacing: .10em; }
+    .viewBtn.hasOld { border-color: rgba(234,179,8,.60); background: rgba(234,179,8,.12); color: #fde68a; }
+    .viewBtn.hasNew { border-color: rgba(239,68,68,.66); background: rgba(239,68,68,.14); color: #fecaca; }
+    .viewBtn.hasRepaired { border-color: rgba(100,116,139,.72); background: rgba(100,116,139,.15); color: #cbd5e1; }
+    .viewBtn.hasMixed { border-color: rgba(168,85,247,.70); background: linear-gradient(135deg, rgba(234,179,8,.13), rgba(239,68,68,.12), rgba(56,189,248,.10)); color: #f8fafc; }
+    .viewBtn.active { box-shadow: 0 0 0 2px rgba(56,189,248,.16), inset 0 0 0 1px rgba(255,255,255,.06); }
+    .viewBtn.active.hasOld { border-color: rgba(234,179,8,.95); box-shadow: 0 0 0 2px rgba(234,179,8,.16); }
+    .viewBtn.active.hasNew { border-color: rgba(239,68,68,.95); box-shadow: 0 0 0 2px rgba(239,68,68,.16); }
+    .viewBtn.active.hasRepaired { border-color: rgba(100,116,139,.95); box-shadow: 0 0 0 2px rgba(100,116,139,.16); }
+    .viewBtn.active.hasMixed { border-color: rgba(168,85,247,.95); box-shadow: 0 0 0 2px rgba(168,85,247,.16); }
 
     .inspectionDrawer { align-items: center; padding: 18px; overflow-y: auto; }
     .inspectionDrawerBox { width: min(100%, 1040px); max-height: calc(100vh - 36px); overflow-y: auto; background: #0a0a10; border: 1px solid rgba(56,189,248,.24); border-radius: 30px; padding: 22px; box-shadow: 0 28px 90px rgba(0,0,0,.58); }
@@ -768,7 +796,7 @@
     }
   </style>
 </head>
-<body data-build="42">
+<body data-build="48">
   <div id="vallet-mobile-bloqueio" class="deviceOverlay" aria-live="assertive" role="alert">
     <div class="deviceCard">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
@@ -2685,6 +2713,54 @@
       return [...avariasHistoricasAtivas(), ...copiarAvarias(vistoriaAvariasNovas)];
     }
 
+    function resumoAvariasPorVista() {
+      const resumo = {};
+      Object.keys(ROTULOS_VISTA_AVARIA).forEach(vista => { resumo[vista] = { old: 0, new: 0, repaired: 0, total: 0 }; });
+      const reparadas = idsAvariasReparadas();
+      vistoriaAvariasHistoricas.forEach(a => {
+        if (!resumo[a.vista]) return;
+        if (reparadas.has(String(a.id))) resumo[a.vista].repaired += 1;
+        else resumo[a.vista].old += 1;
+      });
+      vistoriaAvariasNovas.forEach(a => {
+        if (!resumo[a.vista]) return;
+        resumo[a.vista].new += 1;
+      });
+      Object.values(resumo).forEach(r => { r.total = r.old + r.new + r.repaired; });
+      return resumo;
+    }
+
+    function primeiraVistaComAvaria() {
+      const resumo = resumoAvariasPorVista();
+      return ['ESQUERDA', 'DIREITA', 'FRENTE', 'TRASEIRA', 'SUPERIOR'].find(v => resumo[v] && resumo[v].total > 0) || 'ESQUERDA';
+    }
+
+    function atualizarBotoesVistaVistoria() {
+      const resumo = resumoAvariasPorVista();
+      document.querySelectorAll('[data-view]').forEach(btn => {
+        const vista = btn.dataset.view;
+        const r = resumo[vista] || { old: 0, new: 0, repaired: 0, total: 0 };
+        const gruposAtivos = [r.old > 0, r.new > 0, r.repaired > 0].filter(Boolean).length;
+        btn.classList.toggle('active', vista === vistoriaVistaAtual);
+        btn.classList.toggle('hasOld', r.old > 0 && gruposAtivos === 1);
+        btn.classList.toggle('hasNew', r.new > 0 && gruposAtivos === 1);
+        btn.classList.toggle('hasRepaired', r.repaired > 0 && gruposAtivos === 1);
+        btn.classList.toggle('hasMixed', gruposAtivos > 1);
+
+        const badges = [];
+        if (r.old) badges.push(`<span class="viewDamageBadge old" title="Avarias antigas ativas">${r.old} ANT</span>`);
+        if (r.new) badges.push(`<span class="viewDamageBadge new" title="Novas avarias desta entrada">${r.new} NOVA</span>`);
+        if (r.repaired) badges.push(`<span class="viewDamageBadge repaired" title="Avarias marcadas como reparadas">${r.repaired} REP</span>`);
+
+        btn.innerHTML = `<span class="viewBtnLabel">${ROTULOS_VISTA_AVARIA[vista] || vista}</span>${badges.length ? `<span class="viewDamageBadges">${badges.join('')}</span>` : '<span class="viewDamageEmpty">sem avarias</span>'}`;
+        const partes = [];
+        if (r.old) partes.push(`${r.old} antiga(s)`);
+        if (r.new) partes.push(`${r.new} nova(s)`);
+        if (r.repaired) partes.push(`${r.repaired} reparada(s)`);
+        btn.title = `${ROTULOS_VISTA_AVARIA[vista] || vista}: ${partes.length ? partes.join(' • ') : 'sem avarias'}`;
+      });
+    }
+
     function mesclarHistoricoAvariasReparadas(...listas) {
       const mapa = new Map();
       listas.flat().forEach(item => {
@@ -2803,6 +2879,8 @@
       if (!placa) return;
       $('placa').value = placa;
       prepararVistoriaPlaca(placa, getVeiculoPorPlaca(placa));
+      const primeira = primeiraVistaComAvaria();
+      if (primeira) vistoriaVistaAtual = primeira;
       $('vistoriaModalPlaca').textContent = placa;
       $('modalVistoriaAvarias').classList.add('show');
       renderVistoriaAvarias();
@@ -2933,7 +3011,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
 
     function renderVistoriaAvarias() {
       document.querySelectorAll('[data-damage-type]').forEach(btn => btn.classList.toggle('active', btn.dataset.damageType === vistoriaTipoAtual));
-      document.querySelectorAll('[data-view]').forEach(btn => btn.classList.toggle('active', btn.dataset.view === vistoriaVistaAtual));
+      atualizarBotoesVistaVistoria();
       $('vistoriaVistaTitulo').textContent = ROTULOS_VISTA_AVARIA[vistoriaVistaAtual] || vistoriaVistaAtual;
       $('vistoriaTipoTitulo').textContent = `Marcando: ${(ROTULOS_TIPO_AVARIA[vistoriaTipoAtual] || vistoriaTipoAtual).toLowerCase()}`;
       $('vistoriaCarSvg').innerHTML = svgCarroVistoria(vistoriaVistaAtual);
@@ -3753,7 +3831,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=47', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=48', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -3787,7 +3865,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=47', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=48', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
