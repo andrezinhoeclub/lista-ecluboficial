@@ -197,7 +197,7 @@
     .scheduleAutoStatus { display: inline-flex; align-items: center; justify-content: center; gap: 9px; margin-top: 25px; padding: 11px 15px; border-radius: 999px; background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.22); color: #93c5fd; font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .10em; }
     .scheduleAutoDot { width: 8px; height: 8px; border-radius: 50%; background: #60a5fa; box-shadow: 0 0 0 0 rgba(96,165,250,.45); animation: schedulePulse 1.8s infinite; }
     @keyframes schedulePulse { 0% { box-shadow: 0 0 0 0 rgba(96,165,250,.45); } 70% { box-shadow: 0 0 0 8px rgba(96,165,250,0); } 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); } }
-    .operationScheduleBanner { margin-bottom: 16px; padding: 14px 17px; border-radius: 20px; border: 1px solid rgba(34,197,94,.25); background: rgba(34,197,94,.08); color: #86efac; font-size: 9px; font-weight: 950; text-transform: uppercase; line-height: 1.5; letter-spacing: .06em; }
+    .operationScheduleBanner { display: none !important; margin: 0 !important; padding: 0 !important; height: 0 !important; overflow: hidden !important; }
     .operationScheduleBanner.exitOnly { border-color: rgba(249,115,22,.30); background: rgba(249,115,22,.09); color: #fdba74; }
     .btn[disabled], input[disabled], select[disabled], textarea[disabled] { opacity: .48; cursor: not-allowed; }
     .loginCard {
@@ -318,10 +318,18 @@
     .stat small { display: block; color: var(--muted); font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
     .stat strong { display: block; margin-top: 4px; font-size: 24px; font-weight: 950; }
     .sectorStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; margin: -6px 0 16px; }
-    .sectorStat { border: 1px solid rgba(234,179,8,.18); background: rgba(234,179,8,.055); border-radius: 20px; padding: 13px 14px; min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .sectorStat { border: 1px solid rgba(234,179,8,.18); background: rgba(234,179,8,.055); border-radius: 20px; padding: 13px 14px; min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; color: inherit; }
+    button.sectorStat { cursor: pointer; }
+    button.sectorStat:hover { border-color: rgba(234,179,8,.55); background: rgba(234,179,8,.11); transform: translateY(-1px); }
+    button.sectorStat.active { border-color: rgba(59,130,246,.75); box-shadow: 0 0 0 1px rgba(59,130,246,.22); background: rgba(59,130,246,.10); }
     .sectorStatName { min-width: 0; color: var(--text); font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; line-height: 1.15; overflow-wrap: anywhere; }
     .sectorStatType { display: block; margin-top: 4px; color: var(--muted); font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; }
     .sectorStatCount { min-width: 48px; text-align: right; color: var(--yellow); font-size: 28px; font-weight: 950; line-height: 1; }
+    .sectorConsultHeader { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 16px; border:1px solid rgba(59,130,246,.24); background:rgba(59,130,246,.07); border-radius:18px; margin-bottom:10px; }
+    .sectorConsultHeader strong { display:block; color:var(--text); font-size:13px; font-weight:950; text-transform:uppercase; letter-spacing:.04em; }
+    .sectorConsultHeader span { display:block; color:var(--muted); font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.05em; margin-top:3px; }
+    .sectorConsultClose { border:1px solid rgba(255,255,255,.10); background:rgba(255,255,255,.05); color:var(--muted); border-radius:999px; padding:10px 13px; font-size:9px; font-weight:950; text-transform:uppercase; cursor:pointer; white-space:nowrap; }
+    .sectorConsultClose:hover { color:var(--text); border-color:rgba(255,255,255,.22); }
     .sectorStatEmpty { border-style: dashed; background: rgba(255,255,255,.025); color: var(--muted); justify-content: center; text-align: center; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
     .list { display: grid; gap: 10px; }
     .vehicleCard {
@@ -556,6 +564,7 @@
       border-color: rgba(15,23,42,.12);
     }
     body.theme-light .sectorStat { background: rgba(255,251,235,.88); border-color: rgba(202,138,4,.22); }
+    body.theme-light button.sectorStat.active { background: rgba(219,234,254,.92); border-color: rgba(37,99,235,.45); }
     body.theme-light .sectorStatEmpty { background: rgba(255,255,255,.55); border-color: rgba(15,23,42,.14); }
     body.theme-light .meta { color: #344054; }
     body.theme-light .empty { color: #98a2b3; border-color: rgba(15,23,42,.18); background: rgba(255,255,255,.45); }
@@ -866,7 +875,6 @@
     <datalist id="datalistCores"></datalist>
 
     <section id="tab-atendimento" class="section active">
-      <div id="operationScheduleBanner" class="operationScheduleBanner">Verificando horário e evento...</div>
       <div class="quickStats">
         <div class="stat"><small>Recebidos</small><strong id="kpiRecebido">0</strong></div>
         <div class="stat"><small>Solicitados</small><strong id="kpiSolicitado">0</strong></div>
@@ -1324,6 +1332,7 @@
     let operadores = [];
     let eventosCasa = [];
     let modoTesteValletAtivo = false;
+    let setorOperacaoSelecionado = null;
     let recepcaoValletLiberada = false;
     let modoSomenteSaidaVallet = false;
     let operadorAtual = null;
@@ -3389,6 +3398,11 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       const box = $('resultadoBuscaOperacao');
       if (!box) return;
       const q = normalize($('buscaAtendimentos').value);
+      if (q && setorOperacaoSelecionado) setorOperacaoSelecionado = null;
+      if (setorOperacaoSelecionado && !q) {
+        renderConsultaSetorOperacao();
+        return;
+      }
       if (!q) {
         box.innerHTML = '<div class="empty" style="padding:18px;">Digite para localizar um veículo sem rolar a tela.</div>';
         return;
@@ -3414,12 +3428,72 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       return atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
     }
 
+    function getVeiculosNoPatio() {
+      return getAtendimentosOperacaoAtual().filter(a => a.ativo !== false && a.status !== 'ENTREGUE');
+    }
+
+    function pertenceAoSetorOperacao(a, setorRef) {
+      if (!setorRef) return false;
+      const id = String(a.setor_id || '').trim();
+      const nome = normalize(a.setor_nome || '');
+      if (setorRef.id === '__SEM_SETOR__') return !id && !nome;
+      return (setorRef.id && id === setorRef.id) || (setorRef.nome && nome === normalize(setorRef.nome));
+    }
+
+    function montarCardConsultaSetor(a) {
+      const tagStatus = a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status;
+      return `<div class="vehicleCard operationCard operationListItem">
+        <div class="operationHeader">
+          <div class="operationMain">
+            <div class="ticket">#${a.ticket}</div>
+            <span class="plate">${a.placa}</span>
+            <div class="operationText meta">
+              <strong>${a.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${a.cor || 'COR NÃO INFORMADA'}<br>
+              <span class="muted">${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
+            </div>
+          </div>
+          <span class="tag ${tagStatus}">${tagStatus}</span>
+        </div>
+      </div>`;
+    }
+
+    window.abrirConsultaSetorOperacao = (id, nome) => {
+      setorOperacaoSelecionado = { id: String(id || ''), nome: normalize(nome || '') };
+      if ($('buscaAtendimentos')) $('buscaAtendimentos').value = '';
+      if ($('filtroStatus')) $('filtroStatus').value = 'ativos';
+      renderSetoresOperacao();
+      renderBuscaOperacao();
+      document.getElementById('resultadoBuscaOperacao')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    window.limparConsultaSetorOperacao = () => {
+      setorOperacaoSelecionado = null;
+      renderSetoresOperacao();
+      renderBuscaOperacao();
+    };
+
+    function renderConsultaSetorOperacao() {
+      const box = $('resultadoBuscaOperacao');
+      if (!box || !setorOperacaoSelecionado) return;
+      const nomeVisual = setorOperacaoSelecionado.id === '__SEM_SETOR__' ? 'SEM SETOR' : (setorOperacaoSelecionado.nome || 'SETOR');
+      const lista = getVeiculosNoPatio().filter(a => pertenceAoSetorOperacao(a, setorOperacaoSelecionado));
+      const header = `<div class="sectorConsultHeader">
+        <div><strong>${nomeVisual}</strong><span>${lista.length} veículo${lista.length === 1 ? '' : 's'} no pátio</span></div>
+        <button type="button" class="sectorConsultClose" onclick="limparConsultaSetorOperacao()">Limpar</button>
+      </div>`;
+      if (!lista.length) {
+        box.innerHTML = header + '<div class="empty" style="padding:18px;">Nenhum veículo ativo neste setor.</div>';
+        return;
+      }
+      box.innerHTML = header + lista.map(a => montarCardConsultaSetor(a)).join('');
+    }
+
     function renderSetoresOperacao() {
       const box = $('resumoSetoresOperacao');
       if (!box) return;
 
       const setoresAtivos = setores.filter(s => s.ativo !== false);
-      const veiculosNoPatio = getAtendimentosOperacaoAtual().filter(a => a.ativo !== false && a.status !== 'ENTREGUE');
+      const veiculosNoPatio = getVeiculosNoPatio();
       const contagemPorId = new Map();
       const contagemPorNome = new Map();
       let semSetor = 0;
@@ -3439,16 +3513,18 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
 
       const htmlSetores = setoresAtivos.map(s => {
         const total = (contagemPorId.get(s.id) || 0) + (contagemPorNome.get(normalize(s.nome)) || 0);
-        return `<div class="sectorStat">
+        const ativo = setorOperacaoSelecionado && setorOperacaoSelecionado.id !== '__SEM_SETOR__' && (setorOperacaoSelecionado.id === s.id || normalize(setorOperacaoSelecionado.nome) === normalize(s.nome));
+        return `<button type="button" class="sectorStat${ativo ? ' active' : ''}" onclick="abrirConsultaSetorOperacao(decodeURIComponent('${encodeURIComponent(s.id || '')}'), decodeURIComponent('${encodeURIComponent(s.nome || '')}'))" title="Ver veículos deste setor">
           <div class="sectorStatName">${s.nome}<span class="sectorStatType">${s.tipo || 'SETOR'}</span></div>
           <div class="sectorStatCount">${total}</div>
-        </div>`;
+        </button>`;
       }).join('');
 
-      const htmlSemSetor = semSetor ? `<div class="sectorStat">
+      const semAtivo = setorOperacaoSelecionado && setorOperacaoSelecionado.id === '__SEM_SETOR__';
+      const htmlSemSetor = semSetor ? `<button type="button" class="sectorStat${semAtivo ? ' active' : ''}" onclick="abrirConsultaSetorOperacao('__SEM_SETOR__', 'SEM SETOR')" title="Ver veículos sem setor">
         <div class="sectorStatName">SEM SETOR<span class="sectorStatType">REVISAR</span></div>
         <div class="sectorStatCount">${semSetor}</div>
-      </div>` : '';
+      </button>` : '';
 
       box.innerHTML = htmlSetores + htmlSemSetor;
     }
@@ -3501,7 +3577,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       renderTudo();
     }
 
-    function limparBuscaAtendimento() { $('buscaAtendimentos').value = ''; $('filtroStatus').value = 'ativos'; renderTudo(); }
+    function limparBuscaAtendimento() { setorOperacaoSelecionado = null; $('buscaAtendimentos').value = ''; $('filtroStatus').value = 'ativos'; renderTudo(); }
 
     async function forcarSincronizacao() {
       await processarFila();
@@ -3562,7 +3638,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
-    const VALLET_BUILD_VERSION = '44';
+    const VALLET_BUILD_VERSION = '45';
 
     async function prepararAtualizacaoPWA() {
       try {
@@ -3597,7 +3673,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=44', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=45', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -3631,7 +3707,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=44', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=45', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
