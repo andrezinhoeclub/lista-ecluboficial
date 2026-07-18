@@ -1,7 +1,7 @@
-const CACHE_NAME = 'eclub-vallet-v45';
+const CACHE_NAME = 'eclub-vallet-v46';
 const APP_SHELL = [
-  './vallet_eclub.html?v=45',
-  './vallet_manifest.json?v=45'
+  './vallet_eclub.html?v=46',
+  './vallet_manifest.json?v=46'
 ];
 
 self.addEventListener('install', (event) => {
@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
           return response;
         })
-        .catch(() => caches.match(req).then((cached) => cached || caches.match('./vallet_eclub.html?v=45')))
+        .catch(() => caches.match(req).then((cached) => cached || caches.match('./vallet_eclub.html?v=46')))
     );
     return;
   }

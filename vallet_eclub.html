@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB Vallet • v43</title>
-  <!-- E-CLUB Vallet v43: vistoria visual + baixa de avarias reparadas com histórico -->
+  <!-- E-CLUB Vallet v46: solicitados consultáveis + vistoria finaliza entrada e impressão -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -317,6 +317,9 @@
     .stat { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 22px; padding: 16px; text-align: center; }
     .stat small { display: block; color: var(--muted); font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
     .stat strong { display: block; margin-top: 4px; font-size: 24px; font-weight: 950; }
+    button.stat { width: 100%; color: inherit; font-family: inherit; cursor: pointer; }
+    button.stat:hover { border-color: rgba(249,115,22,.55); background: rgba(249,115,22,.08); transform: translateY(-1px); }
+    button.stat.active { border-color: rgba(249,115,22,.85); box-shadow: 0 0 0 1px rgba(249,115,22,.25); background: rgba(249,115,22,.12); }
     .sectorStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; margin: -6px 0 16px; }
     .sectorStat { border: 1px solid rgba(234,179,8,.18); background: rgba(234,179,8,.055); border-radius: 20px; padding: 13px 14px; min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; color: inherit; }
     button.sectorStat { cursor: pointer; }
@@ -877,7 +880,7 @@
     <section id="tab-atendimento" class="section active">
       <div class="quickStats">
         <div class="stat"><small>Recebidos</small><strong id="kpiRecebido">0</strong></div>
-        <div class="stat"><small>Solicitados</small><strong id="kpiSolicitado">0</strong></div>
+        <button id="statSolicitados" type="button" class="stat" onclick="abrirConsultaSolicitadosOperacao()" title="Ver veículos solicitados"><small>Solicitados</small><strong id="kpiSolicitado">0</strong></button>
         <div class="stat"><small>Entregues hoje</small><strong id="kpiEntregue">0</strong></div>
       </div>
 
@@ -1333,6 +1336,8 @@
     let eventosCasa = [];
     let modoTesteValletAtivo = false;
     let setorOperacaoSelecionado = null;
+    let consultaStatusOperacaoSelecionada = null;
+    let receberAposVistoriaPendente = null;
     let recepcaoValletLiberada = false;
     let modoSomenteSaidaVallet = false;
     let operadorAtual = null;
@@ -2700,6 +2705,7 @@
       vistoriaAvariasReparadas = [];
       vistoriaConfirmada = false;
       vistoriaRealizadaEm = '';
+      receberAposVistoriaPendente = null;
       atualizarResumoVistoria();
     }
 
@@ -2707,6 +2713,7 @@
       const p = normPlaca(placa);
       if (!p) return resetarVistoriaAvarias();
       if (vistoriaPlacaAtual === p) return atualizarResumoVistoria();
+      receberAposVistoriaPendente = null;
       vistoriaPlacaAtual = p;
       vistoriaVistaAtual = 'ESQUERDA';
       vistoriaTipoAtual = 'RISCO';
@@ -2907,6 +2914,18 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       fecharVistoriaAvarias();
       const total = todasAvariasVistoria().length;
       const reparadas = vistoriaAvariasReparadas.length;
+      const pendente = receberAposVistoriaPendente;
+      receberAposVistoriaPendente = null;
+
+      if (pendente && pendente.placa === placa) {
+        if ($('setorAtendimento') && !$('setorAtendimento').value && pendente.setorValue) {
+          $('setorAtendimento').value = pendente.setorValue;
+        }
+        toast('Vistoria confirmada. Finalizando entrada e impressão do cupom...', true);
+        setTimeout(() => receberVeiculo(pendente.imprimir), 80);
+        return;
+      }
+
       toast(total
         ? `Vistoria confirmada com ${total} avaria(s) ativa(s)${reparadas ? ` e ${reparadas} reparada(s)` : ''}.`
         : (reparadas ? `Vistoria confirmada. ${reparadas} avaria(s) marcada(s) como reparada(s).` : 'Vistoria confirmada sem avarias.'), true);
@@ -2998,8 +3017,14 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (!normalize($('cor').value)) return toast('Escolha a cor do veículo.');
       if (vistoriaPlacaAtual !== placa) prepararVistoriaPlaca(placa, getVeiculoPorPlaca(placa));
       if (!vistoriaConfirmada) {
+        receberAposVistoriaPendente = {
+          imprimir: Boolean(imprimirAposSalvar),
+          placa,
+          setorValue: $('setorAtendimento').value,
+          criadoEm: Date.now()
+        };
         abrirVistoriaAvarias();
-        return toast('Confirme a vistoria de avarias antes de receber e imprimir.');
+        return toast('Confirme a vistoria. Ao confirmar, a entrada será finalizada e o cupom será impresso automaticamente.');
       }
 
       const duplicado = buscarAtendimentoAtivoPorPlaca(placa);
@@ -3398,9 +3423,16 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       const box = $('resultadoBuscaOperacao');
       if (!box) return;
       const q = normalize($('buscaAtendimentos').value);
-      if (q && setorOperacaoSelecionado) setorOperacaoSelecionado = null;
+      if (q && (setorOperacaoSelecionado || consultaStatusOperacaoSelecionada)) {
+        setorOperacaoSelecionado = null;
+        consultaStatusOperacaoSelecionada = null;
+      }
       if (setorOperacaoSelecionado && !q) {
         renderConsultaSetorOperacao();
+        return;
+      }
+      if (consultaStatusOperacaoSelecionada && !q) {
+        renderConsultaStatusOperacao();
         return;
       }
       if (!q) {
@@ -3459,8 +3491,21 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
 
     window.abrirConsultaSetorOperacao = (id, nome) => {
       setorOperacaoSelecionado = { id: String(id || ''), nome: normalize(nome || '') };
+      consultaStatusOperacaoSelecionada = null;
       if ($('buscaAtendimentos')) $('buscaAtendimentos').value = '';
       if ($('filtroStatus')) $('filtroStatus').value = 'ativos';
+      renderKpis();
+      renderSetoresOperacao();
+      renderBuscaOperacao();
+      document.getElementById('resultadoBuscaOperacao')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+
+    window.abrirConsultaSolicitadosOperacao = () => {
+      consultaStatusOperacaoSelecionada = 'SOLICITADO';
+      setorOperacaoSelecionado = null;
+      if ($('buscaAtendimentos')) $('buscaAtendimentos').value = '';
+      if ($('filtroStatus')) $('filtroStatus').value = 'ativos';
+      renderKpis();
       renderSetoresOperacao();
       renderBuscaOperacao();
       document.getElementById('resultadoBuscaOperacao')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -3468,6 +3513,8 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
 
     window.limparConsultaSetorOperacao = () => {
       setorOperacaoSelecionado = null;
+      consultaStatusOperacaoSelecionada = null;
+      renderKpis();
       renderSetoresOperacao();
       renderBuscaOperacao();
     };
@@ -3483,6 +3530,21 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       </div>`;
       if (!lista.length) {
         box.innerHTML = header + '<div class="empty" style="padding:18px;">Nenhum veículo ativo neste setor.</div>';
+        return;
+      }
+      box.innerHTML = header + lista.map(a => montarCardConsultaSetor(a)).join('');
+    }
+
+    function renderConsultaStatusOperacao() {
+      const box = $('resultadoBuscaOperacao');
+      if (!box || !consultaStatusOperacaoSelecionada) return;
+      const lista = getVeiculosNoPatio().filter(a => a.status === consultaStatusOperacaoSelecionada);
+      const header = `<div class="sectorConsultHeader">
+        <div><strong>SOLICITADOS</strong><span>${lista.length} veículo${lista.length === 1 ? '' : 's'} aguardando retirada</span></div>
+        <button type="button" class="sectorConsultClose" onclick="limparConsultaSetorOperacao()">Limpar</button>
+      </div>`;
+      if (!lista.length) {
+        box.innerHTML = header + '<div class="empty" style="padding:18px;">Nenhum veículo solicitado no momento.</div>';
         return;
       }
       box.innerHTML = header + lista.map(a => montarCardConsultaSetor(a)).join('');
@@ -3534,6 +3596,8 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       $('kpiRecebido').textContent = lista.filter(a => a.status === 'RECEBIDO').length;
       $('kpiSolicitado').textContent = lista.filter(a => a.status === 'SOLICITADO').length;
       $('kpiEntregue').textContent = lista.filter(a => a.status === 'ENTREGUE').length;
+      const btnSolicitados = $('statSolicitados');
+      if (btnSolicitados) btnSolicitados.classList.toggle('active', consultaStatusOperacaoSelecionada === 'SOLICITADO');
       renderSetoresOperacao();
     }
 
