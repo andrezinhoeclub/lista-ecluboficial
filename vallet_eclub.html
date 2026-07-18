@@ -3253,14 +3253,30 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
     }
 
 
+    function aplicarHtmlSelectPreservandoValor(select, html, valorAnterior = null) {
+      if (!select) return;
+      const valor = valorAnterior !== null ? String(valorAnterior || '') : String(select.value || '');
+      const tinhaFoco = document.activeElement === select;
+      select.innerHTML = html;
+      if (valor && [...select.options].some(opt => opt.value === valor)) {
+        select.value = valor;
+      }
+      if (tinhaFoco) select.focus({ preventScroll: true });
+    }
+
     function montarSelectSetores() {
       const ativos = setores.filter(s => s.ativo !== false);
       const html = ativos.length
         ? '<option value="">SELECIONE O SETOR</option>' + ativos.map(s => `<option value="${s.id}">${s.nome} • ${s.tipo || ''}</option>`).join('')
         : '<option value="">CADASTRE UM SETOR PRIMEIRO</option>';
-      $('setorAtendimento').innerHTML = html;
-      $('modalSetor').innerHTML = html;
-      if ($('editSetor')) $('editSetor').innerHTML = html;
+
+      aplicarHtmlSelectPreservandoValor($('setorAtendimento'), html);
+      aplicarHtmlSelectPreservandoValor($('modalSetor'), html);
+
+      if ($('editSetor')) {
+        const editValor = String($('editSetor').value || '');
+        aplicarHtmlSelectPreservandoValor($('editSetor'), html, editValor);
+      }
     }
 
     function renderDatalists() {
@@ -3737,7 +3753,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=45', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=47', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -3771,7 +3787,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=45', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=47', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
