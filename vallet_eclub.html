@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB Vallet • v50</title>
-  <!-- E-CLUB Vallet v50: busca por ticket exato e aviso para veículo entregue -->
+  <!-- E-CLUB Vallet v51: impressão em 2 vias 80mm, barcode na via 1 e observações na via 2 -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -793,10 +793,18 @@
       .ticketPrintRow { display: flex; justify-content: space-between; gap: 3mm; font-size: 8.5pt; font-weight: 700; margin-top: 1.7mm; }
       .ticketPrintRow b { font-weight: 900; }
       .ticketPrintFooter { font-size: 8.5pt; font-weight: 900; text-align: center; line-height: 1.35; margin-top: 3mm; }
+      .ticketPrintCopy { width: 72mm !important; break-inside: avoid; page-break-inside: avoid; }
+      .ticketPrintCopy + .ticketPrintCopy { margin-top: 6mm; padding-top: 4mm; border-top: 2px dashed #000; }
+      .ticketPrintLabel { font-size: 8pt; font-weight: 900; text-align: center; margin-top: 2mm; }
+      .ticketBarcodeBox { margin-top: 3mm; text-align: center; }
+      .ticketBarcodeSvg { width: 66mm; height: 16mm; display: block; margin: 0 auto; }
+      .ticketBarcodeText { font-size: 7pt; font-weight: 900; text-align: center; letter-spacing: .06em; margin-top: 1mm; word-break: break-all; }
+      .ticketPrintObsTitle { font-size: 9pt; font-weight: 900; text-align: center; margin-bottom: 2mm; }
+      .ticketPrintObs { font-size: 8.5pt; font-weight: 700; line-height: 1.35; white-space: pre-wrap; word-break: break-word; text-align: left; border: 1px solid #000; padding: 2mm; min-height: 16mm; }
     }
   </style>
 </head>
-<body data-build="48">
+<body data-build="51">
   <div id="vallet-mobile-bloqueio" class="deviceOverlay" aria-live="assertive" role="alert">
     <div class="deviceCard">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
@@ -2366,14 +2374,113 @@
       });
     }
 
+    function escapeHtml(valor) {
+      return String(valor ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    const CODE128_PATTERNS = [
+      '212222','222122','222221','121223','121322','131222','122213','122312','132212','221213','221312','231212','112232','122132','122231','113222','123122','123221','223211','221132','221231','213212','223112','312131','311222','321122','321221','312212','322112','322211','212123','212321','232121','111323','131123','131321','112313','132113','132311','211313','231113','231311','112133','112331','132131','113123','113321','133121','313121','211331','231131','213113','213311','213131','311123','311321','331121','312113','312311','332111','314111','221411','431111','111224','111422','121124','121421','141122','141221','112214','112412','122114','122411','142112','142211','241211','221114','413111','241112','134111','111242','121142','121241','114212','124112','124211','411212','421112','421211','212141','214121','412121','111143','111341','131141','114113','114311','411113','411311','113141','114131','311141','411131','211412','211214','211232','2331112'
+    ];
+
+    function code128Svg(valor) {
+      let texto = String(valor || '').replace(/[^\x20-\x7E]/g, '').trim();
+      if (!texto) texto = 'ECLUB';
+      texto = texto.split('').filter(ch => {
+        const c = ch.charCodeAt(0);
+        return c >= 32 && c <= 127;
+      }).join('');
+      if (!texto) texto = 'ECLUB';
+
+      const codes = [104];
+      for (const ch of texto) codes.push(ch.charCodeAt(0) - 32);
+      let checksum = codes[0];
+      for (let i = 1; i < codes.length; i++) checksum += codes[i] * i;
+      codes.push(checksum % 103, 106);
+
+      const quiet = 10;
+      let x = quiet;
+      let rects = '';
+      for (const code of codes) {
+        const pattern = CODE128_PATTERNS[code];
+        let preto = true;
+        for (const larguraChar of pattern) {
+          const w = Number(larguraChar);
+          if (preto) rects += `<rect x="${x}" y="0" width="${w}" height="52"></rect>`;
+          x += w;
+          preto = !preto;
+        }
+      }
+      const total = x + quiet;
+      return `<svg class="ticketBarcodeSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} 52" role="img" aria-label="Código de barras do ticket"><rect width="${total}" height="52" fill="#fff"></rect><g fill="#000">${rects}</g></svg>`;
+    }
+
+    function montarCodigoBarrasAtendimento(atendimento) {
+      const ticket = String(atendimento.ticket || '').padStart(3, '0');
+      const placa = String(atendimento.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      return `ECV-${ticket}-${placa}`;
+    }
+
+    function montarHtmlViaTicket(atendimento, { via = '1ª VIA', comBarcode = false, comObservacoes = false, reimpressao = false } = {}) {
+      const ticket = String(atendimento.ticket || '').padStart(3, '0');
+      const placa = atendimento.placa || '---';
+      const veiculo = `${atendimento.modelo || 'MODELO NÃO INFORMADO'} • ${atendimento.cor || 'COR NÃO INFORMADA'}`;
+      const entrada = formatarDataHoraTicket(atendimento.recebido_em || atendimento.criado_em);
+      const operador = atendimento.operador_recebimento || getOperador() || '---';
+      const setor = atendimento.setor_nome || 'LOCAL NÃO INFORMADO';
+      const vaga = atendimento.vaga ? ` • ${atendimento.vaga}` : '';
+      const obs = String(atendimento.obs || '').trim();
+      const barcodeValue = montarCodigoBarrasAtendimento(atendimento);
+      const labelVia = `${via}${reimpressao ? ' / REIMPRESSÃO' : ''}`;
+
+      return `<div class="ticketPrintCopy">
+        <div class="ticketPrintBrand">E-CLUB VALLET</div>
+        <div class="ticketPrintSub">COMPROVANTE DE VEÍCULO</div>
+        <div class="ticketPrintVia">${escapeHtml(labelVia)}</div>
+        <div class="ticketPrintLine"></div>
+        <div class="ticketPrintNumber">#${escapeHtml(ticket)}</div>
+        <div class="ticketPrintPlate">${escapeHtml(placa)}</div>
+        <div class="ticketPrintVehicle">${escapeHtml(veiculo)}</div>
+        <div class="ticketPrintLine"></div>
+        <div class="ticketPrintRow"><span><b>ENTRADA</b></span><span>${escapeHtml(entrada)}</span></div>
+        <div class="ticketPrintRow"><span><b>OPERADOR</b></span><span>${escapeHtml(operador)}</span></div>
+        <div class="ticketPrintRow"><span><b>SETOR</b></span><span>${escapeHtml(setor + vaga)}</span></div>
+        ${comObservacoes ? `
+          <div class="ticketPrintLine"></div>
+          <div class="ticketPrintObsTitle">OBSERVAÇÕES SOBRE O CARRO</div>
+          <div class="ticketPrintObs">${escapeHtml(obs || 'SEM OBSERVAÇÕES REGISTRADAS.')}</div>
+        ` : ''}
+        ${comBarcode ? `
+          <div class="ticketPrintLine"></div>
+          <div class="ticketPrintLabel">CÓDIGO PARA BAIXA NA SAÍDA</div>
+          <div class="ticketBarcodeBox">${code128Svg(barcodeValue)}</div>
+          <div class="ticketBarcodeText">${escapeHtml(barcodeValue)}</div>
+        ` : ''}
+        <div class="ticketPrintLine"></div>
+        <div class="ticketPrintFooter">GUARDE ESTE TICKET.<br>APRESENTE-O PARA RETIRAR O VEÍCULO.</div>
+      </div>`;
+    }
+
     function imprimirTicketAtendimento(atendimento, segundaVia = true) {
       if (!atendimento) return toast('Atendimento não encontrado para impressão.');
-      $('ticketPrintVia').textContent = segundaVia ? '2ª VIA / REIMPRESSÃO' : '';
-      $('ticketPrintNumero').textContent = `#${String(atendimento.ticket || '').padStart(3, '0')}`;
-      $('ticketPrintPlaca').textContent = atendimento.placa || '---';
-      $('ticketPrintVeiculo').textContent = `${atendimento.modelo || 'MODELO NÃO INFORMADO'} • ${atendimento.cor || 'COR NÃO INFORMADA'}`;
-      $('ticketPrintEntrada').textContent = formatarDataHoraTicket(atendimento.recebido_em || atendimento.criado_em);
-      $('ticketPrintOperador').textContent = atendimento.operador_recebimento || getOperador() || '---';
+      const reimpressao = Boolean(segundaVia);
+      const htmlViaCliente = montarHtmlViaTicket(atendimento, {
+        via: '1ª VIA - CLIENTE / SAÍDA',
+        comBarcode: true,
+        comObservacoes: false,
+        reimpressao
+      });
+      const htmlViaControle = montarHtmlViaTicket(atendimento, {
+        via: '2ª VIA - CONTROLE / OBSERVAÇÕES',
+        comBarcode: false,
+        comObservacoes: true,
+        reimpressao
+      });
+      $('ticketImpressao').innerHTML = htmlViaCliente + htmlViaControle;
       $('ticketImpressao').setAttribute('aria-hidden', 'false');
       window.print();
     }
@@ -3443,6 +3550,35 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       }).join('');
     }
 
+    function parseCodigoBarrasVallet(valor) {
+      const raw = String(valor || '').trim().toUpperCase();
+      if (!raw) return null;
+      const match = raw.match(/ECV[-|\s]*(\d{1,5})[-|\s]*([A-Z]{3}\d[A-Z0-9]\d{2}|[A-Z]{3}\d{4})/i);
+      if (!match) return null;
+      return {
+        ticket: String(match[1] || '').padStart(3, '0'),
+        placa: String(match[2] || '').toUpperCase()
+      };
+    }
+
+    function isBuscaCodigoBarrasVallet(valor) {
+      return !!parseCodigoBarrasVallet(valor);
+    }
+
+    function getAtendimentoPorCodigoBarras(valorBusca) {
+      const dados = parseCodigoBarrasVallet(valorBusca);
+      if (!dados) return null;
+      const lista = getAtendimentosDaOperacaoParaTicket().filter(a => {
+        return isMesmoTicketAtendimento(a, dados.ticket) && String(a.placa || '').toUpperCase() === dados.placa;
+      });
+      lista.sort((a,b) => {
+        const aAtivo = a.ativo !== false && a.status !== 'ENTREGUE' ? 0 : 1;
+        const bAtivo = b.ativo !== false && b.status !== 'ENTREGUE' ? 0 : 1;
+        return aAtivo - bAtivo || String(b.atualizado_em || b.criado_em || '').localeCompare(String(a.atualizado_em || a.criado_em || ''));
+      });
+      return lista[0] || null;
+    }
+
     function normalizarTicketBusca(valor) {
       const digitos = String(valor || '').replace(/\D/g, '');
       if (!digitos) return '';
@@ -3594,6 +3730,19 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       }
       if (!q) {
         box.innerHTML = '<div class="empty" style="padding:18px;">Digite para localizar um veículo sem rolar a tela.</div>';
+        return;
+      }
+
+      if (isBuscaCodigoBarrasVallet(valorBusca)) {
+        const dadosBarcode = parseCodigoBarrasVallet(valorBusca);
+        const atendimentoBarcode = getAtendimentoPorCodigoBarras(valorBusca);
+        if (!atendimentoBarcode) {
+          box.innerHTML = `<div class="empty" style="padding:18px;">Nenhum veículo encontrado para o código ${escapeHtml(valorBusca)} nesta operação.</div>`;
+          return;
+        }
+        const ativo = atendimentoBarcode.ativo !== false && atendimentoBarcode.status !== 'ENTREGUE';
+        const resumo = `<div class="smallText" style="margin:4px 0 8px;">Código lido: #${dadosBarcode.ticket} • ${dadosBarcode.placa}.</div>`;
+        box.innerHTML = resumo + (ativo ? montarCardAtendimento(atendimentoBarcode, true) : montarCardEntregueBusca(atendimentoBarcode));
         return;
       }
 
