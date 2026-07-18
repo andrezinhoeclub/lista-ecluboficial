@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB Vallet • v43</title>
-  <!-- E-CLUB Vallet v48: vistoria automática, resumo oculto e vistas destacadas por avarias -->
+  <!-- E-CLUB Vallet v49: busca operacional restrita a veículos ativos no pátio -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -1012,10 +1012,8 @@
           </div>
           <div class="row two">
             <select id="filtroStatus" onchange="renderTudo()">
-              <option value="ativos">Ativos na operação</option>
+              <option value="ativos">Veículos no pátio</option>
               <option value="SOLICITADO">Solicitados</option>
-              <option value="ENTREGUE">Entregues hoje</option>
-              <option value="todos">Todos de hoje</option>
             </select>
             <button class="btn ghost" onclick="limparBuscaAtendimento()">Limpar busca</button>
           </div>
@@ -3447,13 +3445,14 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
 
     function getAtendimentosFiltrados({ usarBusca = true } = {}) {
       const q = usarBusca ? normalize($('buscaAtendimentos').value) : '';
-      const filtro = $('filtroStatus').value;
-      const hoje = dataOperacaoAtual();
-      let lista = atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
+      const filtro = $('filtroStatus') ? $('filtroStatus').value : 'ativos';
 
-      if (filtro === 'ativos') lista = lista.filter(a => a.ativo !== false && a.status !== 'ENTREGUE');
-      else if (filtro === 'ENTREGUE') lista = lista.filter(a => a.status === 'ENTREGUE' && a.data_operacao === hoje);
-      else if (filtro !== 'todos') lista = lista.filter(a => a.status === filtro);
+      // v49: a busca operacional deve trabalhar somente com veículos ativos no pátio.
+      // Atendimentos entregues ficam fora da pesquisa para evitar ação operacional em veículo já retirado.
+      let lista = getVeiculosNoPatio();
+
+      if (filtro === 'SOLICITADO') lista = lista.filter(a => a.status === 'SOLICITADO');
+      else if (filtro && filtro !== 'ativos') lista = lista.filter(a => a.status === filtro && a.status !== 'ENTREGUE');
 
       if (q) {
         lista = lista.filter(a => [
@@ -3471,7 +3470,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         ].some(x => normalize(x).includes(q)));
       }
 
-      const ordem = { SOLICITADO: 1, RECEBIDO: 2, ESTACIONADO: 3, ENTREGUE: 9 };
+      const ordem = { SOLICITADO: 1, RECEBIDO: 2, ESTACIONADO: 3 };
       lista.sort((a,b) => (ordem[a.status] || 8) - (ordem[b.status] || 8) || String(b.atualizado_em).localeCompare(String(a.atualizado_em)));
       return lista;
     }
@@ -3796,7 +3795,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
-    const VALLET_BUILD_VERSION = '45';
+    const VALLET_BUILD_VERSION = '49';
 
     async function prepararAtualizacaoPWA() {
       try {
