@@ -317,6 +317,12 @@
     .stat { background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 22px; padding: 16px; text-align: center; }
     .stat small { display: block; color: var(--muted); font-size: 8px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
     .stat strong { display: block; margin-top: 4px; font-size: 24px; font-weight: 950; }
+    .sectorStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; margin: -6px 0 16px; }
+    .sectorStat { border: 1px solid rgba(234,179,8,.18); background: rgba(234,179,8,.055); border-radius: 20px; padding: 13px 14px; min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .sectorStatName { min-width: 0; color: var(--text); font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .04em; line-height: 1.15; overflow-wrap: anywhere; }
+    .sectorStatType { display: block; margin-top: 4px; color: var(--muted); font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; }
+    .sectorStatCount { min-width: 48px; text-align: right; color: var(--yellow); font-size: 28px; font-weight: 950; line-height: 1; }
+    .sectorStatEmpty { border-style: dashed; background: rgba(255,255,255,.025); color: var(--muted); justify-content: center; text-align: center; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
     .list { display: grid; gap: 10px; }
     .vehicleCard {
       background: rgba(255,255,255,.035);
@@ -549,6 +555,8 @@
       background: rgba(255,255,255,.78);
       border-color: rgba(15,23,42,.12);
     }
+    body.theme-light .sectorStat { background: rgba(255,251,235,.88); border-color: rgba(202,138,4,.22); }
+    body.theme-light .sectorStatEmpty { background: rgba(255,255,255,.55); border-color: rgba(15,23,42,.14); }
     body.theme-light .meta { color: #344054; }
     body.theme-light .empty { color: #98a2b3; border-color: rgba(15,23,42,.18); background: rgba(255,255,255,.45); }
     body.theme-light .notice { background: rgba(255,251,235,.95); color: #92400e; border-color: rgba(234,179,8,.35); }
@@ -691,7 +699,7 @@
       body { padding: 12px; }
       .topbar { align-items: flex-start; flex-direction: column; }
       .statusBox { justify-content: flex-start; }
-      .grid2, .grid3, .grid4, .two, .three, .quickStats, .cadastroGrid { grid-template-columns: 1fr; }
+      .grid2, .grid3, .grid4, .two, .three, .quickStats, .sectorStats, .cadastroGrid { grid-template-columns: 1fr; }
       .actions { grid-template-columns: repeat(2, 1fr); }
       .operationInfo { grid-template-columns: 1fr; }
       .operationHeader { flex-direction: column; }
@@ -864,6 +872,8 @@
         <div class="stat"><small>Solicitados</small><strong id="kpiSolicitado">0</strong></div>
         <div class="stat"><small>Entregues hoje</small><strong id="kpiEntregue">0</strong></div>
       </div>
+
+      <div id="resumoSetoresOperacao" class="sectorStats" aria-live="polite"></div>
 
       <div class="grid grid2">
         <div class="card">
@@ -1557,13 +1567,18 @@
           fb.getDocs(fb.collection(fb.db, 'eventos')),
           fb.getDoc(fb.doc(fb.db, 'configuracoes', 'sistema'))
         ]);
+        await Promise.all([
+          clearStore(STORE_SETOR),
+          clearStore(STORE_MODELO),
+          clearStore(STORE_COR),
+          clearStore(STORE_EVENTO)
+        ]);
         const puts = [];
         setSnap.forEach(d => puts.push(put(STORE_SETOR, { id: d.id, ...d.data() })));
         modSnap.forEach(d => puts.push(put(STORE_MODELO, { id: d.id, ...d.data() })));
         corSnap.forEach(d => puts.push(put(STORE_COR, { id: d.id, ...d.data() })));
         veiSnap.forEach(d => puts.push(put(STORE_VEICULO, { id: d.id, ...d.data() })));
         opSnap.forEach(d => puts.push(put(STORE_OPERADOR, { id: d.id, ...d.data() })));
-        await clearStore(STORE_EVENTO);
         evtSnap.forEach(d => puts.push(put(STORE_EVENTO, { id: d.id, ...d.data() })));
         if (configSnap.exists()) {
           modoTesteValletAtivo = configSnap.data()?.modo_teste_vallet === true;
@@ -3394,12 +3409,56 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       box.innerHTML = lista.map(a => montarCardAtendimento(a, false)).join('');
     }
 
-    function renderKpis() {
+    function getAtendimentosOperacaoAtual() {
       const hoje = dataOperacaoAtual();
-      const lista = atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
+      return atendimentos.filter(a => a.data_operacao === hoje || a.ativo === true);
+    }
+
+    function renderSetoresOperacao() {
+      const box = $('resumoSetoresOperacao');
+      if (!box) return;
+
+      const setoresAtivos = setores.filter(s => s.ativo !== false);
+      const veiculosNoPatio = getAtendimentosOperacaoAtual().filter(a => a.ativo !== false && a.status !== 'ENTREGUE');
+      const contagemPorId = new Map();
+      const contagemPorNome = new Map();
+      let semSetor = 0;
+
+      veiculosNoPatio.forEach(a => {
+        const id = String(a.setor_id || '').trim();
+        const nome = normalize(a.setor_nome || '');
+        if (id) contagemPorId.set(id, (contagemPorId.get(id) || 0) + 1);
+        else if (nome) contagemPorNome.set(nome, (contagemPorNome.get(nome) || 0) + 1);
+        else semSetor += 1;
+      });
+
+      if (!setoresAtivos.length && !semSetor) {
+        box.innerHTML = '<div class="sectorStat sectorStatEmpty">Nenhum setor cadastrado para exibir o pátio.</div>';
+        return;
+      }
+
+      const htmlSetores = setoresAtivos.map(s => {
+        const total = (contagemPorId.get(s.id) || 0) + (contagemPorNome.get(normalize(s.nome)) || 0);
+        return `<div class="sectorStat">
+          <div class="sectorStatName">${s.nome}<span class="sectorStatType">${s.tipo || 'SETOR'}</span></div>
+          <div class="sectorStatCount">${total}</div>
+        </div>`;
+      }).join('');
+
+      const htmlSemSetor = semSetor ? `<div class="sectorStat">
+        <div class="sectorStatName">SEM SETOR<span class="sectorStatType">REVISAR</span></div>
+        <div class="sectorStatCount">${semSetor}</div>
+      </div>` : '';
+
+      box.innerHTML = htmlSetores + htmlSemSetor;
+    }
+
+    function renderKpis() {
+      const lista = getAtendimentosOperacaoAtual();
       $('kpiRecebido').textContent = lista.filter(a => a.status === 'RECEBIDO').length;
       $('kpiSolicitado').textContent = lista.filter(a => a.status === 'SOLICITADO').length;
       $('kpiEntregue').textContent = lista.filter(a => a.status === 'ENTREGUE').length;
+      renderSetoresOperacao();
     }
 
     function renderQueue() {
@@ -3473,20 +3532,10 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
     }
 
     async function bootstrapPadrao() {
-      const setoresExistentes = await getAll(STORE_SETOR);
-      if (!setoresExistentes.length) {
-        const defaultsSetores = [
-          { id: 'setor_interno', nome: 'ESTACIONAMENTO INTERNO', tipo: 'INTERNO', obs: '', ativo: true },
-          { id: 'setor_externo', nome: 'ESTACIONAMENTO EXTERNO', tipo: 'EXTERNO', obs: '', ativo: true },
-          { id: 'setor_a', nome: 'SETOR A', tipo: 'INTERNO', obs: '', ativo: true },
-          { id: 'setor_b', nome: 'SETOR B', tipo: 'INTERNO', obs: '', ativo: true }
-        ];
-        for (const s of defaultsSetores) {
-          const setor = { ...s, criado_em: agoraISO(), atualizado_em: agoraISO(), origem_dispositivo: deviceId() };
-          await put(STORE_SETOR, setor);
-          await queueSet('vallet_setores', setor.id, setor);
-        }
-      }
+      // Setores não recebem mais cadastros padrão automáticos.
+      // Isso evita que setores antigos voltem depois que forem excluídos na operação.
+      const setoresInicializados = await lerMeta('catalogo_setores_inicializado');
+      if (!setoresInicializados) await salvarMeta('catalogo_setores_inicializado', true);
 
       const modelosExistentes = await getAll(STORE_MODELO);
       const modelosInicializados = await lerMeta('catalogo_modelos_inicializado');
@@ -3513,7 +3562,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
-    const VALLET_BUILD_VERSION = '42';
+    const VALLET_BUILD_VERSION = '44';
 
     async function prepararAtualizacaoPWA() {
       try {
@@ -3548,7 +3597,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=43', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=44', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -3582,7 +3631,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=43', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=44', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
