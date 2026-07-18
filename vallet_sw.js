@@ -1,14 +1,12 @@
-const CACHE_NAME = 'eclub-vallet-v49';
+const CACHE_NAME = 'eclub-vallet-v50';
 const APP_SHELL = [
-  './vallet_eclub.html?v=49',
-  './vallet_manifest.json?v=49'
+  './vallet_eclub.html',
+  './vallet_manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
   );
 });
 
@@ -24,34 +22,32 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  const url = new URL(req.url);
-  const isSameOrigin = url.origin === self.location.origin;
-  const isNavigation = req.mode === 'navigate';
-  const isValletHtml = isSameOrigin && url.pathname.endsWith('/vallet_eclub.html');
+  const isHtml = req.mode === 'navigate' || req.destination === 'document' || req.url.includes('vallet_eclub.html');
 
-  if (isNavigation || isValletHtml) {
+  if (isHtml) {
     event.respondWith(
-      fetch(req, { cache: 'reload' })
+      fetch(req, { cache: 'no-store' })
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put('./vallet_eclub.html', copy));
           return response;
         })
-        .catch(() => caches.match(req).then((cached) => cached || caches.match('./vallet_eclub.html?v=49')))
+        .catch(() => caches.match('./vallet_eclub.html'))
     );
     return;
   }
 
   event.respondWith(
     caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((response) => {
-        if (isSameOrigin) {
+      return fetch(req)
+        .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-        }
-        return response;
-      });
+          caches.open(CACHE_NAME).then((cache) => {
+            if (req.url.startsWith(self.location.origin)) cache.put(req, copy);
+          });
+          return response;
+        })
+        .catch(() => cached);
     })
   );
 });

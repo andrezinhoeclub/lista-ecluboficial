@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#050508" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>E-CLUB Vallet • v43</title>
-  <!-- E-CLUB Vallet v49: busca operacional restrita a veículos ativos no pátio -->
+  <title>E-CLUB Vallet • v50</title>
+  <!-- E-CLUB Vallet v50: busca por ticket exato e aviso para veículo entregue -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -3443,36 +3443,98 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       }).join('');
     }
 
+    function normalizarTicketBusca(valor) {
+      const digitos = String(valor || '').replace(/\D/g, '');
+      if (!digitos) return '';
+      return digitos.padStart(3, '0');
+    }
+
+    function isBuscaTicketExato(valor) {
+      const raw = String(valor || '').trim();
+      if (!raw) return false;
+      return /^#?\d{1,4}$/.test(raw);
+    }
+
+    function isMesmoTicketAtendimento(a, ticketNormalizado) {
+      return normalizarTicketBusca(a?.ticket) === ticketNormalizado;
+    }
+
+    function getAtendimentosDaOperacaoParaTicket() {
+      const dataAtual = dataOperacaoAtual();
+      return atendimentos.filter(a => {
+        if (a.data_operacao === dataAtual) return true;
+        if (a.ativo === true) return true;
+        return false;
+      });
+    }
+
+    function getAtendimentoPorTicketExato(valorBusca) {
+      const ticket = normalizarTicketBusca(valorBusca);
+      if (!ticket) return null;
+      const lista = getAtendimentosDaOperacaoParaTicket().filter(a => isMesmoTicketAtendimento(a, ticket));
+      lista.sort((a,b) => {
+        const aAtivo = a.ativo !== false && a.status !== 'ENTREGUE' ? 0 : 1;
+        const bAtivo = b.ativo !== false && b.status !== 'ENTREGUE' ? 0 : 1;
+        return aAtivo - bAtivo || String(b.atualizado_em || b.criado_em || '').localeCompare(String(a.atualizado_em || a.criado_em || ''));
+      });
+      return lista[0] || null;
+    }
+
     function getAtendimentosFiltrados({ usarBusca = true } = {}) {
       const q = usarBusca ? normalize($('buscaAtendimentos').value) : '';
+      const rawBusca = usarBusca && $('buscaAtendimentos') ? $('buscaAtendimentos').value.trim() : '';
       const filtro = $('filtroStatus') ? $('filtroStatus').value : 'ativos';
 
-      // v49: a busca operacional deve trabalhar somente com veículos ativos no pátio.
-      // Atendimentos entregues ficam fora da pesquisa para evitar ação operacional em veículo já retirado.
+      // v50: a busca operacional trabalha somente com veículos ativos no pátio.
+      // Quando o operador digita um ticket numérico, a busca é EXATA no ticket do dia/operação.
+      // Se o ticket existir, mas já estiver entregue, o sistema mostra aviso em vez de trazer outro veículo.
       let lista = getVeiculosNoPatio();
 
       if (filtro === 'SOLICITADO') lista = lista.filter(a => a.status === 'SOLICITADO');
       else if (filtro && filtro !== 'ativos') lista = lista.filter(a => a.status === filtro && a.status !== 'ENTREGUE');
 
       if (q) {
-        lista = lista.filter(a => [
-          a.ticket,
-          a.placa,
-          a.modelo,
-          a.cor,
-          a.cliente_nome,
-          a.cliente_tel,
-          String(a.cliente_tel || '').replace(/\D/g, ''),
-          a.setor_nome,
-          a.vaga,
-          a.status,
-          a.obs
-        ].some(x => normalize(x).includes(q)));
+        if (isBuscaTicketExato(rawBusca)) {
+          const ticketNormalizado = normalizarTicketBusca(rawBusca);
+          lista = lista.filter(a => isMesmoTicketAtendimento(a, ticketNormalizado));
+        } else {
+          lista = lista.filter(a => [
+            a.placa,
+            a.modelo,
+            a.cor,
+            a.cliente_nome,
+            a.cliente_tel,
+            String(a.cliente_tel || '').replace(/\D/g, ''),
+            a.setor_nome,
+            a.vaga,
+            a.status,
+            a.obs
+          ].some(x => normalize(x).includes(q)));
+        }
       }
 
       const ordem = { SOLICITADO: 1, RECEBIDO: 2, ESTACIONADO: 3 };
       lista.sort((a,b) => (ordem[a.status] || 8) - (ordem[b.status] || 8) || String(b.atualizado_em).localeCompare(String(a.atualizado_em)));
       return lista;
+    }
+
+    function montarCardEntregueBusca(a) {
+      const entregueEm = a.entregue_em || a.atualizado_em || a.ultima_alteracao_em || '';
+      const operadorEntrega = a.operador_entrega || a.ultima_alteracao_operador || '';
+      return `<div class="vehicleCard operationCard buscaQuickCard" style="border-color:rgba(239,68,68,.45);">
+        <div class="buscaQuickMain">
+          <div class="ticket buscaTicket">#${a.ticket}</div>
+          <span class="plate buscaPlate">${a.placa || '---'}</span>
+          <div class="buscaQuickText">
+            <strong>${a.modelo || 'MODELO NÃO INFORMADO'} • ${a.cor || 'COR NÃO INFORMADA'}</strong>
+            <span>${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
+          </div>
+        </div>
+        <div class="notice" style="margin-top:14px;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#fecaca;">
+          VEÍCULO JÁ ENTREGUE${entregueEm ? ' • ' + formatarDataHoraCurta(entregueEm) : ''}${operadorEntrega ? ' • ' + operadorEntrega : ''}
+        </div>
+        <div class="smallText" style="margin-top:10px;">Esse ticket não está mais ativo na operação. Para nova entrada, cadastre novamente a placa no recebimento.</div>
+      </div>`;
     }
 
     function montarCardAtendimento(a, compactoBusca = false) {
@@ -3515,7 +3577,9 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
     function renderBuscaOperacao() {
       const box = $('resultadoBuscaOperacao');
       if (!box) return;
-      const q = normalize($('buscaAtendimentos').value);
+      const campoBusca = $('buscaAtendimentos');
+      const valorBusca = campoBusca ? campoBusca.value.trim() : '';
+      const q = normalize(valorBusca);
       if (q && (setorOperacaoSelecionado || consultaStatusOperacaoSelecionada)) {
         setorOperacaoSelecionado = null;
         consultaStatusOperacaoSelecionada = null;
@@ -3532,9 +3596,23 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         box.innerHTML = '<div class="empty" style="padding:18px;">Digite para localizar um veículo sem rolar a tela.</div>';
         return;
       }
+
+      if (isBuscaTicketExato(valorBusca)) {
+        const ticketNormalizado = normalizarTicketBusca(valorBusca);
+        const atendimentoTicket = getAtendimentoPorTicketExato(valorBusca);
+        if (!atendimentoTicket) {
+          box.innerHTML = `<div class="empty" style="padding:18px;">Nenhum veículo encontrado com o ticket #${ticketNormalizado} nesta operação.</div>`;
+          return;
+        }
+        const ativo = atendimentoTicket.ativo !== false && atendimentoTicket.status !== 'ENTREGUE';
+        const resumo = `<div class="smallText" style="margin:4px 0 8px;">Resultado exato para o ticket #${ticketNormalizado}.</div>`;
+        box.innerHTML = resumo + (ativo ? montarCardAtendimento(atendimentoTicket, true) : montarCardEntregueBusca(atendimentoTicket));
+        return;
+      }
+
       const lista = getAtendimentosFiltrados({ usarBusca: true }).slice(0, 12);
       if (!lista.length) {
-        box.innerHTML = '<div class="empty" style="padding:18px;">Nenhum veículo encontrado para essa busca.</div>';
+        box.innerHTML = '<div class="empty" style="padding:18px;">Nenhum veículo ativo encontrado para essa busca.</div>';
         return;
       }
       const resumo = `<div class="smallText" style="margin:4px 0 8px;">${lista.length} resultado${lista.length === 1 ? '' : 's'} encontrado${lista.length === 1 ? '' : 's'} para a busca.</div>`;
