@@ -44,15 +44,11 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8" alt="E-Club">
             <p class="text-[9px] font-black uppercase tracking-[0.3em] text-yellow-500 mb-2">Acesso Restrito</p>
             <h1 class="text-2xl font-black uppercase italic tracking-tighter text-white mb-8">Command Center</h1>
-            <input type="text" name="username" value="dashboard-eclub" autocomplete="username" class="hidden" tabindex="-1" aria-hidden="true">
-            <input type="password" id="senha-dashboard" name="password" autocomplete="current-password" placeholder="SENHA DO DASHBOARD" class="w-full p-5 rounded-2xl text-center font-black text-xs tracking-widest uppercase mb-4" required>
-            <label class="flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-5 select-none cursor-pointer">
-                <input type="checkbox" id="lembrar-dashboard" class="w-4 h-4 accent-yellow-500 cursor-pointer">
-                manter acesso neste aparelho
-            </label>
-            <button type="submit" id="btn-login-dashboard" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">Entrar</button>
-            <p id="erro-login-dashboard" class="hidden mt-5 text-red-500 text-[9px] font-black uppercase tracking-widest">Senha incorreta.</p>
-            <p class="mt-6 text-[8px] text-zinc-600 font-bold uppercase leading-relaxed">No celular, você pode salvar a senha no navegador/gerenciador de senhas e usar a biometria do aparelho para preencher automaticamente.</p>
+            <input type="email" id="email-dashboard" name="email" autocomplete="username" placeholder="E-MAIL ADMINISTRATIVO" class="w-full p-5 rounded-2xl text-center font-black text-xs tracking-wider mb-3" required>
+            <input type="password" id="senha-dashboard" name="password" autocomplete="current-password" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-black text-xs tracking-widest mb-4" required>
+            <button type="submit" id="btn-login-dashboard" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">Entrar com segurança</button>
+            <p id="erro-login-dashboard" class="hidden mt-5 text-red-500 text-[9px] font-black uppercase tracking-widest" role="alert">Acesso não autorizado.</p>
+            <p class="mt-6 text-[8px] text-zinc-600 font-bold uppercase leading-relaxed">Autenticação protegida pelo Firebase Authentication. A senha não é armazenada neste HTML nem no navegador.</p>
         </form>
     </div>
     <div id="painel-dashboard" class="max-w-7xl mx-auto hidden">
@@ -74,6 +70,7 @@
                 <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-cyan-400">Listas/Cams</button>
                 <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
             </nav>
+            <button onclick="bloquearDashboard()" class="bg-zinc-900 hover:bg-red-600/20 border border-zinc-800 hover:border-red-500/30 text-zinc-400 hover:text-red-400 px-4 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap" title="Encerrar sessão administrativa">Sair</button>
         </header>
 
         <section id="aba-relatorios" class="space-y-8">
@@ -483,12 +480,12 @@
     </div>
 
     <script type="text/plain" id="codigo-principal-dashboard">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
-        const app = initializeApp(firebaseConfig);
+        const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
         
@@ -2188,44 +2185,71 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
         };
     </script>
 
-    <script>
+    <script type="module">
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import {
+            getAuth,
+            setPersistence,
+            browserSessionPersistence,
+            signInWithEmailAndPassword,
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
         (() => {
-            const SENHA_HASH = "c518721ef438f84b67e8320249c2a68b03f773e74c51c2b673dd9f6871657f7d";
-            const CHAVE_LEMBRAR = "eclub_dashboard_acesso_v1";
-            const CHAVE_SESSAO = "eclub_dashboard_sessao_v1";
-            const TEMPO_LEMBRAR_MS = 1000 * 60 * 60 * 24 * 30;
+            // FASE 1 DE SEGURANÇA — autenticação real do Command Center.
+            // O UID não é segredo. A proteção definitiva será aplicada também nas Firestore Rules.
+            const MASTER_UID = "PSoHpBpXaGeO4UCw1c3nbGOz7jf1";
+            const firebaseConfig = {
+                apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+                authDomain: "teste-de-reserva.firebaseapp.com",
+                projectId: "teste-de-reserva",
+                storageBucket: "teste-de-reserva.firebasestorage.app",
+                messagingSenderId: "163395694876",
+                appId: "1:163395694876:web:8b1116a0483af951548ad9"
+            };
+
+            const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+            const auth = getAuth(app);
             let sistemaCarregado = false;
+            let authPronto = false;
 
             const painel = () => document.getElementById('painel-dashboard');
             const login = () => document.getElementById('dashboard-login');
             const erro = () => document.getElementById('erro-login-dashboard');
+            const inputEmail = () => document.getElementById('email-dashboard');
             const inputSenha = () => document.getElementById('senha-dashboard');
             const btnLogin = () => document.getElementById('btn-login-dashboard');
 
-            async function sha256(texto) {
-                if (!window.crypto || !window.crypto.subtle) {
-                    throw new Error('Criptografia do navegador indisponível. Acesse por HTTPS.');
-                }
-                const bytes = new TextEncoder().encode(texto);
-                const hashBuffer = await crypto.subtle.digest('SHA-256', bytes);
-                return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            function mostrarErro(mensagem = 'Acesso não autorizado.') {
+                if (!erro()) return;
+                erro().innerText = mensagem;
+                erro().classList.remove('hidden');
             }
 
-            function acessoSalvoValido() {
-                if (sessionStorage.getItem(CHAVE_SESSAO) === 'ok') return true;
-                try {
-                    const salvo = JSON.parse(localStorage.getItem(CHAVE_LEMBRAR) || 'null');
-                    return !!(salvo && salvo.ok === true && Number(salvo.expira || 0) > Date.now());
-                } catch (e) {
-                    localStorage.removeItem(CHAVE_LEMBRAR);
-                    return false;
-                }
+            function limparErro() {
+                if (erro()) erro().classList.add('hidden');
+            }
+
+            function mostrarLogin() {
+                if (painel()) painel().classList.add('hidden');
+                if (login()) login().classList.remove('hidden');
+            }
+
+            function usuarioMasterValido(user) {
+                return Boolean(user && user.uid === MASTER_UID);
             }
 
             function carregarSistema() {
                 if (sistemaCarregado) return;
-                sistemaCarregado = true;
+                const user = auth.currentUser;
+                if (!usuarioMasterValido(user)) {
+                    mostrarLogin();
+                    mostrarErro();
+                    return;
+                }
 
+                sistemaCarregado = true;
                 if (login()) login().classList.add('hidden');
                 if (painel()) painel().classList.remove('hidden');
 
@@ -2240,60 +2264,68 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
 
             window.desbloquearDashboard = async (event) => {
                 if (event) event.preventDefault();
+                if (!authPronto) return;
 
-                const senha = inputSenha() ? inputSenha().value : '';
-                if (!senha) return;
+                const email = inputEmail()?.value.trim() || '';
+                const senha = inputSenha()?.value || '';
+                if (!email || !senha) return;
 
                 if (btnLogin()) {
                     btnLogin().disabled = true;
                     btnLogin().innerText = 'VERIFICANDO...';
                 }
-                if (erro()) erro().classList.add('hidden');
+                limparErro();
 
                 try {
-                    const hashDigitado = await sha256(senha);
-                    if (hashDigitado !== SENHA_HASH) {
-                        if (erro()) erro().classList.remove('hidden');
-                        if (inputSenha()) {
-                            inputSenha().value = '';
-                            inputSenha().focus();
-                        }
+                    const credencial = await signInWithEmailAndPassword(auth, email, senha);
+                    if (!usuarioMasterValido(credencial.user)) {
+                        await signOut(auth);
+                        mostrarErro();
                         return;
                     }
-
-                    sessionStorage.setItem(CHAVE_SESSAO, 'ok');
-
-                    if (document.getElementById('lembrar-dashboard')?.checked) {
-                        localStorage.setItem(CHAVE_LEMBRAR, JSON.stringify({ ok: true, expira: Date.now() + TEMPO_LEMBRAR_MS }));
-                    }
-
+                    if (inputSenha()) inputSenha().value = '';
                     carregarSistema();
                 } catch (e) {
-                    if (erro()) {
-                        erro().innerText = 'Erro de segurança. Acesse a página por HTTPS.';
-                        erro().classList.remove('hidden');
-                    }
+                    console.warn('Falha de autenticação do dashboard:', e?.code || 'auth/unknown');
+                    if (inputSenha()) inputSenha().value = '';
+                    mostrarErro('E-mail ou senha inválidos.');
+                    setTimeout(() => inputSenha()?.focus(), 100);
                 } finally {
                     if (btnLogin()) {
                         btnLogin().disabled = false;
-                        btnLogin().innerText = 'ENTRAR';
+                        btnLogin().innerText = 'ENTRAR COM SEGURANÇA';
                     }
                 }
             };
 
-            window.bloquearDashboard = () => {
-                sessionStorage.removeItem(CHAVE_SESSAO);
-                localStorage.removeItem(CHAVE_LEMBRAR);
+            window.bloquearDashboard = async () => {
+                try { await signOut(auth); } catch (_) {}
                 location.reload();
             };
 
-            document.addEventListener('DOMContentLoaded', () => {
-                if (acessoSalvoValido()) {
-                    carregarSistema();
-                } else {
-                    setTimeout(() => inputSenha()?.focus(), 200);
-                }
-            });
+            // Usa sessão do navegador, não uma flag editável em localStorage/sessionStorage.
+            setPersistence(auth, browserSessionPersistence)
+                .then(() => {
+                    authPronto = true;
+                    onAuthStateChanged(auth, async (user) => {
+                        if (usuarioMasterValido(user)) {
+                            limparErro();
+                            carregarSistema();
+                        } else {
+                            if (user) {
+                                try { await signOut(auth); } catch (_) {}
+                                mostrarErro();
+                            }
+                            mostrarLogin();
+                            setTimeout(() => inputEmail()?.focus(), 150);
+                        }
+                    });
+                })
+                .catch((e) => {
+                    console.error('Não foi possível inicializar a sessão Firebase:', e);
+                    mostrarLogin();
+                    mostrarErro('Erro ao iniciar autenticação segura.');
+                });
         })();
     </script>
 </body>
