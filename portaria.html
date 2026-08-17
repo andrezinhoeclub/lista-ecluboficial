@@ -372,10 +372,11 @@
             if (!user) return false;
 
             const token = await user.getIdTokenResult(true);
-            const role = token.claims?.role;
+            const portariaPermitida = token.claims?.portaria === true || String(token.claims?.role || '').toLowerCase() === 'portaria';
             const portariaId = String(token.claims?.portaria_id || '').trim().toLowerCase();
+            const acessoAtivo = token.claims?.active !== false;
 
-            if (role !== 'portaria' || !portariaId) {
+            if (!portariaPermitida || !portariaId || !acessoAtivo) {
                 await signOut(auth);
                 mensagemAuth('⚠️ USUÁRIO AUTENTICADO, MAS SEM PERMISSÃO DE PORTARIA.');
                 return false;

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB | Area do Promoter ✨</title>
-    <!-- SEGURANÇA FASE 1: Firebase Authentication + claims role/promoter_id. NÃO MERGEAR EM MAIN ATÉ REGRAS DO FIRESTORE ESTAREM PRONTAS. -->
+    <!-- SEGURANÇA FASE 2: Firebase Authentication + permissões múltiplas (promoter/portaria) por Custom Claims. NÃO MERGEAR EM MAIN ATÉ REGRAS DO FIRESTORE ESTAREM PRONTAS. -->
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -263,10 +263,11 @@
         const liberarPainelPromoter = async (user) => {
             try {
                 const token = await user.getIdTokenResult(true);
-                const role = String(token.claims.role || '').toLowerCase();
+                const promoterPermitido = token.claims.promoter === true || String(token.claims.role || '').toLowerCase() === 'promoter';
                 const promoterId = String(token.claims.promoter_id || '').trim().toLowerCase();
+                const acessoAtivo = token.claims.active !== false;
 
-                if (role !== 'promoter' || !promoterId) {
+                if (!promoterPermitido || !promoterId || !acessoAtivo) {
                     await signOut(auth);
                     mostrarTelaLogin();
                     return mostrarAviso('USUÁRIO AUTENTICADO, MAS SEM PERMISSÃO DE PROMOTER.');
