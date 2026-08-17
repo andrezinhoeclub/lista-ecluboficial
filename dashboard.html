@@ -68,6 +68,7 @@
                 <button onclick="trocarAba('aba-equipe', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Equipe</button>
                 <button onclick="trocarAba('aba-vallet', this, 'blue')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-blue-400">Vallet</button>
                 <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-cyan-400">Listas/Cams</button>
+                <button onclick="trocarAba('aba-acessos', this, 'success'); carregarGestaoAcessos()" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-emerald-400">Acessos</button>
                 <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
             </nav>
             <button onclick="bloquearDashboard()" class="bg-zinc-900 hover:bg-red-600/20 border border-zinc-800 hover:border-red-500/30 text-zinc-400 hover:text-red-400 px-4 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap" title="Encerrar sessão administrativa">Sair</button>
@@ -428,6 +429,78 @@
                         <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Evento</th><th class="pb-4">Camarote</th><th class="pb-4">Cliente / Info</th><th class="pb-4 text-center">Status</th><th class="pb-4 text-right pr-4">Ação</th></tr></thead>
                         <tbody id="tabela-camarotes-body"></tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="aba-acessos" class="hidden space-y-8">
+            <div class="glass-card p-8 border-l-4 border-l-emerald-500">
+                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-8">
+                    <div>
+                        <p class="text-[9px] font-black uppercase tracking-[0.28em] text-emerald-400 mb-2">Segurança de usuários</p>
+                        <h2 class="text-emerald-400 font-black uppercase italic text-2xl tracking-tighter">Gerenciar Acessos</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-2 tracking-widest leading-relaxed max-w-3xl">
+                            O MASTER informa o e-mail e as áreas permitidas. A senha não aparece no Dashboard: o funcionário recebe um e-mail do Firebase e define uma senha nova.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl text-[8px] font-black text-emerald-400 uppercase">Firebase Authentication</span>
+                        <span class="bg-blue-500/10 border border-blue-500/20 px-3 py-2 rounded-xl text-[8px] font-black text-blue-400 uppercase">Backend protegido</span>
+                        <span class="bg-zinc-800 border border-zinc-700 px-3 py-2 rounded-xl text-[8px] font-black text-zinc-400 uppercase">Vallet pausado</span>
+                    </div>
+                </div>
+
+                <form id="form-gestao-acesso" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div class="xl:col-span-2">
+                        <label class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">E-mail do funcionário</label>
+                        <input id="acesso-email" type="email" autocomplete="off" maxlength="254" placeholder="EMAIL@EXEMPLO.COM" class="w-full mt-2 p-4 rounded-2xl font-bold text-sm lowercase" required>
+                    </div>
+                    <div class="xl:col-span-2">
+                        <label class="text-[8px] text-zinc-500 font-black uppercase tracking-widest">Nome para identificação</label>
+                        <input id="acesso-nome" type="text" autocomplete="off" maxlength="120" placeholder="NOME DO FUNCIONÁRIO" class="w-full mt-2 p-4 rounded-2xl font-bold text-sm uppercase" required>
+                    </div>
+
+                    <div class="md:col-span-1 xl:col-span-2 glass-card p-5 border border-yellow-500/20">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input id="acesso-promoter" type="checkbox" class="w-5 h-5 accent-yellow-500">
+                            <span class="text-[10px] font-black uppercase text-yellow-400">Permitir Promoter</span>
+                        </label>
+                        <select id="acesso-promoter-id" class="w-full mt-4 p-4 rounded-2xl font-bold text-[10px] uppercase" disabled>
+                            <option value="">SELECIONE O PROMOTER</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-1 xl:col-span-2 glass-card p-5 border border-green-500/20">
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input id="acesso-portaria" type="checkbox" class="w-5 h-5 accent-green-500">
+                            <span class="text-[10px] font-black uppercase text-green-400">Permitir Portaria</span>
+                        </label>
+                        <select id="acesso-portaria-id" class="w-full mt-4 p-4 rounded-2xl font-bold text-[10px] uppercase" disabled>
+                            <option value="">SELECIONE O OPERADOR</option>
+                        </select>
+                    </div>
+
+                    <input id="acesso-uid-edicao" type="hidden" value="">
+                    <div class="md:col-span-2 xl:col-span-4 flex flex-col md:flex-row gap-3 pt-2">
+                        <button id="btn-salvar-acesso" type="submit" class="flex-1 bg-emerald-600 text-white font-black py-4 rounded-2xl uppercase text-[10px] hover:bg-emerald-500 transition-all">Criar / Atualizar Acesso</button>
+                        <button id="btn-cancelar-edicao-acesso" type="button" onclick="limparFormularioAcesso()" class="hidden md:w-48 bg-zinc-800 text-zinc-300 font-black py-4 rounded-2xl uppercase text-[10px] hover:bg-zinc-700 transition-all">Cancelar edição</button>
+                    </div>
+                </form>
+
+                <div id="status-gestao-acesso" class="hidden mt-6 rounded-2xl border p-4 text-[9px] font-black uppercase tracking-widest"></div>
+            </div>
+
+            <div class="glass-card p-8">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                    <div>
+                        <h3 class="text-white font-black uppercase italic text-xl tracking-tighter">Contas seguras</h3>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Somente contas criadas ou vinculadas pelo módulo seguro aparecem aqui.</p>
+                    </div>
+                    <button type="button" onclick="carregarGestaoAcessos(true)" class="bg-zinc-800 px-5 py-3 rounded-xl text-[9px] font-black uppercase text-zinc-300 hover:bg-zinc-700">Atualizar lista</button>
+                </div>
+                <div id="lista-acessos-seguros" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="border border-dashed border-zinc-800 rounded-3xl p-8 text-center text-[9px] text-zinc-600 font-black uppercase tracking-widest">Abra esta aba para carregar os acessos</div>
                 </div>
             </div>
         </section>
@@ -2194,6 +2267,7 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
             signInWithEmailAndPassword,
             onAuthStateChanged,
             getIdTokenResult,
+            sendPasswordResetEmail,
             signOut
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -2241,7 +2315,7 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                 if (!user) return false;
                 try {
                     const token = await getIdTokenResult(user, forcarAtualizacao);
-                    return token?.claims?.role === 'master';
+                    return token?.claims?.role === 'master' || token?.claims?.master === true;
                 } catch (e) {
                     console.warn('Não foi possível validar a função MASTER:', e?.code || e?.message || e);
                     return false;
@@ -2306,6 +2380,254 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                     }
                 }
             };
+
+
+            // ===== GESTÃO SEGURA DE ACESSOS =====
+            // A criação/alteração de usuários NÃO é feita pelo navegador.
+            // O Dashboard envia um ID token Firebase para a Cloud Function, que valida a claim MASTER.
+            const ENDPOINT_GESTAO_ACESSO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerenciarAcesso';
+            let cacheAcessosSeguros = [];
+            let opcoesAcessoCarregadas = false;
+
+            const elAcesso = (id) => document.getElementById(id);
+
+            function escaparHtmlAcesso(valor) {
+                return String(valor ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
+            }
+
+            function statusAcesso(mensagem, sucesso = false, aviso = false) {
+                const box = elAcesso('status-gestao-acesso');
+                if (!box) return;
+                box.innerText = mensagem;
+                box.classList.remove('hidden', 'border-emerald-500/30', 'bg-emerald-500/10', 'text-emerald-300', 'border-red-500/30', 'bg-red-500/10', 'text-red-300', 'border-yellow-500/30', 'bg-yellow-500/10', 'text-yellow-300');
+                if (sucesso) box.classList.add('border-emerald-500/30', 'bg-emerald-500/10', 'text-emerald-300');
+                else if (aviso) box.classList.add('border-yellow-500/30', 'bg-yellow-500/10', 'text-yellow-300');
+                else box.classList.add('border-red-500/30', 'bg-red-500/10', 'text-red-300');
+            }
+
+            async function chamarBackendAcesso(action, payload = {}) {
+                const user = auth.currentUser;
+                if (!user || !(await usuarioMasterValido(user))) throw new Error('Sessão MASTER inválida. Entre novamente.');
+                const idToken = await user.getIdToken(true);
+                const resposta = await fetch(ENDPOINT_GESTAO_ACESSO, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ action, ...payload })
+                });
+                let dados = {};
+                try { dados = await resposta.json(); } catch (_) {}
+                if (!resposta.ok || dados.ok === false) throw new Error(dados.error || `Falha no backend (${resposta.status}).`);
+                return dados;
+            }
+
+            function preencherOpcoesAcesso(referencias = {}) {
+                const selPromoter = elAcesso('acesso-promoter-id');
+                const selPortaria = elAcesso('acesso-portaria-id');
+                if (selPromoter) {
+                    const atual = selPromoter.value;
+                    selPromoter.innerHTML = '<option value="">SELECIONE O PROMOTER</option>' + (referencias.promoters || []).map(p => `<option value="${escaparHtmlAcesso(p.id)}">${escaparHtmlAcesso(p.nome || p.id)} — ${escaparHtmlAcesso(p.tipo || 'PADRÃO')}</option>`).join('');
+                    if ([...selPromoter.options].some(o => o.value === atual)) selPromoter.value = atual;
+                }
+                if (selPortaria) {
+                    const atual = selPortaria.value;
+                    selPortaria.innerHTML = '<option value="">SELECIONE O OPERADOR</option>' + (referencias.portaria || []).map(p => `<option value="${escaparHtmlAcesso(p.id)}">${escaparHtmlAcesso(p.nome || p.id)}</option>`).join('');
+                    if ([...selPortaria.options].some(o => o.value === atual)) selPortaria.value = atual;
+                }
+                opcoesAcessoCarregadas = true;
+            }
+
+            function badgesAcesso(a) {
+                const p = a.permissions || {};
+                const itens = [];
+                if (p.promoter) itens.push(`<span class="bg-yellow-500/10 border border-yellow-500/20 px-2.5 py-1.5 rounded-lg text-[8px] font-black text-yellow-400 uppercase">Promoter: ${escaparHtmlAcesso(a.promoter_id || '-')}</span>`);
+                if (p.portaria) itens.push(`<span class="bg-green-500/10 border border-green-500/20 px-2.5 py-1.5 rounded-lg text-[8px] font-black text-green-400 uppercase">Portaria: ${escaparHtmlAcesso(a.portaria_id || '-')}</span>`);
+                return itens.length ? itens.join(' ') : '<span class="text-[8px] text-zinc-600 font-black uppercase">Sem áreas liberadas</span>';
+            }
+
+            function renderAcessosSeguros() {
+                const alvo = elAcesso('lista-acessos-seguros');
+                if (!alvo) return;
+                if (!cacheAcessosSeguros.length) {
+                    alvo.innerHTML = '<div class="lg:col-span-2 border border-dashed border-zinc-800 rounded-3xl p-8 text-center text-[9px] text-zinc-600 font-black uppercase tracking-widest">Nenhuma conta segura cadastrada ainda</div>';
+                    return;
+                }
+                alvo.innerHTML = cacheAcessosSeguros.map(a => {
+                    const ativo = a.active !== false && a.disabled !== true;
+                    const nome = escaparHtmlAcesso(a.displayName || a.nome || 'FUNCIONÁRIO');
+                    const email = escaparHtmlAcesso(a.email || '-');
+                    const uid = escaparHtmlAcesso(a.uid || '');
+                    return `<div class="glass-card p-6 border-l-4 ${ativo ? 'border-l-emerald-500' : 'border-l-red-500'}">
+                        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="text-xs font-black uppercase text-white break-words">${nome}</p>
+                                    <span class="text-[8px] font-black uppercase ${ativo ? 'text-emerald-400' : 'text-red-400'}">● ${ativo ? 'ATIVO' : 'SUSPENSO'}</span>
+                                </div>
+                                <p class="text-[9px] text-zinc-400 font-bold mt-2 break-all">${email}</p>
+                                <div class="flex flex-wrap gap-2 mt-4">${badgesAcesso(a)}</div>
+                                <p class="text-[7px] text-zinc-700 font-bold mt-4 break-all">UID: ${uid}</p>
+                            </div>
+                            <div class="flex flex-wrap md:flex-col gap-2 md:min-w-[145px]">
+                                <button type="button" onclick="editarAcessoSeguro('${uid}')" class="bg-blue-600/20 border border-blue-500/30 text-blue-300 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Editar</button>
+                                <button type="button" onclick="reenviarSenhaAcesso('${email}')" class="bg-purple-600/20 border border-purple-500/30 text-purple-300 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Enviar senha</button>
+                                <button type="button" onclick="${ativo ? 'suspenderAcessoSeguro' : 'reativarAcessoSeguro'}('${uid}')" class="${ativo ? 'bg-red-600/20 border-red-500/30 text-red-300' : 'bg-emerald-600/20 border-emerald-500/30 text-emerald-300'} border px-3 py-2 rounded-xl text-[8px] font-black uppercase">${ativo ? 'Suspender' : 'Reativar'}</button>
+                                <button type="button" onclick="revogarSessoesAcesso('${uid}')" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Revogar sessões</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            window.carregarGestaoAcessos = async (manual = false) => {
+                const alvo = elAcesso('lista-acessos-seguros');
+                if (alvo) alvo.innerHTML = '<div class="lg:col-span-2 border border-zinc-800 rounded-3xl p-8 text-center text-[9px] text-zinc-500 font-black uppercase tracking-widest animate-pulse">Carregando acessos seguros...</div>';
+                try {
+                    const dados = await chamarBackendAcesso('listar');
+                    cacheAcessosSeguros = Array.isArray(dados.acessos) ? dados.acessos : [];
+                    preencherOpcoesAcesso(dados.referencias || {});
+                    renderAcessosSeguros();
+                    if (manual) statusAcesso('Lista de acessos atualizada.', true);
+                } catch (e) {
+                    if (alvo) alvo.innerHTML = `<div class="lg:col-span-2 border border-red-500/20 rounded-3xl p-8 text-center text-[9px] text-red-400 font-black uppercase tracking-widest">${escaparHtmlAcesso(e.message)}</div>`;
+                    statusAcesso(e.message || 'Erro ao carregar acessos.');
+                }
+            };
+
+            window.limparFormularioAcesso = () => {
+                elAcesso('form-gestao-acesso')?.reset();
+                if (elAcesso('acesso-email')) elAcesso('acesso-email').readOnly = false;
+                if (elAcesso('acesso-uid-edicao')) elAcesso('acesso-uid-edicao').value = '';
+                if (elAcesso('acesso-promoter-id')) { elAcesso('acesso-promoter-id').disabled = true; elAcesso('acesso-promoter-id').value = ''; }
+                if (elAcesso('acesso-portaria-id')) { elAcesso('acesso-portaria-id').disabled = true; elAcesso('acesso-portaria-id').value = ''; }
+                elAcesso('btn-cancelar-edicao-acesso')?.classList.add('hidden');
+            };
+
+            window.editarAcessoSeguro = (uid) => {
+                const a = cacheAcessosSeguros.find(x => x.uid === uid);
+                if (!a) return statusAcesso('Acesso não encontrado.');
+                const p = a.permissions || {};
+                elAcesso('acesso-uid-edicao').value = a.uid || '';
+                elAcesso('acesso-email').value = a.email || '';
+                elAcesso('acesso-nome').value = a.displayName || a.nome || '';
+                elAcesso('acesso-email').readOnly = true;
+                elAcesso('acesso-promoter').checked = p.promoter === true;
+                elAcesso('acesso-portaria').checked = p.portaria === true;
+                elAcesso('acesso-promoter-id').disabled = !p.promoter;
+                elAcesso('acesso-portaria-id').disabled = !p.portaria;
+                elAcesso('acesso-promoter-id').value = a.promoter_id || '';
+                elAcesso('acesso-portaria-id').value = a.portaria_id || '';
+                elAcesso('btn-cancelar-edicao-acesso')?.classList.remove('hidden');
+                statusAcesso('Editando conta existente. O e-mail não pode ser trocado por esta tela.', false, true);
+                elAcesso('acesso-email')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            };
+
+            window.reenviarSenhaAcesso = async (email) => {
+                if (!email || !confirm(`Enviar um novo e-mail para ${email} definir/redefinir a senha?`)) return;
+                try {
+                    await sendPasswordResetEmail(auth, email);
+                    statusAcesso(`E-mail de criação/redefinição de senha enviado para ${email}.`, true);
+                } catch (e) {
+                    console.warn('Falha ao enviar redefinição:', e?.code || e?.message || e);
+                    statusAcesso('Não foi possível enviar o e-mail de senha. Confira o endereço e as configurações de Authentication.');
+                }
+            };
+
+            window.suspenderAcessoSeguro = async (uid) => {
+                if (!confirm('Suspender este acesso? O usuário deixará de conseguir fazer novos logins e as sessões serão revogadas.')) return;
+                try {
+                    await chamarBackendAcesso('suspender', { uid });
+                    statusAcesso('Acesso suspenso e sessões revogadas.', true);
+                    await carregarGestaoAcessos();
+                } catch (e) { statusAcesso(e.message); }
+            };
+
+            window.reativarAcessoSeguro = async (uid) => {
+                if (!confirm('Reativar este acesso?')) return;
+                try {
+                    await chamarBackendAcesso('reativar', { uid });
+                    statusAcesso('Acesso reativado.', true);
+                    await carregarGestaoAcessos();
+                } catch (e) { statusAcesso(e.message); }
+            };
+
+            window.revogarSessoesAcesso = async (uid) => {
+                if (!confirm('Revogar todas as sessões atuais deste usuário? Ele precisará entrar novamente.')) return;
+                try {
+                    await chamarBackendAcesso('revogar_sessoes', { uid });
+                    statusAcesso('Sessões revogadas com sucesso.', true);
+                } catch (e) { statusAcesso(e.message); }
+            };
+
+            const checkPromoter = elAcesso('acesso-promoter');
+            const checkPortaria = elAcesso('acesso-portaria');
+            checkPromoter?.addEventListener('change', () => {
+                if (elAcesso('acesso-promoter-id')) {
+                    elAcesso('acesso-promoter-id').disabled = !checkPromoter.checked;
+                    if (!checkPromoter.checked) elAcesso('acesso-promoter-id').value = '';
+                }
+            });
+            checkPortaria?.addEventListener('change', () => {
+                if (elAcesso('acesso-portaria-id')) {
+                    elAcesso('acesso-portaria-id').disabled = !checkPortaria.checked;
+                    if (!checkPortaria.checked) elAcesso('acesso-portaria-id').value = '';
+                }
+            });
+
+            elAcesso('form-gestao-acesso')?.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const email = (elAcesso('acesso-email')?.value || '').trim().toLowerCase();
+                const displayName = (elAcesso('acesso-nome')?.value || '').trim();
+                const uid = (elAcesso('acesso-uid-edicao')?.value || '').trim();
+                const promoter = elAcesso('acesso-promoter')?.checked === true;
+                const portaria = elAcesso('acesso-portaria')?.checked === true;
+                const promoter_id = promoter ? (elAcesso('acesso-promoter-id')?.value || '') : '';
+                const portaria_id = portaria ? (elAcesso('acesso-portaria-id')?.value || '') : '';
+
+                if (!email || !displayName) return statusAcesso('Informe nome e e-mail.');
+                if (!promoter && !portaria) return statusAcesso('Selecione pelo menos uma permissão: Promoter ou Portaria.');
+                if (promoter && !promoter_id) return statusAcesso('Selecione qual Promoter será vinculado.');
+                if (portaria && !portaria_id) return statusAcesso('Selecione qual operador de Portaria será vinculado.');
+
+                const btn = elAcesso('btn-salvar-acesso');
+                if (btn) { btn.disabled = true; btn.innerText = 'SALVANDO ACESSO...'; }
+                try {
+                    const resultado = await chamarBackendAcesso('salvar', {
+                        uid: uid || undefined,
+                        email,
+                        displayName,
+                        permissions: { promoter, portaria },
+                        promoter_id,
+                        portaria_id
+                    });
+
+                    let mensagem = resultado.created ? 'Conta criada com segurança.' : 'Permissões atualizadas com segurança.';
+                    if (resultado.created) {
+                        try {
+                            await sendPasswordResetEmail(auth, email);
+                            mensagem += ' O e-mail para definir a nova senha foi enviado.';
+                        } catch (emailErro) {
+                            console.warn('Conta criada, mas o e-mail de senha falhou:', emailErro?.code || emailErro?.message || emailErro);
+                            mensagem += ' A conta foi criada, mas o e-mail de senha não pôde ser enviado. Use o botão ENVIAR SENHA na lista.';
+                        }
+                    }
+                    statusAcesso(mensagem, true);
+                    limparFormularioAcesso();
+                    if (elAcesso('acesso-email')) elAcesso('acesso-email').readOnly = false;
+                    await carregarGestaoAcessos();
+                } catch (e) {
+                    statusAcesso(e.message || 'Erro ao salvar acesso.');
+                } finally {
+                    if (btn) { btn.disabled = false; btn.innerText = 'CRIAR / ATUALIZAR ACESSO'; }
+                }
+            });
 
             window.bloquearDashboard = async () => {
                 try { await signOut(auth); } catch (_) {}
