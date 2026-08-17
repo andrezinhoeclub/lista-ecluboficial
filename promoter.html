@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>E-CLUB | Area do Promoter ✨</title>
+    <!-- SEGURANÇA FASE 1: Firebase Authentication + claims role/promoter_id. NÃO MERGEAR EM MAIN ATÉ REGRAS DO FIRESTORE ESTAREM PRONTAS. -->
     <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -30,11 +31,10 @@
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter">PROMOTER <span class="text-sky-400">ACCESS</span></h1>
-            <input type="text" id="usuario" placeholder="USUÁRIO" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white outline-none focus:border-sky-500 transition-all">
-            <div id="campo-senha" class="hidden">
-                <input type="password" id="senha" placeholder="SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold uppercase text-xs mb-4 text-white outline-none focus:border-sky-500 transition-all">
-            </div>
-            <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient font-black py-4 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">CONTINUAR</button>
+            <input type="email" id="email" autocomplete="username" placeholder="E-MAIL" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold text-xs mb-4 text-white outline-none focus:border-sky-500 transition-all">
+            <input type="password" id="senha" autocomplete="current-password" placeholder="SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold text-xs mb-4 text-white outline-none focus:border-sky-500 transition-all">
+            <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient font-black py-4 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">ENTRAR COM SEGURANÇA</button>
+            <p class="text-[8px] text-zinc-600 font-bold uppercase mt-5 leading-relaxed">Autenticação protegida pelo Firebase Authentication. A senha não é armazenada neste HTML nem no Firestore.</p>
         </div>
     </div>
 
@@ -44,7 +44,7 @@
                 <p class="text-sky-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1 italic">E-CLUB OFFICIAL</p>
                 <h1 id="nomeHeader" class="text-3xl font-black uppercase italic leading-none">---</h1>
             </div>
-            <button onclick="location.reload()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-4 py-2 rounded-xl font-black text-[9px] uppercase italic">Sair</button>
+            <button onclick="sairSeguro()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-4 py-2 rounded-xl font-black text-[9px] uppercase italic">Sair</button>
         </header>
 
         <section id="secaoAniversario" class="hidden mb-10">
@@ -121,13 +121,16 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, updateDoc, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
         
         let logado = ""; let reservas = []; let eventos = []; let dadosPromoter = null; let linksAniv = [];
+        let sistemaIniciado = false;
         let camCortesiaSelecionado = null; let tipoCortesiaSelecionado = null;
 
         const nomeCamaroteSistema = (num) => {
@@ -250,59 +253,94 @@
             }, 4000);
         };
 
-        window.prosseguirLogin = async () => {
-            const u = document.getElementById('usuario').value.trim().toLowerCase();
-            const s = document.getElementById('senha').value.trim();
-            const btn = document.getElementById('btnAcao');
-            const inputSenha = document.getElementById('senha');
-            
-            if (!logado) {
-                if(!u) return mostrarAviso("Digite o seu nome de usuário!");
-                btn.innerText = "VERIFICANDO...";
-                const snap = await getDoc(doc(db, "promoters", u));
-                
-                if (snap.exists()) {
-                    logado = u; dadosPromoter = snap.data();
-                    document.getElementById('campo-senha').classList.remove('hidden');
-                    document.getElementById('usuario').readOnly = true;
-                    
-                    if (!dadosPromoter.senha) { 
-                        mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
-                        inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)"; 
-                        inputSenha.style.border = "1px solid #a855f7"; 
-                        btn.innerText = "SALVAR SENHA E ENTRAR";
-                    } else {
-                        btn.innerText = "ENTRAR NO PAINEL";
-                    }
-                } else { 
-                    mostrarAviso("Usuário não encontrado."); 
-                    btn.innerText = "CONTINUAR";
-                }
-            } else {
-                if (!s) return mostrarAviso("Digite a sua senha!");
+        const mostrarTelaLogin = () => {
+            document.getElementById('telaLogin').style.display = 'flex';
+            document.getElementById('painel').classList.add('hidden');
+            document.getElementById('btnAcao').disabled = false;
+            document.getElementById('btnAcao').innerText = 'ENTRAR COM SEGURANÇA';
+        };
 
-                if (!dadosPromoter.senha) {
-                    if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
-                    btn.innerText = "SALVANDO...";
-                    
-                    await updateDoc(doc(db, "promoters", logado), { senha: s, ultimo_login: new Date().toISOString() });
-                    dadosPromoter.senha = s;
-                    mostrarAviso("Senha cadastrada com sucesso!", true);
+        const liberarPainelPromoter = async (user) => {
+            try {
+                const token = await user.getIdTokenResult(true);
+                const role = String(token.claims.role || '').toLowerCase();
+                const promoterId = String(token.claims.promoter_id || '').trim().toLowerCase();
+
+                if (role !== 'promoter' || !promoterId) {
+                    await signOut(auth);
+                    mostrarTelaLogin();
+                    return mostrarAviso('USUÁRIO AUTENTICADO, MAS SEM PERMISSÃO DE PROMOTER.');
                 }
 
-                if (dadosPromoter.senha === s) {
-                    await updateDoc(doc(db, "promoters", logado), { ultimo_login: new Date().toISOString() });
-                    
-                    document.getElementById('telaLogin').style.display = 'none'; 
-                    document.getElementById('painel').classList.remove('hidden');
-                    document.getElementById('nomeHeader').innerText = logado.toUpperCase();
+                const snap = await getDoc(doc(db, 'promoters', promoterId));
+                if (!snap.exists()) {
+                    await signOut(auth);
+                    mostrarTelaLogin();
+                    return mostrarAviso('PROMOTER NÃO ENCONTRADO.');
+                }
+
+                const perfil = snap.data();
+                if (perfil.ativo === false) {
+                    await signOut(auth);
+                    mostrarTelaLogin();
+                    return mostrarAviso('ACESSO DO PROMOTER DESATIVADO.');
+                }
+
+                logado = promoterId;
+                dadosPromoter = perfil;
+                document.getElementById('telaLogin').style.display = 'none';
+                document.getElementById('painel').classList.remove('hidden');
+                document.getElementById('nomeHeader').innerText = (dadosPromoter.nome || logado).toUpperCase();
+
+                if (!sistemaIniciado) {
+                    sistemaIniciado = true;
                     iniciarSistema();
-                } else { 
-                    mostrarAviso("Senha incorreta."); 
-                    btn.innerText = "ENTRAR NO PAINEL";
                 }
+            } catch (erro) {
+                console.error('Falha ao validar autorização promoter:', erro);
+                await signOut(auth).catch(() => {});
+                mostrarTelaLogin();
+                mostrarAviso('NÃO FOI POSSÍVEL VALIDAR A PERMISSÃO.');
             }
         };
+
+        window.prosseguirLogin = async () => {
+            const email = document.getElementById('email').value.trim();
+            const senha = document.getElementById('senha').value;
+            const btn = document.getElementById('btnAcao');
+
+            if (!email || !senha) return mostrarAviso('Digite e-mail e senha.');
+
+            btn.disabled = true;
+            btn.innerText = 'VERIFICANDO...';
+
+            try {
+                await setPersistence(auth, browserSessionPersistence);
+                await signInWithEmailAndPassword(auth, email, senha);
+                document.getElementById('senha').value = '';
+                // A autorização é validada pelo onAuthStateChanged abaixo.
+            } catch (erro) {
+                console.error('Falha de autenticação promoter:', erro?.code || erro);
+                mostrarAviso('E-MAIL OU SENHA INVÁLIDOS.');
+                btn.disabled = false;
+                btn.innerText = 'ENTRAR COM SEGURANÇA';
+            }
+        };
+
+        window.sairSeguro = async () => {
+            await signOut(auth);
+            location.reload();
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                logado = '';
+                dadosPromoter = null;
+                mostrarTelaLogin();
+                return;
+            }
+            await liberarPainelPromoter(user);
+        });
 
         function iniciarSistema() {
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
