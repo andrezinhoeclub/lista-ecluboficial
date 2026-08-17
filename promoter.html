@@ -121,15 +121,15 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, getDoc, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
         const auth = getAuth(app);
+        const PROMOTER_API_URL = "https://us-central1-teste-de-reserva.cloudfunctions.net/promoterApi";
+        let timerAtualizacaoSegura = null;
         
-        let logado = ""; let reservas = []; let eventos = []; let dadosPromoter = null; let linksAniv = [];
+        let logado = ""; let eventos = []; let dadosPromoter = null; let linksAniv = [];
         let sistemaIniciado = false;
         let camCortesiaSelecionado = null; let tipoCortesiaSelecionado = null;
 
@@ -260,10 +260,53 @@
             document.getElementById('btnAcao').innerText = 'ENTRAR COM SEGURANÇA';
         };
 
+        const chamarPromoterApi = async (action, payload = {}) => {
+            const user = auth.currentUser;
+            if (!user) throw new Error('Sessão ausente.');
+            const token = await user.getIdToken();
+            const resp = await fetch(PROMOTER_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                cache: 'no-store',
+                body: JSON.stringify({ action, ...payload })
+            });
+            let dados = {};
+            try { dados = await resp.json(); } catch (_) {}
+            if (!resp.ok || dados.ok === false) throw new Error(dados.error || `Erro ${resp.status}`);
+            return dados;
+        };
+
+        const aplicarDadosSeguros = (dados) => {
+            dadosPromoter = dados.perfil || null;
+            logado = String(dadosPromoter?.id || '').toLowerCase().trim();
+            eventos = Array.isArray(dados.eventos) ? dados.eventos : [];
+            linksAniv = Array.isArray(dados.links) ? dados.links : [];
+        };
+
+        const atualizarDadosSeguros = async (silencioso = true) => {
+            try {
+                const dados = await chamarPromoterApi('bootstrap');
+                aplicarDadosSeguros(dados);
+                renderPerformance();
+                const st = (dadosPromoter?.tipo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                if (st === 'aniversario') renderAniversarios();
+            } catch (erro) {
+                console.error('Falha ao atualizar dados seguros do promoter:', erro);
+                if (!silencioso) mostrarAviso(erro.message || 'Falha ao atualizar dados.');
+                if (/sessão|permiss|acesso|inativ/i.test(String(erro.message || ''))) {
+                    await signOut(auth).catch(() => {});
+                    mostrarTelaLogin();
+                }
+            }
+        };
+
         const liberarPainelPromoter = async (user) => {
             try {
                 const token = await user.getIdTokenResult(true);
-                const promoterPermitido = token.claims.promoter === true || String(token.claims.role || '').toLowerCase() === 'promoter';
+                const promoterPermitido = token.claims.promoter === true || ['promoter','staff'].includes(String(token.claims.role || '').toLowerCase());
                 const promoterId = String(token.claims.promoter_id || '').trim().toLowerCase();
                 const acessoAtivo = token.claims.active !== false;
 
@@ -273,35 +316,27 @@
                     return mostrarAviso('USUÁRIO AUTENTICADO, MAS SEM PERMISSÃO DE PROMOTER.');
                 }
 
-                const snap = await getDoc(doc(db, 'promoters', promoterId));
-                if (!snap.exists()) {
-                    await signOut(auth);
-                    mostrarTelaLogin();
-                    return mostrarAviso('PROMOTER NÃO ENCONTRADO.');
-                }
+                // A autorização REAL e os dados são validados pelo backend promoterApi.
+                const dados = await chamarPromoterApi('bootstrap');
+                aplicarDadosSeguros(dados);
 
-                const perfil = snap.data();
-                if (perfil.ativo === false) {
-                    await signOut(auth);
-                    mostrarTelaLogin();
-                    return mostrarAviso('ACESSO DO PROMOTER DESATIVADO.');
-                }
-
-                logado = promoterId;
-                dadosPromoter = perfil;
                 document.getElementById('telaLogin').style.display = 'none';
                 document.getElementById('painel').classList.remove('hidden');
-                document.getElementById('nomeHeader').innerText = (dadosPromoter.nome || logado).toUpperCase();
+                document.getElementById('nomeHeader').innerText = (dadosPromoter?.nome || logado).toUpperCase();
 
                 if (!sistemaIniciado) {
                     sistemaIniciado = true;
                     iniciarSistema();
+                } else {
+                    renderPerformance();
+                    const st = (dadosPromoter?.tipo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                    if (st === 'aniversario') renderAniversarios();
                 }
             } catch (erro) {
                 console.error('Falha ao validar autorização promoter:', erro);
                 await signOut(auth).catch(() => {});
                 mostrarTelaLogin();
-                mostrarAviso('NÃO FOI POSSÍVEL VALIDAR A PERMISSÃO.');
+                mostrarAviso(erro.message || 'NÃO FOI POSSÍVEL VALIDAR A PERMISSÃO.');
             }
         };
 
@@ -351,27 +386,18 @@
                 document.getElementById('painel').classList.remove('pb-44');
                 document.getElementById('painel').classList.add('pb-10');
             }
-            
+
             if (st === "aniversario") {
-                document.getElementById('secaoAniversario').classList.remove('hidden'); 
+                document.getElementById('secaoAniversario').classList.remove('hidden');
                 document.getElementById('botoesAniversario').classList.remove('hidden');
-                onSnapshot(collection(db, "links_aniversario"), (snap) => {
-                    linksAniv = snap.docs.map(d => ({id: d.id, ...d.data()})).filter(l => (l.promoter || '').toLowerCase().trim() === logado);
-                    renderAniversarios();
-                });
+                renderAniversarios();
             }
 
-            onSnapshot(collection(db, "lista_eventos"), (snap) => { 
-                reservas = snap.docs.map(d => d.data()); 
-                renderPerformance(); 
-                if (st === "aniversario") renderAniversarios(); 
-            });
-            
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snap) => { 
-                eventos = snap.docs.map(d => d.data()).sort((a,b) => new Date(a.data) - new Date(b.data)); 
-                renderPerformance(); 
-                if (st === "aniversario") renderAniversarios(); 
-            });
+            renderPerformance();
+
+            // Atualização periódica via backend; o navegador recebe somente agregados e status necessários.
+            if (timerAtualizacaoSegura) clearInterval(timerAtualizacaoSegura);
+            timerAtualizacaoSegura = setInterval(() => atualizarDadosSeguros(true), 15000);
         }
 
         function renderAniversarios() {
@@ -386,8 +412,9 @@
             });
 
             cont.innerHTML = linksAtivos.map(l => {
-                const count = reservas.filter(r => isReservaValidaEclub(r) && mesmaChaveReservaEclub(r.evento, l.festa) && mesmaChaveReservaEclub(r.aniversariante, l.aniversariante)).length;
-                return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${l.aniversariante}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
+                const count = Number(l.count || 0);
+                const nomeSeguro = String(l.aniversariante || '').replace(/'/g, "\\'");
+                return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${nomeSeguro}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
             }).join('');
         }
 
@@ -395,7 +422,7 @@
             const container = document.getElementById('listaPerformance');
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const isVisualizador = (st === 'visualizar');
-            const escondeGeral = (st === 'padrao'); 
+            const escondeGeral = (st === 'padrao');
 
             let htmlLegenda = '';
             if (isVisualizador) {
@@ -409,55 +436,33 @@
             }
 
             const htmlEventos = eventos.map(ev => {
-                const reservasDoEvento = reservas.filter(r => mesmaChaveReservaEclub(r.evento, ev.nome));
-                const reservasValidas = reservasDoEvento.filter(isReservaValidaEclub);
+                const minhas = Number(ev.minhas || 0);
+                const geral = Number(ev.geral || 0);
+                const camarotes = Array.isArray(ev.camarotes) ? ev.camarotes : [];
+                const dataHoraFormatada = `${String(ev.data || '').split('-').reverse().join('/')} ${ev.hora ? 'às ' + ev.hora : ''}`;
 
-                const minhas = reservasValidas.filter(r => mesmaChaveReservaEclub(r.promoter, logado)).length;
-                const geral = reservasValidas.length;
-                
-                const camesGeral = reservasDoEvento.filter(r => {
-                    const tipoCam = String(r.tipo_entrada || '').toUpperCase().trim();
-                    return tipoCam.includes('CAMAROTE') || tipoCam === 'VIP 1' || tipoCam === 'VIP 2';
-                });
-                
-                const dataHoraFormatada = `${ev.data.split('-').reverse().join('/')} ${ev.hora ? 'às ' + ev.hora : ''}`;
-                
                 if (isVisualizador) {
                     let luzesCamarotes = '';
                     for(let n=1; n<=8; n++) {
                         const ativo = ev[`cam${n}_ativo`] === true;
-                        if (!ativo) { luzesCamarotes += `<div class="w-full py-1 rounded bg-zinc-900/50 flex items-center justify-center text-[7px] text-zinc-600 font-bold border border-white/5">x</div>`; continue; }
+                        if (!ativo) {
+                            luzesCamarotes += `<div class="w-full py-1 rounded bg-zinc-900/50 flex items-center justify-center text-[7px] text-zinc-600 font-bold border border-white/5">x</div>`;
+                            continue;
+                        }
 
-                        const resDesseCam = camesGeral.filter(r => tipoEntradaCorrespondeCamarote(r.tipo_entrada, n));
+                        const cam = camarotes.find(c => Number(c.numero) === n) || { status: 'livre' };
+                        const statusCam = String(cam.status || 'livre');
                         const nomeCamVisor = nomeCamaroteVisual(n);
                         const nomeCamCurto = nomeCamaroteCurto(n);
-                        let statusCam = 'livre';
-                        let nomeCliente = "";
-                        
-                        if (resDesseCam.length > 0) {
-                            // Captura o nome e garante que não quebre o código se tiver aspas no nome do cliente
-                            nomeCliente = String(resDesseCam[0].nome || '').replace(/'/g, "\\'"); 
-                        }
-                        
-                        if (resDesseCam.some(r => r.cortesia === true)) statusCam = 'cortesia';
-                        else if (resDesseCam.some(r => r.pago === true)) statusCam = 'vendido';
-                        else {
-                            const temPendente = resDesseCam.filter(r => r.pago === false && !r.cortesia).some(r => r.data_reserva && ((new Date() - new Date(r.data_reserva)) / 60000) < 5);
-                            if(temPendente) statusCam = 'aguardando';
-                        }
 
-                        let clickEvt = "";
                         if (statusCam === 'cortesia') {
-                            clickEvt = `onclick="mostrarAviso('🎁 ${nomeCamVisor} - ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]"`;
-                            luzesCamarotes += `<div ${clickEvt}>${nomeCamCurto}</div>`; 
+                            luzesCamarotes += `<div onclick="mostrarAviso('🎁 ${nomeCamVisor} - CORTESIA')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]">${nomeCamCurto}</div>`;
                         } else if (statusCam === 'vendido') {
-                            clickEvt = `onclick="mostrarAviso('💎 ${nomeCamVisor} - ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]"`;
-                            luzesCamarotes += `<div ${clickEvt}>${nomeCamCurto}</div>`; 
+                            luzesCamarotes += `<div onclick="mostrarAviso('💎 ${nomeCamVisor} - VENDIDO')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]">${nomeCamCurto}</div>`;
                         } else if (statusCam === 'aguardando') {
-                            clickEvt = `onclick="mostrarAviso('⏳ ${nomeCamVisor} - AGUARDANDO: ${nomeCliente}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308]"`;
-                            luzesCamarotes += `<div ${clickEvt}>${nomeCamCurto}</div>`; 
+                            luzesCamarotes += `<div onclick="mostrarAviso('⏳ ${nomeCamVisor} - AGUARDANDO PAGAMENTO')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308]">${nomeCamCurto}</div>`;
                         } else {
-                            luzesCamarotes += `<div class="w-full py-1.5 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">${nomeCamCurto}</div>`; 
+                            luzesCamarotes += `<div class="w-full py-1.5 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">${nomeCamCurto}</div>`;
                         }
                     }
 
@@ -472,18 +477,17 @@
                             <div class="grid grid-cols-8 gap-2">${luzesCamarotes}</div>
                         </div>
                     </div>`;
-                } 
-                else {
-                    const blocoGeralHTML = escondeGeral ? '' : `<div class="border-l border-white/5 pl-6"><p class="text-2xl font-black text-white/20 leading-none">${geral}</p><p class="text-[6px] text-white/10 font-black mt-1 uppercase tracking-widest">Geral</p></div>`;
-                    return `
-                    <div class="card-performance p-5 flex justify-between items-center">
-                        <div class="text-left"><h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[8px] text-zinc-500 font-bold mt-1">${dataHoraFormatada}</p></div>
-                        <div class="flex gap-6 text-right">
-                            <div><p class="text-2xl font-black text-sky-400 leading-none">${minhas}</p><p class="text-[6px] text-sky-500 font-black mt-1 uppercase tracking-widest">Minhas</p></div>
-                            ${blocoGeralHTML}
-                        </div>
-                    </div>`;
                 }
+
+                const blocoGeralHTML = escondeGeral ? '' : `<div class="border-l border-white/5 pl-6"><p class="text-2xl font-black text-white/20 leading-none">${geral}</p><p class="text-[6px] text-white/10 font-black mt-1 uppercase tracking-widest">Geral</p></div>`;
+                return `
+                <div class="card-performance p-5 flex justify-between items-center">
+                    <div class="text-left"><h4 class="text-[11px] font-black uppercase italic leading-tight text-white">${ev.nome}</h4><p class="text-[8px] text-zinc-500 font-bold mt-1">${dataHoraFormatada}</p></div>
+                    <div class="flex gap-6 text-right">
+                        <div><p class="text-2xl font-black text-sky-400 leading-none">${minhas}</p><p class="text-[6px] text-sky-500 font-black mt-1 uppercase tracking-widest">Minhas</p></div>
+                        ${blocoGeralHTML}
+                    </div>
+                </div>`;
             }).join('');
 
             container.innerHTML = htmlLegenda + htmlEventos;
@@ -511,20 +515,32 @@
         window.carregarCamarotesCortesia = () => {
             const nomeEv = document.getElementById('selEventoCortesia').value;
             if (!nomeEv) { document.getElementById('area-mapa-cortesia').classList.add('hidden'); return; }
-            const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, nomeEv)); const resEvento = reservas.filter(r => mesmaChaveReservaEclub(r.evento, nomeEv));
+            const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, nomeEv));
+            if (!ev) return mostrarAviso('Evento não encontrado.');
+            const camarotes = Array.isArray(ev.camarotes) ? ev.camarotes : [];
+
             document.getElementById('area-mapa-cortesia').classList.remove('hidden');
             const grid = document.getElementById('grid-camarotes-cortesia'); grid.innerHTML = '';
+
             for(let i=1; i<=8; i++) {
                 if(ev[`cam${i}_ativo`]) {
-                    let status = 'livre'; let classCor = 'border-green-500/50 bg-green-500/10 text-green-400';
-                    const resCam = resEvento.filter(r => tipoEntradaCorrespondeCamarote(r.tipo_entrada, i));
-                    const nomeCamVisor = nomeCamaroteVisual(i);
-                    if (resCam.some(r => r.cortesia === true)) { status = 'cortesia dada'; classCor = 'border-blue-500/50 bg-blue-500/10 text-blue-400 opacity-50 cursor-not-allowed'; } 
-                    else if (resCam.some(r => r.pago === true)) { status = 'vendido'; classCor = 'border-red-500/50 bg-red-500/10 text-red-400 opacity-50 cursor-not-allowed'; } 
-                    else {
-                        const temPendente = resCam.filter(r => r.pago === false && !r.cortesia).some(r => ((new Date() - new Date(r.data_reserva)) / 60000) < 5);
-                        if(temPendente) { status = 'aguardando pix'; classCor = 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400 opacity-50 cursor-not-allowed'; }
+                    const cam = camarotes.find(c => Number(c.numero) === i) || { status: 'livre' };
+                    const statusApi = String(cam.status || 'livre');
+                    let status = 'livre';
+                    let classCor = 'border-green-500/50 bg-green-500/10 text-green-400';
+
+                    if (statusApi === 'cortesia') {
+                        status = 'cortesia dada';
+                        classCor = 'border-blue-500/50 bg-blue-500/10 text-blue-400 opacity-50 cursor-not-allowed';
+                    } else if (statusApi === 'vendido') {
+                        status = 'vendido';
+                        classCor = 'border-red-500/50 bg-red-500/10 text-red-400 opacity-50 cursor-not-allowed';
+                    } else if (statusApi === 'aguardando') {
+                        status = 'aguardando pix';
+                        classCor = 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400 opacity-50 cursor-not-allowed';
                     }
+
+                    const nomeCamVisor = nomeCamaroteVisual(i);
                     const onclickAction = status === 'livre' ? `onclick="selecionarCamCortesia(${i})"` : '';
                     grid.innerHTML += `<div ${onclickAction} class="p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${classCor} ${status==='livre'?'cursor-pointer hover:bg-green-500/20 hover:scale-105':''}"><span class="text-[10px] font-black uppercase">${nomeCamVisor}</span><span class="text-[7px] font-bold uppercase mt-1 opacity-70">${status}</span></div>`;
                 }
@@ -543,23 +559,31 @@
         window.salvarCortesia = async () => {
             if (!camCortesiaSelecionado) return mostrarAviso("Selecione um camarote!");
             if (!tipoCortesiaSelecionado) return mostrarAviso("Selecione se o cliente pagará como Casal ou Solteiro na porta!");
-            const n = document.getElementById('nomeCortesia').value.trim().toUpperCase(); const t = document.getElementById('telCortesia').value.trim(); const f = document.getElementById('selEventoCortesia').value;
+            const n = document.getElementById('nomeCortesia').value.trim().toUpperCase();
+            const t = document.getElementById('telCortesia').value.trim();
+            const f = document.getElementById('selEventoCortesia').value;
             if (!n || t.length < 14) return mostrarAviso("Preencha nome e telefone!");
-            const btn = document.getElementById('btnSalvarCortesia'); const originalText = btn.innerText; btn.innerText = "SALVANDO..."; btn.disabled = true;
+            const btn = document.getElementById('btnSalvarCortesia');
+            const originalText = btn.innerText;
+            btn.innerText = "SALVANDO...";
+            btn.disabled = true;
             try {
-                const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", f)));
-                let ocupado = false;
-                checkFinal.forEach(d => {
-                    const ex = d.data();
-                    if (
-                        tipoEntradaCorrespondeCamarote(ex.tipo_entrada, camCortesiaSelecionado) &&
-                        (ex.cortesia === true || ex.pago === true || (ex.pago === false && !ex.cortesia && ((new Date() - new Date(ex.data_reserva))/60000 < 5)))
-                    ) ocupado = true;
+                await chamarPromoterApi('criar_cortesia', {
+                    evento: f,
+                    camarote: camCortesiaSelecionado,
+                    pagamento_porta: tipoCortesiaSelecionado,
+                    nome: n,
+                    telefone: t
                 });
-                if (ocupado) throw new Error("Ops! Este Camarote acabou de ficar indisponível. Selecione outro.");
-                await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, evento: f, tipo_entrada: nomeCamaroteSistema(camCortesiaSelecionado), pagamento_porta: tipoCortesiaSelecionado, promoter: logado, cortesia: true, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'portaria' });
-                mostrarAviso("🎁 Cortesia concedida com sucesso!", true); fecharModalCortesia();
-            } catch (e) { mostrarAviso(e.message); } finally { btn.innerText = originalText; btn.disabled = false; }
+                await atualizarDadosSeguros(true);
+                mostrarAviso("🎁 Cortesia concedida com sucesso!", true);
+                fecharModalCortesia();
+            } catch (e) {
+                mostrarAviso(e.message || 'Erro ao salvar cortesia.');
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
         };
 
         window.abrirModalAniv = () => { 
@@ -590,26 +614,41 @@
             const selCam = document.getElementById('selCamaroteAniv');
             const areaCam = document.getElementById('areaCamaroteAniv');
             const checkCam = document.getElementById('checkAddCamarote');
-            
-            if (!nomeEv) { areaCam.classList.add('hidden'); checkCam.checked = false; selCam.classList.add('hidden'); selCam.value = ""; return; }
-            
+
+            if (!nomeEv) {
+                areaCam.classList.add('hidden');
+                checkCam.checked = false;
+                selCam.classList.add('hidden');
+                selCam.value = "";
+                return;
+            }
+
             const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, nomeEv));
-            const resEvento = reservas.filter(r => mesmaChaveReservaEclub(r.evento, nomeEv));
+            if (!ev) return mostrarAviso('Evento não encontrado.');
+            const camarotes = Array.isArray(ev.camarotes) ? ev.camarotes : [];
 
             let options = '<option value="">SELECIONE O CAMAROTE</option>';
             let hasLivre = false;
 
             for(let i=1; i<=8; i++) {
                 if(ev[`cam${i}_ativo`]) {
-                    const resCam = resEvento.filter(r => tipoEntradaCorrespondeCamarote(r.tipo_entrada, i));
+                    const cam = camarotes.find(c => Number(c.numero) === i) || { status: 'livre' };
                     const nomeCamVisor = nomeCamaroteVisual(i);
-                    const isOcupado = resCam.some(r => r.cortesia === true || r.pago === true || (r.pago === false && !r.cortesia && ((new Date() - new Date(r.data_reserva)) / 60000) < 5));
-                    if (!isOcupado) { options += `<option value="${i}">🎁 ${nomeCamVisor} (LIVRE)</option>`; hasLivre = true; }
+                    if (String(cam.status || 'livre') === 'livre') {
+                        options += `<option value="${i}">🎁 ${nomeCamVisor} (LIVRE)</option>`;
+                        hasLivre = true;
+                    }
                 }
             }
 
             selCam.innerHTML = options;
-            if (hasLivre) areaCam.classList.remove('hidden'); else { areaCam.classList.add('hidden'); checkCam.checked = false; selCam.classList.add('hidden'); selCam.value = ""; }
+            if (hasLivre) areaCam.classList.remove('hidden');
+            else {
+                areaCam.classList.add('hidden');
+                checkCam.checked = false;
+                selCam.classList.add('hidden');
+                selCam.value = "";
+            }
         };
 
         window.fecharModalAniv = () => {
@@ -620,58 +659,36 @@
             document.getElementById('selEvento').value = ""; document.getElementById('nomeAniv').value = ""; document.getElementById('telAniv').value = ""; document.getElementById('selCamaroteAniv').value = "";
         };
         
-        window.criarLinkAniv = async () => { 
-            const f = document.getElementById('selEvento').value; 
-            const n = document.getElementById('nomeAniv').value.trim().toUpperCase(); 
-            const t = document.getElementById('telAniv').value.trim(); 
+        window.criarLinkAniv = async () => {
+            const f = document.getElementById('selEvento').value;
+            const n = document.getElementById('nomeAniv').value.trim().toUpperCase();
+            const t = document.getElementById('telAniv').value.trim();
             const querCamarote = document.getElementById('checkAddCamarote').checked;
             const camSelecionado = querCamarote ? document.getElementById('selCamaroteAniv').value : "";
-            const btn = document.getElementById('btnGerarVip'); 
-            
+            const btn = document.getElementById('btnGerarVip');
+
             if (!f) return mostrarAviso("Selecione o evento!");
-            if (!n || t.length < 14) return mostrarAviso("Digite o nome e telefone completos!"); 
+            if (!n || t.length < 14) return mostrarAviso("Digite o nome e telefone completos!");
             if (querCamarote && !camSelecionado) return mostrarAviso("Você marcou camarote, mas não selecionou nenhum na lista!");
-            
-            btn.innerText = "GERANDO..."; btn.disabled = true; 
-            
-            try { 
-                if (camSelecionado) {
-                    const checkFinal = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", f)));
-                    let ocupado = false;
-                    checkFinal.forEach(d => {
-                        const ex = d.data();
-                        if (
-                            tipoEntradaCorrespondeCamarote(ex.tipo_entrada, camSelecionado) &&
-                            (ex.cortesia === true || ex.pago === true || (ex.pago === false && !ex.cortesia && ((new Date() - new Date(ex.data_reserva))/60000 < 5)))
-                        ) ocupado = true;
-                    });
-                    if (ocupado) throw new Error("Ops! O Camarote selecionado acabou de ser reservado.");
-                }
 
-                await addDoc(collection(db, "links_aniversario"), { promoter: logado, aniversariante: n, festa: f, criado: new Date().toISOString() }); 
-                
-                await addDoc(collection(db, "lista_eventos"), {
-                    nome: n,
-                    tel: t,
+            btn.innerText = "GERANDO...";
+            btn.disabled = true;
+            try {
+                await chamarPromoterApi('criar_aniversario', {
                     evento: f,
-                    tipo_entrada: camSelecionado ? nomeCamaroteSistema(camSelecionado) : "VIP_DONO",
-                    is_dono: true,
-                    promoter: logado,
-                    cortesia: !!camSelecionado,
-                    data_reserva: new Date().toISOString(),
-                    entrou: false,
-                    pago: false,
-                    metodo: 'portaria',
-                    aniversariante: n
+                    nome: n,
+                    telefone: t,
+                    camarote: camSelecionado
                 });
-
-                fecharModalAniv(); 
-                mostrarAviso(camSelecionado ? "Lista e Camarote criados!" : "Lista VIP criada!", true); 
-            } catch (e) { 
-                mostrarAviso(e.message); 
-            } finally { 
-                btn.innerText = "GERAR LINK E GARANTIR VIP ✨"; btn.disabled = false; 
-            } 
+                await atualizarDadosSeguros(true);
+                fecharModalAniv();
+                mostrarAviso(camSelecionado ? "Lista e Camarote criados!" : "Lista VIP criada!", true);
+            } catch (e) {
+                mostrarAviso(e.message || 'Erro ao criar lista VIP.');
+            } finally {
+                btn.innerText = "GERAR LINK E GARANTIR VIP ✨";
+                btn.disabled = false;
+            }
         };
 
         window.abrirLinkGeral = () => { window.open(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`, '_blank'); };
