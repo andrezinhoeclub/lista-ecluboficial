@@ -2193,13 +2193,14 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
             browserSessionPersistence,
             signInWithEmailAndPassword,
             onAuthStateChanged,
+            getIdTokenResult,
             signOut
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         (() => {
-            // FASE 1 DE SEGURANÇA — autenticação real do Command Center.
-            // O UID não é segredo. A proteção definitiva será aplicada também nas Firestore Rules.
-            const MASTER_UID = "PSoHpBpXaGeO4UCw1c3nbGOz7jf1";
+            // FASE 2 DE SEGURANÇA — autenticação real + autorização por Custom Claim.
+            // O papel MASTER vem do token assinado pelo Firebase Authentication.
+            // A mesma claim será exigida nas Firestore Rules na etapa de fechamento do banco.
             const firebaseConfig = {
                 apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
                 authDomain: "teste-de-reserva.firebaseapp.com",
@@ -2236,14 +2237,21 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                 if (login()) login().classList.remove('hidden');
             }
 
-            function usuarioMasterValido(user) {
-                return Boolean(user && user.uid === MASTER_UID);
+            async function usuarioMasterValido(user, forcarAtualizacao = false) {
+                if (!user) return false;
+                try {
+                    const token = await getIdTokenResult(user, forcarAtualizacao);
+                    return token?.claims?.role === 'master';
+                } catch (e) {
+                    console.warn('Não foi possível validar a função MASTER:', e?.code || e?.message || e);
+                    return false;
+                }
             }
 
-            function carregarSistema() {
+            async function carregarSistema() {
                 if (sistemaCarregado) return;
                 const user = auth.currentUser;
-                if (!usuarioMasterValido(user)) {
+                if (!(await usuarioMasterValido(user))) {
                     mostrarLogin();
                     mostrarErro();
                     return;
@@ -2278,13 +2286,14 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
 
                 try {
                     const credencial = await signInWithEmailAndPassword(auth, email, senha);
-                    if (!usuarioMasterValido(credencial.user)) {
+                    // Força um token novo para garantir que a claim role=master esteja presente.
+                    if (!(await usuarioMasterValido(credencial.user, true))) {
                         await signOut(auth);
-                        mostrarErro();
+                        mostrarErro('Usuário autenticado, mas sem permissão MASTER.');
                         return;
                     }
                     if (inputSenha()) inputSenha().value = '';
-                    carregarSistema();
+                    await carregarSistema();
                 } catch (e) {
                     console.warn('Falha de autenticação do dashboard:', e?.code || 'auth/unknown');
                     if (inputSenha()) inputSenha().value = '';
@@ -2308,9 +2317,9 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                 .then(() => {
                     authPronto = true;
                     onAuthStateChanged(auth, async (user) => {
-                        if (usuarioMasterValido(user)) {
+                        if (await usuarioMasterValido(user)) {
                             limparErro();
-                            carregarSistema();
+                            await carregarSistema();
                         } else {
                             if (user) {
                                 try { await signOut(auth); } catch (_) {}
