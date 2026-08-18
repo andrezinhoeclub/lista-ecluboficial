@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- E-CLUB REGRA ÚNICA DE RESERVAS V41 -->
+<!-- E-CLUB RESERVAS V42 SEGURA — LISTAS API / PIX BACKEND -->
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -171,18 +171,30 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, onSnapshot, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        const URL_LISTAS_API = 'https://us-central1-teste-de-reserva.cloudfunctions.net/listasApi';
+        const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamentoSeguro';
 
-        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.appspot.com", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const URL_FUNCAO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerarPagamento';
+        async function apiListas(action, payload = {}) {
+            const resp = await fetch(URL_LISTAS_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                cache: 'no-store',
+                body: JSON.stringify({ action, ...payload })
+            });
+
+            let data = {};
+            try { data = await resp.json(); } catch (_) {}
+
+            if (!resp.ok || data.ok === false) {
+                throw new Error(data.error || `Erro ${resp.status}`);
+            }
+            return data;
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         let globalPromoter = urlParams.get('ref') || "site_direto";
         let globalAniversariante = ""; let eventoFixo = null; let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
-        let unsubscribeCamarotes = null; let numCamaroteSelecionado = null; let unsubscribePagamento = null;
+        let numCamaroteSelecionado = null; let intervalPagamento = null;
         let promoterTipo = "padrao";
         let aplicouDescontoFidelidade = false;
         let intervalCamarotes = null;
@@ -336,44 +348,17 @@
         };
 
         async function validarDuplicidade(telefone, nomeEvento) {
-            const q = query(collection(db, "lista_eventos"), where("evento", "==", nomeEvento), where("tel", "==", telefone));
-            const snap = await getDocs(q);
-            if (!snap.empty) {
-                const ativos = snap.docs.filter(d => {
-                    const data = d.data();
-                    return isReservaValidaEclub(data) || isReservaPixPendenteRecenteEclub(data, 5);
-                });
-                return ativos.length > 0;
-            }
-            return false;
+            const data = await apiListas('duplicidade', { telefone, nomeEvento });
+            return data.duplicado === true;
         }
 
         async function verificarFidelidade(telefone) {
-            try {
-                const q = query(collection(db, "lista_eventos"), where("tel", "==", telefone));
-                const snap = await getDocs(q);
-                if (snap.empty) return false;
-                
-                let veioNaSexta = false;
-                const agora = new Date();
-                
-                snap.forEach(docSnap => {
-                    const dados = docSnap.data();
-                    if (dados.entrou === true && dados.data_entrada) {
-                        const dEntrada = new Date(dados.data_entrada);
-                        const dia = dEntrada.getDay(); 
-                        const hora = dEntrada.getHours();
-                        const diffDias = (agora - dEntrada) / (1000 * 60 * 60 * 24);
-                        
-                        if (diffDias <= 7) {
-                            if ((dia === 5 && hora >= 21) || (dia === 6 && hora <= 5)) {
-                                veioNaSexta = true;
-                            }
-                        }
-                    }
-                });
-                return veioNaSexta;
-            } catch(e) { return false; }
+            const data = await apiListas('fidelidade', {
+                telefone,
+                ref: globalPromoter,
+                id: urlParams.get('id') || ''
+            });
+            return data.elegivel === true;
         }
 
         window.checarTelefoneFidelidade = async (val) => {
@@ -408,11 +393,7 @@
             btnFinal.disabled = true;
 
             try {
-                if (promoterTipo === "padrao") {
-                    const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
-                    if (pSnap.exists()) { promoterTipo = pSnap.data().tipo; }
-                }
-                
+                // promoterTipo já vem validado pelo listasApi/bootstrap.
                 if (promoterTipo !== 'aniversario') {
                     btnFinal.innerText = "Confirmar Presença";
                     btnFinal.disabled = false;
@@ -454,36 +435,27 @@
         };
 
         async function carregarPagina() {
-            const sysSnap = await getDoc(doc(db, "configuracoes", "sistema"));
-            if (sysSnap.exists()) {
-                taxaPixTipo = sysSnap.data().taxa_tipo || 'desativado';
-                taxaPixValor = parseFloat(sysSnap.data().taxa_valor || 0);
-            }
+            const boot = await apiListas('bootstrap', {
+                ref: globalPromoter,
+                id: urlParams.get('id') || ''
+            });
 
-            const anivId = urlParams.get('id');
-            if (anivId) {
-                const anivSnap = await getDoc(doc(db, "links_aniversario", anivId));
-                if (anivSnap.exists()) {
-                    const d = anivSnap.data();
-                    globalPromoter = d.promoter || "site_direto";
-                    globalAniversariante = d.aniversariante;
-                    eventoFixo = d.festa;
+            taxaPixTipo = boot.configuracao?.taxa_tipo || 'desativado';
+            taxaPixValor = Number(boot.configuracao?.taxa_valor || 0);
+
+            globalPromoter = boot.contexto?.promoter || 'site_direto';
+            globalAniversariante = boot.contexto?.aniversariante || '';
+            eventoFixo = boot.contexto?.festa || null;
+            promoterTipo = boot.contexto?.promoterTipo || 'padrao';
+            eventosCache = Array.isArray(boot.eventos) ? boot.eventos : [];
+
+            if (globalAniversariante) {
+                const h = document.getElementById('header-aniv');
+                if (h) {
+                    h.innerText = globalAniversariante;
+                    h.classList.remove('hidden');
                 }
-            } else if (globalPromoter && globalPromoter !== "site_direto") {
-                const pSnap = await getDoc(doc(db, "promoters", globalPromoter.toLowerCase()));
-                if (pSnap.exists()) { promoterTipo = pSnap.data().tipo; }
             }
-
-            const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
-            const hojeStr = obterHojeISO();
-            eventosCache = snap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(ev => {
-                    const dataEvento = normalizarDataEvento(ev.data);
-                    return dataEvento && dataEvento >= hojeStr;
-                })
-                .sort((a, b) => normalizarDataEvento(a.data).localeCompare(normalizarDataEvento(b.data)));
-            if (eventoFixo) eventosCache = eventosCache.filter(e => e.nome === eventoFixo);
 
             const container = document.getElementById('listaEventos');
             container.innerHTML = eventosCache.map(ev => {
@@ -670,120 +642,126 @@
                     return;
                 }
 
-                if(eFluxoPix || !aplicouDescontoFidelidade) {
-                   const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
-                   if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
-                }
-                
-                let valorRefRaw;
-                if (aplicouDescontoFidelidade) {
-                    valorRefRaw = (tipoAtivo === 'SOLTEIRO') ? (eventoAtivo.valor_recorrente_solteiro || "FREE") : (eventoAtivo.valor_recorrente_casal || "FREE");
-                } else {
-                    if (tipoAtivo === 'CASAL') valorRefRaw = eFluxoPix ? eventoAtivo.ant_casal : (globalAniversariante ? eventoAtivo.desc_casal : eventoAtivo.valor_casal);
-                    else if (tipoAtivo === 'CASAL CONSUMAÇÃO') valorRefRaw = eFluxoPix ? eventoAtivo.ant_casal_cons : eventoAtivo.valor_casal_cons;
-                    else valorRefRaw = eFluxoPix ? eventoAtivo.ant_solteiro : (globalAniversariante ? eventoAtivo.desc_solteiro : eventoAtivo.valor_solteiro);
-                }
-
-                let valorPuroDB = valorRefRaw; 
-                if (eFluxoPix) {
-                    valorPuroDB = extrairValorNumerico(valorRefRaw); 
-                }
-
-                const docRef = await addDoc(collection(db, "lista_eventos"), { 
-                    nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, 
-                    tipo_entrada: aplicouDescontoFidelidade ? (tipoAtivo + " FIDELIDADE") : tipoAtivo, 
-                    promoter: globalPromoter, aniversariante: globalAniversariante, 
-                    data_reserva: new Date().toISOString(), entrou: false, pago: false, 
-                    metodo: eFluxoPix ? 'pix_antecipado' : 'portaria',
-                    regra_contagem: 'RESERVA_VALIDA_V1',
-                    valor_pago: valorPuroDB > 0 ? String(valorPuroDB) : String(valorRefRaw)
+                const nova = await apiListas('criar_reserva', {
+                    eventId: eventoAtivo.id,
+                    nome: n,
+                    telefone: t,
+                    cpf: eFluxoPix ? cpf : '',
+                    tipo: tipoAtivo,
+                    pix: eFluxoPix,
+                    fidelidade: aplicouDescontoFidelidade,
+                    ref: globalPromoter,
+                    id: urlParams.get('id') || ''
                 });
-                
+
                 if (eFluxoPix) {
-                    let valorTotalComTaxa = calcularComTaxa(valorRefRaw);
-                    const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valorTotalComTaxa.toFixed(2), titulo: `PISTA: ${eventoAtivo.nome}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
+                    const resp = await fetch(URL_FUNCAO, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        cache: 'no-store',
+                        body: JSON.stringify({
+                            reservaId: nova.reservaId,
+                            nome: n,
+                            email: em,
+                            cpf
+                        })
+                    });
+
                     const data = await resp.json();
-                    if (data.sucesso) { abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id); } 
-                    else { mostrarAviso(data.mensagem || "Erro na chave Pix. Revise seus dados."); btn.disabled = false; btn.innerText = "Confirmar Presença"; }
-                } else { 
-                    mostrarAviso(aplicouDescontoFidelidade ? "🏆 Reserva Fidelidade Finalizada com Sucesso!" : "✨ Confirmado na lista com sucesso!", true);
+                    if (data.sucesso) {
+                        abrirTelaQR(
+                            data.qr_code_base64,
+                            data.qr_code_copia_cola,
+                            nova.reservaId,
+                            nova.statusToken
+                        );
+                    } else {
+                        mostrarAviso(data.mensagem || "Erro na geração do PIX. Tente novamente.");
+                        btn.disabled = false;
+                        btn.innerText = "Confirmar Presença";
+                    }
+                } else {
+                    mostrarAviso(
+                        aplicouDescontoFidelidade
+                            ? "🏆 Reserva Fidelidade Finalizada com Sucesso!"
+                            : "✨ Confirmado na lista com sucesso!",
+                        true
+                    );
                     setTimeout(() => { location.reload(); }, 2000);
                 }
-            } catch (e) { mostrarAviso(e.message); btn.disabled = false; btn.innerText = "Confirmar Presença"; }
+            } catch (e) {
+                mostrarAviso(e.message);
+                btn.disabled = false;
+                btn.innerText = "Confirmar Presença";
+            }
         };
 
-        window.iniciarFluxoCamarote = (id) => {
+        window.iniciarFluxoCamarote = async (id) => {
             eventoAtivo = eventosCache.find(e => e.id === id);
             if (bloquearEventoPassadoSeNecessario(eventoAtivo)) return;
-            const q = query(collection(db, "lista_eventos"), where("evento", "==", eventoAtivo.nome));
-            
-            let ultimasReservas = [];
 
-            const renderGrid = () => {
-                const grid = document.getElementById('grid-camarotes-venda'); 
+            const renderGrid = (statuses) => {
+                const grid = document.getElementById('grid-camarotes-venda');
                 grid.innerHTML = '';
-                
-                let temTaxa = taxaPixTipo !== 'desativado' && taxaPixValor > 0;
-                if (temTaxa) document.getElementById('aviso-taxa-camarote').classList.remove('hidden');
-                else document.getElementById('aviso-taxa-camarote').classList.add('hidden');
-                
-                const agora = new Date();
 
-                for(let i=1; i<=8; i++) {
-                    let valCamCru = String(eventoAtivo[`v_cam${i}`] || '0');
-                    let valBase = extrairValorNumerico(valCamCru);
-                    
-                    if(eventoAtivo[`cam${i}_ativo`] && valBase > 0) {
-                        const nomeDB = (i === 7) ? "VIP 1" : (i === 8) ? "VIP 2" : `CAMAROTE ${i}`;
-                        const nomeAlternativo = `CAMAROTE 0${i}`; 
+                const temTaxa = taxaPixTipo !== 'desativado' && taxaPixValor > 0;
+                document.getElementById('aviso-taxa-camarote').classList.toggle('hidden', !temTaxa);
 
-                        const resCam = ultimasReservas.filter(r => { const ent = String(r.tipo_entrada).toUpperCase().trim(); return ent === nomeDB || ent === nomeAlternativo; });
-                        
-                        let status = 'livre', classCor = 'cam-livre', icone = '✅';
-                        
-                        if (resCam.some(r => r.pago === true || r.cortesia === true)) { 
-                            status = 'vendido'; classCor = 'cam-vendido'; icone = '🔒'; 
-                        } 
-                        else if (resCam.some(r => {
-                            if (r.pago === true || r.cortesia === true) return false;
-                            if (!r.data_reserva) return false;
-                            const tRes = new Date(r.data_reserva);
-                            const diffMins = (agora - tRes) / 60000;
-                            return diffMins >= 0 && diffMins < 5;
-                        })) { 
-                            status = 'aguardando'; classCor = 'cam-aguardando'; icone = '⏳'; 
-                        }
-                        
-                        const observacao = eventoAtivo[`obs_cam${i}`] ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>` : '';
-                        let nomeVisor = (i === 7) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 1</span>` : (i === 8) ? `<span class="text-[#eab308] text-[13px] font-black">VIP 2</span>` : `CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span>`;
+                for (let i=1; i<=8; i++) {
+                    const valCamCru = String(eventoAtivo[`v_cam${i}`] || '0');
+                    const valBase = extrairValorNumerico(valCamCru);
 
-                        let taxa = calcularTaxaApenas(valCamCru);
+                    if (eventoAtivo[`cam${i}_ativo`] && valBase > 0) {
+                        const status = statuses?.[i] || statuses?.[String(i)] || 'livre';
+                        let classCor = 'cam-livre', icone = '✅';
+                        if (status === 'vendido') { classCor = 'cam-vendido'; icone = '🔒'; }
+                        else if (status === 'aguardando') { classCor = 'cam-aguardando'; icone = '⏳'; }
+
+                        const observacao = eventoAtivo[`obs_cam${i}`]
+                            ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>`
+                            : '';
+
+                        const nomeVisor = i === 7
+                            ? `<span class="text-[#eab308] text-[13px] font-black">VIP 1</span>`
+                            : i === 8
+                                ? `<span class="text-[#eab308] text-[13px] font-black">VIP 2</span>`
+                                : `CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span>`;
+
+                        const taxa = calcularTaxaApenas(valCamCru);
                         let txtDisplay = formatarNumeroMoeda(valBase);
-                        if (taxa > 0) txtDisplay += `<br><span class="text-[7.5px] text-yellow-500 tracking-widest mt-1">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
+                        if (taxa > 0) {
+                            txtDisplay += `<br><span class="text-[7.5px] text-yellow-500 tracking-widest mt-1">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
+                        }
 
                         grid.innerHTML += `<button id="btn-cam-${i}" onclick="selecionarCamarote(${i}, '${status}', '${valCamCru}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all text-center"><span class="text-[9px] font-black uppercase text-zinc-300">${nomeVisor}</span><span class="text-xs font-bold mt-1 leading-tight">${txtDisplay}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
                     }
                 }
 
-                if(numCamaroteSelecionado !== null) {
-                    let btnAtivo = document.getElementById(`btn-cam-${numCamaroteSelecionado}`);
-                    if(btnAtivo) btnAtivo.classList.add('cam-selecionado');
+                if (numCamaroteSelecionado !== null) {
+                    const btnAtivo = document.getElementById(`btn-cam-${numCamaroteSelecionado}`);
+                    if (btnAtivo) btnAtivo.classList.add('cam-selecionado');
                 }
             };
 
-            unsubscribeCamarotes = onSnapshot(q, (snap) => {
-                ultimasReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
-                renderGrid();
-            });
+            const refresh = async () => {
+                try {
+                    const data = await apiListas('camarotes_status', { eventId: eventoAtivo.id });
+                    renderGrid(data.statuses || {});
+                } catch (e) {
+                    mostrarAviso(e.message || 'Erro ao atualizar camarotes.');
+                }
+            };
 
-            if(intervalCamarotes) clearInterval(intervalCamarotes);
+            await refresh();
+
+            if (intervalCamarotes) clearInterval(intervalCamarotes);
             intervalCamarotes = setInterval(() => {
-                if(!document.getElementById('modalCamarote').classList.contains('hidden')) {
-                    renderGrid();
+                if (!document.getElementById('modalCamarote').classList.contains('hidden')) {
+                    refresh();
                 } else {
                     clearInterval(intervalCamarotes);
                 }
-            }, 10000); 
+            }, 12000);
 
             document.getElementById('modalCamarote').classList.remove('hidden');
         };
@@ -818,15 +796,16 @@
             const t = document.getElementById('tel-camarote').value.trim();
             const em = document.getElementById('email-camarote').value.trim();
             const cpf = document.getElementById('cpf-camarote').value.trim();
-            
+
             if (!n) return mostrarAviso("Faltou preencher o Nome do titular!");
             if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto (faltam dígitos)!");
             if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
             if (cpf.length < 14) return mostrarAviso("CPF incompleto (são 11 dígitos)!");
 
-            const btn = document.getElementById('btn-final-camarote'); 
-            btn.disabled = true; btn.innerText = "VALIDANDO...";
-            
+            const btn = document.getElementById('btn-final-camarote');
+            btn.disabled = true;
+            btn.innerText = "VALIDANDO...";
+
             try {
                 if (bloquearEventoPassadoSeNecessario(eventoAtivo)) {
                     btn.disabled = false;
@@ -834,40 +813,88 @@
                     return;
                 }
 
-                const jaExiste = await validarDuplicidade(t, eventoAtivo.nome);
-                if (jaExiste) throw new Error("Você já possui uma reserva ativa para este evento!");
-                
-                let nomeSalvar = (numCamaroteSelecionado === 7) ? "VIP 1" : (numCamaroteSelecionado === 8) ? "VIP 2" : `CAMAROTE ${numCamaroteSelecionado}`;
+                const nova = await apiListas('criar_camarote', {
+                    eventId: eventoAtivo.id,
+                    num: numCamaroteSelecionado,
+                    nome: n,
+                    telefone: t,
+                    cpf,
+                    ref: globalPromoter,
+                    id: urlParams.get('id') || ''
+                });
 
-                let valRawBase = eventoAtivo[`v_cam${numCamaroteSelecionado}`];
-                let valPuroDB = extrairValorNumerico(valRawBase);
-                let valFinalCobrado = calcularComTaxa(valRawBase);
+                const resp = await fetch(URL_FUNCAO, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    cache: 'no-store',
+                    body: JSON.stringify({
+                        reservaId: nova.reservaId,
+                        nome: n,
+                        email: em,
+                        cpf
+                    })
+                });
 
-                const docRef = await addDoc(collection(db, "lista_eventos"), { nome: n, tel: t, cpf: cpf, evento: eventoAtivo.nome, tipo_entrada: nomeSalvar, promoter: globalPromoter, data_reserva: new Date().toISOString(), entrou: false, pago: false, metodo: 'pix_antecipado', regra_contagem: 'RESERVA_VALIDA_V1', valor_pago: valPuroDB });
-                
-                const resp = await fetch(URL_FUNCAO, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ valor: valFinalCobrado.toFixed(2), titulo: `${nomeSalvar}`, reservaId: docRef.id, nome: n, email: em, cpf: cpf }) });
                 const data = await resp.json();
-                
-                if (data.sucesso) { abrirTelaQR(data.qr_code_base64, data.qr_code_copia_cola, docRef.id); } 
-                else { mostrarAviso(data.mensagem || "Erro na geração do PIX. Tente novamente."); btn.disabled = false; btn.innerText = "Garantir Ingresso ⚡"; }
-            } catch (e) { mostrarAviso(e.message); btn.disabled = false; btn.innerText = "Garantir Ingresso ⚡"; }
+
+                if (data.sucesso) {
+                    abrirTelaQR(
+                        data.qr_code_base64,
+                        data.qr_code_copia_cola,
+                        nova.reservaId,
+                        nova.statusToken
+                    );
+                } else {
+                    mostrarAviso(data.mensagem || "Erro na geração do PIX. Tente novamente.");
+                    btn.disabled = false;
+                    btn.innerText = "Garantir Ingresso ⚡";
+                }
+            } catch (e) {
+                mostrarAviso(e.message);
+                btn.disabled = false;
+                btn.innerText = "Garantir Ingresso ⚡";
+            }
         };
 
-        window.abrirTelaQR = (base64, copiaCola, reservaId) => {
+        window.abrirTelaQR = (base64, copiaCola, reservaId, statusToken) => {
             document.getElementById('img-qrcode').src = `data:image/jpeg;base64,${base64}`;
             document.getElementById('chave-copia-cola').value = copiaCola;
-            document.getElementById('modalForm').classList.add('hidden'); document.getElementById('modalCamarote').classList.add('hidden'); document.getElementById('modalQrCode').classList.remove('hidden');
-            unsubscribePagamento = onSnapshot(doc(db, "lista_eventos", reservaId), (ds) => { if (ds.exists() && ds.data().pago) { document.getElementById('box-qrcode').classList.add('hidden'); document.getElementById('box-sucesso').classList.remove('hidden'); } });
+            document.getElementById('modalForm').classList.add('hidden');
+            document.getElementById('modalCamarote').classList.add('hidden');
+            document.getElementById('modalQrCode').classList.remove('hidden');
+
+            if (intervalPagamento) clearInterval(intervalPagamento);
+
+            const verificar = async () => {
+                try {
+                    const data = await apiListas('status_pagamento', { reservaId, statusToken });
+                    if (data.pago === true) {
+                        if (intervalPagamento) clearInterval(intervalPagamento);
+                        intervalPagamento = null;
+                        document.getElementById('box-qrcode').classList.add('hidden');
+                        document.getElementById('box-sucesso').classList.remove('hidden');
+                    }
+                } catch (e) {
+                    console.warn('Status PIX:', e.message);
+                }
+            };
+
+            verificar();
+            intervalPagamento = setInterval(verificar, 3000);
         };
 
         window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
-        window.fecharModalCamarote = () => { 
+        window.fecharModalCamarote = () => {
             numCamaroteSelecionado = null;
-            if(unsubscribeCamarotes) unsubscribeCamarotes(); 
-            if(intervalCamarotes) clearInterval(intervalCamarotes);
-            document.getElementById('modalCamarote').classList.add('hidden'); 
+            if (intervalCamarotes) clearInterval(intervalCamarotes);
+            intervalCamarotes = null;
+            document.getElementById('modalCamarote').classList.add('hidden');
         };
-        window.fecharModalQrCode = () => { location.reload(); };
+        window.fecharModalQrCode = () => {
+            if (intervalPagamento) clearInterval(intervalPagamento);
+            intervalPagamento = null;
+            location.reload();
+        };
         window.copiarChavePix = () => { const c = document.getElementById('chave-copia-cola'); c.select(); document.execCommand('copy'); mostrarAviso("Copiado com sucesso!", true); };
         window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
         window.maskCPF = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 3) v = v.substring(0, 3) + "." + v.substring(3); if (v.length > 7) v = v.substring(0, 7) + "." + v.substring(7); if (v.length > 11) v = v.substring(0, 11) + "-" + v.substring(11); i.value = v; };

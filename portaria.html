@@ -1,688 +1,534 @@
 <!DOCTYPE html>
-<!-- E-CLUB REGRA ÚNICA DE RESERVAS V41 -->
+<!-- E-CLUB PORTARIA SEGURA — FASE 3 — API BACKEND / SEM FIRESTORE NO NAVEGADOR -->
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-CLUB | Master Portaria</title>
-    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #fff; overflow: hidden; }
-        .glass { background: rgba(18, 18, 20, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
-        .login-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
-        
-        .client-card { 
-            background: #0d0d0f; 
-            border: 1px solid #1a1a1c; 
-            border-left: 4px solid #eab308;
-            transition: all 0.2s ease;
-        }
-        .client-card:hover { background: #16161a; border-color: #333; }
-        .client-card.pix-fora-turno { background: rgba(113, 63, 18, 0.35); border-color: rgba(234, 179, 8, 0.65); border-left-color: #facc15; box-shadow: 0 0 22px rgba(234, 179, 8, 0.12); }
-        .client-card.pix-fora-turno:hover { background: rgba(133, 77, 14, 0.45); border-color: rgba(250, 204, 21, 0.85); }
-        
-        .client-card.entrou { pointer-events: none; border-color: #1a1a1c; background: #08080a; border-left-color: #333; }
-        .client-card.entrou .dados-cliente { filter: grayscale(1); opacity: 0.3; }
-        .client-card.entrou .area-checkin { opacity: 0.75; }
-        
-        input { background: #000 !important; border: 1px solid #333 !important; color: white !important; outline: none; transition: 0.3s; }
-        input:focus { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.2); }
-        
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        
-        @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .animate-online { animation: pulse-green 1.5s infinite; color: #22c55e; font-weight: 900; }
-        
-        .btn-liberar { background: #eab308; color: #000; transition: all 0.2s; }
-        .btn-liberar:hover { background: #fbbf24; transform: translateY(-1px); }
-
-
-        /* TEMA CLARO / ESCURO DA PORTARIA - somente visual */
-        .theme-toggle {
-            position: fixed;
-            top: 12px;
-            left: 12px;
-            z-index: 10050;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            padding: 7px 10px;
-            border-radius: 999px;
-            border: 1px solid rgba(234, 179, 8, 0.45);
-            background: rgba(0, 0, 0, 0.72);
-            color: #facc15;
-            font-size: 9px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            box-shadow: 0 0 16px rgba(234, 179, 8, 0.12);
-            backdrop-filter: blur(10px);
-            transition: all 0.2s ease;
-        }
-        .theme-toggle:hover { transform: translateY(-1px); border-color: #facc15; }
-
-        body.tema-claro { background: #f4f4f5; color: #111827; }
-        body.tema-claro .login-bg { background: radial-gradient(circle at center, #ffffff 0%, #e5e7eb 100%); }
-        body.tema-claro .glass { background: rgba(255,255,255,0.88); border-color: rgba(15,23,42,0.14); color: #111827; }
-        body.tema-claro aside { background: rgba(255,255,255,0.92) !important; border-color: #d1d5db !important; }
-        body.tema-claro main header { background: rgba(255,255,255,0.86) !important; border-color: #d1d5db !important; }
-        body.tema-claro section { background: #f3f4f6 !important; }
-        body.tema-claro input { background: #ffffff !important; border-color: #cbd5e1 !important; color: #111827 !important; }
-        body.tema-claro input::placeholder { color: #6b7280 !important; }
-        body.tema-claro .client-card { background: #ffffff; border-color: #e5e7eb; border-left-color: #ca8a04; color: #111827; box-shadow: 0 10px 30px rgba(15,23,42,0.07); }
-        body.tema-claro .client-card:hover { background: #f9fafb; border-color: #cbd5e1; }
-        body.tema-claro .client-card.pix-fora-turno { background: #fef3c7; border-color: rgba(202, 138, 4, 0.62); border-left-color: #d97706; box-shadow: 0 0 22px rgba(202, 138, 4, 0.12); }
-        body.tema-claro .client-card.pix-fora-turno:hover { background: #fde68a; border-color: #d97706; }
-        body.tema-claro .client-card.entrou { background: #e5e7eb; border-color: #cbd5e1; border-left-color: #9ca3af; }
-        body.tema-claro .text-white { color: #111827 !important; }
-        body.tema-claro .text-zinc-300,
-        body.tema-claro .text-zinc-400,
-        body.tema-claro .text-zinc-500,
-        body.tema-claro .text-zinc-600,
-        body.tema-claro .text-zinc-700 { color: #4b5563 !important; }
-        body.tema-claro .border-zinc-900,
-        body.tema-claro .border-zinc-800,
-        body.tema-claro .border-zinc-700,
-        body.tema-claro .border-white\/5 { border-color: #d1d5db !important; }
-        body.tema-claro .bg-zinc-800,
-        body.tema-claro .bg-zinc-800\/80 { background: #e5e7eb !important; }
-        body.tema-claro .bg-zinc-900\/50 { background: #f3f4f6 !important; }
-        body.tema-claro .theme-toggle { background: rgba(255,255,255,0.9); color: #854d0e; border-color: rgba(202,138,4,0.5); box-shadow: 0 8px 24px rgba(15,23,42,0.12); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-CLUB | Master Portaria</title>
+  <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@700&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color:#050505; color:#fff; overflow:hidden; }
+    .glass { background:rgba(18,18,20,.8); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.05); }
+    .login-bg { background:radial-gradient(circle at center,#111 0%,#000 100%); }
+    .client-card { background:#0d0d0f; border:1px solid #1a1a1c; border-left:4px solid #eab308; transition:all .2s ease; }
+    .client-card:hover { background:#16161a; border-color:#333; }
+    .client-card.pix-fora-turno { background:rgba(113,63,18,.35); border-color:rgba(234,179,8,.65); border-left-color:#facc15; box-shadow:0 0 22px rgba(234,179,8,.12); }
+    .client-card.entrou { pointer-events:none; background:#08080a; border-color:#1a1a1c; border-left-color:#333; }
+    .client-card.entrou .dados-cliente { filter:grayscale(1); opacity:.3; }
+    .client-card.entrou .area-checkin { opacity:.75; }
+    input { background:#000 !important; border:1px solid #333 !important; color:white !important; outline:none; transition:.3s; }
+    input:focus { border-color:#eab308 !important; box-shadow:0 0 15px rgba(234,179,8,.2); }
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-thumb { background:#333; border-radius:10px; }
+    @keyframes pulse-green { 0%,100%{opacity:1} 50%{opacity:.5} }
+    .animate-online { animation:pulse-green 1.5s infinite; color:#22c55e; font-weight:900; }
+    .btn-liberar { background:#eab308; color:#000; transition:all .2s; }
+    .btn-liberar:hover { background:#fbbf24; transform:translateY(-1px); }
+    .btn-liberar:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+    .theme-toggle {
+      position:fixed; top:12px; left:12px; z-index:10050; display:flex; align-items:center; gap:5px;
+      padding:7px 10px; border-radius:999px; border:1px solid rgba(234,179,8,.45);
+      background:rgba(0,0,0,.72); color:#facc15; font-size:9px; font-weight:900; text-transform:uppercase;
+      letter-spacing:.06em; box-shadow:0 0 16px rgba(234,179,8,.12); backdrop-filter:blur(10px);
+    }
+    body.tema-claro { background:#f4f4f5; color:#111827; }
+    body.tema-claro .login-bg { background:radial-gradient(circle at center,#fff 0%,#e5e7eb 100%); }
+    body.tema-claro .glass { background:rgba(255,255,255,.88); border-color:rgba(15,23,42,.14); color:#111827; }
+    body.tema-claro aside { background:rgba(255,255,255,.92)!important; border-color:#d1d5db!important; }
+    body.tema-claro main header { background:rgba(255,255,255,.86)!important; border-color:#d1d5db!important; }
+    body.tema-claro section { background:#f3f4f6!important; }
+    body.tema-claro input { background:#fff!important; border-color:#cbd5e1!important; color:#111827!important; }
+    body.tema-claro input::placeholder { color:#6b7280!important; }
+    body.tema-claro .client-card { background:#fff; border-color:#e5e7eb; border-left-color:#ca8a04; color:#111827; box-shadow:0 10px 30px rgba(15,23,42,.07); }
+    body.tema-claro .client-card.pix-fora-turno { background:#fef3c7; border-color:rgba(202,138,4,.62); border-left-color:#d97706; }
+    body.tema-claro .client-card.entrou { background:#e5e7eb; border-color:#cbd5e1; border-left-color:#9ca3af; }
+    body.tema-claro .text-white { color:#111827!important; }
+    body.tema-claro .text-zinc-300, body.tema-claro .text-zinc-400, body.tema-claro .text-zinc-500,
+    body.tema-claro .text-zinc-600, body.tema-claro .text-zinc-700 { color:#4b5563!important; }
+    body.tema-claro .border-zinc-900, body.tema-claro .border-zinc-800, body.tema-claro .border-zinc-700,
+    body.tema-claro .border-white\/5 { border-color:#d1d5db!important; }
+    body.tema-claro .bg-zinc-800, body.tema-claro .bg-zinc-800\/80 { background:#e5e7eb!important; }
+    body.tema-claro .bg-zinc-900\/50 { background:#f3f4f6!important; }
+    body.tema-claro .theme-toggle { background:rgba(255,255,255,.9); color:#854d0e; border-color:rgba(202,138,4,.5); }
+  </style>
 </head>
 <body class="flex h-screen relative">
 
-    <button id="btnTemaPortaria" type="button" onclick="alternarTemaPortaria()" class="theme-toggle" title="Alternar fundo claro/escuro">🌙 <span>ESCURO</span></button>
+  <button id="btnTemaPortaria" type="button" class="theme-toggle">🌙 <span>ESCURO</span></button>
 
-    <div id="status-conexao" class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.5)] hidden z-[9999] animate-pulse">
-        🔴 Sem Internet (Operando no Cache Local)
+  <div id="status-conexao" class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.5)] hidden z-[9999] animate-pulse">
+    🔴 Sem Internet — Portaria indisponível
+  </div>
+
+  <div class="fixed inset-0 z-[99999] bg-[#050505] flex-col items-center justify-center p-8 text-center flex md:hidden">
+    <div class="glass p-8 rounded-[2.5rem] border border-red-500/30 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.15)]">
+      <span class="text-6xl mb-6">🖥️</span>
+      <h1 class="text-xl font-black uppercase italic text-red-500 mb-3 tracking-tighter">Acesso Restrito</h1>
+      <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">O sistema de Portaria Master deve ser acessado<br><span class="text-white">exclusivamente por um computador</span>.</p>
     </div>
+  </div>
 
-    <div class="fixed inset-0 z-[99999] bg-[#050505] flex-col items-center justify-center p-8 text-center flex md:hidden">
-        <div class="glass p-8 rounded-[2.5rem] border border-red-500/30 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.15)]">
-            <span class="text-6xl mb-6">🖥️</span>
-            <h1 class="text-xl font-black uppercase italic text-red-500 mb-3 tracking-tighter">Acesso Restrito</h1>
-            <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">O sistema de Portaria Master deve ser acessado <br><span class="text-white">exclusivamente por um computador</span>.</p>
+  <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
+    <span id="toast-icon" class="text-lg">⚠️</span>
+    <span id="toast-msg">Mensagem</span>
+  </div>
+
+  <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
+    <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
+      <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8" alt="E-Club">
+      <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
+      <div class="space-y-4">
+        <input type="email" id="inputNomeUsuario" placeholder="E-MAIL DO OPERADOR" autocomplete="username" class="w-full p-5 rounded-2xl text-center font-bold text-xs">
+        <input type="password" id="senhaUsuario" placeholder="SENHA" autocomplete="current-password" class="w-full p-5 rounded-2xl text-center font-bold text-xs">
+        <button id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ENTRAR COM SEGURANÇA</button>
+        <p id="mensagem-auth" class="text-[9px] font-bold uppercase tracking-widest text-zinc-500 min-h-[20px]"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="interfacePrincipal" class="hidden flex w-full h-full">
+    <aside class="w-72 h-full flex flex-col p-6 bg-black/40 border-r border-zinc-900">
+      <div class="mb-10 text-center">
+        <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2" alt="E-Club">
+        <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
+        <p id="operadorAtivo" class="text-[8px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg tracking-widest italic">---</p>
+      </div>
+
+      <div class="flex-grow overflow-y-auto">
+        <h3 class="text-zinc-600 text-[8px] font-black uppercase mb-4 tracking-widest border-b border-zinc-900 pb-2">Status Eventos</h3>
+        <div id="lista-eventos-sidebar" class="space-y-3"></div>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-4 border-t border-zinc-900 pt-6">
+        <button id="btnLogout" class="text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors w-full text-center">Sair do Sistema</button>
+        <div class="text-center opacity-30 hover:opacity-100 transition-all pt-4">
+          <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" rel="noopener noreferrer" class="inline-flex flex-col items-center justify-center gap-1 group">
+            <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-500 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
+          </a>
         </div>
-    </div>
+      </div>
+    </aside>
 
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
-        <span id="toast-icon" class="text-lg">⚠️</span>
-        <span id="toast-msg">Mensagem de erro</span>
-    </div>
-
-    <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
-        <div class="w-full max-w-sm p-10 glass rounded-[3rem] text-center border-yellow-500/20 border shadow-2xl">
-            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
-            <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter text-white">PORTARIA <span class="text-yellow-500">MASTER</span></h1>
-            <div class="space-y-4">
-                <input type="text" id="inputNomeUsuario" placeholder="LOGIN OPERADOR" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs outline-none focus:border-yellow-500 transition-all">
-                <div id="areaSenha" class="hidden">
-                    <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50 outline-none focus:border-yellow-500 transition-all">
-                </div>
-                <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ENTRAR</button>
-            </div>
+    <main class="flex-grow flex flex-col">
+      <header class="p-6 border-b border-zinc-900 bg-black/20">
+        <div class="max-w-[1400px] mx-auto flex gap-6 items-center">
+          <div class="relative flex-grow">
+            <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
+            <input type="text" id="input-busca" placeholder="BUSCAR NOME, TELEFONE OU CPF..." autocomplete="off" maxlength="80" class="w-full p-5 pl-16 rounded-2xl text-sm font-bold uppercase text-white shadow-lg">
+          </div>
+          <div class="text-right border-l border-zinc-800 pl-6 min-w-[120px]">
+            <p id="total-checkins" class="text-4xl font-black italic text-green-500 leading-none">0</p>
+            <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-1">Check-ins</p>
+          </div>
         </div>
-    </div>
+      </header>
 
-    <div id="interfacePrincipal" class="hidden flex w-full h-full">
-        <aside class="w-72 h-full flex flex-col p-6 bg-black/40 border-r border-zinc-900">
-            <div class="mb-10 text-center">
-                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-10 mx-auto mb-2">
-                <h2 class="text-yellow-500 font-black italic uppercase text-lg tracking-tighter">E-CLUB</h2>
-                <p id="operadorAtivo" class="text-[8px] text-zinc-500 font-bold uppercase mt-4 border border-zinc-800 py-2 rounded-lg tracking-widest italic">---</p>
+      <section class="flex-grow p-6 overflow-y-auto bg-[#030303]">
+        <div id="alertaModoTeste" class="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-center font-black py-2 rounded-xl text-[10px] uppercase mb-6 hidden">
+          ⚠️ MODO DE TESTE ATIVO - BUSCA LIBERADA PARA TODOS OS EVENTOS
+        </div>
+        <div id="container-resultados" class="max-w-[1400px] mx-auto space-y-3"></div>
+      </section>
+    </main>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import {
+    getAuth,
+    setPersistence,
+    browserSessionPersistence,
+    signInWithEmailAndPassword,
+    onAuthStateChanged,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+    authDomain: "teste-de-reserva.firebaseapp.com",
+    projectId: "teste-de-reserva",
+    storageBucket: "teste-de-reserva.firebasestorage.app",
+    messagingSenderId: "163395694876",
+    appId: "1:163395694876:web:8b1116a0483af951548ad9"
+  };
+
+  const API_URL = "https://us-central1-teste-de-reserva.cloudfunctions.net/portariaApi";
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  await setPersistence(auth, browserSessionPersistence).catch(err => {
+    console.warn("Falha ao configurar sessão do navegador:", err?.code || err?.message);
+  });
+
+  let operadorLogado = "";
+  let eventos = [];
+  let isModoTeste = false;
+  let debounceBusca = null;
+  let abortBusca = null;
+  let bootstrapTimer = null;
+  let restaurandoSessao = false;
+
+  const $ = id => document.getElementById(id);
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function mostrarAviso(msg, sucesso=false) {
+    const toast = $("toast-aviso");
+    const bgClass = sucesso ? "bg-green-600" : "bg-red-600";
+    const shadowClass = sucesso ? "shadow-[0_0_24px_rgba(22,163,74,.35)]" : "shadow-[0_0_24px_rgba(220,38,38,.35)]";
+    toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+    $("toast-icon").innerText = sucesso ? "✅" : "⚠️";
+    $("toast-msg").innerText = msg;
+    setTimeout(() => {
+      toast.classList.remove("-translate-y-32","opacity-0");
+      toast.classList.add("translate-y-0","opacity-100");
+    }, 10);
+    setTimeout(() => {
+      toast.classList.remove("translate-y-0","opacity-100");
+      toast.classList.add("-translate-y-32","opacity-0");
+    }, 3500);
+  }
+
+  function mensagemAuth(msg, sucesso=false) {
+    const el = $("mensagem-auth");
+    el.textContent = msg || "";
+    el.className = `text-[9px] font-bold uppercase tracking-widest min-h-[20px] ${sucesso ? "text-green-500" : "text-red-400"}`;
+  }
+
+  function aplicarTemaPortaria(tema) {
+    const claro = tema === "claro";
+    document.body.classList.toggle("tema-claro", claro);
+    $("btnTemaPortaria").innerHTML = claro ? "☀️ <span>CLARO</span>" : "🌙 <span>ESCURO</span>";
+  }
+
+  $("btnTemaPortaria").addEventListener("click", () => {
+    const atual = document.body.classList.contains("tema-claro") ? "claro" : "escuro";
+    const novo = atual === "claro" ? "escuro" : "claro";
+    localStorage.setItem("eclub_portaria_tema_visual_v1", novo);
+    aplicarTemaPortaria(novo);
+  });
+  aplicarTemaPortaria(localStorage.getItem("eclub_portaria_tema_visual_v1") || "escuro");
+
+  window.addEventListener("offline", () => $("status-conexao").classList.remove("hidden"));
+  window.addEventListener("online", () => {
+    $("status-conexao").classList.add("hidden");
+    if (auth.currentUser) carregarBootstrap().catch(()=>{});
+  });
+
+  async function encerrarSessaoLocal(mensagem="Sessão encerrada.") {
+    clearInterval(bootstrapTimer);
+    bootstrapTimer = null;
+    if (abortBusca) abortBusca.abort();
+    try { await signOut(auth); } catch {}
+    operadorLogado = "";
+    eventos = [];
+    $("interfacePrincipal").classList.add("hidden");
+    $("telaLogin").classList.remove("hidden");
+    $("input-busca").value = "";
+    $("container-resultados").innerHTML = "";
+    $("lista-eventos-sidebar").innerHTML = "";
+    $("total-checkins").innerText = "0";
+    mensagemAuth(mensagem);
+  }
+
+  async function api(action, body={}, options={}) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Sessão ausente.");
+
+    let token = await user.getIdToken(Boolean(options.forceRefresh));
+    const controller = options.controller;
+
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ action, ...body }),
+      cache: "no-store",
+      signal: controller?.signal
+    });
+
+    let payload = {};
+    try { payload = await response.json(); } catch {}
+
+    if (response.status === 401 && !options.forceRefresh) {
+      token = await user.getIdToken(true);
+      return api(action, body, { ...options, forceRefresh:true });
+    }
+
+    if (!response.ok || payload?.ok === false) {
+      const err = new Error(payload?.error || `Erro ${response.status}`);
+      err.status = response.status;
+      throw err;
+    }
+    return payload;
+  }
+
+  async function validarAcessoPortaria(user) {
+    const result = await user.getIdTokenResult(true);
+    const c = result.claims || {};
+    const permitido = c.portaria === true || String(c.role || "").toLowerCase() === "portaria";
+    const portariaId = String(c.portaria_id || "").trim().toLowerCase();
+    const ativo = c.active !== false;
+
+    if (!permitido || !portariaId || !ativo) {
+      throw Object.assign(new Error("USUÁRIO SEM PERMISSÃO DE PORTARIA."), { status:403 });
+    }
+
+    operadorLogado = portariaId;
+    $("operadorAtivo").innerText = `OPERADOR: ${portariaId.toUpperCase()}`;
+
+    // O bootstrap passa pelo backend e confirma também /acessos/{uid}
+    // e o operador ativo. Nenhuma leitura direta do Firestore ocorre aqui.
+    await carregarBootstrap();
+
+    $("telaLogin").classList.add("hidden");
+    $("interfacePrincipal").classList.remove("hidden");
+    mensagemAuth("", true);
+
+    if (!bootstrapTimer) {
+      bootstrapTimer = setInterval(() => {
+        if (auth.currentUser && !document.hidden) carregarBootstrap().catch(()=>{});
+      }, 30000);
+    }
+  }
+
+  async function carregarBootstrap() {
+    try {
+      const dados = await api("bootstrap");
+      isModoTeste = dados.modoTeste === true;
+      eventos = Array.isArray(dados.eventos) ? dados.eventos : [];
+      $("total-checkins").innerText = String(Number(dados.totalCheckins || 0));
+      $("alertaModoTeste").classList.toggle("hidden", !isModoTeste);
+      renderizarSidebar();
+    } catch (e) {
+      if (e?.status === 401 || e?.status === 403) {
+        await encerrarSessaoLocal(e.message || "Acesso não autorizado.");
+      }
+      throw e;
+    }
+  }
+
+  function renderizarSidebar() {
+    const cont = $("lista-eventos-sidebar");
+    if (!eventos.length) {
+      cont.innerHTML = `<div class="text-[9px] text-zinc-600 font-bold uppercase text-center py-6">Nenhum evento ativo</div>`;
+      return;
+    }
+
+    cont.innerHTML = eventos.map(ev => {
+      const online = ev.status === "ONLINE";
+      return `
+        <div class="p-3 rounded-xl glass border-l-2 ${online ? "border-l-green-500" : "border-l-zinc-800 opacity-60"} mb-2">
+          <h4 class="text-[10px] font-black uppercase text-white truncate">${escapeHtml(ev.nome)}</h4>
+          <div class="flex justify-between items-center mt-1">
+            <span class="text-[7px] font-bold ${online ? "text-green-500 animate-online" : "text-zinc-600"} uppercase">
+              ${online ? "● ONLINE" : "🔒 RESTRITO"}
+            </span>
+            <span class="text-sm font-black text-yellow-500">${Number(ev.total || 0)}</span>
+          </div>
+        </div>`;
+    }).join("");
+  }
+
+  function tagClass(tag) {
+    const t = String(tag || "").toUpperCase();
+    if (t.includes("DONO")) return "bg-green-900/30 text-green-400 border-green-500/20";
+    if (t.includes("CASAL")) return "bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-500/20";
+    if (t.includes("CORTESIA")) return "bg-blue-900/30 text-blue-400 border-blue-500/20";
+    if (t.includes("FIDELIDADE")) return "bg-fuchsia-900/30 text-fuchsia-400 border-fuchsia-500/20";
+    if (t.includes("ANIV")) return "bg-purple-900/30 text-purple-400 border-purple-500/20";
+    return "bg-zinc-900/60 text-zinc-400 border-zinc-700";
+  }
+
+  function renderResultados(resultados, limitado=false) {
+    const cont = $("container-resultados");
+
+    if (!Array.isArray(resultados) || !resultados.length) {
+      cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>`;
+      return;
+    }
+
+    const avisoLimite = limitado
+      ? `<div class="mb-3 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-[9px] font-black uppercase text-center">Muitos resultados. Refine a busca para localizar o cliente.</div>`
+      : "";
+
+    cont.innerHTML = avisoLimite + resultados.map(c => {
+      const tags = (Array.isArray(c.tags) ? c.tags : []).map(tag =>
+        `<span class="${tagClass(tag)} border px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">${escapeHtml(tag)}</span>`
+      ).join("");
+
+      return `
+      <div class="client-card ${c.entrou ? "entrou" : ""} ${c.pixForaTurno ? "pix-fora-turno" : ""} rounded-2xl p-5 flex items-center gap-5">
+        <div class="dados-cliente flex-grow min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-2">
+            ${tags}
+          </div>
+          <div class="grid grid-cols-12 gap-4 items-center">
+            <div class="col-span-4 min-w-0">
+              <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Cliente</p>
+              <h3 class="text-sm font-black uppercase text-white truncate">${escapeHtml(c.nome || "SEM NOME")}</h3>
+              <p class="text-[9px] text-zinc-500 font-bold mt-1">${escapeHtml(c.telefone || "")}</p>
             </div>
-            
-            <div class="flex-grow overflow-y-auto">
-                <h3 class="text-zinc-600 text-[8px] font-black uppercase mb-4 tracking-widest border-b border-zinc-900 pb-2">Status Eventos</h3>
-                <div id="lista-eventos-sidebar" class="space-y-3"></div>
+            <div class="col-span-3 min-w-0">
+              <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Entrada / Promoter</p>
+              <p class="text-[10px] font-black uppercase text-zinc-300 break-words">${escapeHtml(c.tipo || "---")}</p>
+              <p class="text-[8px] text-yellow-500 font-bold uppercase mt-1 truncate">${escapeHtml(c.promoter || "DIRETO")}</p>
             </div>
-            
-            <div class="mt-6 flex flex-col gap-4 border-t border-zinc-900 pt-6">
-                <button onclick="fazerLogout()" class="text-zinc-700 text-[9px] font-black uppercase hover:text-red-500 transition-colors w-full text-center">Sair do Sistema</button>
-                
-                <div class="text-center opacity-30 hover:opacity-100 transition-all pt-4">
-                    <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
-                        <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-yellow-500 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
-                    </a>
-                </div>
+            <div class="col-span-3 min-w-0">
+              <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
+              <p class="text-[10px] font-black uppercase ${String(c.pagamento).includes("PIX") ? "text-green-500" : String(c.pagamento).includes("PROMO") ? "text-fuchsia-500" : "text-zinc-400"}">${escapeHtml(c.pagamento || "PORTARIA")}</p>
+              <p class="text-[8px] text-zinc-600 font-bold uppercase mt-1 truncate">${escapeHtml(c.evento || "")}</p>
             </div>
-        </aside>
-
-        <main class="flex-grow flex flex-col">
-            <header class="p-6 border-b border-zinc-900 bg-black/20">
-                <div class="max-w-[1400px] mx-auto flex gap-6 items-center">
-                    <div class="relative flex-grow">
-                        <span class="absolute left-6 top-5 text-zinc-600">🔍</span>
-                        <input type="text" id="input-busca" oninput="processarPesquisa()" placeholder="BUSCAR NOME, TELEFONE OU CPF..." class="w-full p-5 pl-16 rounded-2xl text-sm font-bold uppercase text-white shadow-lg">
-                    </div>
-                    <div class="text-right border-l border-zinc-800 pl-6 min-w-[120px]">
-                        <p id="total-checkins" class="text-4xl font-black italic text-green-500 leading-none">0</p>
-                        <p class="text-[8px] text-zinc-500 font-black uppercase tracking-widest mt-1">Check-ins</p>
-                    </div>
-                </div>
-            </header>
-
-            <section class="flex-grow p-6 overflow-y-auto bg-[#030303]">
-                <div id="alertaModoTeste" class="bg-blue-500/10 border border-blue-500/30 text-blue-400 text-center font-black py-2 rounded-xl text-[10px] uppercase mb-6 hidden">
-                    ⚠️ MODO DE TESTE ATIVO - BUSCA LIBERADA PARA TODOS OS EVENTOS
-                </div>
-                <div id="container-resultados" class="max-w-[1400px] mx-auto space-y-3"></div>
-            </section>
-        </main>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, query, where, doc, updateDoc, getDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-        const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        
-        // HABILITAR PROTEÇÃO OFFLINE (CACHE LOCAL)
-        enableIndexedDbPersistence(db).catch((err) => {
-            console.warn("Modo offline não suportado ou múltiplas abas abertas.", err);
-        });
-
-        // DETECTOR DE INTERNET
-        window.addEventListener('offline', () => { document.getElementById('status-conexao').classList.remove('hidden'); });
-        window.addEventListener('online', () => { document.getElementById('status-conexao').classList.add('hidden'); });
-
-        let bancoClientes = []; let bancoEventos = []; let operadorLogado = ""; let stepLogin = 0; let usuarioData = null;
-        let isModoTeste = false; let listenerSessao = null;
-
-
-        const CHAVE_TEMA_PORTARIA = 'eclub_portaria_tema_visual_v1';
-
-        const aplicarTemaPortaria = (tema) => {
-            const temaClaro = tema === 'claro';
-            document.body.classList.toggle('tema-claro', temaClaro);
-
-            const btnTema = document.getElementById('btnTemaPortaria');
-            if (btnTema) {
-                btnTema.innerHTML = temaClaro ? '☀️ <span>CLARO</span>' : '🌙 <span>ESCURO</span>';
-                btnTema.title = temaClaro ? 'Mudar para fundo escuro' : 'Mudar para fundo claro';
-            }
-        };
-
-        window.alternarTemaPortaria = () => {
-            const temaAtual = document.body.classList.contains('tema-claro') ? 'claro' : 'escuro';
-            const novoTema = temaAtual === 'claro' ? 'escuro' : 'claro';
-            localStorage.setItem(CHAVE_TEMA_PORTARIA, novoTema);
-            aplicarTemaPortaria(novoTema);
-        };
-
-        aplicarTemaPortaria(localStorage.getItem(CHAVE_TEMA_PORTARIA) || 'escuro');
-
-        const tipoEntradaCorrespondeCamarote = (tipo, num) => {
-            const n = Number(num);
-            const t = String(tipo || '').toUpperCase().trim().replace(/\s+/g, ' ');
-            const principal = n === 7 ? 'VIP 1' : n === 8 ? 'VIP 2' : `CAMAROTE ${n}`;
-            const aliases = [principal, `CAMAROTE ${n}`, `CAMAROTE 0${n}`].map(v => String(v).toUpperCase().trim());
-            return aliases.includes(t);
-        };
-
-        const normalizarTipoCamaroteExibicao = (tipo) => {
-            if (tipoEntradaCorrespondeCamarote(tipo, 7)) return 'VIP 1';
-            if (tipoEntradaCorrespondeCamarote(tipo, 8)) return 'VIP 2';
-            return String(tipo || '').toUpperCase().trim();
-        };
-
-        const isVipEspecialCamarote = (tipo) => tipoEntradaCorrespondeCamarote(tipo, 7) || tipoEntradaCorrespondeCamarote(tipo, 8);
-
-        // REGRA ÚNICA DE CONTAGEM E-CLUB
-        // A mesma regra é usada na Dashboard, Portaria e Promoter.
-        const normalizarChaveReservaEclub = (valor) => String(valor ?? '')
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .trim()
-            .toUpperCase()
-            .replace(/\s+/g, ' ');
-
-        const normalizarCodigoReservaEclub = (valor) => normalizarChaveReservaEclub(valor)
-            .replace(/[\s-]+/g, '_');
-
-        const valorBooleanoReservaEclub = (valor) =>
-            valor === true ||
-            valor === 1 ||
-            String(valor ?? '').trim().toLowerCase() === 'true' ||
-            String(valor ?? '').trim() === '1';
-
-        const isMetodoPixReservaEclub = (reserva) => {
-            const metodo = normalizarCodigoReservaEclub(reserva?.metodo);
-            return metodo === 'PIX' || metodo === 'PIX_ANTECIPADO' || metodo.startsWith('PIX_');
-        };
-
-        const isReservaValidaEclub = (reserva) => {
-            if (!reserva) return false;
-
-            const tipo = normalizarCodigoReservaEclub(reserva.tipo_entrada);
-            if (tipo === 'SOLTEIRA_VIP') return false;
-
-            const status = normalizarCodigoReservaEclub(reserva.status_reserva || reserva.status);
-            if (['CANCELADO', 'CANCELADA', 'EXCLUIDO', 'EXCLUIDA', 'INATIVO', 'INATIVA'].includes(status)) return false;
-
-            if (valorBooleanoReservaEclub(reserva.cortesia)) return true;
-            if (isMetodoPixReservaEclub(reserva)) return valorBooleanoReservaEclub(reserva.pago);
-
-            return true;
-        };
-
-        const isReservaPixPendenteRecenteEclub = (reserva, minutos = 5) => {
-            if (!reserva || !isMetodoPixReservaEclub(reserva) || isReservaValidaEclub(reserva) || !reserva.data_reserva) return false;
-            const dataReserva = new Date(reserva.data_reserva);
-            if (isNaN(dataReserva)) return false;
-            const diferenca = (Date.now() - dataReserva.getTime()) / 60000;
-            return diferenca >= 0 && diferenca < minutos;
-        };
-
-        const mesmaChaveReservaEclub = (a, b) =>
-            normalizarChaveReservaEclub(a) === normalizarChaveReservaEclub(b);
-
-
-        window.mostrarAviso = (msg, isSucesso = false) => {
-            const toast = document.getElementById('toast-aviso');
-            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
-            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
-            const icon = isSucesso ? '✅' : (msg.includes('ACESSO') ? '👋' : '⚠️');
-            
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
-            document.getElementById('toast-icon').innerText = icon; document.getElementById('toast-msg').innerText = msg;
-            setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
-            setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
-        };
-
-        const formatarDataLocal = (data) => {
-            const ano = data.getFullYear();
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            const dia = String(data.getDate()).padStart(2, '0');
-            return `${ano}-${mes}-${dia}`;
-        };
-
-        const normalizarDataEventoPortaria = (dataEvento) => {
-            if (!dataEvento) return null;
-
-            if (typeof dataEvento.toDate === 'function') {
-                const d = dataEvento.toDate();
-                if (!isNaN(d)) return formatarDataLocal(d);
-            }
-
-            const str = String(dataEvento).trim();
-
-            // Aceita o formato padrão do sistema: YYYY-MM-DD
-            const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-            if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-
-            // Aceita formato BR caso algum evento tenha sido salvo assim: DD/MM/YYYY
-            const br = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
-            if (br) return `${br[3]}-${br[2]}-${br[1]}`;
-
-            const d = new Date(str);
-            return isNaN(d) ? null : formatarDataLocal(d);
-        };
-
-        const normalizarHoraEventoPortaria = (horaEvento) => {
-            const str = String(horaEvento || '21:00').trim().toLowerCase();
-            const match = str.match(/(\d{1,2})(?::|h)?\s*(\d{2})?/);
-            let h = match ? Number(match[1]) : 21;
-            let m = match && match[2] !== undefined ? Number(match[2]) : 0;
-
-            if (!Number.isFinite(h) || h < 0 || h > 23) h = 21;
-            if (!Number.isFinite(m) || m < 0 || m > 59) m = 0;
-
-            return { h, m };
-        };
-
-        const getStatusTurno = (dataEvento) => {
-            if (!dataEvento) return "RESTRITO";
-            if (isModoTeste) return "ONLINE";
-
-            const dataLimpa = normalizarDataEventoPortaria(dataEvento);
-            if (!dataLimpa) return "RESTRITO";
-
-            const partes = dataLimpa.split('-').map(Number);
-            if (partes.length < 3 || !partes[0] || !partes[1] || !partes[2]) return "RESTRITO";
-
-            // PORTARIA AUTÔNOMA:
-            // abre sempre às 21:00 do dia cadastrado no evento, independente do horário salvo no cadastro.
-            const inicioEvento = new Date(partes[0], partes[1] - 1, partes[2], 21, 0, 0, 0);
-            const fimEvento = new Date(inicioEvento);
-            fimEvento.setDate(fimEvento.getDate() + 1);
-            fimEvento.setHours(6, 0, 0, 0);
-
-            const agora = new Date();
-
-            if (agora >= inicioEvento && agora <= fimEvento) return "ONLINE";
-
-            return "RESTRITO";
-        };
-
-        window.verificarOuLogar = async () => {
-            const n = document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
-            const s = document.getElementById('senhaUsuario').value.trim();
-            const btn = document.getElementById('btnAcao');
-            const inputSenha = document.getElementById('senhaUsuario');
-
-            if (stepLogin === 0) {
-                if(!n) return mostrarAviso("Digite o login do operador!");
-                btn.innerText = "VERIFICANDO...";
-                try {
-                    const docSnap = await getDoc(doc(db, "configuracoes", n));
-                    if (docSnap.exists()) {
-                        usuarioData = docSnap.data(); stepLogin = 1;
-                        document.getElementById('areaSenha').classList.remove('hidden');
-                        document.getElementById('inputNomeUsuario').readOnly = true;
-                        if (!usuarioData.senha) {
-                            mostrarAviso("👋 PRIMEIRO ACESSO: Crie sua senha agora!", true);
-                            inputSenha.placeholder = "CRIE UMA SENHA (MÍN. 6)"; inputSenha.style.borderColor = "#eab308";
-                            btn.innerText = "SALVAR SENHA E ENTRAR";
-                        } else { btn.innerText = "AUTENTICAR"; }
-                    } else { btn.innerText = "ENTRAR"; mostrarAviso("Operador não encontrado."); }
-                } catch(err) {
-                    btn.innerText = "ENTRAR";
-                    mostrarAviso("Erro ao conectar no banco de dados.");
-                }
-            } else {
-                if(!s) return mostrarAviso("Digite a sua senha!");
-                if (!usuarioData.senha) {
-                    if (s.length < 6) return mostrarAviso("A senha deve ter no mínimo 6 caracteres.");
-                    btn.innerText = "SALVANDO...";
-                    try {
-                        await updateDoc(doc(db, "configuracoes", n), { senha: s });
-                        usuarioData.senha = s;
-                    } catch(err) {
-                        btn.innerText = "SALVAR SENHA E ENTRAR";
-                        return mostrarAviso("Erro ao salvar nova senha.");
-                    }
-                }
-                if (usuarioData.senha === s) {
-                    const meuToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-                    localStorage.setItem('sessao_eclub_master', meuToken);
-                    try {
-                        await updateDoc(doc(db, "configuracoes", n), { ultimo_login: new Date().toISOString(), token_sessao: meuToken });
-                    } catch(err) {}
-                    
-                    operadorLogado = n; document.getElementById('operadorAtivo').innerText = "OPERADOR: " + n.toUpperCase();
-                    document.getElementById('telaLogin').classList.add('hidden'); 
-                    document.getElementById('interfacePrincipal').classList.remove('hidden');
-                    iniciarEscutas();
-                    
-                    listenerSessao = onSnapshot(doc(db, "configuracoes", n), (docSnap) => {
-                        if (docSnap.exists()) {
-                            const tokenBanco = docSnap.data().token_sessao; const meuTokenLocal = localStorage.getItem('sessao_eclub_master');
-                            if (tokenBanco && tokenBanco !== meuTokenLocal) {
-                                document.getElementById('interfacePrincipal').classList.add('hidden'); document.getElementById('telaLogin').classList.remove('hidden');
-                                stepLogin = 0; document.getElementById('inputNomeUsuario').value = ''; document.getElementById('senhaUsuario').value = '';
-                                document.getElementById('areaSenha').classList.add('hidden'); document.getElementById('inputNomeUsuario').readOnly = false;
-                                document.getElementById('btnAcao').innerText = "ENTRAR"; localStorage.removeItem('sessao_eclub_master');
-                                mostrarAviso("🚨 VOCÊ FOI DESCONECTADO! O usuário foi logado em outro computador.");
-                                if(listenerSessao) listenerSessao(); 
-                            }
-                        }
-                    });
-                } else { mostrarAviso("Senha incorreta"); btn.innerText = "AUTENTICAR"; }
-            }
-        };
-
-        window.fazerLogout = async () => {
-            if (operadorLogado) { try { await updateDoc(doc(db, "configuracoes", operadorLogado), { token_sessao: "" }); } catch(e) {} }
-            localStorage.removeItem('sessao_eclub_master'); location.reload();
-        };
-
-        function iniciarEscutas() {
-            onSnapshot(doc(db, "configuracoes", "sistema"), (snap) => {
-                isModoTeste = snap.exists() && snap.data().modo_teste === true;
-                document.getElementById('alertaModoTeste').classList.toggle('hidden', !isModoTeste);
-                if (bancoEventos.length > 0) { renderizarSidebar(); processarPesquisa(); }
-            });
-            onSnapshot(query(collection(db, "eventos"), where("ativo", "==", true)), (snapEv) => {
-                bancoEventos = snapEv.docs.map(d => ({id: d.id, ...d.data()}));
-                onSnapshot(collection(db, "lista_eventos"), (snapCli) => {
-                    bancoClientes = snapCli.docs.map(d => ({id: d.id, ...d.data()}));
-                    
-                    let totalTurno = 0;
-                    const agora = new Date();
-                    const hora = agora.getHours();
-                    
-                    if (isModoTeste) {
-                        totalTurno = bancoClientes.filter(c => isReservaValidaEclub(c) && valorBooleanoReservaEclub(c.entrou) && c.data_entrada && (agora - new Date(c.data_entrada)) / 3600000 <= 12).length;
-                    } else if (hora >= 5 && hora < 21) {
-                        totalTurno = 0;
-                    } else {
-                        let inicioTurno = new Date(agora);
-                        if (hora >= 21) inicioTurno.setHours(21, 0, 0, 0); 
-                        else { inicioTurno.setDate(inicioTurno.getDate() - 1); inicioTurno.setHours(21, 0, 0, 0); } 
-                        totalTurno = bancoClientes.filter(c => isReservaValidaEclub(c) && valorBooleanoReservaEclub(c.entrou) && c.data_entrada && new Date(c.data_entrada) >= inicioTurno).length;
-                    }
-                    
-                    document.getElementById('total-checkins').innerText = totalTurno;
-                    renderizarSidebar(); processarPesquisa();
-                });
-            });
-        }
-
-        function renderizarSidebar() {
-            try {
-                const cont = document.getElementById('lista-eventos-sidebar'); 
-                if(!cont) return;
-                cont.innerHTML = '';
-                
-                bancoEventos.sort((a,b) => new Date(a.data || 0) - new Date(b.data || 0)).forEach(ev => {
-                    if (!ev.data) return;
-                    const status = getStatusTurno(ev.data, ev.hora);
-                    const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
-                    
-                    const total = bancoClientes.filter(c => mesmaChaveReservaEclub(c.evento, ev.nome) && isReservaValidaEclub(c)).length;
-                    
-                    cont.innerHTML += `
-                        <div class="p-3 rounded-xl glass border-l-2 ${status === 'ONLINE' ? 'border-l-green-500' : 'border-l-zinc-800 opacity-60'} mb-2">
-                            <h4 class="text-[10px] font-black uppercase text-white truncate">${ev.nome}</h4>
-                            <div class="flex justify-between items-center mt-1">
-                                <span class="text-[7px] font-bold ${status === 'ONLINE' ? 'text-green-500 animate-online' : 'text-zinc-600'} uppercase">${status === 'ONLINE' ? '● ONLINE' : '🔒 RESTRITO'}</span>
-                                <span class="text-sm font-black text-yellow-500">${total}</span>
-                            </div>
-                        </div>`;
-                });
-            } catch (e) {
-                console.error("Erro ao renderizar sidebar:", e);
-            }
-        }
-
-        window.copiarTelefoneLimpo = (numeroRaw) => {
-            if (!numeroRaw) return;
-            let apenasNumeros = String(numeroRaw).replace(/\D/g, ''); 
-            if (apenasNumeros.length >= 9) { apenasNumeros = apenasNumeros.slice(-9); }
-            if (apenasNumeros.length === 0) return;
-
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(apenasNumeros).then(() => { mostrarAviso("Telefone copiado!", true); }).catch(() => fallbackCopia(apenasNumeros));
-            } else { fallbackCopia(apenasNumeros); }
-        };
-
-        function fallbackCopia(texto) {
-            const textArea = document.createElement("textarea"); textArea.value = texto; textArea.style.position = "fixed"; 
-            document.body.appendChild(textArea); textArea.focus(); textArea.select();
-            try { document.execCommand('copy'); mostrarAviso("Telefone copiado!", true); } catch (err) { mostrarAviso("Erro ao copiar."); }
-            document.body.removeChild(textArea);
-        }
-
-        window.processarPesquisa = () => {
-            const buscaInput = document.getElementById('input-busca').value.trim().toUpperCase();
-            const cont = document.getElementById('container-resultados');
-            
-            if (buscaInput.length < 2) { cont.innerHTML = ''; return; }
-            
-            const termosBusca = buscaInput.split(/\s+/);
-            
-            const filtrados = bancoClientes.filter(c => {
-                if (!isReservaValidaEclub(c)) return false;
-
-                const evRel = bancoEventos.find(e => mesmaChaveReservaEclub(e.nome, c.evento));
-                const eventoOnline = evRel && getStatusTurno(evRel.data, evRel.hora) === "ONLINE";
-                const pixPago = isMetodoPixReservaEclub(c) && valorBooleanoReservaEclub(c.pago);
-
-                // Mantém a regra atual da portaria: evento do turno aparece normalmente.
-                // Exceção: PIX pago aparece na busca mesmo se for de outro dia/evento, para a portaria conseguir localizar o cliente.
-                if (!isModoTeste && !eventoOnline && !pixPago) return false;
-                
-                const nomeString = String(c.nome || '').toUpperCase();
-                const telString = String(c.tel || '') + " " + String(c.telefone || '');
-                const telNumeros = telString.replace(/\D/g, ''); 
-                const cpfNumeros = String(c.cpf || '').replace(/\D/g, ''); 
-                
-                const todosOsDadosDoCliente = `${nomeString} ${telString} ${telNumeros} ${cpfNumeros}`;
-                return termosBusca.every(termo => todosOsDadosDoCliente.includes(termo));
-            });
-
-            if (filtrados.length === 0) { cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>`; return; }
-
-            cont.innerHTML = '';
-            filtrados.sort((a,b) => a.entrou - b.entrou).forEach(c => {
-                const ev = bancoEventos.find(e => String(e.nome || '').trim().toUpperCase() === String(c.evento || '').trim().toUpperCase()) || {};
-                const tipoNorm = normalizarTipoCamaroteExibicao(c.tipo_entrada); 
-                const pagPorta = String(c.pagamento_porta || '').toUpperCase(); 
-                const isCasal = tipoNorm.includes("CASAL") || /\s+E\s+/i.test(c.nome); const isDono = tipoNorm === "VIP_DONO" || c.is_dono === true || pagPorta === "ISENTO";
-                const isCortesia = c.cortesia === true; const isAniv = c.aniversariante && c.aniversariante.trim() !== ""; const isPix = c.metodo === 'pix_antecipado';
-                const eventoOnlineCard = ev && ev.data ? getStatusTurno(ev.data, ev.hora) === "ONLINE" : false;
-                const pixForaDoTurno = isPix && String(c.pago) === 'true' && !isModoTeste && !eventoOnlineCard;
-                const isFidelidade = tipoNorm.includes("FIDELIDADE");
-
-                const isCamaroteOrVip = tipoNorm.includes("CAMAROTE") || tipoNorm === "VIP 1" || tipoNorm === "VIP 2";
-
-                let valorFinal = "PORTARIA";
-                if (isDono) { 
-                    valorFinal = "FREE"; 
-                } 
-                else if (isCamaroteOrVip) {
-                    if (isCortesia && pagPorta && pagPorta !== "ISENTO") {
-                        let val = pagPorta === "CASAL" ? ev.valor_casal : ev.valor_solteiro; 
-                        valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
-                    } else { 
-                        valorFinal = "R$ " + (c.valor_pago || "---"); 
-                    }
-                } 
-                else if (isFidelidade) {
-                    let val = c.valor_pago || (isCasal ? ev.valor_recorrente_casal : ev.valor_recorrente_solteiro);
-                    valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PROMO";
-                } 
-                else {
-                    let val = isAniv ? (isCasal ? ev.desc_casal : ev.desc_solteiro) : (isPix ? (c.valor_pago || (isCasal ? ev.ant_casal : ev.ant_solteiro)) : (isCasal ? ev.valor_casal : ev.valor_solteiro));
-                    valorFinal = val ? (String(val).toUpperCase().includes('R$') ? val : "R$ " + val) : "PORTARIA";
-                }
-
-                let textoPagamento = isPix ? 'PIX PAGO' : 'PORTARIA'; 
-                let corPagamento = isPix ? 'text-green-500' : 'text-zinc-500';
-                
-                if (isFidelidade && !isPix) {
-                    textoPagamento = 'PROMO';
-                    corPagamento = 'text-fuchsia-500';
-                }
-
-                let tagsHTML = ''; const ehCasalFinal = isCasal || pagPorta === 'CASAL';
-
-                if (isDono) { tagsHTML += `<span class="bg-green-900/30 text-green-400 border border-green-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👑 DONO</span>`; } 
-                else if (ehCasalFinal) { tagsHTML += `<span class="bg-fuchsia-900/30 text-fuchsia-400 border border-fuchsia-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👫 CASAL</span>`; } 
-                else { tagsHTML += `<span class="bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase text-center">👤 SOLTEIRO</span>`; }
-                
-                if (isCamaroteOrVip) { tagsHTML += `<span class="bg-cyan-900/30 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">💎 ${tipoNorm}</span>`; }
-                
-                if (isFidelidade) { 
-                    tagsHTML += `<span class="bg-fuchsia-600 text-white border border-fuchsia-400 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate animate-pulse shadow-[0_0_10px_rgba(192,38,211,0.5)]">⭐ PROMO VIP</span>`; 
-                }
-
-                if (!isDono && !isFidelidade) {
-                    if (isCamaroteOrVip) {
-                        if (isPix) { 
-                            if (isVipEspecialCamarote(tipoNorm)) {
-                                tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ SEM CONSUMAÇÃO</span>`;
-                            } else {
-                                tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`;
-                            }
-                        } 
-                        else if (isCortesia && pagPorta && pagPorta !== 'ISENTO') { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎁 CORTESIA</span>`; }
-                    } else {
-                        if (isPix) {
-                            if (tipoNorm === 'CASAL CONSUMAÇÃO') { tagsHTML += `<span class="bg-emerald-900/30 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🍹 100% CONSUMAÇÃO</span>`; } 
-                            else { tagsHTML += `<span class="bg-orange-900/30 text-orange-400 border border-orange-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center">🎟️ ENTRADA SECA</span>`; }
-                        }
-                    }
-                }
-                
-                if (isAniv) { tagsHTML += `<span class="bg-purple-900/30 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded text-[8px] font-black uppercase text-center truncate">🎉 ANIV: ${c.aniversariante}</span>`; }
-                
-                const numTel = c.tel || c.telefone || '';
-                const btnCopiar = numTel ? `<button onclick="copiarTelefoneLimpo('${numTel}')" class="bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 text-[8px] font-black uppercase px-2 py-1 rounded transition-colors active:scale-95" title="Copiar apenas os 9 dígitos limpos">📋 COPIAR</button>` : '';
-                const avisoPixForaTurno = pixForaDoTurno ? `<p class="mt-2 text-[9px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/10 border border-yellow-500/30 px-2 py-1 rounded-lg inline-block">⚠️ PIX DE OUTRO EVENTO: ${c.evento || 'EVENTO NÃO INFORMADO'}</p>` : '';
-
-                cont.innerHTML += `
-                <div class="client-card p-4 rounded-2xl flex items-center justify-between gap-4 ${c.entrou ? 'entrou' : ''} ${pixForaDoTurno ? 'pix-fora-turno' : ''}">
-                    <div class="flex-1 min-w-[250px] max-w-[400px] dados-cliente">
-                        <div class="flex items-center gap-2 mb-1">
-                            <h3 class="text-lg font-black uppercase text-white truncate">${c.nome}</h3>
-                            <span class="bg-zinc-800 text-[8px] px-2 py-0.5 rounded text-zinc-400 font-bold uppercase whitespace-nowrap">${c.promoter || 'DIRETO'}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <p class="text-sm font-mono text-zinc-500">${numTel || '---'}</p>
-                            ${btnCopiar}
-                        </div>
-                        ${avisoPixForaTurno}
-                    </div>
-                    <div class="flex flex-col gap-1 w-[140px] dados-cliente">${tagsHTML}</div>
-                    <div class="flex-1 border-l border-white/5 pl-4 flex items-center gap-4 min-w-[300px] dados-cliente">
-                        <div class="w-[100px]">
-                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Pagamento</p>
-                            <p class="text-xs font-black ${corPagamento}">${textoPagamento}</p>
-                        </div>
-                        <div class="flex-1 pr-4">
-                            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Info / Total</p>
-                            <p class="text-sm font-bold ${isDono ? 'text-green-500' : 'text-yellow-500'} leading-tight uppercase break-words whitespace-normal">${valorFinal}</p>
-                        </div>
-                    </div>
-                    <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4 area-checkin flex-col items-end justify-center">
-                        ${c.entrou ? 
-                            `<span class="text-green-500 font-black uppercase text-[12px] leading-none">✓ OK</span>
-                             <span class="text-yellow-500 text-[8px] font-black uppercase mt-1.5 tracking-widest">👤 ${c.porteiro || 'SISTEMA'}</span>` : 
-                            `<button onclick="confirmarCheckin('${c.id}', '${numTel}')" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
-                        }
-                    </div>
-                </div>`;
-            });
-        };
-
-        window.confirmarCheckin = async (id, telefone) => {
-            try {
-                let copiouSucesso = false;
-                if (telefone) {
-                    let apenasNumeros = String(telefone).replace(/\D/g, '');
-                    
-                    if (apenasNumeros.length >= 9) {
-                        apenasNumeros = apenasNumeros.slice(-9);
-                    }
-                    
-                    if (apenasNumeros.length > 0) {
-                        try {
-                            if (navigator.clipboard && window.isSecureContext) { 
-                                await navigator.clipboard.writeText(apenasNumeros); 
-                                copiouSucesso = true; 
-                            } else {
-                                const textArea = document.createElement("textarea"); textArea.value = apenasNumeros; textArea.style.position = "fixed"; document.body.appendChild(textArea);
-                                textArea.focus(); textArea.select(); document.execCommand('copy'); document.body.removeChild(textArea); copiouSucesso = true;
-                            }
-                        } catch (err) {}
-                    }
-                }
-                await updateDoc(doc(db, "lista_eventos", id), { entrou: true, porteiro: operadorLogado, data_entrada: new Date().toISOString() });
-                if (copiouSucesso) { mostrarAviso("CHECK-IN OK E TELEFONE COPIADO!", true); } 
-                else { mostrarAviso("Check-in confirmado!", true); }
-                
-                const campoBusca = document.getElementById('input-busca');
-                campoBusca.value = ''; processarPesquisa(); campoBusca.focus(); 
-            } catch(e) { mostrarAviso("Erro ao confirmar check-in."); }
-        };
-    </script>
+            <div class="col-span-2">
+              <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mb-1">Info / Total</p>
+              <p class="text-sm font-bold text-yellow-500 leading-tight uppercase break-words">${escapeHtml(c.total || "PORTARIA")}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="w-[130px] flex justify-end shrink-0 border-l border-white/5 pl-4 area-checkin flex-col items-end justify-center">
+          ${c.entrou
+            ? `<span class="text-green-500 font-black uppercase text-[12px] leading-none">✓ OK</span>
+               <span class="text-yellow-500 text-[8px] font-black uppercase mt-1.5 tracking-widest">👤 ${escapeHtml(c.porteiro || "SISTEMA")}</span>`
+            : `<button type="button" data-checkin="${escapeHtml(c.id)}" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">LIBERAR</button>`
+          }
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  async function executarBusca() {
+    const q = $("input-busca").value.trim();
+    const cont = $("container-resultados");
+
+    if (q.length < 3) {
+      if (abortBusca) abortBusca.abort();
+      cont.innerHTML = "";
+      return;
+    }
+
+    if (abortBusca) abortBusca.abort();
+    abortBusca = new AbortController();
+    const estaBusca = abortBusca;
+
+    cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm animate-pulse">Buscando...</div>`;
+
+    try {
+      const dados = await api("buscar", { q }, { controller:estaBusca });
+      renderResultados(dados.resultados, dados.limitado === true);
+    } catch (e) {
+      if (e?.name === "AbortError") return;
+      if (e?.status === 401 || e?.status === 403) {
+        await encerrarSessaoLocal(e.message || "Acesso não autorizado.");
+        return;
+      }
+      cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-red-500 text-sm">${escapeHtml(e.message || "Erro na busca")}</div>`;
+    }
+  }
+
+  $("input-busca").addEventListener("input", () => {
+    clearTimeout(debounceBusca);
+    debounceBusca = setTimeout(executarBusca, 280);
+  });
+
+  $("container-resultados").addEventListener("click", async event => {
+    const btn = event.target.closest("button[data-checkin]");
+    if (!btn) return;
+
+    const reservaId = btn.dataset.checkin;
+    if (!reservaId) return;
+
+    btn.disabled = true;
+    btn.textContent = "LIBERANDO...";
+
+    try {
+      const r = await api("checkin", { reservaId });
+
+      let copiou = false;
+      if (r.telefoneCopia) {
+        try {
+          await navigator.clipboard.writeText(String(r.telefoneCopia));
+          copiou = true;
+        } catch {}
+      }
+
+      mostrarAviso(copiou ? "CHECK-IN OK E TELEFONE COPIADO!" : "CHECK-IN CONFIRMADO!", true);
+      $("input-busca").value = "";
+      $("container-resultados").innerHTML = "";
+      $("input-busca").focus();
+      await carregarBootstrap();
+    } catch (e) {
+      if (e?.status === 401 || e?.status === 403) {
+        await encerrarSessaoLocal(e.message || "Acesso não autorizado.");
+        return;
+      }
+      mostrarAviso(e.message || "Erro ao confirmar check-in.");
+      btn.disabled = false;
+      btn.textContent = "LIBERAR";
+    }
+  });
+
+  $("btnAcao").addEventListener("click", async () => {
+    const email = $("inputNomeUsuario").value.trim();
+    const senha = $("senhaUsuario").value;
+    const btn = $("btnAcao");
+
+    if (!email || !senha) return mensagemAuth("Informe e-mail e senha do operador.");
+
+    btn.disabled = true;
+    btn.textContent = "VERIFICANDO...";
+    mensagemAuth("");
+
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, senha);
+      await validarAcessoPortaria(cred.user);
+    } catch (e) {
+      console.warn("Falha de login Portaria:", e?.code || e?.message);
+      try { await signOut(auth); } catch {}
+      const msg = e?.status === 403 ? e.message : "E-mail ou senha inválidos, ou acesso não autorizado.";
+      mensagemAuth(msg);
+    } finally {
+      $("senhaUsuario").value = "";
+      btn.disabled = false;
+      btn.textContent = "ENTRAR COM SEGURANÇA";
+    }
+  });
+
+  $("senhaUsuario").addEventListener("keydown", e => {
+    if (e.key === "Enter") $("btnAcao").click();
+  });
+
+  $("btnLogout").addEventListener("click", () => encerrarSessaoLocal("Sessão encerrada."));
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) {
+      $("interfacePrincipal").classList.add("hidden");
+      $("telaLogin").classList.remove("hidden");
+      return;
+    }
+
+    if (restaurandoSessao) return;
+    restaurandoSessao = true;
+    try {
+      await validarAcessoPortaria(user);
+    } catch (e) {
+      console.warn("Sessão da Portaria recusada:", e?.message || e);
+      await encerrarSessaoLocal(e?.message || "Não foi possível validar a sessão.");
+    } finally {
+      restaurandoSessao = false;
+    }
+  });
+</script>
 </body>
 </html>
