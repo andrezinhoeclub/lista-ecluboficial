@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- E-CLUB CARONAS V2 SEGURA — API / SEM FIRESTORE NO NAVEGADOR -->
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -383,31 +384,25 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        const URL_CARONAS_API = 'https://us-central1-teste-de-reserva.cloudfunctions.net/caronasApi';
 
-        import {
-            getFirestore,
-            collection,
-            addDoc,
-            getDocs,
-            query,
-            where,
-            doc,
-            getDoc,
-            onSnapshot
-        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        async function apiCaronas(action, payload = {}) {
+            const resp = await fetch(URL_CARONAS_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                cache: 'no-store',
+                body: JSON.stringify({ action, ...payload })
+            });
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
-            authDomain: "teste-de-reserva.firebaseapp.com",
-            projectId: "teste-de-reserva",
-            storageBucket: "teste-de-reserva.appspot.com",
-            messagingSenderId: "163395694876",
-            appId: "1:163395694876:web:8b1116a0483af951548ad9"
-        };
+            let data = {};
+            try { data = await resp.json(); } catch (_) {}
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+            if (!resp.ok || data.ok === false) {
+                throw new Error(data.error || `Erro ${resp.status}`);
+            }
+
+            return data;
+        }
 
         let eventosCache = [];
         let eventoAtivo = null;
@@ -420,7 +415,8 @@
         let bloqueioBairro = false;
         let reservasCaronaMemoria = [];
         let controleNavegacao = false;
-        let unsubscribeRotas = null;
+        let sessionRotasToken = sessionStorage.getItem("eclub_caronas_session") || "";
+        let intervalRotas = null;
 
         window.addEventListener("popstate", function() {
             controleNavegacao = false;
@@ -428,6 +424,10 @@
             document.getElementById("modalForm").classList.add("hidden");
             document.getElementById("modalLogin").classList.add("hidden");
             document.getElementById("modalSucesso").classList.add("hidden");
+            if (intervalRotas) {
+                clearInterval(intervalRotas);
+                intervalRotas = null;
+            }
             document.getElementById("tela-rotas").classList.add("hidden");
             document.getElementById("tela-principal").classList.remove("hidden");
         });
@@ -483,11 +483,11 @@
         };
 
         function salvarMemoria(dados) {
-            localStorage.setItem("eclub_solteira_perfil", JSON.stringify(dados));
+            sessionStorage.setItem("eclub_solteira_perfil", JSON.stringify(dados));
         }
 
         function recuperarMemoria() {
-            const p = localStorage.getItem("eclub_solteira_perfil");
+            const p = sessionStorage.getItem("eclub_solteira_perfil");
             return p ? JSON.parse(p) : null;
         }
 
@@ -504,56 +504,19 @@
 
         async function carregarPagina() {
             try {
-                const sysSnap = await getDoc(doc(db, "configuracoes", "sistema"));
+                const data = await apiCaronas('bootstrap');
 
-                if (sysSnap.exists()) {
-                    const d = sysSnap.data();
+                regrasLogistica.hora = data.hora_limite || "18:00";
+                regrasLogistica.bairros = Array.isArray(data.bairros) ? data.bairros : [];
+                eventosCache = Array.isArray(data.eventos) ? data.eventos : [];
 
-                    if (d.carona_hora_limite) {
-                        regrasLogistica.hora = d.carona_hora_limite;
-                    }
-
-                    if (d.carona_bairros) {
-                        regrasLogistica.bairros = d.carona_bairros
-                            .toUpperCase()
-                            .split(",")
-                            .map(function(b) {
-                                return b.trim();
-                            })
-                            .filter(Boolean);
-                    }
-                }
-            } catch (e) {
-                console.warn("Configuração não encontrada ou erro ao carregar configurações.", e);
-            }
-
-            const displayHora = document.getElementById("display-hora-limite");
-
-            if (displayHora) {
-                displayHora.innerText = regrasLogistica.hora;
-            }
-
-            try {
-                const snap = await getDocs(query(collection(db, "eventos"), where("ativo", "==", true)));
+                const displayHora = document.getElementById("display-hora-limite");
+                if (displayHora) displayHora.innerText = regrasLogistica.hora;
 
                 const hojeStr = new Date().toLocaleDateString("en-CA");
-
                 const agora = new Date();
-                const horaAtual = String(agora.getHours()).padStart(2, "0") + ":" + String(agora.getMinutes()).padStart(2, "0");
-
-                eventosCache = snap.docs
-                    .map(function(d) {
-                        return {
-                            id: d.id,
-                            ...d.data()
-                        };
-                    })
-                    .filter(function(ev) {
-                        return ev.data && ev.data >= hojeStr;
-                    })
-                    .sort(function(a, b) {
-                        return a.data.localeCompare(b.data);
-                    });
+                const horaAtual = String(agora.getHours()).padStart(2, "0") + ":" +
+                    String(agora.getMinutes()).padStart(2, "0");
 
                 const container = document.getElementById("listaEventos");
 
@@ -561,19 +524,14 @@
                     container.innerHTML = `
                         <p class="text-center text-[10px] text-pink-300 uppercase tracking-widest p-8 glass rounded-3xl">
                             Nenhuma festa programada para carona no momento.
-                        </p>
-                    `;
+                        </p>`;
                     return;
                 }
 
                 container.innerHTML = eventosCache.map(function(ev) {
                     const isHoje = ev.data === hojeStr;
                     const passouLimite = isHoje && horaAtual >= regrasLogistica.hora;
-
-                    const btnTexto = passouLimite
-                        ? "CARONAS ENCERRADAS PARA HOJE"
-                        : "SOLICITAR CARONA VIP 🚗";
-
+                    const btnTexto = passouLimite ? "CARONAS ENCERRADAS PARA HOJE" : "SOLICITAR CARONA VIP 🚗";
                     const btnClasse = passouLimite ? "btn-disabled" : "";
                     const dataFormatada = ev.data.split("-").reverse().join("/");
 
@@ -584,30 +542,21 @@
                                     ? `<img src="${ev.imagem}" class="banner-img">`
                                     : `<div class="h-64 bg-pink-900/10 flex items-center justify-center text-pink-500/30 font-black italic text-2xl border-b border-pink-500/10">E-CLUB</div>`
                             }
-
                             <div class="p-6 md:p-8 text-center">
-                                <h3 class="text-2xl font-black uppercase italic mb-1 tracking-tighter text-white">
-                                    ${ev.nome}
-                                </h3>
-
-                                <p class="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-6">
-                                    ${dataFormatada}
-                                </p>
-
-                                <button onclick="abrirReserva('${ev.id}', ${passouLimite})" class="w-full btn-rosa py-5 rounded-2xl text-[11px] uppercase tracking-widest shadow-lg ${btnClasse}">
+                                <h3 class="text-2xl font-black uppercase italic mb-1 tracking-tighter text-white">${ev.nome}</h3>
+                                <p class="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-6">${dataFormatada}</p>
+                                <button onclick="abrirReserva('${ev.id}', ${passouLimite})"
+                                    class="w-full btn-rosa py-5 rounded-2xl text-[11px] uppercase tracking-widest shadow-lg ${btnClasse}">
                                     ${btnTexto}
                                 </button>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
                 }).join("");
             } catch (e) {
                 document.getElementById("listaEventos").innerHTML = `
                     <p class="text-center text-[10px] text-red-300 uppercase tracking-widest p-8 glass rounded-3xl">
-                        Erro ao carregar eventos. Verifique o Firebase.
-                    </p>
-                `;
-
+                        Erro ao carregar eventos. Tente novamente.
+                    </p>`;
                 console.error(e);
             }
         }
@@ -718,9 +667,7 @@
         };
 
         window.processarFinalizacao = async function() {
-            if (!eventoAtivo) {
-                return mostrarAviso("Selecione um evento antes de confirmar.");
-            }
+            if (!eventoAtivo) return mostrarAviso("Selecione um evento antes de confirmar.");
 
             const n = document.getElementById("nome-cliente").value.trim().toUpperCase();
             const t = document.getElementById("tel-cliente").value.trim();
@@ -730,103 +677,69 @@
             const rua = document.getElementById("rua-cliente").value.trim().toUpperCase();
             const num = document.getElementById("num-cliente").value.trim();
             const comp = document.getElementById("comp-cliente").value.trim().toUpperCase();
-            const qtdPass = document.getElementById("qtd-cliente").value;
+            const qtdPass = Number(document.getElementById("qtd-cliente").value || 1);
 
             if (!n || !t || telLimpo.length < 10 || !num || cep.length < 8) {
                 return mostrarAviso("Por favor, preencha todos os campos corretamente!");
             }
 
             const btn = document.getElementById("btn-final-acao");
-
             btn.disabled = true;
             btn.innerText = "AGENDANDO...";
 
             try {
-                const qBuscaTelLimpo = query(
-                    collection(db, "lista_eventos"),
-                    where("evento", "==", eventoAtivo.nome),
-                    where("tel_limpo", "==", telLimpo)
-                );
-
-                const snapBuscaTelLimpo = await getDocs(qBuscaTelLimpo);
-
-                if (!snapBuscaTelLimpo.empty) {
-                    throw new Error("Você já possui um VIP ou Carona agendada para este evento com este número!");
-                }
-
-                const qBuscaTelAntigo = query(
-                    collection(db, "lista_eventos"),
-                    where("evento", "==", eventoAtivo.nome),
-                    where("tel", "==", t)
-                );
-
-                const snapBuscaTelAntigo = await getDocs(qBuscaTelAntigo);
-
-                if (!snapBuscaTelAntigo.empty) {
-                    throw new Error("Você já possui um VIP ou Carona agendada para este evento com este número!");
-                }
+                const resultado = await apiCaronas('criar_carona', {
+                    eventId: eventoAtivo.id,
+                    nome: n,
+                    telefone: t,
+                    cep,
+                    bairro,
+                    rua,
+                    numero: num,
+                    complemento: comp,
+                    quantidade: qtdPass
+                });
 
                 salvarMemoria({
-                    nome: n,
-                    tel: t,
-                    tel_limpo: telLimpo,
-                    cep: cep,
-                    bairro: bairro,
-                    rua: rua,
-                    num: num,
-                    comp: comp,
-                    qtd: qtdPass
+                    nome: n, tel: t, cep, bairro, rua,
+                    num, comp, qtd: String(qtdPass)
                 });
 
-                const vaiTerCarona = !bloqueioBairro;
-
-                await addDoc(collection(db, "lista_eventos"), {
-                    nome: n,
-                    tel: t,
-                    tel_limpo: telLimpo,
-                    evento: eventoAtivo.nome,
-                    evento_id: eventoAtivo.id,
-                    tipo_entrada: "SOLTEIRA VIP",
-                    promoter: vaiTerCarona ? "CARONA VIP" : "LOUNGE VIP",
-                    data_reserva: new Date().toISOString(),
-                    entrou: false,
-                    pago: false,
-                    metodo: "portaria",
-                    valor_pago: "FREE",
-                    carona: vaiTerCarona,
-                    qtd_solteiras: vaiTerCarona ? parseInt(qtdPass) : 1,
-                    bairro: vaiTerCarona ? bairro : "",
-                    cep: vaiTerCarona ? cep : "",
-                    endereco: vaiTerCarona ? `${rua}, ${num}${comp ? " (" + comp + ")" : ""}` : ""
-                });
-
+                const vaiTerCarona = resultado.carona === true;
                 document.getElementById("modalForm").classList.add("hidden");
-
                 const modalInner = document.getElementById("modal-sucesso-inner");
 
                 if (vaiTerCarona) {
                     document.getElementById("sucesso-icone").innerText = "💖";
                     document.getElementById("sucesso-titulo").innerText = "Agendado!";
-                    document.getElementById("sucesso-titulo").className = "text-pink-500 font-black uppercase italic mb-2 text-2xl tracking-tighter";
-                    document.getElementById("sucesso-texto").innerText = "Tudo pronto! Seu VIP está garantido e o motorista te chamará no WhatsApp para confirmar o horário.";
-                    document.getElementById("btn-sucesso-ok").className = "w-full bg-pink-600 hover:bg-pink-500 text-white py-5 rounded-2xl uppercase text-xs font-black transition-colors shadow-lg";
-                    modalInner.className = "w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-pink-500/50";
+                    document.getElementById("sucesso-titulo").className =
+                        "text-pink-500 font-black uppercase italic mb-2 text-2xl tracking-tighter";
+                    document.getElementById("sucesso-texto").innerText =
+                        "Tudo pronto! Seu VIP está garantido e o motorista te chamará no WhatsApp para confirmar o horário.";
+                    document.getElementById("btn-sucesso-ok").className =
+                        "w-full bg-pink-600 hover:bg-pink-500 text-white py-5 rounded-2xl uppercase text-xs font-black transition-colors shadow-lg";
+                    modalInner.className =
+                        "w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-pink-500/50";
                 } else {
                     document.getElementById("sucesso-icone").innerText = "✨";
-                    document.getElementById("sucesso-titulo").innerText = "VIP Confirmado\n(Carona não atendida)";
-                    document.getElementById("sucesso-titulo").className = "text-yellow-500 font-black uppercase italic mb-2 text-xl tracking-tighter whitespace-pre-line";
-                    document.getElementById("sucesso-texto").innerText = "Seu nome está na Lista VIP na recepção. O motorista não atende sua região, então a carona não foi agendada.";
-                    document.getElementById("btn-sucesso-ok").className = "w-full bg-yellow-500 hover:bg-yellow-400 text-black py-5 rounded-2xl uppercase text-xs font-black transition-colors shadow-[0_0_20px_rgba(234,179,8,0.4)]";
-                    modalInner.className = "w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-yellow-500/50";
+                    document.getElementById("sucesso-titulo").innerText =
+                        "VIP Confirmado\n(Carona não atendida)";
+                    document.getElementById("sucesso-titulo").className =
+                        "text-yellow-500 font-black uppercase italic mb-2 text-xl tracking-tighter whitespace-pre-line";
+                    document.getElementById("sucesso-texto").innerText =
+                        "Seu nome está na Lista VIP na recepção. O motorista não atende sua região, então a carona não foi agendada.";
+                    document.getElementById("btn-sucesso-ok").className =
+                        "w-full bg-yellow-500 hover:bg-yellow-400 text-black py-5 rounded-2xl uppercase text-xs font-black transition-colors shadow-[0_0_20px_rgba(234,179,8,0.4)]";
+                    modalInner.className =
+                        "w-full max-w-sm glass p-10 rounded-[2.5rem] text-center anim-fade border-yellow-500/50";
                 }
 
                 document.getElementById("modalSucesso").classList.remove("hidden");
             } catch (e) {
                 mostrarAviso(e.message || "Erro ao salvar solicitação.");
-
                 btn.disabled = false;
-                btn.innerText = bloqueioBairro ? "Confirmar Apenas VIP ✨" : "Confirmar Solicitação 🚗";
-
+                btn.innerText = bloqueioBairro ?
+                    "Confirmar Apenas VIP ✨" : "Confirmar Solicitação 🚗";
                 console.error(e);
             }
         };
@@ -853,96 +766,90 @@
 
         window.fazerLoginGerador = async function() {
             const u = document.getElementById("login-user").value.trim().toLowerCase();
-            const s = document.getElementById("login-senha").value.trim();
+            const s = document.getElementById("login-senha").value;
 
-            if (!u || !s) {
-                return mostrarAviso("Preencha usuário e senha!");
-            }
+            if (!u || !s) return mostrarAviso("Preencha usuário e senha!");
 
             const btn = document.getElementById("btn-login");
-
             btn.innerText = "VERIFICANDO...";
             btn.disabled = true;
 
             try {
-                let acessoLiberado = false;
+                const data = await apiCaronas('login_rotas', { usuario: u, senha: s });
 
-                const snap = await getDoc(doc(db, "promoters", u));
+                sessionRotasToken = data.sessionToken;
+                sessionStorage.setItem("eclub_caronas_session", sessionRotasToken);
 
-                if (snap.exists() && snap.data().senha === s) {
-                    acessoLiberado = true;
-                }
+                document.getElementById("label-logado").innerText =
+                    "ACESSO: " + String(data.usuario || u).toUpperCase();
+                document.getElementById("modalLogin").classList.add("hidden");
+                document.getElementById("tela-principal").classList.add("hidden");
+                document.getElementById("tela-rotas").classList.remove("hidden");
 
-                if (acessoLiberado) {
-                    document.getElementById("label-logado").innerText = "ACESSO: " + u.toUpperCase();
-
-                    document.getElementById("modalLogin").classList.add("hidden");
-                    document.getElementById("tela-principal").classList.add("hidden");
-                    document.getElementById("tela-rotas").classList.remove("hidden");
-
-                    iniciarSistemaRotas();
-                } else {
-                    mostrarAviso("Acesso negado. Usuário ou senha incorretos.");
-                }
+                iniciarSistemaRotas();
             } catch (e) {
-                mostrarAviso("Erro de conexão ao verificar login.");
-                console.error(e);
+                mostrarAviso(e.message || "Acesso negado.");
+            } finally {
+                btn.innerText = "Acessar Painel";
+                btn.disabled = false;
+                document.getElementById("login-senha").value = "";
             }
-
-            btn.innerText = "Acessar Painel";
-            btn.disabled = false;
         };
 
-        window.sairPainelRotas = function() {
-            if (unsubscribeRotas) {
-                unsubscribeRotas();
-                unsubscribeRotas = null;
+        window.sairPainelRotas = async function() {
+            if (intervalRotas) {
+                clearInterval(intervalRotas);
+                intervalRotas = null;
             }
 
+            if (sessionRotasToken) {
+                try {
+                    await apiCaronas('logout_rotas', {
+                        sessionToken: sessionRotasToken
+                    });
+                } catch (_) {}
+            }
+
+            sessionRotasToken = "";
+            sessionStorage.removeItem("eclub_caronas_session");
             reservasCaronaMemoria = [];
 
             document.getElementById("tela-rotas").classList.add("hidden");
             document.getElementById("tela-principal").classList.remove("hidden");
 
-            const selectCarona = document.getElementById("filtro-evento-carona");
-            const textarea = document.getElementById("output-rotas-carona");
-
-            selectCarona.innerHTML = '<option value="">Aguardando reservas...</option>';
-            textarea.value = "";
+            document.getElementById("filtro-evento-carona").innerHTML =
+                '<option value="">Aguardando reservas...</option>';
+            document.getElementById("output-rotas-carona").value = "";
         };
 
-        function iniciarSistemaRotas() {
-            if (unsubscribeRotas) {
-                unsubscribeRotas();
-                unsubscribeRotas = null;
-            }
+        async function atualizarRotasSeguras() {
+            if (!sessionRotasToken) return;
 
-            const q = query(collection(db, "lista_eventos"), where("carona", "==", true));
-
-            unsubscribeRotas = onSnapshot(q, function(snap) {
-                reservasCaronaMemoria = snap.docs.map(function(d) {
-                    return {
-                        id: d.id,
-                        ...d.data()
-                    };
+            try {
+                const data = await apiCaronas('listar_rotas', {
+                    sessionToken: sessionRotasToken
                 });
 
-                const selectCarona = document.getElementById("filtro-evento-carona");
+                reservasCaronaMemoria = Array.isArray(data.reservas) ?
+                    data.reservas : [];
+
+                const selectCarona =
+                    document.getElementById("filtro-evento-carona");
                 const valAtual = selectCarona.value;
 
                 const eventosComCarona = [
                     ...new Set(
                         reservasCaronaMemoria
-                            .map(function(r) {
-                                return r.evento;
-                            })
+                            .map(function(r) { return r.evento; })
                             .filter(Boolean)
                     )
                 ].sort();
 
                 if (eventosComCarona.length === 0) {
-                    selectCarona.innerHTML = '<option value="">Nenhuma carona registrada ainda...</option>';
-                    document.getElementById("output-rotas-carona").value = "Nenhuma solicitação de carona encontrada no momento.";
+                    selectCarona.innerHTML =
+                        '<option value="">Nenhuma carona registrada ainda...</option>';
+                    document.getElementById("output-rotas-carona").value =
+                        "Nenhuma solicitação de carona encontrada no momento.";
                     return;
                 }
 
@@ -956,13 +863,26 @@
                     selectCarona.value = valAtual;
                 }
 
-                if (selectCarona.value) {
-                    window.gerarRelatorioCaronas();
+                if (selectCarona.value) window.gerarRelatorioCaronas();
+            } catch (e) {
+                if (/sessão|sessao/i.test(e.message || "")) {
+                    mostrarAviso("Sessão expirada. Faça login novamente.");
+                    sessionRotasToken = "";
+                    sessionStorage.removeItem("eclub_caronas_session");
+                    if (intervalRotas) clearInterval(intervalRotas);
+                    intervalRotas = null;
+                    document.getElementById("tela-rotas").classList.add("hidden");
+                    document.getElementById("tela-principal").classList.remove("hidden");
+                } else {
+                    mostrarAviso(e.message || "Erro ao carregar caronas.");
                 }
-            }, function(error) {
-                mostrarAviso("Erro ao carregar caronas.");
-                console.error(error);
-            });
+            }
+        }
+
+        function iniciarSistemaRotas() {
+            if (intervalRotas) clearInterval(intervalRotas);
+            atualizarRotasSeguras();
+            intervalRotas = setInterval(atualizarRotasSeguras, 10000);
         }
 
         window.gerarRelatorioCaronas = function() {
