@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- E-CLUB CARONAS V2 SEGURA — API / SEM FIRESTORE NO NAVEGADOR -->
+<!-- E-CLUB CARONAS V3 SEGURA — API / SEM FIRESTORE NO NAVEGADOR -->
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -352,7 +352,7 @@
             </h2>
 
             <form id="form-login" class="space-y-3">
-                <input type="text" id="login-user" placeholder="USUÁRIO" autocomplete="username" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
+                <input type="text" id="login-user" placeholder="E-MAIL DO OPERADOR" autocomplete="username" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
 
                 <input type="password" id="login-senha" placeholder="SENHA" autocomplete="current-password" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-center text-white focus:border-blue-500">
 
@@ -384,12 +384,50 @@
     </div>
 
     <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import {
+            getAuth,
+            setPersistence,
+            browserSessionPersistence,
+            signInWithEmailAndPassword,
+            signOut,
+            getIdToken
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g",
+            authDomain: "teste-de-reserva.firebaseapp.com",
+            projectId: "teste-de-reserva",
+            storageBucket: "teste-de-reserva.firebasestorage.app",
+            messagingSenderId: "163395694876",
+            appId: "1:163395694876:web:8b1116a0483af951548ad9"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const authReady = setPersistence(
+            auth,
+            browserSessionPersistence
+        ).catch(function(e) {
+            console.warn("Persistência Firebase Auth:", e);
+        });
+
         const URL_CARONAS_API = 'https://us-central1-teste-de-reserva.cloudfunctions.net/caronasApi';
 
         async function apiCaronas(action, payload = {}) {
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+
+            if (auth.currentUser) {
+                const idToken = await getIdToken(auth.currentUser, false);
+                headers['Authorization'] = `Bearer ${idToken}`;
+            }
+
             const resp = await fetch(URL_CARONAS_API, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 cache: 'no-store',
                 body: JSON.stringify({ action, ...payload })
             });
@@ -398,7 +436,9 @@
             try { data = await resp.json(); } catch (_) {}
 
             if (!resp.ok || data.ok === false) {
-                throw new Error(data.error || `Erro ${resp.status}`);
+                const err = new Error(data.error || `Erro ${resp.status}`);
+                err.status = resp.status;
+                throw err;
             }
 
             return data;
@@ -765,30 +805,59 @@
         };
 
         window.fazerLoginGerador = async function() {
-            const u = document.getElementById("login-user").value.trim().toLowerCase();
-            const s = document.getElementById("login-senha").value;
+            const email = document.getElementById("login-user").value
+                .trim()
+                .toLowerCase();
+            const senha = document.getElementById("login-senha").value;
 
-            if (!u || !s) return mostrarAviso("Preencha usuário e senha!");
+            if (!email || !senha) {
+                return mostrarAviso("Preencha e-mail e senha!");
+            }
 
             const btn = document.getElementById("btn-login");
             btn.innerText = "VERIFICANDO...";
             btn.disabled = true;
 
             try {
-                const data = await apiCaronas('login_rotas', { usuario: u, senha: s });
+                await authReady;
+
+                const credencial = await signInWithEmailAndPassword(
+                    auth,
+                    email,
+                    senha
+                );
+
+                await getIdToken(credencial.user, true);
+
+                const data = await apiCaronas('login_rotas');
 
                 sessionRotasToken = data.sessionToken;
-                sessionStorage.setItem("eclub_caronas_session", sessionRotasToken);
+                sessionStorage.setItem(
+                    "eclub_caronas_session",
+                    sessionRotasToken
+                );
 
                 document.getElementById("label-logado").innerText =
-                    "ACESSO: " + String(data.usuario || u).toUpperCase();
+                    "ACESSO: " +
+                    String(data.usuario || email).toUpperCase();
+
                 document.getElementById("modalLogin").classList.add("hidden");
                 document.getElementById("tela-principal").classList.add("hidden");
                 document.getElementById("tela-rotas").classList.remove("hidden");
 
                 iniciarSistemaRotas();
             } catch (e) {
-                mostrarAviso(e.message || "Acesso negado.");
+                console.error("Login Caronas:", e);
+
+                sessionRotasToken = "";
+                sessionStorage.removeItem("eclub_caronas_session");
+
+                try { await signOut(auth); } catch (_) {}
+
+                mostrarAviso(
+                    e.message ||
+                    "E-mail, senha ou permissão inválidos."
+                );
             } finally {
                 btn.innerText = "Acessar Painel";
                 btn.disabled = false;
@@ -812,6 +881,9 @@
 
             sessionRotasToken = "";
             sessionStorage.removeItem("eclub_caronas_session");
+
+            try { await signOut(auth); } catch (_) {}
+
             reservasCaronaMemoria = [];
 
             document.getElementById("tela-rotas").classList.add("hidden");
