@@ -45,6 +45,17 @@
             <p class="mt-6 text-[8px] text-zinc-600 font-bold uppercase leading-relaxed">Autenticação protegida pelo Firebase Authentication. A senha não é armazenada neste HTML nem no navegador.</p>
         </form>
     </div>
+    <div id="modal-confirmar-eclub" class="hidden fixed inset-0 z-[10050] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="glass-card w-full max-w-md p-8 border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.10)]">
+            <p id="modal-confirmar-eclub-titulo" class="text-[9px] font-black uppercase tracking-[0.3em] text-red-500 mb-2">Confirmar ação</p>
+            <h3 id="modal-confirmar-eclub-subtitulo" class="text-lg font-black uppercase italic tracking-tighter text-white mb-5"></h3>
+            <p id="modal-confirmar-eclub-mensagem" class="text-[10px] text-zinc-400 font-bold uppercase leading-relaxed mb-8"></p>
+            <div class="flex gap-3">
+                <button id="modal-confirmar-eclub-cancelar" type="button" class="flex-1 bg-zinc-800 text-zinc-300 font-black py-4 rounded-2xl uppercase text-[10px] hover:bg-zinc-700 transition-all">Cancelar</button>
+                <button id="modal-confirmar-eclub-confirmar" type="button" class="flex-1 bg-red-600 text-white font-black py-4 rounded-2xl uppercase text-[10px] hover:bg-red-500 transition-all">Confirmar</button>
+            </div>
+        </div>
+    </div>
     <div id="painel-dashboard" class="max-w-7xl mx-auto hidden">
         <header class="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
             <div class="flex items-center gap-4">
@@ -2077,6 +2088,34 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
             const ENDPOINT_GESTAO_ACESSO = 'https://us-central1-teste-de-reserva.cloudfunctions.net/gerenciarAcesso';
             let cacheAcessosSeguros = [];
             const elAcesso = (id) => document.getElementById(id);
+            // Modal de confirmação com o visual do sistema (substitui o confirm() nativo do navegador).
+            // Uso: const ok = await confirmarAcaoEclub({ subtitulo: 'Excluir cadastro?', mensagem: '...', textoConfirmar: 'Excluir' });
+            function confirmarAcaoEclub({ titulo = 'Confirmar ação', subtitulo = '', mensagem = '', textoConfirmar = 'Confirmar' } = {}) {
+                return new Promise((resolve) => {
+                    const modal = document.getElementById('modal-confirmar-eclub');
+                    if (!modal) { resolve(confirm(mensagem || subtitulo)); return; }
+                    document.getElementById('modal-confirmar-eclub-titulo').innerText = titulo;
+                    document.getElementById('modal-confirmar-eclub-subtitulo').innerText = subtitulo;
+                    document.getElementById('modal-confirmar-eclub-mensagem').innerText = mensagem;
+                    const btnConfirmar = document.getElementById('modal-confirmar-eclub-confirmar');
+                    const btnCancelar = document.getElementById('modal-confirmar-eclub-cancelar');
+                    btnConfirmar.innerText = textoConfirmar;
+                    const fechar = (resultado) => {
+                        modal.classList.add('hidden');
+                        btnConfirmar.removeEventListener('click', onConfirmar);
+                        btnCancelar.removeEventListener('click', onCancelar);
+                        modal.removeEventListener('click', onFundo);
+                        resolve(resultado);
+                    };
+                    const onConfirmar = () => fechar(true);
+                    const onCancelar = () => fechar(false);
+                    const onFundo = (ev) => { if (ev.target === modal) fechar(false); };
+                    btnConfirmar.addEventListener('click', onConfirmar);
+                    btnCancelar.addEventListener('click', onCancelar);
+                    modal.addEventListener('click', onFundo);
+                    modal.classList.remove('hidden');
+                });
+            }
             function escaparHtmlAcesso(valor) {
                 return String(valor ?? '')
                     .replaceAll('&', '&amp;')
@@ -2229,7 +2268,13 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
             window.excluirAcessoSeguro = async (uid) => {
                 const a = cacheAcessosSeguros.find(x => x.uid === uid);
                 const rotulo = a ? (a.displayName || a.email || uid) : uid;
-                if (!confirm(`EXCLUIR o cadastro de ${rotulo}?\n\nO login dele(a) deixa de funcionar imediatamente e essa ação não pode ser desfeita. Se for só suspender temporariamente, use "Suspender" em vez disso.`)) return;
+                const confirmado = await confirmarAcaoEclub({
+                    titulo: 'Excluir cadastro',
+                    subtitulo: `Excluir o cadastro de ${rotulo}?`,
+                    mensagem: 'O login dele(a) deixa de funcionar imediatamente e essa ação não pode ser desfeita. Se for só suspender temporariamente, use "Suspender" em vez disso.',
+                    textoConfirmar: 'Excluir'
+                });
+                if (!confirmado) return;
                 try {
                     await chamarBackendAcesso('excluir', { uid });
                     statusAcesso(`Cadastro de ${rotulo} excluído com sucesso.`, true);
