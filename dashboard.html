@@ -2149,6 +2149,7 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                                 <button type="button" onclick="reenviarSenhaAcesso('${email}')" class="bg-purple-600/20 border border-purple-500/30 text-purple-300 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Enviar senha</button>
                                 <button type="button" onclick="${ativo ? 'suspenderAcessoSeguro' : 'reativarAcessoSeguro'}('${uid}')" class="${ativo ? 'bg-red-600/20 border-red-500/30 text-red-300' : 'bg-emerald-600/20 border-emerald-500/30 text-emerald-300'} border px-3 py-2 rounded-xl text-[8px] font-black uppercase">${ativo ? 'Suspender' : 'Reativar'}</button>
                                 <button type="button" onclick="revogarSessoesAcesso('${uid}')" class="bg-zinc-800 border border-zinc-700 text-zinc-300 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Revogar sessões</button>
+                                <button type="button" onclick="excluirAcessoSeguro('${uid}')" class="bg-red-700/30 border border-red-600/40 text-red-300 px-3 py-2 rounded-xl text-[8px] font-black uppercase">Excluir cadastro</button>
                             </div>
                         </div>
                     </div>`;
@@ -2223,6 +2224,16 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                 try {
                     await chamarBackendAcesso('revogar_sessoes', { uid });
                     statusAcesso('Sessões revogadas com sucesso.', true);
+                } catch (e) { statusAcesso(e.message); }
+            };
+            window.excluirAcessoSeguro = async (uid) => {
+                const a = cacheAcessosSeguros.find(x => x.uid === uid);
+                const rotulo = a ? (a.displayName || a.email || uid) : uid;
+                if (!confirm(`EXCLUIR o cadastro de ${rotulo}?\n\nO login dele(a) deixa de funcionar imediatamente e essa ação não pode ser desfeita. Se for só suspender temporariamente, use "Suspender" em vez disso.`)) return;
+                try {
+                    await chamarBackendAcesso('excluir', { uid });
+                    statusAcesso('Cadastro excluído com sucesso.', true);
+                    await carregarGestaoAcessos();
                 } catch (e) { statusAcesso(e.message); }
             };
             const checkPromoter = elAcesso('acesso-promoter');
