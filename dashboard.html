@@ -485,6 +485,10 @@
                         <h3 class="text-red-500 font-black uppercase tracking-widest text-[11px] mb-2">Zerar Sistema</h3>
                         <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto" title="Não apaga as Solteiras cadastradas nem os Modelos.">⚠️ ZERAR TUDO</button>
                     </div>
+                    <div class="bg-orange-500/10 border border-orange-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-orange-500 font-black uppercase tracking-widest text-[11px] mb-2">Eventos Antigos</h3>
+                        <button onclick="limparEventosAntigos()" class="w-full bg-orange-600/10 border border-orange-600/30 text-orange-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-orange-600 hover:text-white transition-all mt-auto" title="Apaga por completo eventos antes de uma data, com tudo que está ligado a eles.">Limpar Antigos</button>
+                    </div>
                     <div class="bg-yellow-500/10 border border-yellow-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
                         <h3 class="text-yellow-500 font-black uppercase tracking-widest text-[11px] mb-4">Taxa de Serviço PIX</h3>
                         <div class="flex gap-2 mb-4">
@@ -1846,16 +1850,67 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                 </div>
             `).join('');
         };
+        // Apaga uma lista de referências em lotes de até 400 (o Firestore trava em 500
+        // operações por lote — abaixo disso um evento bem movimentado já quebrava a
+        // exclusão inteira, sem apagar nada e sem avisar direito o motivo).
+        const excluirDocsEmLotes = async (refs) => {
+            const LIMITE_POR_LOTE = 400;
+            for (let inicio = 0; inicio < refs.length; inicio += LIMITE_POR_LOTE) {
+                const batch = writeBatch(db);
+                refs.slice(inicio, inicio + LIMITE_POR_LOTE).forEach(r => batch.delete(r));
+                await batch.commit();
+            }
+        };
+        // Junta tudo que precisa ser apagado quando um EVENTO é excluído: reservas,
+        // listas de aniversário e atendimentos do Vallet vinculados a ele. Usada tanto
+        // na exclusão individual quanto na limpeza em lote de eventos antigos.
+        const refsParaExcluirEvento = async (evId, evNome) => {
+            const refs = [];
+            const qR = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", evNome)));
+            qR.forEach(x => refs.push(x.ref));
+            const qA = await getDocs(query(collection(db, "links_aniversario"), where("festa", "==", evNome)));
+            qA.forEach(x => refs.push(x.ref));
+            dadosValletAtendimentos.forEach(a => {
+                const evAtendimento = eventoDoAtendimentoRelatorioVallet(a);
+                if (evAtendimento && evAtendimento.id === evId) refs.push(doc(db, 'vallet_atendimentos', a.id));
+            });
+            return refs;
+        };
         window.removerItem = async (colecao, id) => {
-            if(!confirm("TEM CERTEZA? Isso vai apagar permanentemente o item.")) return;
+            if(!confirm("TEM CERTEZA? Isso vai apagar permanentemente o item, do banco de dados inteiro (reservas, camarotes, listas e atendimentos do Vallet ligados a ele).")) return;
             try {
-                if(colecao === 'eventos') { const ev = dadosEventos.find(e => e.id === id); if(ev && ev.imagem && ev.imagem.includes('firebasestorage')) { await deleteObject(ref(storage, ev.imagem)).catch(()=>{}); } }
-                const batch = writeBatch(db); const docRef = doc(db, colecao, id); const snap = await getDoc(docRef);
-                if (!snap.exists()) return; const d = snap.data();
-                if (colecao === 'eventos') { const qR = await getDocs(query(collection(db, "lista_eventos"), where("evento", "==", d.nome))); qR.forEach(x => batch.delete(x.ref)); const qA = await getDocs(query(collection(db, "links_aniversario"), where("festa", "==", d.nome))); qA.forEach(x => batch.delete(x.ref)); }
-                if (colecao === 'links_aniversario') { const qC = await getDocs(query(collection(db, "lista_eventos"), where("aniversariante", "==", d.aniversariante), where("evento", "==", d.festa))); qC.forEach(x => batch.delete(x.ref)); }
-                batch.delete(docRef); await batch.commit(); mostrarAviso("Excluído com sucesso!", true);
-            } catch (e) { mostrarAviso("Erro ao excluir."); }
+                const docRef = doc(db, colecao, id); const snap = await getDoc(docRef);
+                if (!snap.exists()) return mostrarAviso("Item não encontrado — pode já ter sido excluído.");
+                const d = snap.data();
+                const refs = [];
+                if (colecao === 'eventos') {
+                    if (d.imagem && d.imagem.includes('firebasestorage')) { await deleteObject(ref(storage, d.imagem)).catch(()=>{}); }
+                    refs.push(...await refsParaExcluirEvento(id, d.nome));
+                }
+                if (colecao === 'links_aniversario') { const qC = await getDocs(query(collection(db, "lista_eventos"), where("aniversariante", "==", d.aniversariante), where("evento", "==", d.festa))); qC.forEach(x => refs.push(x.ref)); }
+                refs.push(docRef);
+                await excluirDocsEmLotes(refs);
+                mostrarAviso(`Excluído com sucesso! (${refs.length} registro(s) apagado(s))`, true);
+            } catch (e) { console.error('Erro ao excluir:', e); mostrarAviso("Erro ao excluir."); }
+        };
+        window.limparEventosAntigos = async () => {
+            const dataCorte = prompt("Apagar TODOS os eventos com data ANTES de qual dia?\n\nDigite no formato AAAA-MM-DD (ex: 2026-08-01). Tudo o que for desse evento — reservas, camarotes, listas de aniversário e atendimentos do Vallet — será apagado de vez.");
+            if (!dataCorte) return;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dataCorte.trim())) return mostrarAviso("Data inválida. Use o formato AAAA-MM-DD.");
+            const corte = dataCorte.trim();
+            const alvos = dadosEventos.filter(ev => !isEventoModeloAntigo(ev) && String(ev.data || '') < corte);
+            if (alvos.length === 0) return mostrarAviso("Nenhum evento antes dessa data.");
+            if (!confirm(`Isso vai apagar PERMANENTEMENTE ${alvos.length} evento(s) anterior(es) a ${corte.split('-').reverse().join('/')}, com tudo que está ligado a eles (reservas, camarotes, listas de aniversário, atendimentos do Vallet). Não tem como desfazer. Confirma?`)) return;
+            try {
+                const todosOsRefs = [];
+                for (const ev of alvos) {
+                    if (ev.imagem && ev.imagem.includes('firebasestorage')) { await deleteObject(ref(storage, ev.imagem)).catch(()=>{}); }
+                    todosOsRefs.push(...await refsParaExcluirEvento(ev.id, ev.nome));
+                    todosOsRefs.push(doc(db, 'eventos', ev.id));
+                }
+                await excluirDocsEmLotes(todosOsRefs);
+                mostrarAviso(`${alvos.length} evento(s) antigo(s) apagado(s) por completo (${todosOsRefs.length} registro(s) no total).`, true);
+            } catch (e) { console.error('Erro ao limpar eventos antigos:', e); mostrarAviso("A limpeza foi interrompida por segurança."); }
         };
         window.renderCamarotesVendidos = () => {
             const tb = document.getElementById('tabela-camarotes-body'); if(!tb) return;
@@ -1932,15 +1987,16 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
         window.limparBaseDeDados = async () => {
             const confirmarLimpeza = confirm(
                 "LIMPAR BASE OPERACIONAL?\n\n" +
-                "As reservas sairão das listas e da portaria, mantendo a segurança dos dados arquivados."
+                "As reservas serão apagadas DE VEZ das listas e da portaria — sem guardar cópia de arquivo. Essa ação não pode ser desfeita."
             );
             if (!confirmarLimpeza) return;
             try {
                 const q = await getDocs(collection(db, "lista_eventos"));
-                const total = await arquivarEExcluirReservas(q.docs, "limpeza_base_operacional");
-                mostrarAviso(`${total} reserva(s) removida(s) da operação com segurança.`, true);
+                const total = q.docs.length;
+                await excluirDocsEmLotes(q.docs.map(d => d.ref));
+                mostrarAviso(`${total} reserva(s) apagada(s) definitivamente.`, true);
             } catch (e) {
-                console.error("Erro ao arquivar a base:", e);
+                console.error("Erro ao limpar a base:", e);
                 mostrarAviso("A limpeza foi cancelada por segurança.");
             }
         };
