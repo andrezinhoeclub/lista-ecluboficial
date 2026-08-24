@@ -2232,9 +2232,13 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                 if (!confirm(`EXCLUIR o cadastro de ${rotulo}?\n\nO login dele(a) deixa de funcionar imediatamente e essa ação não pode ser desfeita. Se for só suspender temporariamente, use "Suspender" em vez disso.`)) return;
                 try {
                     await chamarBackendAcesso('excluir', { uid });
-                    statusAcesso('Cadastro excluído com sucesso.', true);
+                    statusAcesso(`Cadastro de ${rotulo} excluído com sucesso.`, true);
+                    mostrarAviso(`${rotulo} excluído(a) com sucesso!`, true);
                     await carregarGestaoAcessos();
-                } catch (e) { statusAcesso(e.message); }
+                } catch (e) {
+                    statusAcesso(e.message);
+                    mostrarAviso(e.message || 'Erro ao excluir cadastro.');
+                }
             };
             const checkPromoter = elAcesso('acesso-promoter');
             checkPromoter?.addEventListener('change', () => {
