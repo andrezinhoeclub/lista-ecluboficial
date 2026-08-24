@@ -21,12 +21,10 @@
     </style>
 </head>
 <body class="p-4 md:p-8">
-
     <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
-
     <div id="telaLogin" class="fixed inset-0 z-[999] bg-[#000] flex items-center justify-center p-6">
         <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8">
@@ -37,7 +35,6 @@
             <p class="text-[8px] text-zinc-600 font-bold uppercase mt-5 leading-relaxed">Autenticação protegida pelo Firebase Authentication. A senha não é armazenada neste HTML nem no Firestore.</p>
         </div>
     </div>
-
     <div id="painel" class="hidden max-w-md mx-auto pb-44">
         <header class="flex justify-between items-center mb-8">
             <div>
@@ -46,28 +43,24 @@
             </div>
             <button onclick="sairSeguro()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-4 py-2 rounded-xl font-black text-[9px] uppercase italic">Sair</button>
         </header>
-
         <section id="secaoAniversario" class="hidden mb-10">
             <h3 class="text-[10px] font-black uppercase text-purple-400 mb-3 tracking-[0.2em] italic ml-1">🎂 LISTAS VIP</h3>
             <div id="listaAniversarios" class="space-y-3"></div>
         </section>
-
         <section class="space-y-4">
             <h3 class="text-[10px] font-black uppercase text-sky-400 mb-3 tracking-[0.2em] italic ml-1">📈 PERFORMANCE REALTIME</h3>
             <div id="listaPerformance" class="space-y-3"></div>
         </section>
-
         <div class="mt-12 text-center opacity-40 hover:opacity-100 transition-all">
             <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-sky-400 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
             </a>
         </div>
-
         <footer id="navAcoes" class="fixed bottom-0 left-0 w-full p-4 bg-black/60 backdrop-blur-md border-t border-white/5 z-40">
             <div class="max-w-md mx-auto flex gap-2">
                 <button onclick="abrirLinkGeral()" class="flex-[2] gold-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl active:scale-95 transition-all">ABRIR MEU LINK</button>
                 <button onclick="copiarLinkGeral()" class="flex-none bg-zinc-800 text-white border border-white/10 px-5 rounded-2xl text-lg flex items-center justify-center">📋</button>
-                
+
                 <div class="flex-[2.5] flex gap-2 hidden" id="botoesAniversario">
                     <button onclick="abrirModalAniv()" class="flex-1 purple-gradient font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">VIP</button>
                     <button onclick="abrirModalCortesia()" class="flex-1 bg-blue-600/20 text-blue-400 border border-blue-500/30 font-black py-4 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl">🎁 CORTESIA</button>
@@ -75,7 +68,6 @@
             </div>
         </footer>
     </div>
-
     <div id="modalAniv" class="fixed inset-0 bg-black/95 z-[10000] hidden flex items-center justify-center p-6 text-white">
         <div class="glass max-w-sm w-full p-8 rounded-[2.5rem] border-purple-500/30 border text-center">
             <h2 class="text-xl font-black text-purple-400 uppercase italic mb-6">NOVA LISTA VIP</h2>
@@ -95,7 +87,6 @@
             <button onclick="fecharModalAniv()" class="w-full text-zinc-600 font-black py-3 uppercase text-[9px] mt-2">FECHAR</button>
         </div>
     </div>
-
     <div id="modalCortesia" class="fixed inset-0 bg-black/95 z-[10000] hidden flex flex-col items-center justify-center p-6 text-white overflow-y-auto">
         <div class="glass max-w-sm w-full p-8 rounded-[2.5rem] border-blue-500/30 border text-center my-auto">
             <h2 class="text-xl font-black text-blue-400 uppercase italic mb-6">🎁 CORTESIA CAMAROTE</h2>
@@ -118,42 +109,36 @@
             <button onclick="fecharModalCortesia()" class="w-full text-zinc-600 font-black py-3 uppercase text-[9px] mt-4">FECHAR</button>
         </div>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const PROMOTER_API_URL = "https://us-central1-teste-de-reserva.cloudfunctions.net/promoterApi";
         let timerAtualizacaoSegura = null;
-        
+
         let logado = ""; let eventos = []; let dadosPromoter = null; let linksAniv = [];
         let sistemaIniciado = false;
         let camCortesiaSelecionado = null; let tipoCortesiaSelecionado = null;
-
         const nomeCamaroteSistema = (num) => {
             const n = Number(num);
             if (n === 7) return 'VIP 1';
             if (n === 8) return 'VIP 2';
             return `CAMAROTE ${n}`;
         };
-
         const nomeCamaroteVisual = (num) => {
             const n = Number(num);
             if (n === 7) return 'VIP 1';
             if (n === 8) return 'VIP 2';
             return `CAMAROTE 0${n}`;
         };
-
         const nomeCamaroteCurto = (num) => {
             const n = Number(num);
             if (n === 7) return 'VIP1';
             if (n === 8) return 'VIP2';
             return `C${n}`;
         };
-
         const tipoEntradaCorrespondeCamarote = (tipo, num) => {
             const n = Number(num);
             const t = String(tipo || '').toUpperCase().trim().replace(/\s+/g, ' ');
@@ -164,8 +149,6 @@
             ].map(v => String(v).toUpperCase().trim());
             return aliases.includes(t);
         };
-
-
         // REGRA ÚNICA DE CONTAGEM E-CLUB
         // A mesma regra é usada na Dashboard, Portaria e Promoter.
         const normalizarChaveReservaEclub = (valor) => String(valor ?? '')
@@ -174,36 +157,27 @@
             .trim()
             .toUpperCase()
             .replace(/\s+/g, ' ');
-
         const normalizarCodigoReservaEclub = (valor) => normalizarChaveReservaEclub(valor)
             .replace(/[\s-]+/g, '_');
-
         const valorBooleanoReservaEclub = (valor) =>
             valor === true ||
             valor === 1 ||
             String(valor ?? '').trim().toLowerCase() === 'true' ||
             String(valor ?? '').trim() === '1';
-
         const isMetodoPixReservaEclub = (reserva) => {
             const metodo = normalizarCodigoReservaEclub(reserva?.metodo);
             return metodo === 'PIX' || metodo === 'PIX_ANTECIPADO' || metodo.startsWith('PIX_');
         };
-
         const isReservaValidaEclub = (reserva) => {
             if (!reserva) return false;
-
             const tipo = normalizarCodigoReservaEclub(reserva.tipo_entrada);
             if (tipo === 'SOLTEIRA_VIP') return false;
-
             const status = normalizarCodigoReservaEclub(reserva.status_reserva || reserva.status);
             if (['CANCELADO', 'CANCELADA', 'EXCLUIDO', 'EXCLUIDA', 'INATIVO', 'INATIVA'].includes(status)) return false;
-
             if (valorBooleanoReservaEclub(reserva.cortesia)) return true;
             if (isMetodoPixReservaEclub(reserva)) return valorBooleanoReservaEclub(reserva.pago);
-
             return true;
         };
-
         const isReservaPixPendenteRecenteEclub = (reserva, minutos = 5) => {
             if (!reserva || !isMetodoPixReservaEclub(reserva) || isReservaValidaEclub(reserva) || !reserva.data_reserva) return false;
             const dataReserva = new Date(reserva.data_reserva);
@@ -211,10 +185,8 @@
             const diferenca = (Date.now() - dataReserva.getTime()) / 60000;
             return diferenca >= 0 && diferenca < minutos;
         };
-
         const mesmaChaveReservaEclub = (a, b) =>
             normalizarChaveReservaEclub(a) === normalizarChaveReservaEclub(b);
-
         // FUNÇÃO DE AVISO MODERNA (TOAST)
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -222,44 +194,41 @@
             let shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
             let icon = isSucesso ? '✅' : '⚠️';
             let textClass = 'text-white';
-            
+
             if(msg.includes('ACESSO')) { icon = '👋'; bgClass = 'bg-blue-600'; shadowClass = 'shadow-[0_0_20px_rgba(37,99,235,0.5)]'; }
             if(msg.includes('PROIBIDA')) { icon = '🚨'; }
-            
+
             // Layout escuro exclusivo para leitura de Camarotes
             if(msg.includes('CAMAROTE 0') || msg.includes('VIP 1') || msg.includes('VIP 2')) {
                 bgClass = 'bg-[#121214] border border-zinc-700'; // Fundo preto/cinza escuro
                 shadowClass = 'shadow-[0_0_30px_rgba(0,0,0,0.9)]'; // Sombra forte para destacar
                 textClass = 'text-cyan-400'; // Texto azul claro neon (ótimo no escuro)
-                
+
                 // Extrai o emoji (💎, 🎁, ⏳) que enviamos no clique
-                icon = msg.split(' ')[0]; 
+                icon = msg.split(' ')[0];
                 msg = msg.substring(2).trim(); // Limpa o emoji da mensagem principal
             }
-            
+
             toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] ${textClass} font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
-            
+
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
-            
+
             setTimeout(() => {
                 toast.classList.remove('-translate-y-32', 'opacity-0');
                 toast.classList.add('translate-y-0', 'opacity-100');
             }, 10);
-
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('-translate-y-32', 'opacity-0');
             }, 4000);
         };
-
         const mostrarTelaLogin = () => {
             document.getElementById('telaLogin').style.display = 'flex';
             document.getElementById('painel').classList.add('hidden');
             document.getElementById('btnAcao').disabled = false;
             document.getElementById('btnAcao').innerText = 'ENTRAR COM SEGURANÇA';
         };
-
         const chamarPromoterApi = async (action, payload = {}) => {
             const user = auth.currentUser;
             if (!user) throw new Error('Sessão ausente.');
@@ -278,14 +247,12 @@
             if (!resp.ok || dados.ok === false) throw new Error(dados.error || `Erro ${resp.status}`);
             return dados;
         };
-
         const aplicarDadosSeguros = (dados) => {
             dadosPromoter = dados.perfil || null;
             logado = String(dadosPromoter?.id || '').toLowerCase().trim();
             eventos = Array.isArray(dados.eventos) ? dados.eventos : [];
             linksAniv = Array.isArray(dados.links) ? dados.links : [];
         };
-
         const atualizarDadosSeguros = async (silencioso = true) => {
             try {
                 const dados = await chamarPromoterApi('bootstrap');
@@ -302,28 +269,23 @@
                 }
             }
         };
-
         const liberarPainelPromoter = async (user) => {
             try {
                 const token = await user.getIdTokenResult(true);
                 const promoterPermitido = token.claims.promoter === true || ['promoter','staff'].includes(String(token.claims.role || '').toLowerCase());
                 const promoterId = String(token.claims.promoter_id || '').trim().toLowerCase();
                 const acessoAtivo = token.claims.active !== false;
-
                 if (!promoterPermitido || !promoterId || !acessoAtivo) {
                     await signOut(auth);
                     mostrarTelaLogin();
                     return mostrarAviso('USUÁRIO AUTENTICADO, MAS SEM PERMISSÃO DE PROMOTER.');
                 }
-
                 // A autorização REAL e os dados são validados pelo backend promoterApi.
                 const dados = await chamarPromoterApi('bootstrap');
                 aplicarDadosSeguros(dados);
-
                 document.getElementById('telaLogin').style.display = 'none';
                 document.getElementById('painel').classList.remove('hidden');
                 document.getElementById('nomeHeader').innerText = (dadosPromoter?.nome || logado).toUpperCase();
-
                 if (!sistemaIniciado) {
                     sistemaIniciado = true;
                     iniciarSistema();
@@ -339,17 +301,13 @@
                 mostrarAviso(erro.message || 'NÃO FOI POSSÍVEL VALIDAR A PERMISSÃO.');
             }
         };
-
         window.prosseguirLogin = async () => {
             const email = document.getElementById('email').value.trim();
             const senha = document.getElementById('senha').value;
             const btn = document.getElementById('btnAcao');
-
             if (!email || !senha) return mostrarAviso('Digite e-mail e senha.');
-
             btn.disabled = true;
             btn.innerText = 'VERIFICANDO...';
-
             try {
                 await setPersistence(auth, browserSessionPersistence);
                 await signInWithEmailAndPassword(auth, email, senha);
@@ -362,12 +320,10 @@
                 btn.innerText = 'ENTRAR COM SEGURANÇA';
             }
         };
-
         window.sairSeguro = async () => {
             await signOut(auth);
             location.reload();
         };
-
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
                 logado = '';
@@ -377,53 +333,43 @@
             }
             await liberarPainelPromoter(user);
         });
-
         function iniciarSistema() {
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-
             if (st === "visualizar") {
                 document.getElementById('navAcoes').style.display = 'none';
                 document.getElementById('painel').classList.remove('pb-44');
                 document.getElementById('painel').classList.add('pb-10');
             }
-
             if (st === "aniversario") {
                 document.getElementById('secaoAniversario').classList.remove('hidden');
                 document.getElementById('botoesAniversario').classList.remove('hidden');
                 renderAniversarios();
             }
-
             renderPerformance();
-
             // Atualização periódica via backend; o navegador recebe somente agregados e status necessários.
             if (timerAtualizacaoSegura) clearInterval(timerAtualizacaoSegura);
             timerAtualizacaoSegura = setInterval(() => atualizarDadosSeguros(true), 15000);
         }
-
         function renderAniversarios() {
             const cont = document.getElementById('listaAniversarios'); if(!cont) return;
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-
             const linksAtivos = linksAniv.filter(l => {
                 const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, l.festa));
                 if (!ev) return false;
                 return ev.data >= hojeLocal;
             });
-
             cont.innerHTML = linksAtivos.map(l => {
                 const count = Number(l.count || 0);
                 const nomeSeguro = String(l.aniversariante || '').replace(/'/g, "\\'");
                 return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${nomeSeguro}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
             }).join('');
         }
-
         function renderPerformance() {
             const container = document.getElementById('listaPerformance');
             const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
             const isVisualizador = (st === 'visualizar');
             const escondeGeral = (st === 'padrao');
-
             let htmlLegenda = '';
             if (isVisualizador) {
                 htmlLegenda = `
@@ -434,13 +380,11 @@
                     <div class="flex items-center gap-1.5"><div class="w-3 h-3 rounded bg-blue-500 shadow-[0_0_8px_#3b82f6]"></div><span class="text-[8px] font-black uppercase text-zinc-400 tracking-widest">Cortesia</span></div>
                 </div>`;
             }
-
             const htmlEventos = eventos.map(ev => {
                 const minhas = Number(ev.minhas || 0);
                 const geral = Number(ev.geral || 0);
                 const camarotes = Array.isArray(ev.camarotes) ? ev.camarotes : [];
                 const dataHoraFormatada = `${String(ev.data || '').split('-').reverse().join('/')} ${ev.hora ? 'às ' + ev.hora : ''}`;
-
                 if (isVisualizador) {
                     let luzesCamarotes = '';
                     for(let n=1; n<=8; n++) {
@@ -449,23 +393,24 @@
                             luzesCamarotes += `<div class="w-full py-1 rounded bg-zinc-900/50 flex items-center justify-center text-[7px] text-zinc-600 font-bold border border-white/5">x</div>`;
                             continue;
                         }
-
                         const cam = camarotes.find(c => Number(c.numero) === n) || { status: 'livre' };
                         const statusCam = String(cam.status || 'livre');
                         const nomeCamVisor = nomeCamaroteVisual(n);
                         const nomeCamCurto = nomeCamaroteCurto(n);
-
+                        // Nome de quem comprou/ganhou o camarote (quando o backend envia).
+                        const nomeCliente = cam.nome ? String(cam.nome).trim() : '';
+                        const nomeClienteSeguro = nomeCliente.replace(/'/g, "\\'");
+                        const sufixoNome = nomeClienteSeguro ? ` — ${nomeClienteSeguro}` : '';
                         if (statusCam === 'cortesia') {
-                            luzesCamarotes += `<div onclick="mostrarAviso('🎁 ${nomeCamVisor} - CORTESIA')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]">${nomeCamCurto}</div>`;
+                            luzesCamarotes += `<div onclick="mostrarAviso('🎁 ${nomeCamVisor} - CORTESIA${sufixoNome}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]">${nomeCamCurto}</div>`;
                         } else if (statusCam === 'vendido') {
-                            luzesCamarotes += `<div onclick="mostrarAviso('💎 ${nomeCamVisor} - VENDIDO')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]">${nomeCamCurto}</div>`;
+                            luzesCamarotes += `<div onclick="mostrarAviso('💎 ${nomeCamVisor} - VENDIDO${sufixoNome}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-red-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#ef4444]">${nomeCamCurto}</div>`;
                         } else if (statusCam === 'aguardando') {
-                            luzesCamarotes += `<div onclick="mostrarAviso('⏳ ${nomeCamVisor} - AGUARDANDO PAGAMENTO')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308]">${nomeCamCurto}</div>`;
+                            luzesCamarotes += `<div onclick="mostrarAviso('⏳ ${nomeCamVisor} - AGUARDANDO PAGAMENTO${sufixoNome}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-yellow-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#eab308]">${nomeCamCurto}</div>`;
                         } else {
                             luzesCamarotes += `<div class="w-full py-1.5 rounded bg-green-500 flex items-center justify-center text-black text-[8px] font-black shadow-[0_0_8px_#22c55e]">${nomeCamCurto}</div>`;
                         }
                     }
-
                     return `
                     <div class="card-performance p-5 flex flex-col">
                         <div class="flex justify-between items-center mb-4">
@@ -478,7 +423,6 @@
                         </div>
                     </div>`;
                 }
-
                 const blocoGeralHTML = escondeGeral ? '' : `<div class="border-l border-white/5 pl-6"><p class="text-2xl font-black text-white/20 leading-none">${geral}</p><p class="text-[6px] text-white/10 font-black mt-1 uppercase tracking-widest">Geral</p></div>`;
                 return `
                 <div class="card-performance p-5 flex justify-between items-center">
@@ -489,21 +433,18 @@
                     </div>
                 </div>`;
             }).join('');
-
             container.innerHTML = htmlLegenda + htmlEventos;
         }
-
         window.abrirModalCortesia = () => {
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); 
-            
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal);
+
             const sel = document.getElementById('selEventoCortesia');
             if (eventosAtivos.length === 0) return mostrarAviso("Nenhum evento futuro ativo!");
             sel.innerHTML = '<option value="">SELECIONE O EVENTO</option>' + eventosAtivos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join('');
             document.getElementById('modalCortesia').classList.remove('hidden');
         };
-
         window.fecharModalCortesia = () => {
             document.getElementById('modalCortesia').classList.add('hidden');
             document.getElementById('area-mapa-cortesia').classList.add('hidden');
@@ -511,24 +452,20 @@
             camCortesiaSelecionado = null; tipoCortesiaSelecionado = null;
             document.getElementById('selEventoCortesia').value = ''; document.getElementById('nomeCortesia').value = ''; document.getElementById('telCortesia').value = '';
         };
-
         window.carregarCamarotesCortesia = () => {
             const nomeEv = document.getElementById('selEventoCortesia').value;
             if (!nomeEv) { document.getElementById('area-mapa-cortesia').classList.add('hidden'); return; }
             const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, nomeEv));
             if (!ev) return mostrarAviso('Evento não encontrado.');
             const camarotes = Array.isArray(ev.camarotes) ? ev.camarotes : [];
-
             document.getElementById('area-mapa-cortesia').classList.remove('hidden');
             const grid = document.getElementById('grid-camarotes-cortesia'); grid.innerHTML = '';
-
             for(let i=1; i<=8; i++) {
                 if(ev[`cam${i}_ativo`]) {
                     const cam = camarotes.find(c => Number(c.numero) === i) || { status: 'livre' };
                     const statusApi = String(cam.status || 'livre');
                     let status = 'livre';
                     let classCor = 'border-green-500/50 bg-green-500/10 text-green-400';
-
                     if (statusApi === 'cortesia') {
                         status = 'cortesia dada';
                         classCor = 'border-blue-500/50 bg-blue-500/10 text-blue-400 opacity-50 cursor-not-allowed';
@@ -539,14 +476,12 @@
                         status = 'aguardando pix';
                         classCor = 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400 opacity-50 cursor-not-allowed';
                     }
-
                     const nomeCamVisor = nomeCamaroteVisual(i);
                     const onclickAction = status === 'livre' ? `onclick="selecionarCamCortesia(${i})"` : '';
                     grid.innerHTML += `<div ${onclickAction} class="p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${classCor} ${status==='livre'?'cursor-pointer hover:bg-green-500/20 hover:scale-105':''}"><span class="text-[10px] font-black uppercase">${nomeCamVisor}</span><span class="text-[7px] font-bold uppercase mt-1 opacity-70">${status}</span></div>`;
                 }
             }
         };
-
         window.selecionarCamCortesia = (num) => { camCortesiaSelecionado = num; document.getElementById('txt-camarote-selecionado').innerText = `🎁 SELECIONADO: ${nomeCamaroteVisual(num)}`; document.getElementById('form-cortesia').classList.remove('hidden'); };
         window.selTipoCort = (tipo) => {
             tipoCortesiaSelecionado = tipo;
@@ -555,7 +490,6 @@
             if(tipo === 'CASAL') document.getElementById('btn-cort-casal').classList.add('bg-blue-600/20', 'border-blue-500', 'text-blue-400');
             if(tipo === 'SOLTEIRO') document.getElementById('btn-cort-solteiro').classList.add('bg-blue-600/20', 'border-blue-500', 'text-blue-400');
         };
-
         window.salvarCortesia = async () => {
             if (!camCortesiaSelecionado) return mostrarAviso("Selecione um camarote!");
             if (!tipoCortesiaSelecionado) return mostrarAviso("Selecione se o cliente pagará como Casal ou Solteiro na porta!");
@@ -585,36 +519,31 @@
                 btn.disabled = false;
             }
         };
-
-        window.abrirModalAniv = () => { 
+        window.abrirModalAniv = () => {
             const f = new Intl.DateTimeFormat('pt-br', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
             const hojeLocal = f.split('/').reverse().join('-');
-            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal); 
+            const eventosAtivos = eventos.filter(ev => ev.data >= hojeLocal);
+            const sel = document.getElementById('selEvento');
+            if (eventosAtivos.length === 0) return mostrarAviso("Nenhum evento futuro ativo!");
+            sel.innerHTML = '<option value="">SELECIONE O EVENTO</option>' + eventosAtivos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join('');
 
-            const sel = document.getElementById('selEvento'); 
-            if (eventosAtivos.length === 0) return mostrarAviso("Nenhum evento futuro ativo!"); 
-            sel.innerHTML = '<option value="">SELECIONE O EVENTO</option>' + eventosAtivos.map(ev => `<option value="${ev.nome}">${ev.nome}</option>`).join(''); 
-            
             document.getElementById('areaCamaroteAniv').classList.add('hidden');
             document.getElementById('selCamaroteAniv').classList.add('hidden');
             document.getElementById('checkAddCamarote').checked = false;
             document.getElementById('selCamaroteAniv').value = '';
-            
-            document.getElementById('modalAniv').classList.remove('hidden'); 
-        };
 
+            document.getElementById('modalAniv').classList.remove('hidden');
+        };
         window.toggleCamaroteSelect = () => {
             const isChecked = document.getElementById('checkAddCamarote').checked;
             const sel = document.getElementById('selCamaroteAniv');
             if (isChecked) sel.classList.remove('hidden'); else { sel.classList.add('hidden'); sel.value = ""; }
         };
-
         window.carregarCamarotesAniv = () => {
             const nomeEv = document.getElementById('selEvento').value;
             const selCam = document.getElementById('selCamaroteAniv');
             const areaCam = document.getElementById('areaCamaroteAniv');
             const checkCam = document.getElementById('checkAddCamarote');
-
             if (!nomeEv) {
                 areaCam.classList.add('hidden');
                 checkCam.checked = false;
@@ -622,14 +551,11 @@
                 selCam.value = "";
                 return;
             }
-
             const ev = eventos.find(e => mesmaChaveReservaEclub(e.nome, nomeEv));
             if (!ev) return mostrarAviso('Evento não encontrado.');
             const camarotes = Array.isArray(ev.camarotes) ? ev.camarotes : [];
-
             let options = '<option value="">SELECIONE O CAMAROTE</option>';
             let hasLivre = false;
-
             for(let i=1; i<=8; i++) {
                 if(ev[`cam${i}_ativo`]) {
                     const cam = camarotes.find(c => Number(c.numero) === i) || { status: 'livre' };
@@ -640,7 +566,6 @@
                     }
                 }
             }
-
             selCam.innerHTML = options;
             if (hasLivre) areaCam.classList.remove('hidden');
             else {
@@ -650,7 +575,6 @@
                 selCam.value = "";
             }
         };
-
         window.fecharModalAniv = () => {
             document.getElementById('modalAniv').classList.add('hidden');
             document.getElementById('areaCamaroteAniv').classList.add('hidden');
@@ -658,7 +582,7 @@
             document.getElementById('checkAddCamarote').checked = false;
             document.getElementById('selEvento').value = ""; document.getElementById('nomeAniv').value = ""; document.getElementById('telAniv').value = ""; document.getElementById('selCamaroteAniv').value = "";
         };
-        
+
         window.criarLinkAniv = async () => {
             const f = document.getElementById('selEvento').value;
             const n = document.getElementById('nomeAniv').value.trim().toUpperCase();
@@ -666,11 +590,9 @@
             const querCamarote = document.getElementById('checkAddCamarote').checked;
             const camSelecionado = querCamarote ? document.getElementById('selCamaroteAniv').value : "";
             const btn = document.getElementById('btnGerarVip');
-
             if (!f) return mostrarAviso("Selecione o evento!");
             if (!n || t.length < 14) return mostrarAviso("Digite o nome e telefone completos!");
             if (querCamarote && !camSelecionado) return mostrarAviso("Você marcou camarote, mas não selecionou nenhum na lista!");
-
             btn.innerText = "GERANDO...";
             btn.disabled = true;
             try {
@@ -690,7 +612,6 @@
                 btn.disabled = false;
             }
         };
-
         window.abrirLinkGeral = () => { window.open(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`, '_blank'); };
         window.copiarLinkGeral = () => { navigator.clipboard.writeText(`https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?ref=${logado}`).then(() => mostrarAviso("Link Copiado!", true)); };
         window.copiarLinkAniv = (id, n) => { const link = `https://andrezinhoeclub.github.io/lista-ecluboficial/listas.html?id=${id}`; navigator.clipboard.writeText(`*Convite VIP: Lista de ${n}* 🍾\n\nGaranta seu nome na lista pelo link abaixo:\n${link}`).then(() => mostrarAviso("Convite Copiado!", true)); };
