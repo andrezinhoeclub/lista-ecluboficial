@@ -33,6 +33,40 @@
         .glass-card { background: rgba(18, 18, 20, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border-radius: 2.5rem; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #a1a1aa; border-radius: 10px; }
+        .theme-toggle {
+            position: relative; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 14px;
+            padding: 7px 10px; border-radius: 999px; border: 1px solid #ca8a04;
+            background: #fff; color: #854d0e; font-size: 9px; font-weight: 900; text-transform: uppercase;
+            letter-spacing: .06em; box-shadow: 0 4px 14px rgba(0,0,0,.08); cursor: pointer;
+        }
+        /* Tema escuro — só afeta a tela DEPOIS de logado (#conteudo-sistema); a tela
+           de login continua sempre escura como já era, e sem esse botão. Aqui a
+           direção é invertida em relação às outras telas: o sistema já é claro por
+           padrão, então o botão liga um tema escuro por cima. */
+        body.tema-escuro #conteudo-sistema .theme-toggle { background: rgba(0,0,0,.72); color: #facc15; border-color: rgba(234,179,8,.45); }
+        body.tema-escuro #conteudo-sistema header { background: #18181b !important; border-color: #3f3f46 !important; }
+        body.tema-escuro #conteudo-sistema h1,
+        body.tema-escuro #conteudo-sistema h2,
+        body.tema-escuro #conteudo-sistema h3,
+        body.tema-escuro #conteudo-sistema .text-zinc-900 { color: #f4f4f5 !important; }
+        body.tema-escuro #conteudo-sistema .text-zinc-700,
+        body.tema-escuro #conteudo-sistema .text-zinc-600,
+        body.tema-escuro #conteudo-sistema .text-zinc-500 { color: #a1a1aa !important; }
+        body.tema-escuro #conteudo-sistema .bg-zinc-100 { background: #27272a !important; border-color: #3f3f46 !important; }
+        body.tema-escuro #conteudo-sistema .bg-zinc-200 { background: #3f3f46 !important; border-color: #52525b !important; }
+        body.tema-escuro #conteudo-sistema .glass-card { background: #18181b !important; border-color: #3f3f46 !important; color: #f4f4f5 !important; }
+        body.tema-escuro #conteudo-sistema .input-field { background: #09090b !important; border-color: #52525b !important; color: #fff !important; }
+        body.tema-escuro #conteudo-sistema .input-field::placeholder { color: #71717a !important; }
+        body.tema-escuro #conteudo-sistema .item-cliente { background: #18181b !important; border-color: #3f3f46 !important; }
+        body.tema-escuro #conteudo-sistema .item-cliente:hover { background: #27272a !important; }
+        body.tema-escuro #conteudo-sistema .cliente-checkin-ok { background: #052e16 !important; }
+        body.tema-escuro #conteudo-sistema .cliente-bloqueada { background: #450a0a !important; }
+        body.tema-escuro #conteudo-sistema .bg-red-100 { background: #450a0a !important; border-color: #7f1d1d !important; }
+        body.tema-escuro #conteudo-sistema .bg-blue-50 { background: #172554 !important; border-color: #1e3a8a !important; }
+        /* Cartão de aniversariante mantém o visual claro original (dourado sobre
+           fundo claro) mesmo no tema escuro, pra não perder o destaque. */
+        body.tema-escuro #conteudo-sistema .card-aniversariante,
+        body.tema-escuro #conteudo-sistema .card-aniversariante * { color: #18181b !important; }
     </style>
 </head>
 <body class="p-4 md:p-8 flex flex-col min-h-screen relative">
@@ -80,6 +114,7 @@
         </div>
     </div>
     <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto flex-grow w-full">
+        <button id="btnTemaSolteiras" type="button" class="theme-toggle">🌙 <span>ESCURO</span></button>
         <header class="flex justify-between items-center mb-8 gap-6 bg-white p-4 rounded-3xl border border-zinc-300 shadow-sm">
             <div class="flex items-center gap-4">
                 <div class="bg-black rounded-xl p-2"><img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-10"></div>
@@ -153,6 +188,24 @@
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#039;');
+        // ===== TEMA CLARO/ESCURO =====
+        // Só existe (e só aparece) depois de logado, dentro do #conteudo-sistema — a
+        // tela de login continua sempre no visual escuro padrão, sem esse botão. Aqui
+        // a direção é invertida em relação ao Promoter/Portaria: o sistema já é claro
+        // por padrão, então o botão liga um tema escuro por cima.
+        function aplicarTemaSolteiras(tema) {
+            const escuro = tema === 'escuro';
+            document.body.classList.toggle('tema-escuro', escuro);
+            const btn = document.getElementById('btnTemaSolteiras');
+            if (btn) btn.innerHTML = escuro ? '☀️ <span>CLARO</span>' : '🌙 <span>ESCURO</span>';
+        }
+        document.getElementById('btnTemaSolteiras')?.addEventListener('click', () => {
+            const atual = document.body.classList.contains('tema-escuro') ? 'escuro' : 'claro';
+            const novo = atual === 'escuro' ? 'claro' : 'escuro';
+            localStorage.setItem('eclub_solteiras_tema_visual_v1', novo);
+            aplicarTemaSolteiras(novo);
+        });
+        aplicarTemaSolteiras(localStorage.getItem('eclub_solteiras_tema_visual_v1') || 'claro');
         window.addEventListener('offline', () => document.getElementById('status-conexao').classList.remove('hidden'));
         window.addEventListener('online', () => {
             document.getElementById('status-conexao').classList.add('hidden');
