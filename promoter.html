@@ -131,6 +131,14 @@
 
         let logado = ""; let eventos = []; let dadosPromoter = null; let linksAniv = [];
         let sistemaIniciado = false;
+        // Limpa dado digitado por qualquer pessoa (nome de aniversariante etc.) antes de
+        // colocar na tela — evita que um nome com código HTML/script rode na sessão do promoter.
+        const escapeHtml = (v) => String(v ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
         let camCortesiaSelecionado = null; let tipoCortesiaSelecionado = null;
         const nomeCamaroteSistema = (num) => {
             const n = Number(num);
@@ -415,8 +423,10 @@
             });
             cont.innerHTML = linksAtivos.map(l => {
                 const count = Number(l.count || 0);
-                const nomeSeguro = String(l.aniversariante || '').replace(/'/g, "\\'");
-                return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${l.aniversariante}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${l.festa}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${nomeSeguro}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
+                // Mesmo tratamento de dupla camada usado no nome do camarote: escapa para o
+                // contexto JS do onclick e depois para o atributo HTML.
+                const nomeSeguro = escapeHtml(String(l.aniversariante || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+                return `<div class="card-aniv p-4 flex justify-between items-center"><div class="text-left"><p class="text-[11px] font-black uppercase italic text-white">${escapeHtml(l.aniversariante)}</p><p class="text-[7px] text-zinc-500 font-bold uppercase">${escapeHtml(l.festa)}</p></div><div class="flex items-center gap-3"><div class="text-right"><p class="text-lg font-black text-purple-400 leading-none">${count}</p><p class="text-[6px] text-purple-500 font-black tracking-widest">LISTA</p></div><button onclick="copiarLinkAniv('${l.id}', '${nomeSeguro}')" class="bg-purple-500/20 text-purple-400 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase border border-purple-500/30">Copiar</button></div></div>`;
             }).join('');
         }
         function renderPerformance() {
@@ -453,7 +463,9 @@
                         const nomeCamCurto = nomeCamaroteCurto(n);
                         // Nome de quem comprou/ganhou o camarote (quando o backend envia).
                         const nomeCliente = cam.nome ? String(cam.nome).trim() : '';
-                        const nomeClienteSeguro = nomeCliente.replace(/'/g, "\\'");
+                        // Escapa para o contexto JS (dentro de onclick='...') e depois para o
+                        // contexto HTML do atributo — evita fuga de aspas duplas/tags no nome do cliente.
+                        const nomeClienteSeguro = escapeHtml(nomeCliente.replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
                         const sufixoNome = nomeClienteSeguro ? ` — ${nomeClienteSeguro}` : '';
                         if (statusCam === 'cortesia') {
                             luzesCamarotes += `<div onclick="mostrarAviso('🎁 ${nomeCamVisor} - CORTESIA${sufixoNome}')" class="cursor-pointer hover:scale-105 transition-all w-full py-1.5 rounded bg-blue-500 flex items-center justify-center text-white text-[8px] font-black shadow-[0_0_8px_#3b82f6]">${nomeCamCurto}</div>`;
