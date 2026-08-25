@@ -60,8 +60,13 @@
         body.tema-escuro #conteudo-sistema .glass-card { background: #18181b !important; border-color: #3f3f46 !important; color: #f4f4f5 !important; }
         body.tema-escuro #conteudo-sistema .input-field { background: #09090b !important; border-color: #52525b !important; color: #fff !important; }
         body.tema-escuro #conteudo-sistema .input-field::placeholder { color: #71717a !important; }
-        body.tema-escuro #conteudo-sistema .item-cliente { background: #18181b !important; border-color: #3f3f46 !important; }
-        body.tema-escuro #conteudo-sistema .item-cliente:hover { background: #27272a !important; }
+        /* :not(.card-aniversariante) é essencial aqui: sem isso, esta regra (mais
+           específica por causa do #conteudo-sistema) vencia o fundo dourado original
+           do cartão de aniversariante e deixava o texto (forçado escuro logo abaixo,
+           pra manter legibilidade no fundo claro) invisível — texto escuro em cima
+           de fundo escuro. */
+        body.tema-escuro #conteudo-sistema .item-cliente:not(.card-aniversariante) { background: #18181b !important; border-color: #3f3f46 !important; }
+        body.tema-escuro #conteudo-sistema .item-cliente:hover:not(.card-aniversariante) { background: #27272a !important; }
         body.tema-escuro #conteudo-sistema .cliente-checkin-ok { background: #052e16 !important; }
         body.tema-escuro #conteudo-sistema .cliente-bloqueada { background: #450a0a !important; }
         body.tema-escuro #conteudo-sistema .bg-red-100 { background: #450a0a !important; border-color: #7f1d1d !important; }
@@ -182,6 +187,11 @@
         let intervaloAtualizacao = null;
         let buscaTimer = null;
         let authReady = false;
+        // Cache local da lista completa de cadastros, usada só pela busca (ver
+        // garantirListaCompleta() mais abaixo) — evita reler até 3000 cadastros do
+        // banco a cada letra digitada.
+        let listaCompletaCache = null;
+        let carregandoListaCompleta = null;
         // Limpa dado digitado por qualquer pessoa (nome, telefone, CPF, observação, motivo de
         // bloqueio etc.) antes de colocar na tela — evita que um valor com código HTML/script
         // rode dentro da sessão autenticada de quem usa o painel de Solteiras.
@@ -252,6 +262,35 @@
         }
         function corteTurno() {
             const agora=new Date(), corte=new Date(); corte.setHours(5,0,0,0); if (agora < corte) corte.setDate(corte.getDate()-1); return corte;
+        }
+        // Mesma normalização usada no backend (remove acento, maiúsculas, espaços
+        // duplicados) — precisa ser idêntica pra busca local dar o mesmo resultado
+        // de antes, quando cada letra digitada ia direto pro servidor.
+        function normalizeBusca(v) {
+            return String(v ?? '').trim()
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .toUpperCase().replace(/\s+/g, ' ').trim();
+        }
+        // Carrega a lista completa de cadastros UMA VEZ (cache local) pra busca
+        // filtrar aí mesmo no navegador em cada letra digitada, sem reler o banco
+        // toda hora. É atualizada sozinha a cada ciclo de atualizarPainelSeguro()
+        // (10 em 10s, mesmo ritmo que o resto da tela já usa) só depois da
+        // primeira vez que for carregada, então nunca fica desatualizada por mais
+        // que isso enquanto a busca está em uso.
+        function garantirListaCompleta() {
+            if (listaCompletaCache) return Promise.resolve(listaCompletaCache);
+            if (!carregandoListaCompleta) {
+                carregandoListaCompleta = apiSolteiras('listar_tudo')
+                    .then(data => { listaCompletaCache = Array.isArray(data.clientes) ? data.clientes : []; return listaCompletaCache; })
+                    .finally(() => { carregandoListaCompleta = null; });
+            }
+            return carregandoListaCompleta;
+        }
+        function atualizarListaCompletaEmSegundoPlano() {
+            if (!listaCompletaCache) return;
+            apiSolteiras('listar_tudo').then(data => {
+                listaCompletaCache = Array.isArray(data.clientes) ? data.clientes : [];
+            }).catch(() => {});
         }
         window.mostrarAviso = (msg,isSucesso=false) => {
             const toast=document.getElementById('toast-aviso');
@@ -326,6 +365,7 @@
             document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();
             document.getElementById('telaLogin').classList.add('hidden'); document.getElementById('conteudo-sistema').classList.remove('hidden');
             await atualizarPainelSeguro(); iniciarAtualizacaoPeriodica();
+            garantirListaCompleta().catch(()=>{}); // pré-carrega a lista da busca em segundo plano, sem travar o login
         }
         async function bloquearTelaSessao(msg) {
             if (intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao=null;
@@ -342,6 +382,7 @@
                 document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();
                 document.getElementById('contagemEvento').innerText=Number(data.contagemTurno || clientesCache.length);
                 if (!document.getElementById('buscaCliente').value.trim()) render(clientesCache,false);
+                atualizarListaCompletaEmSegundoPlano();
             } catch(e) {
                 if (e.status===409 || /CONEXÃO ENCERRADA/i.test(e.message||'')) await bloquearTelaSessao(e.message);
                 else if (e.status===401 || e.status===403) { mostrarAviso(e.message||'Acesso não autorizado.'); await sairSistema(false); }
@@ -415,12 +456,26 @@
             catch(e){mostrarAviso(e.message||'Erro ao salvar os dados!');}
             finally{btn.disabled=false;btn.innerText=idEx?'ATUALIZAR DADOS':'Confirmar e Liberar';}
         });
-        window.filtrarClientes=()=>{if(buscaTimer)clearTimeout(buscaTimer);buscaTimer=setTimeout(async()=>{const termo=document.getElementById('buscaCliente').value.trim();if(!termo){render(clientesCache,false);return;}try{const data=await apiSolteiras('buscar',{termo}),rows=Array.isArray(data.clientes)?data.clientes:[];rows.forEach(c=>{const idx=clientesCache.findIndex(x=>x.id===c.id);if(idx>=0)clientesCache[idx]=c;else clientesCache.push(c);});render(rows,true);}catch(e){mostrarAviso(e.message||'Erro ao buscar cliente.');}},250);};
+        // Busca agora filtra em cima do cache local (garantirListaCompleta), carregado
+        // uma vez só, em vez de mandar cada letra digitada pro servidor reler até
+        // 3000 cadastros — mesmo resultado de antes (mesma normalização, mesmo corte
+        // de 100 itens), só que instantâneo depois da primeira carga.
+        window.filtrarClientes=()=>{if(buscaTimer)clearTimeout(buscaTimer);buscaTimer=setTimeout(async()=>{
+            const termo=document.getElementById('buscaCliente').value.trim();
+            if(!termo){render(clientesCache,false);return;}
+            try{
+                const lista=await garantirListaCompleta();
+                const q=normalizeBusca(termo), pieces=q.split(/\s+/).filter(Boolean);
+                const rows=lista.filter(c=>{const hay=normalizeBusca(`${c.nome} ${c.cpf} ${c.tel}`);return pieces.every(p=>hay.includes(p));}).slice(0,100);
+                rows.forEach(c=>{const idx=clientesCache.findIndex(x=>x.id===c.id);if(idx>=0)clientesCache[idx]=c;else clientesCache.push(c);});
+                render(rows,true);
+            }catch(e){mostrarAviso(e.message||'Erro ao buscar cliente.');}
+        },250);};
         onAuthStateChanged(auth,async user=>{
             if(authReady)return;authReady=true;
             if(!user){document.getElementById('telaLogin').classList.remove('hidden');window.mostrarLoginNormalSolteiras?.();return;}
             if(!sessionTokenAtual){try{await signOut(auth);}catch(_){}return;}
-            try{const data=await apiSolteiras('bootstrap');operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();}
+            try{const data=await apiSolteiras('bootstrap');operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();garantirListaCompleta().catch(()=>{});}
             catch(_){sessionTokenAtual='';sessionStorage.removeItem('eclub_solteiras_session');try{await signOut(auth);}catch(_){}}
         });
     </script>
