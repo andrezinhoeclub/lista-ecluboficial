@@ -162,10 +162,17 @@
   let operadorLogado = "";
   let eventos = [];
   let isModoTeste = false;
+  const MAX_RESULTADOS_TELA = 20;
   let debounceBusca = null;
-  let abortBusca = null;
   let bootstrapTimer = null;
   let restaurandoSessao = false;
+  // Cache local dos candidatos de busca (válidos + no turno OU PIX pago —
+  // mesma regra de sempre, decidida no servidor). Carregado uma vez e
+  // atualizado sozinho a cada ciclo do bootstrapTimer, pra busca filtrar por
+  // nome/telefone ali mesmo na tela em vez de reconsultar o servidor a cada
+  // letra digitada.
+  let candidatosCache = null;
+  let carregandoCandidatos = null;
   const $ = id => document.getElementById(id);
   function escapeHtml(value) {
     return String(value ?? "")
@@ -190,6 +197,48 @@
       toast.classList.remove("translate-y-0","opacity-100");
       toast.classList.add("-translate-y-32","opacity-0");
     }, 3500);
+  }
+  // Mesma normalização usada no servidor (remove acento, maiúsculas, espaços
+  // duplicados) — precisa ficar idêntica pra busca local achar os mesmos
+  // resultados de antes, quando cada letra digitada ia direto pro servidor.
+  function normalizeTextCliente(value) {
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, " ");
+  }
+  // A busca da Portaria só usa nome e telefone (o CPF nunca sai do servidor,
+  // igual sempre foi — a validação de identidade continua sendo feita
+  // fisicamente na entrada, não por aqui).
+  function candidatoCombinaBusca(c, terms) {
+    const tel = String(c.telefone || "");
+    const hay = normalizeTextCliente(`${c.nome || ""} ${tel} ${tel.replace(/\D/g, "")}`);
+    return terms.every(term => hay.includes(term));
+  }
+  // Carrega a lista de candidatos UMA VEZ (cache local) pra busca filtrar
+  // aí mesmo no navegador em cada letra digitada, sem reconsultar o servidor
+  // toda hora. É atualizada sozinha junto com o bootstrapTimer (ver
+  // carregarBootstrap), então nunca fica desatualizada por mais tempo do que
+  // o resto da tela já fica.
+  function garantirCandidatos() {
+    if (candidatosCache) return Promise.resolve(candidatosCache);
+    if (!carregandoCandidatos) {
+      carregandoCandidatos = api("listar_candidatos")
+        .then(dados => {
+          candidatosCache = Array.isArray(dados.resultados) ? dados.resultados : [];
+          return candidatosCache;
+        })
+        .finally(() => { carregandoCandidatos = null; });
+    }
+    return carregandoCandidatos;
+  }
+  function atualizarCandidatosEmSegundoPlano() {
+    if (!candidatosCache) return;
+    api("listar_candidatos").then(dados => {
+      candidatosCache = Array.isArray(dados.resultados) ? dados.resultados : [];
+    }).catch(() => {});
   }
   function mensagemAuth(msg, sucesso=false) {
     const el = $("mensagem-auth");
@@ -265,10 +314,11 @@
   async function encerrarSessaoLocal(mensagem="Sessão encerrada.") {
     clearInterval(bootstrapTimer);
     bootstrapTimer = null;
-    if (abortBusca) abortBusca.abort();
     try { await signOut(auth); } catch {}
     operadorLogado = "";
     eventos = [];
+    candidatosCache = null;
+    carregandoCandidatos = null;
     $("interfacePrincipal").classList.add("hidden");
     $("telaLogin").classList.remove("hidden");
     mostrarLoginNormalPortaria();
@@ -323,6 +373,7 @@
     $("telaLogin").classList.add("hidden");
     $("interfacePrincipal").classList.remove("hidden");
     mensagemAuth("", true);
+    garantirCandidatos().catch(()=>{}); // pré-carrega a lista da busca em segundo plano, sem travar o login
     if (!bootstrapTimer) {
       bootstrapTimer = setInterval(() => {
         if (auth.currentUser && !document.hidden) carregarBootstrap().catch(()=>{});
@@ -337,6 +388,7 @@
       $("total-checkins").innerText = String(Number(dados.totalCheckins || 0));
       $("alertaModoTeste").classList.toggle("hidden", !isModoTeste);
       renderizarSidebar();
+      atualizarCandidatosEmSegundoPlano();
     } catch (e) {
       if (e?.status === 401 || e?.status === 403) {
         await encerrarSessaoLocal(e.message || "Acesso não autorizado.");
@@ -424,23 +476,25 @@
       </div>`;
     }).join("");
   }
+  // Busca agora filtra em cima do cache local (garantirCandidatos), carregado
+  // uma vez, em vez de mandar cada letra digitada pro servidor reler a lista
+  // inteira de reservas — mesmo resultado de antes (mesma normalização, mesma
+  // regra de turno/PIX decidida no servidor), só que instantâneo depois da
+  // primeira carga.
   async function executarBusca() {
     const q = $("input-busca").value.trim();
     const cont = $("container-resultados");
     if (q.length < 3) {
-      if (abortBusca) abortBusca.abort();
       cont.innerHTML = "";
       return;
     }
-    if (abortBusca) abortBusca.abort();
-    abortBusca = new AbortController();
-    const estaBusca = abortBusca;
     cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm animate-pulse">Buscando...</div>`;
     try {
-      const dados = await api("buscar", { q }, { controller:estaBusca });
-      renderResultados(dados.resultados, dados.limitado === true);
+      const candidatos = await garantirCandidatos();
+      const terms = normalizeTextCliente(q).split(/\s+/).filter(Boolean);
+      const resultados = candidatos.filter(c => candidatoCombinaBusca(c, terms));
+      renderResultados(resultados.slice(0, MAX_RESULTADOS_TELA), resultados.length > MAX_RESULTADOS_TELA);
     } catch (e) {
-      if (e?.name === "AbortError") return;
       if (e?.status === 401 || e?.status === 403) {
         await encerrarSessaoLocal(e.message || "Acesso não autorizado.");
         return;
