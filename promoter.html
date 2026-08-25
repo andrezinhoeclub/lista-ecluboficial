@@ -19,6 +19,31 @@
         .card-aniv { background: rgba(10, 10, 10, 0.9); border: 1px solid #a855f7; border-radius: 1.5rem; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .theme-toggle {
+            position: fixed; top: 12px; left: 12px; z-index: 10050; display: flex; align-items: center; gap: 5px;
+            padding: 7px 10px; border-radius: 999px; border: 1px solid rgba(234,179,8,.45);
+            background: rgba(0,0,0,.72); color: #facc15; font-size: 9px; font-weight: 900; text-transform: uppercase;
+            letter-spacing: .06em; box-shadow: 0 0 16px rgba(234,179,8,.12); backdrop-filter: blur(10px);
+        }
+        /* Tema claro — só afeta a tela DEPOIS de logado (#painel), a tela de login
+           continua sempre escura, do mesmo jeito que já era. */
+        body.tema-claro { background: #f4f4f5; color: #111827; }
+        body.tema-claro .theme-toggle { background: rgba(255,255,255,.9); color: #854d0e; border-color: rgba(202,138,4,.5); }
+        body.tema-claro #painel .glass-card,
+        body.tema-claro #painel .glass { background: rgba(255,255,255,.9); border-color: rgba(15,23,42,.14); color: #111827; }
+        body.tema-claro #painel .card-performance { background: #fff; box-shadow: 0 10px 30px rgba(15,23,42,.07); }
+        body.tema-claro #painel .card-aniv { background: #fff; box-shadow: 0 10px 30px rgba(15,23,42,.07); }
+        body.tema-claro #painel .text-white { color: #111827 !important; }
+        body.tema-claro #painel .text-zinc-300,
+        body.tema-claro #painel .text-zinc-400,
+        body.tema-claro #painel .text-zinc-500,
+        body.tema-claro #painel .text-zinc-600 { color: #4b5563 !important; }
+        body.tema-claro #painel .border-zinc-800,
+        body.tema-claro #painel .border-white\/5,
+        body.tema-claro #painel .border-white\/10 { border-color: #d1d5db !important; }
+        body.tema-claro #painel .bg-zinc-800,
+        body.tema-claro #painel .bg-zinc-900\/50 { background: #e5e7eb !important; }
+        body.tema-claro #painel footer#navAcoes { background: rgba(255,255,255,.92) !important; border-color: #d1d5db !important; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -47,6 +72,7 @@
         </div>
     </div>
     <div id="painel" class="hidden max-w-md mx-auto pb-44">
+        <button id="btnTemaPromoter" type="button" class="theme-toggle">🌙 <span>ESCURO</span></button>
         <header class="flex justify-between items-center mb-8">
             <div>
                 <p class="text-sky-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1 italic">E-CLUB OFFICIAL</p>
@@ -242,6 +268,22 @@
                 toast.classList.add('-translate-y-32', 'opacity-0');
             }, 4000);
         };
+        // ===== TEMA CLARO/ESCURO =====
+        // Só existe (e só aparece) depois de logado, dentro do #painel — a tela de
+        // login continua sempre no visual escuro padrão, sem esse botão.
+        function aplicarTemaPromoter(tema) {
+            const claro = tema === 'claro';
+            document.body.classList.toggle('tema-claro', claro);
+            const btn = document.getElementById('btnTemaPromoter');
+            if (btn) btn.innerHTML = claro ? '☀️ <span>CLARO</span>' : '🌙 <span>ESCURO</span>';
+        }
+        document.getElementById('btnTemaPromoter')?.addEventListener('click', () => {
+            const atual = document.body.classList.contains('tema-claro') ? 'claro' : 'escuro';
+            const novo = atual === 'claro' ? 'escuro' : 'claro';
+            localStorage.setItem('eclub_promoter_tema_visual_v1', novo);
+            aplicarTemaPromoter(novo);
+        });
+        aplicarTemaPromoter(localStorage.getItem('eclub_promoter_tema_visual_v1') || 'escuro');
         const mostrarTelaLogin = () => {
             document.getElementById('telaLogin').style.display = 'flex';
             document.getElementById('painel').classList.add('hidden');
