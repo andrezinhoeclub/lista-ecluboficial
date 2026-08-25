@@ -1373,13 +1373,15 @@
             renderSolteiras();
 
         });
-        // Rede de segurança contra crescimento sem limite: por padrão você já limpa
-        // a base de reservas toda semana (Limpar Base / Limpar Antigos), então isso
-        // não deve mudar nada no dia a dia — só evita que o Dashboard tente carregar
-        // meses de reservas de uma vez se, por algum motivo, uma limpeza for pulada.
-        const JANELA_RESERVAS_DIAS = 90;
-        const corteReservas = Timestamp.fromMillis(Date.now() - JANELA_RESERVAS_DIAS * 24 * 60 * 60 * 1000);
-        onSnapshot(query(collection(db, "lista_eventos"), where("data_reserva_ts", ">=", corteReservas)), snap => {
+        // ATENÇÃO — NÃO filtrar esta consulta por data (ex.: where("data_reserva_ts", ">=", ...)).
+        // Já foi tentado e quebrou as contagens: no Firestore, um filtro em cima de um
+        // campo REMOVE da consulta todo documento que não tenha aquele campo. Reservas
+        // antigas (feitas antes de o campo data_reserva_ts existir) simplesmente sumiam
+        // do Dashboard, enquanto Portaria e Promoter — que leem sem filtro — continuavam
+        // mostrando o número certo. Resultado: somas diferentes em cada tela e camarotes
+        // reservados desaparecendo. A limpeza semanal (Limpar Base / Limpar Antigos) é
+        // que controla o tamanho desta coleção, não um filtro aqui.
+        onSnapshot(collection(db, "lista_eventos"), snap => {
             dadosReservas = snap.docs.map(d => ({id: d.id, ...d.data()}));
             renderRelatorios(); renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderAuditoria(); renderSolteiras();
             const sCarona = document.getElementById('filtro-evento-carona');
