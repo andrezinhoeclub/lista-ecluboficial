@@ -34,7 +34,7 @@
         <span id="toast-msg">Mensagem de erro</span>
     </div>
     <div id="dashboard-login" class="fixed inset-0 z-[99999] bg-[#050505] flex items-center justify-center p-6 text-white">
-        <form onsubmit="desbloquearDashboard(event)" class="w-full max-w-sm glass-card p-8 md:p-10 text-center border border-yellow-500/20 shadow-[0_0_50px_rgba(234,179,8,0.10)]">
+        <form id="form-login-dashboard" onsubmit="desbloquearDashboard(event)" class="w-full max-w-sm glass-card p-8 md:p-10 text-center border border-yellow-500/20 shadow-[0_0_50px_rgba(234,179,8,0.10)]">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8" alt="E-Club">
             <p class="text-[9px] font-black uppercase tracking-[0.3em] text-yellow-500 mb-2">Acesso Restrito</p>
             <h1 class="text-2xl font-black uppercase italic tracking-tighter text-white mb-8">Command Center</h1>
@@ -42,8 +42,18 @@
             <input type="password" id="senha-dashboard" name="password" autocomplete="current-password" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-black text-xs tracking-widest mb-4" required>
             <button type="submit" id="btn-login-dashboard" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">Entrar com segurança</button>
             <p id="erro-login-dashboard" class="hidden mt-5 text-red-500 text-[9px] font-black uppercase tracking-widest" role="alert">Acesso não autorizado.</p>
-            <p class="mt-6 text-[8px] text-zinc-600 font-bold uppercase leading-relaxed">Autenticação protegida pelo Firebase Authentication. A senha não é armazenada neste HTML nem no navegador.</p>
+            <button type="button" onclick="mostrarRecuperarSenha()" class="w-full mt-5 text-zinc-500 font-bold py-2 uppercase text-[9px] tracking-widest hover:text-yellow-500 transition-all underline underline-offset-4">Esqueci minha senha</button>
         </form>
+        <div id="form-recuperar-senha" class="hidden w-full max-w-sm glass-card p-8 md:p-10 text-center border border-yellow-500/20 shadow-[0_0_50px_rgba(234,179,8,0.10)]">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8" alt="E-Club">
+            <p class="text-[9px] font-black uppercase tracking-[0.3em] text-yellow-500 mb-2">Recuperar acesso</p>
+            <h1 class="text-xl font-black uppercase italic tracking-tighter text-white mb-3">Redefinir senha</h1>
+            <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6 leading-relaxed">Informe o e-mail cadastrado. Se ele já tiver acesso liberado, um link para criar uma nova senha é enviado para essa caixa de entrada.</p>
+            <input type="email" id="email-recuperar-dashboard" autocomplete="username" placeholder="SEU E-MAIL" class="w-full p-5 rounded-2xl text-center font-black text-xs tracking-wider mb-4" required>
+            <button type="button" onclick="enviarRecuperarSenhaDashboard()" id="btn-recuperar-dashboard" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all mb-3">Enviar link</button>
+            <button type="button" onclick="mostrarLoginNormal()" class="w-full text-zinc-500 font-bold py-3 uppercase text-[9px] tracking-widest hover:text-white transition-all">Voltar para o login</button>
+            <p id="status-recuperar-dashboard" class="hidden mt-4 text-[9px] font-black uppercase tracking-widest"></p>
+        </div>
     </div>
     <div id="modal-confirmar-eclub" class="hidden fixed inset-0 z-[10050] bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
         <div class="glass-card w-full max-w-md p-8 border border-red-500/30 shadow-[0_0_50px_rgba(239,68,68,0.10)]">
@@ -2075,6 +2085,7 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
             function mostrarLogin() {
                 if (painel()) painel().classList.add('hidden');
                 if (login()) login().classList.remove('hidden');
+                window.mostrarLoginNormal?.();
             }
             async function usuarioMasterValido(user, forcarAtualizacao = false) {
                 if (!user) return false;
@@ -2136,6 +2147,54 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                         btnLogin().disabled = false;
                         btnLogin().innerText = 'ENTRAR COM SEGURANÇA';
                     }
+                }
+            };
+            // ===== RECUPERAÇÃO DE SENHA (self-service) =====
+            // O funcionário informa o e-mail e recebe (se ele já tiver acesso liberado
+            // pelo administrador) um link do próprio Firebase Authentication para criar
+            // uma nova senha. Nenhuma Cloud Function nova é necessária: só existe conta no
+            // Firebase Authentication para quem foi cadastrado pela aba Acessos, então o
+            // envio do e-mail já funciona como a verificação "esse e-mail está na base?".
+            function statusRecuperar(mensagem, ok = false) {
+                const el = document.getElementById('status-recuperar-dashboard');
+                if (!el) return;
+                el.innerText = mensagem;
+                el.className = `mt-4 text-[9px] font-black uppercase tracking-widest ${ok ? 'text-emerald-400' : 'text-red-500'}`;
+                el.classList.remove('hidden');
+            }
+            window.mostrarRecuperarSenha = () => {
+                limparErro();
+                document.getElementById('status-recuperar-dashboard')?.classList.add('hidden');
+                document.getElementById('form-login-dashboard')?.classList.add('hidden');
+                document.getElementById('form-recuperar-senha')?.classList.remove('hidden');
+                const campo = document.getElementById('email-recuperar-dashboard');
+                const emailAtual = inputEmail()?.value.trim();
+                if (campo) campo.value = emailAtual || '';
+            };
+            window.mostrarLoginNormal = () => {
+                document.getElementById('form-recuperar-senha')?.classList.add('hidden');
+                document.getElementById('form-login-dashboard')?.classList.remove('hidden');
+            };
+            window.enviarRecuperarSenhaDashboard = async () => {
+                const campo = document.getElementById('email-recuperar-dashboard');
+                const email = campo?.value.trim() || '';
+                if (!email) return statusRecuperar('Digite seu e-mail.');
+                const btn = document.getElementById('btn-recuperar-dashboard');
+                if (btn) { btn.disabled = true; btn.innerText = 'ENVIANDO...'; }
+                try {
+                    await sendPasswordResetEmail(auth, email);
+                    statusRecuperar('Se esse e-mail tiver acesso liberado, o link para criar a nova senha já foi enviado. Confira também a caixa de spam.', true);
+                } catch (e) {
+                    console.warn('Falha ao enviar recuperação de senha:', e?.code || e?.message || e);
+                    if (e?.code === 'auth/user-not-found') {
+                        statusRecuperar('Esse e-mail não está cadastrado no sistema. Fale com o administrador.');
+                    } else if (e?.code === 'auth/invalid-email') {
+                        statusRecuperar('E-mail inválido.');
+                    } else {
+                        statusRecuperar('Não foi possível enviar agora. Tente novamente em instantes.');
+                    }
+                } finally {
+                    if (btn) { btn.disabled = false; btn.innerText = 'ENVIAR LINK'; }
                 }
             };
             // ===== GESTÃO SEGURA DE ACESSOS =====
