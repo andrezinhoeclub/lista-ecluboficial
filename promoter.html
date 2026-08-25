@@ -26,13 +26,21 @@
         <span id="toast-msg">Mensagem de erro</span>
     </div>
     <div id="telaLogin" class="fixed inset-0 z-[999] bg-[#000] flex items-center justify-center p-6">
-        <div class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
+        <div id="painelLoginNormal" class="w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic tracking-tighter">PROMOTER <span class="text-sky-400">ACCESS</span></h1>
             <input type="email" id="email" autocomplete="username" placeholder="E-MAIL" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold text-xs mb-4 text-white outline-none focus:border-sky-500 transition-all">
             <input type="password" id="senha" autocomplete="current-password" placeholder="SENHA" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold text-xs mb-4 text-white outline-none focus:border-sky-500 transition-all">
             <button onclick="prosseguirLogin()" id="btnAcao" class="w-full purple-gradient font-black py-4 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">ENTRAR COM SEGURANÇA</button>
-            <p class="text-[8px] text-zinc-600 font-bold uppercase mt-5 leading-relaxed">Autenticação protegida pelo Firebase Authentication. A senha não é armazenada neste HTML nem no Firestore.</p>
+            <button type="button" onclick="mostrarRecuperarSenhaPromoter()" class="w-full mt-4 text-zinc-500 font-bold py-2 uppercase text-[9px] tracking-widest hover:text-sky-400 transition-all underline underline-offset-4">Esqueci minha senha</button>
+        </div>
+        <div id="painelRecuperarSenha" class="hidden w-full max-w-sm glass p-10 rounded-[3rem] text-center border-sky-500/20 border shadow-2xl">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8">
+            <h1 class="text-xl font-black mb-3 uppercase italic tracking-tighter">Redefinir <span class="text-sky-400">senha</span></h1>
+            <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6 leading-relaxed">Informe o e-mail cadastrado. Se ele já tiver acesso liberado, um link para criar uma nova senha é enviado para essa caixa de entrada.</p>
+            <input type="email" id="emailRecuperar" autocomplete="username" placeholder="SEU E-MAIL" class="w-full p-4 rounded-2xl bg-black border border-zinc-800 text-center font-bold text-xs mb-4 text-white outline-none focus:border-sky-500 transition-all">
+            <button onclick="enviarRecuperarSenhaPromoter()" id="btnRecuperar" class="w-full purple-gradient font-black py-4 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all mb-3">ENVIAR LINK</button>
+            <button type="button" onclick="mostrarLoginNormalPromoter()" class="w-full text-zinc-500 font-bold py-3 uppercase text-[9px] tracking-widest hover:text-white transition-all">Voltar para o login</button>
         </div>
     </div>
     <div id="painel" class="hidden max-w-md mx-auto pb-44">
@@ -111,7 +119,7 @@
     </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, setPersistence, browserSessionPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -228,6 +236,46 @@
             document.getElementById('painel').classList.add('hidden');
             document.getElementById('btnAcao').disabled = false;
             document.getElementById('btnAcao').innerText = 'ENTRAR COM SEGURANÇA';
+            window.mostrarLoginNormalPromoter?.();
+        };
+        // ===== RECUPERAÇÃO DE SENHA (self-service) =====
+        // O promoter informa o e-mail e recebe (se ele já tiver acesso liberado pelo
+        // administrador) um link do próprio Firebase Authentication para criar uma nova
+        // senha. Não existe conta no Firebase Authentication para quem não foi cadastrado
+        // pela aba Acessos do dashboard, então o envio do e-mail já funciona como a
+        // verificação "esse e-mail está na base?" — sem precisar de Cloud Function nova.
+        window.mostrarRecuperarSenhaPromoter = () => {
+            document.getElementById('painelLoginNormal')?.classList.add('hidden');
+            document.getElementById('painelRecuperarSenha')?.classList.remove('hidden');
+            const campo = document.getElementById('emailRecuperar');
+            const emailAtual = document.getElementById('email')?.value.trim();
+            if (campo) campo.value = emailAtual || '';
+        };
+        window.mostrarLoginNormalPromoter = () => {
+            document.getElementById('painelRecuperarSenha')?.classList.add('hidden');
+            document.getElementById('painelLoginNormal')?.classList.remove('hidden');
+        };
+        window.enviarRecuperarSenhaPromoter = async () => {
+            const campo = document.getElementById('emailRecuperar');
+            const email = campo?.value.trim() || '';
+            if (!email) return mostrarAviso('Digite seu e-mail.');
+            const btn = document.getElementById('btnRecuperar');
+            if (btn) { btn.disabled = true; btn.innerText = 'ENVIANDO...'; }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                mostrarAviso('Se esse e-mail tiver acesso liberado, o link para criar a nova senha já foi enviado. Confira também o spam.', true);
+            } catch (erro) {
+                console.warn('Falha ao enviar recuperação de senha promoter:', erro?.code || erro?.message || erro);
+                if (erro?.code === 'auth/user-not-found') {
+                    mostrarAviso('Esse e-mail não está cadastrado. Fale com o administrador.');
+                } else if (erro?.code === 'auth/invalid-email') {
+                    mostrarAviso('E-mail inválido.');
+                } else {
+                    mostrarAviso('Não foi possível enviar agora. Tente de novo.');
+                }
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = 'ENVIAR LINK'; }
+            }
         };
         const chamarPromoterApi = async (action, payload = {}) => {
             const user = auth.currentUser;
