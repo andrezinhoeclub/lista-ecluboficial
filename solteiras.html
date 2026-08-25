@@ -10,42 +10,34 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f4f4f5; color: #18181b; overflow-x: hidden; }
-
         /* NOVO VISUAL DE ALTO CONTRASTE */
         .glass-card { background: #ffffff; border: 1px solid #d4d4d8; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
         .input-field { background: #ffffff !important; border: 2px solid #a1a1aa !important; color: #000 !important; font-weight: 900; }
         .input-field:focus { border-color: #eab308 !important; outline: none; box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.3); }
         .input-field::placeholder { color: #71717a; font-weight: bold; }
-
         .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; border: 2px solid #ca8a04; }
         .btn-gold:hover { background: #facc15; }
-
         .card-aniversariante {
             background: linear-gradient(90deg, #fff1a8 0%, #fff8d6 50%, #f3e8ff 100%) !important;
             border-left: 12px solid #eab308 !important;
             box-shadow: inset 0 0 0 2px rgba(234, 179, 8, 0.45), 0 8px 24px rgba(234, 179, 8, 0.25) !important;
         }
-
         .item-cliente { border-bottom: 1px solid #e4e4e7; transition: 0.3s; background: #ffffff; }
         .item-cliente:hover { background: #f4f4f5; }
         .cliente-bloqueada { background: #fef2f2 !important; border-left: 6px solid #ef4444 !important; }
         .cliente-checkin-ok { background: #f0fdf4 !important; }
-
         /* TELA DE LOGIN MANTIDA ESCURA PARA ESTILO */
         .login-bg { background: radial-gradient(circle at center, #27272a 0%, #09090b 100%); }
         .login-card { background: #18181b; border: 1px solid #3f3f46; }
         .login-input { background: #000 !important; border: 1px solid #52525b !important; color: #fff !important; }
-
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-thumb { background: #a1a1aa; border-radius: 10px; }
     </style>
 </head>
 <body class="p-4 md:p-8 flex flex-col min-h-screen relative">
-
     <div id="status-conexao" class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.5)] hidden z-[9999] animate-pulse">
         🔴 Sem Internet — Operação Pausada
     </div>
-
     <div class="fixed inset-0 z-[99999] bg-[#050505] flex-col items-center justify-center p-8 text-center flex md:hidden">
         <div class="login-card p-8 rounded-[2.5rem] border border-red-500/30 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.15)]">
             <span class="text-6xl mb-6">🖥️</span>
@@ -53,14 +45,12 @@
             <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">O sistema de Portaria deve ser acessado <br><span class="text-white">exclusivamente por um computador</span>.</p>
         </div>
     </div>
-
     <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
-
     <div id="telaLogin" class="fixed inset-0 z-[100] flex items-center justify-center login-bg">
-        <div class="w-full max-w-sm p-10 login-card rounded-[3rem] text-center border-yellow-500/30 shadow-2xl">
+        <div id="painelLoginNormal" class="w-full max-w-sm p-10 login-card rounded-[3rem] text-center border-yellow-500/30 shadow-2xl">
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
             <h1 class="text-2xl font-black mb-8 uppercase italic text-white">SOLTEIRAS <span class="text-yellow-500">ACCESS</span></h1>
             <div class="space-y-4">
@@ -69,10 +59,21 @@
                     <input type="password" id="senhaUsuario" placeholder="SENHA" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs mt-2 border-yellow-500/50 login-input focus:border-yellow-500">
                 </div>
                 <button onclick="verificarOuLogar()" id="btnAcao" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-4 active:scale-95 transition-all">ACESSAR SISTEMA</button>
+                <button type="button" onclick="mostrarRecuperarSenhaSolteiras()" class="w-full text-zinc-500 font-bold py-2 uppercase text-[9px] tracking-widest hover:text-yellow-500 transition-all underline underline-offset-4">Esqueci minha senha</button>
+            </div>
+        </div>
+        <div id="painelRecuperarSenha" class="hidden w-full max-w-sm p-10 login-card rounded-[3rem] text-center border-yellow-500/30 shadow-2xl">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16 mx-auto mb-8">
+            <h1 class="text-xl font-black mb-3 uppercase italic text-white">Redefinir <span class="text-yellow-500">senha</span></h1>
+            <p class="text-[9px] text-zinc-400 font-bold uppercase mb-6 leading-relaxed">Informe o e-mail cadastrado. Se ele já tiver acesso liberado, um link para criar uma nova senha é enviado para essa caixa de entrada.</p>
+            <div class="space-y-4">
+                <input type="email" id="emailRecuperarSolteiras" placeholder="SEU E-MAIL" autocomplete="username" class="w-full p-5 rounded-2xl text-center font-bold uppercase text-xs login-input">
+                <button type="button" onclick="enviarRecuperarSenhaSolteiras()" id="btnRecuperarSolteiras" class="w-full bg-yellow-500 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl mt-2 active:scale-95 transition-all">ENVIAR LINK</button>
+                <p id="mensagem-recuperar-solteiras" class="text-[9px] font-bold uppercase tracking-widest text-zinc-500 min-h-[20px]"></p>
+                <button type="button" onclick="mostrarLoginNormalSolteiras()" class="w-full text-zinc-500 font-bold py-2 uppercase text-[9px] tracking-widest hover:text-white transition-all">Voltar para o login</button>
             </div>
         </div>
     </div>
-
     <div id="telaBloqueio" class="hidden fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex-col items-center justify-center p-8 text-center flex">
         <div class="login-card p-8 rounded-[2.5rem] border border-red-500/50 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.3)]">
             <span class="text-6xl mb-6 animate-pulse">🚨</span>
@@ -81,7 +82,6 @@
             <button onclick="sairSistema(false)" class="mt-8 px-8 py-4 bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase rounded-2xl transition-colors">Voltar ao Login</button>
         </div>
     </div>
-
     <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto flex-grow w-full">
         <header class="flex justify-between items-center mb-8 gap-6 bg-white p-4 rounded-3xl border border-zinc-300 shadow-sm">
             <div class="flex items-center gap-4">
@@ -99,7 +99,6 @@
                 <button onclick="sairSistema()" class="bg-red-100 border border-red-300 text-red-600 px-4 py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-red-200 transition-colors">Sair</button>
             </div>
         </header>
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
             <aside class="lg:col-span-1">
                 <div class="glass-card p-6 rounded-[2rem] sticky top-8">
@@ -109,25 +108,20 @@
                         <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field text-sm" required>
                         <input type="tel" id="tel" placeholder="WHATSAPP" class="w-full p-4 rounded-xl input-field text-sm" oninput="maskTel(this)" onblur="validarDuplicidade('tel')" required>
                         <input type="text" id="cpf" placeholder="CPF COMPLETO" class="w-full p-4 rounded-xl input-field text-sm" oninput="maskCPF(this)" onblur="validarDuplicidade('cpf')" required>
-
                         <div>
                             <label class="text-[10px] font-black text-zinc-500 uppercase ml-2">Data de Nascimento</label>
                             <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field text-sm uppercase mt-1" onchange="updateIdade(this.value)" required>
                         </div>
-
                         <div class="bg-zinc-100 p-4 rounded-xl border border-zinc-300 flex justify-between items-center text-zinc-900">
                             <p class="text-[10px] font-black text-zinc-600 uppercase">Idade Calculada</p>
                             <p id="idadeDisplay" class="text-xl font-black text-zinc-900">--</p>
                         </div>
-
                         <textarea id="obs" placeholder="OBSERVAÇÕES (OPCIONAL)..." class="w-full p-4 rounded-xl input-field text-xs uppercase h-20 resize-none"></textarea>
-
                         <button type="submit" id="btnSalvar" class="w-full btn-gold py-5 rounded-xl uppercase text-sm shadow-md mt-2 active:scale-95 transition-all">Confirmar e Liberar</button>
                         <button type="button" id="btnCancelarEdicao" onclick="limparFormulario()" class="hidden w-full bg-zinc-200 text-zinc-700 hover:bg-zinc-300 py-3 rounded-xl uppercase text-[10px] font-black mt-2 transition-colors border border-zinc-300">Cancelar Edição</button>
                     </form>
                 </div>
             </aside>
-
             <main class="lg:col-span-2 space-y-6">
                 <div class="relative w-full">
                     <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." class="w-full p-5 rounded-2xl input-field text-base font-black uppercase pl-14 shadow-md" oninput="filtrarClientes()">
@@ -139,16 +133,13 @@
             </main>
         </div>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdToken } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdToken, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         const firebaseConfig = { apiKey:"AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain:"teste-de-reserva.firebaseapp.com", projectId:"teste-de-reserva", storageBucket:"teste-de-reserva.firebasestorage.app", messagingSenderId:"163395694876", appId:"1:163395694876:web:8b1116a0483af951548ad9" };
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const URL_SOLTEIRAS_API = 'https://us-central1-teste-de-reserva.cloudfunctions.net/solteirasApi';
-
         let clientesCache = [];
         let operadorLogado = "";
         let sessionTokenAtual = sessionStorage.getItem("eclub_solteiras_session") || "";
@@ -156,13 +147,11 @@
         let intervaloAtualizacao = null;
         let buscaTimer = null;
         let authReady = false;
-
         window.addEventListener('offline', () => document.getElementById('status-conexao').classList.remove('hidden'));
         window.addEventListener('online', () => {
             document.getElementById('status-conexao').classList.add('hidden');
             if (auth.currentUser && sessionTokenAtual) atualizarPainelSeguro();
         });
-
         function normalizarDataNascimento(d) {
             if (!d) return null;
             if (!isNaN(d) && Number(d) > 10000) {
@@ -202,7 +191,6 @@
         function corteTurno() {
             const agora=new Date(), corte=new Date(); corte.setHours(5,0,0,0); if (agora < corte) corte.setDate(corte.getDate()-1); return corte;
         }
-
         window.mostrarAviso = (msg,isSucesso=false) => {
             const toast=document.getElementById('toast-aviso');
             const bg=isSucesso?'bg-green-600':'bg-red-600';
@@ -213,7 +201,52 @@
             setTimeout(()=>{toast.classList.remove('-translate-y-32','opacity-0');toast.classList.add('translate-y-0','opacity-100');},10);
             setTimeout(()=>{toast.classList.remove('translate-y-0','opacity-100');toast.classList.add('-translate-y-32','opacity-0');},4000);
         };
-
+        // ===== RECUPERAÇÃO DE SENHA (self-service) =====
+        // A operadora informa o e-mail e recebe (se ele já tiver acesso liberado pelo
+        // administrador) um link do próprio Firebase Authentication para criar uma nova
+        // senha. Não existe conta no Firebase Authentication para quem não foi cadastrado
+        // pela aba Acessos do dashboard, então o envio do e-mail já funciona como a
+        // verificação "esse e-mail está na base?" — sem precisar de Cloud Function nova.
+        function mensagemRecuperarSolteiras(msg, ok = false) {
+            const el = document.getElementById('mensagem-recuperar-solteiras');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.className = `text-[9px] font-bold uppercase tracking-widest min-h-[20px] ${ok ? 'text-green-500' : 'text-red-400'}`;
+        }
+        window.mostrarRecuperarSenhaSolteiras = () => {
+            mensagemRecuperarSolteiras('');
+            document.getElementById('painelLoginNormal')?.classList.add('hidden');
+            document.getElementById('painelRecuperarSenha')?.classList.remove('hidden');
+            const emailAtual = document.getElementById('inputNomeUsuario')?.value.trim();
+            const campo = document.getElementById('emailRecuperarSolteiras');
+            if (campo) campo.value = emailAtual || '';
+        };
+        window.mostrarLoginNormalSolteiras = () => {
+            document.getElementById('painelRecuperarSenha')?.classList.add('hidden');
+            document.getElementById('painelLoginNormal')?.classList.remove('hidden');
+        };
+        window.enviarRecuperarSenhaSolteiras = async () => {
+            const campo = document.getElementById('emailRecuperarSolteiras');
+            const email = campo?.value.trim() || '';
+            if (!email) return mensagemRecuperarSolteiras('Digite seu e-mail.');
+            const btn = document.getElementById('btnRecuperarSolteiras');
+            if (btn) { btn.disabled = true; btn.innerText = 'ENVIANDO...'; }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                mensagemRecuperarSolteiras('Se esse e-mail tiver acesso liberado, o link para criar a nova senha já foi enviado. Confira também o spam.', true);
+            } catch (e) {
+                console.warn('Falha ao enviar recuperação de senha solteiras:', e?.code || e?.message || e);
+                if (e?.code === 'auth/user-not-found') {
+                    mensagemRecuperarSolteiras('Esse e-mail não está cadastrado. Fale com o administrador.');
+                } else if (e?.code === 'auth/invalid-email') {
+                    mensagemRecuperarSolteiras('E-mail inválido.');
+                } else {
+                    mensagemRecuperarSolteiras('Não foi possível enviar agora. Tente de novo.');
+                }
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = 'ENVIAR LINK'; }
+            }
+        };
         async function apiSolteiras(action,payload={},semSessaoModulo=false) {
             const user=auth.currentUser; if (!user) throw new Error('Sessão do Firebase ausente.');
             const idToken=await getIdToken(user,false);
@@ -253,7 +286,6 @@
             }
         }
         function iniciarAtualizacaoPeriodica(){ if(intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao=setInterval(atualizarPainelSeguro,10000); }
-
         window.verificarOuLogar = async () => {
             const email=document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
             const senha=document.getElementById('senhaUsuario').value;
@@ -266,15 +298,14 @@
             finally{btn.disabled=false;btn.innerText='ACESSAR SISTEMA';}
         };
         document.getElementById('inputNomeUsuario').addEventListener('input',()=>document.getElementById('areaSenha').classList.remove('hidden'));
-
         window.sairSistema = async (chamarApi=true) => {
             if(intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao=null;
             if(chamarApi && auth.currentUser && sessionTokenAtual){try{await apiSolteiras('logout');}catch(_){}}
             sessionTokenAtual=''; sessionStorage.removeItem('eclub_solteiras_session'); clientesCache=[]; eventoHojeCache=null;
             try{await signOut(auth);}catch(_){}
             document.getElementById('conteudo-sistema').classList.add('hidden'); document.getElementById('telaBloqueio').classList.add('hidden'); document.getElementById('telaLogin').classList.remove('hidden');
+            window.mostrarLoginNormalSolteiras?.();
         };
-
         function limparFocarBusca(){const c=document.getElementById('buscaCliente');c.value='';render(clientesCache,false);c.focus();}
         window.dispararCheckin = async id => { try{await apiSolteiras('checkin',{id});mostrarAviso('Liberada com sucesso!',true);limparFocarBusca();await atualizarPainelSeguro();}catch(e){mostrarAviso(e.message||'Erro ao liberar a cliente!');} };
         window.bloquearDesbloquear = async (id,acaoBloquear) => {
@@ -290,7 +321,6 @@
             document.getElementById('editId').value=c.id; document.getElementById('nome').value=c.nome||''; document.getElementById('tel').value=c.tel||''; document.getElementById('cpf').value=c.cpf||''; document.getElementById('nascimento').value=norm?norm.raw:''; document.getElementById('obs').value=c.obs||'';
             window.updateIdade(norm?norm.raw:null); document.getElementById('btnSalvar').innerText='ATUALIZAR DADOS'; document.getElementById('btnCancelarEdicao').classList.remove('hidden'); document.getElementById('tituloForm').scrollIntoView({behavior:'smooth'});
         };
-
         function render(dados,isBusca=false){
             const container=document.getElementById('listaSolteiras'), corte=corteTurno();
             let paraExibir=isBusca?dados:dados.filter(c=>{const d=dataVisita(c);return d&&d>=corte;});
@@ -308,30 +338,25 @@
                 container.appendChild(div);
             });
         }
-
         window.maskCPF=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');i.value=v;};
         window.maskTel=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d)(\d{4})$/,'$1-$2');i.value=v;};
         window.updateIdade=v=>{if(!v){document.getElementById('idadeDisplay').innerText='--';return;}const norm=normalizarDataNascimento(v);if(!norm){document.getElementById('idadeDisplay').innerText='--';return;}const h=new Date(),n=new Date(norm.raw+'T12:00:00');let i=h.getFullYear()-n.getFullYear();if(h.getMonth()<n.getMonth()||(h.getMonth()===n.getMonth()&&h.getDate()<n.getDate()))i--;document.getElementById('idadeDisplay').innerText=isNaN(i)?'--':i;};
         window.limparFormulario=()=>{document.getElementById('formSolteira').reset();document.getElementById('editId').value='';document.getElementById('btnSalvar').innerText='Confirmar e Liberar';document.getElementById('btnCancelarEdicao').classList.add('hidden');document.getElementById('idadeDisplay').innerText='--';};
-
         window.validarDuplicidade=async()=>{
             const cpf=document.getElementById('cpf').value,tel=document.getElementById('tel').value;
             if(cpf.replace(/\D/g,'').length<11&&tel.replace(/\D/g,'').length<10)return;
             try{const data=await apiSolteiras('duplicidade',{cpf,tel,excludeId:document.getElementById('editId').value});if(!data.duplicado||!data.cliente)return;const c=data.cliente;if(c.bloqueada){mostrarAviso(`🚨 PROIBIDA! Motivo: ${c.motivo_bloqueio||'Sem motivo.'}`);window.limparFormulario();return;}if(!clientesCache.some(x=>x.id===c.id))clientesCache.push(c);if(confirm(`CLIENTE ENCONTRADA: ${c.nome}\n\nOK: Fazer Check-in (Ela já pagou).\nCANCELAR: Editar dados dela.`)){await window.dispararCheckin(c.id);window.limparFormulario();}else window.prepararEdicao(c.id);}catch(e){mostrarAviso(e.message||'Erro ao verificar cadastro.');}
         };
-
         document.getElementById('formSolteira').addEventListener('submit',async e=>{
             e.preventDefault();const btn=document.getElementById('btnSalvar'),idEx=document.getElementById('editId').value;btn.disabled=true;btn.innerText='SALVANDO...';
             try{await apiSolteiras('salvar_cliente',{id:idEx,nome:document.getElementById('nome').value,tel:document.getElementById('tel').value,cpf:document.getElementById('cpf').value,data_nascimento:document.getElementById('nascimento').value,obs:document.getElementById('obs').value});mostrarAviso(idEx?'Dados atualizados e entrada registrada!':'Cadastro salvo e liberado!',true);window.limparFormulario();limparFocarBusca();await atualizarPainelSeguro();}
             catch(e){mostrarAviso(e.message||'Erro ao salvar os dados!');}
             finally{btn.disabled=false;btn.innerText=idEx?'ATUALIZAR DADOS':'Confirmar e Liberar';}
         });
-
         window.filtrarClientes=()=>{if(buscaTimer)clearTimeout(buscaTimer);buscaTimer=setTimeout(async()=>{const termo=document.getElementById('buscaCliente').value.trim();if(!termo){render(clientesCache,false);return;}try{const data=await apiSolteiras('buscar',{termo}),rows=Array.isArray(data.clientes)?data.clientes:[];rows.forEach(c=>{const idx=clientesCache.findIndex(x=>x.id===c.id);if(idx>=0)clientesCache[idx]=c;else clientesCache.push(c);});render(rows,true);}catch(e){mostrarAviso(e.message||'Erro ao buscar cliente.');}},250);};
-
         onAuthStateChanged(auth,async user=>{
             if(authReady)return;authReady=true;
-            if(!user){document.getElementById('telaLogin').classList.remove('hidden');return;}
+            if(!user){document.getElementById('telaLogin').classList.remove('hidden');window.mostrarLoginNormalSolteiras?.();return;}
             if(!sessionTokenAtual){try{await signOut(auth);}catch(_){}return;}
             try{const data=await apiSolteiras('bootstrap');operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();}
             catch(_){sessionTokenAtual='';sessionStorage.removeItem('eclub_solteiras_session');try{await signOut(auth);}catch(_){}}
