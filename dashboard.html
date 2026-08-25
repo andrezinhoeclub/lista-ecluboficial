@@ -499,6 +499,10 @@
                         <h3 class="text-orange-500 font-black uppercase tracking-widest text-[11px] mb-2">Eventos Antigos</h3>
                         <button onclick="limparEventosAntigos()" class="w-full bg-orange-600/10 border border-orange-600/30 text-orange-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-orange-600 hover:text-white transition-all mt-auto" title="Apaga por completo eventos antes de uma data, com tudo que está ligado a eles.">Limpar Antigos</button>
                     </div>
+                    <div class="bg-pink-500/10 border border-pink-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
+                        <h3 class="text-pink-500 font-black uppercase tracking-widest text-[11px] mb-2">Imagens Órfãs</h3>
+                        <button onclick="limparImagensOrfas()" class="w-full bg-pink-600/10 border border-pink-600/30 text-pink-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-pink-600 hover:text-white transition-all mt-auto" title="Apaga do armazenamento as fotos de capa que não pertencem a nenhum evento existente.">Limpar Imagens</button>
+                    </div>
                     <div class="bg-yellow-500/10 border border-yellow-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
                         <h3 class="text-yellow-500 font-black uppercase tracking-widest text-[11px] mb-4">Taxa de Serviço PIX</h3>
                         <div class="flex gap-2 mb-4">
@@ -527,7 +531,7 @@
     <script type="text/plain" id="codigo-principal-dashboard">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, deleteDoc, setDoc, addDoc, updateDoc, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, listAll } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
         const firebaseConfig = { apiKey: "AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain: "teste-de-reserva.firebaseapp.com", projectId: "teste-de-reserva", storageBucket: "teste-de-reserva.firebasestorage.app", messagingSenderId: "163395694876", appId: "1:163395694876:web:8b1116a0483af951548ad9" };
         const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -1790,7 +1794,15 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
             e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
             try {
                 const id = document.getElementById('edit_evento_id').value; const arq = document.getElementById('upload_capa').files[0]; let url = document.getElementById('url_imagem_atual').value;
-                if (arq) { const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); await uploadBytes(sr, arq); url = await getDownloadURL(sr); }
+                const urlImagemAntiga = url;
+                if (arq) {
+                    const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); await uploadBytes(sr, arq); url = await getDownloadURL(sr);
+                    // Troca de capa: a imagem antiga deixa de estar ligada a qualquer evento,
+                    // então apaga ela do armazenamento pra não acumular arquivo órfão.
+                    if (urlImagemAntiga && urlImagemAntiga.includes('firebasestorage') && urlImagemAntiga !== url) {
+                        await deleteObject(ref(storage, urlImagemAntiga)).catch(() => {});
+                    }
+                }
                 const d = { nome: document.getElementById('nome_festa').value, data: document.getElementById('data_festa').value, hora: document.getElementById('hora_inicio').value, valor_casal: document.getElementById('valor_casal').value, valor_solteiro: document.getElementById('valor_solteiro').value, desc_casal: document.getElementById('desc_casal').value, desc_solteiro: document.getElementById('desc_solteiro').value, ant_casal: document.getElementById('ant_casal').value, ant_casal_cons: document.getElementById('ant_casal_cons').value, ant_solteiro: document.getElementById('ant_solteiro').value, valor_recorrente_casal: document.getElementById('valor_recorrente_casal').value, valor_recorrente_solteiro: document.getElementById('valor_recorrente_solteiro').value, diferenciais_noite: document.getElementById('diferenciais_noite') ? document.getElementById('diferenciais_noite').value : '', imagem: url, ativo: true };
                 for(let i=1; i<=8; i++) { d[`cam${i}_ativo`] = document.getElementById(`cam${i}_ativo`).checked; d[`v_cam${i}`] = document.getElementById(`v_cam${i}`).value; d[`obs_cam${i}`] = document.getElementById(`obs_cam${i}`).value; }
                 if(id) await updateDoc(doc(db, "eventos", id), d); else await addDoc(collection(db, "eventos"), d);
@@ -1930,6 +1942,31 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
                 await excluirDocsEmLotes(todosOsRefs);
                 mostrarAviso(`${alvos.length} evento(s) antigo(s) apagado(s) por completo (${todosOsRefs.length} registro(s) no total).`, true);
             } catch (e) { console.error('Erro ao limpar eventos antigos:', e); mostrarAviso("A limpeza foi interrompida por segurança."); }
+        };
+        // Varre a pasta "eventos" do Storage e apaga qualquer foto de capa que não
+        // esteja mais ligada a nenhum evento cadastrado agora (evento excluído antes
+        // dessa função existir, capa trocada sem apagar a antiga, upload que falhou
+        // no meio do caminho etc.). Serve de "faxina" pra pegar o que ficou pra trás,
+        // além da limpeza automática que já roda ao excluir ou trocar a capa de um evento.
+        window.limparImagensOrfas = async () => {
+            if (!confirm("Isso vai apagar do armazenamento TODAS as fotos de capa que não pertencem a nenhum evento existente agora. As fotos dos eventos atuais (ativos, inativos ou modelos) não são afetadas. Confirma?")) return;
+            try {
+                const emUso = new Set();
+                dadosEventos.forEach(ev => {
+                    if (ev.imagem && ev.imagem.includes('firebasestorage')) {
+                        try { emUso.add(ref(storage, ev.imagem).fullPath); } catch (_) {}
+                    }
+                });
+                const pasta = await listAll(ref(storage, 'eventos'));
+                const orfas = pasta.items.filter(item => !emUso.has(item.fullPath));
+                if (orfas.length === 0) { mostrarAviso("Nenhuma imagem órfã encontrada. Tudo limpo!", true); return; }
+                let apagadas = 0;
+                for (const item of orfas) {
+                    await deleteObject(item).catch(() => {});
+                    apagadas++;
+                }
+                mostrarAviso(`${apagadas} imagem(ns) órfã(s) apagada(s) do armazenamento.`, true);
+            } catch (e) { console.error('Erro ao limpar imagens órfãs:', e); mostrarAviso("Erro ao limpar imagens órfãs."); }
         };
         window.renderCamarotesVendidos = () => {
             const tb = document.getElementById('tabela-camarotes-body'); if(!tb) return;
