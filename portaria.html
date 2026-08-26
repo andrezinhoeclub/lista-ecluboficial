@@ -163,6 +163,16 @@
   let eventos = [];
   let isModoTeste = false;
   const MAX_RESULTADOS_TELA = 20;
+  // ===== MODO OFFLINE =====
+  // Chaves de armazenamento na própria máquina. A lista fica guardada aqui pra
+  // sobreviver a um reinício do computador no meio da queda, e a fila guarda as
+  // entradas feitas sem internet até conseguir mandar pro servidor.
+  const CHAVE_LISTA_LOCAL = "eclub_portaria_lista_offline_v1";
+  const CHAVE_FILA_OFFLINE = "eclub_portaria_fila_offline_v1";
+  // Lista guardada há mais de 20 horas é descartada: evita a porta abrir na
+  // noite seguinte usando a lista da festa anterior.
+  const VALIDADE_LISTA_MS = 20 * 60 * 60 * 1000;
+  let sincronizando = false;
   let debounceBusca = null;
   let bootstrapTimer = null;
   let restaurandoSessao = false;
@@ -222,13 +232,71 @@
   // toda hora. É atualizada sozinha junto com o bootstrapTimer (ver
   // carregarBootstrap), então nunca fica desatualizada por mais tempo do que
   // o resto da tela já fica.
+  // ---- lista guardada na máquina ----
+  function salvarListaLocal(lista) {
+    try { localStorage.setItem(CHAVE_LISTA_LOCAL, JSON.stringify({ em: Date.now(), lista })); } catch {}
+  }
+  function lerListaLocal() {
+    try {
+      const bruto = localStorage.getItem(CHAVE_LISTA_LOCAL);
+      if (!bruto) return null;
+      const o = JSON.parse(bruto);
+      if (!o || !Array.isArray(o.lista)) return null;
+      if (Date.now() - Number(o.em || 0) > VALIDADE_LISTA_MS) return null;
+      return o.lista;
+    } catch { return null; }
+  }
+  // ---- fila de entradas feitas sem internet ----
+  function lerFila() {
+    try { const f = JSON.parse(localStorage.getItem(CHAVE_FILA_OFFLINE)); return Array.isArray(f) ? f : []; }
+    catch { return []; }
+  }
+  function salvarFila(f) {
+    try { localStorage.setItem(CHAVE_FILA_OFFLINE, JSON.stringify(f)); } catch {}
+    atualizarAvisoOffline();
+  }
+  function enfileirar(item) {
+    const f = lerFila();
+    f.push({ ...item, criadoEm: new Date().toISOString() });
+    salvarFila(f);
+  }
+  // Falha de rede (internet caiu) x erro do servidor (ele respondeu recusando).
+  // A diferença importa: rede a gente guarda pra depois, recusa do servidor não
+  // adianta repetir.
+  function ehFalhaDeRede(e) {
+    if (!navigator.onLine) return true;
+    if (e?.status) return false;
+    return e instanceof TypeError || /fetch|network|failed|load/i.test(String(e?.message || ""));
+  }
+  function atualizarAvisoOffline() {
+    const pendentes = lerFila().length;
+    const semNet = !navigator.onLine;
+    const el = $("status-conexao");
+    if (!el) return;
+    if (!semNet && !pendentes) { el.classList.add("hidden"); return; }
+    el.classList.remove("hidden");
+    el.classList.toggle("bg-red-600", semNet);
+    el.classList.toggle("bg-yellow-600", !semNet);
+    el.textContent = semNet
+      ? `🔴 SEM INTERNET — PORTARIA FUNCIONANDO NORMAL${pendentes ? ` · ${pendentes} PENDENTE(S)` : ""}`
+      : `🟡 ENVIANDO ${pendentes} ENTRADA(S) FEITA(S) SEM INTERNET...`;
+  }
   function garantirCandidatos() {
     if (candidatosCache) return Promise.resolve(candidatosCache);
     if (!carregandoCandidatos) {
       carregandoCandidatos = api("listar_candidatos")
         .then(dados => {
           candidatosCache = Array.isArray(dados.resultados) ? dados.resultados : [];
+          salvarListaLocal(candidatosCache);
           return candidatosCache;
+        })
+        .catch(e => {
+          // Sem internet: usa a lista que ficou guardada na máquina. É isso que
+          // permite a porta continuar rodando durante a queda, inclusive se o
+          // computador tiver sido reiniciado no meio.
+          const local = lerListaLocal();
+          if (local) { candidatosCache = local; return candidatosCache; }
+          throw e;
         })
         .finally(() => { carregandoCandidatos = null; });
     }
@@ -237,8 +305,76 @@
   function atualizarCandidatosEmSegundoPlano() {
     if (!candidatosCache) return;
     api("listar_candidatos").then(dados => {
-      candidatosCache = Array.isArray(dados.resultados) ? dados.resultados : [];
+      const novos = Array.isArray(dados.resultados) ? dados.resultados : [];
+      // Não deixa a lista vinda do servidor "apagar" entradas que ainda estão na
+      // fila esperando subir — senão elas voltariam a aparecer como não liberadas.
+      const pendentes = new Set(lerFila().filter(i => i.tipo === "checkin").map(i => i.reservaId));
+      if (pendentes.size) {
+        novos.forEach(c => { if (pendentes.has(c.id)) { c.entrou = true; c.porteiro = operadorLogado; } });
+      }
+      candidatosCache = novos;
+      salvarListaLocal(candidatosCache);
     }).catch(() => {});
+  }
+  // Qual evento está no ar agora — usado pra registrar a entrada manual no
+  // evento certo. Se nenhum estiver no ar, a entrada manual não é oferecida.
+  function eventoAtivoAgora() {
+    const online = (eventos || []).find(ev => ev.status === "ONLINE");
+    return online || null;
+  }
+  function registrarCheckinOffline(reservaId) {
+    enfileirar({ tipo: "checkin", reservaId, dataEntrada: new Date().toISOString() });
+    if (Array.isArray(candidatosCache)) {
+      const c = candidatosCache.find(x => x.id === reservaId);
+      if (c) { c.entrou = true; c.porteiro = operadorLogado; }
+      salvarListaLocal(candidatosCache);
+    }
+    mostrarAviso("SEM INTERNET — ENTRADA LIBERADA E GUARDADA", true);
+  }
+  function registrarEntradaManualOffline(nome, evento) {
+    enfileirar({ tipo: "entrada_manual", nome, eventoId: evento.id, dataEntrada: new Date().toISOString() });
+    mostrarAviso("ENTRADA MANUAL GUARDADA — SOBE QUANDO A INTERNET VOLTAR", true);
+  }
+  // Manda pro servidor tudo que ficou pendente. Roda quando a internet volta,
+  // ao entrar no sistema e junto com a atualização automática.
+  async function sincronizarFilaOffline() {
+    if (sincronizando || !navigator.onLine || !auth.currentUser) return;
+    const fila = lerFila();
+    if (!fila.length) return;
+
+    sincronizando = true;
+    atualizarAvisoOffline();
+    const restantes = [];
+    let enviadas = 0, jaConstavam = 0, recusadas = 0;
+
+    for (const item of fila) {
+      try {
+        if (item.tipo === "checkin") {
+          await api("checkin", { reservaId: item.reservaId, dataEntradaOffline: item.dataEntrada });
+        } else if (item.tipo === "entrada_manual") {
+          await api("entrada_manual", { nome: item.nome, eventoId: item.eventoId, dataEntradaOffline: item.dataEntrada });
+        }
+        enviadas++;
+      } catch (e) {
+        if (ehFalhaDeRede(e)) { restantes.push(item); continue; } // a internet caiu de novo
+        // O servidor respondeu recusando: repetir não resolve.
+        if (/j[áa] realizado/i.test(String(e?.message || ""))) jaConstavam++;
+        else { recusadas++; console.warn("sincronizacao recusada:", item, e?.message); }
+      }
+    }
+
+    salvarFila(restantes);
+    sincronizando = false;
+    atualizarAvisoOffline();
+
+    if (enviadas || recusadas || jaConstavam) {
+      const partes = [];
+      if (enviadas) partes.push(`${enviadas} ENVIADA(S)`);
+      if (jaConstavam) partes.push(`${jaConstavam} JÁ CONSTAVA(M)`);
+      if (recusadas) partes.push(`${recusadas} RECUSADA(S) — VER DASHBOARD`);
+      mostrarAviso(`SINCRONIZADO: ${partes.join(" · ")}`, recusadas === 0);
+    }
+    if (!restantes.length) await carregarBootstrap().catch(() => {});
   }
   function mensagemAuth(msg, sucesso=false) {
     const el = $("mensagem-auth");
@@ -262,10 +398,12 @@
     aplicarTemaPortaria(novo);
   });
   aplicarTemaPortaria(localStorage.getItem("eclub_portaria_tema_visual_v1") || "escuro");
-  window.addEventListener("offline", () => $("status-conexao").classList.remove("hidden"));
+  window.addEventListener("offline", () => atualizarAvisoOffline());
   window.addEventListener("online", () => {
-    $("status-conexao").classList.add("hidden");
-    if (auth.currentUser) carregarBootstrap().catch(()=>{});
+    atualizarAvisoOffline();
+    // Primeiro sobe o que ficou pendente, depois recarrega os números — nessa
+    // ordem, senão o total de check-ins apareceria desatualizado por um instante.
+    if (auth.currentUser) sincronizarFilaOffline().catch(()=>{});
   });
   // ===== RECUPERAÇÃO DE SENHA (self-service) =====
   // O operador informa o e-mail e recebe (se ele já tiver acesso liberado pelo
@@ -374,9 +512,14 @@
     $("interfacePrincipal").classList.remove("hidden");
     mensagemAuth("", true);
     garantirCandidatos().catch(()=>{}); // pré-carrega a lista da busca em segundo plano, sem travar o login
+    atualizarAvisoOffline();
+    sincronizarFilaOffline().catch(()=>{}); // sobe o que ficou pendente de uma queda anterior
     if (!bootstrapTimer) {
       bootstrapTimer = setInterval(() => {
-        if (auth.currentUser && !document.hidden) carregarBootstrap().catch(()=>{});
+        if (!auth.currentUser || document.hidden) return;
+        // Se sobrou coisa na fila, prioriza mandar ela antes de recarregar números.
+        if (lerFila().length) sincronizarFilaOffline().catch(()=>{});
+        else carregarBootstrap().catch(()=>{});
       }, 30000);
     }
   }
@@ -428,7 +571,26 @@
   function renderResultados(resultados, limitado=false) {
     const cont = $("container-resultados");
     if (!Array.isArray(resultados) || !resultados.length) {
-      cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>`;
+      // Sem internet, quem comprou online agorinha não está na lista guardada.
+      // Nesse caso (e só nesse) oferece a liberação manual pelo nome digitado.
+      const termo = $("input-busca").value.trim();
+      const evento = eventoAtivoAgora();
+      const podeManual = !navigator.onLine && termo.length >= 3 && evento;
+      cont.innerHTML = `
+        <div class="py-16 text-center">
+          <div class="font-black uppercase text-zinc-700 text-sm">Nenhum cliente encontrado na busca</div>
+          ${podeManual ? `
+          <div class="mt-8 mx-auto max-w-md p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/30">
+            <p class="text-[10px] font-black uppercase text-yellow-500 tracking-widest mb-2">Sem internet</p>
+            <p class="text-[11px] text-zinc-400 font-bold leading-relaxed mb-4">
+              Se essa pessoa comprou pela internet agora, ela ainda não está na lista desta máquina.
+              Você pode liberar manualmente — fica registrado para conferência.
+            </p>
+            <button type="button" data-manual="${escapeHtml(termo)}" class="btn-liberar px-6 py-3 rounded-xl font-black uppercase text-xs w-full">
+              Liberar manualmente: ${escapeHtml(termo)}
+            </button>
+          </div>` : ""}
+        </div>`;
       return;
     }
     const avisoLimite = limitado
@@ -528,6 +690,15 @@
       $("input-busca").focus();
       await carregarBootstrap();
     } catch (e) {
+      // Internet caiu: guarda a entrada na máquina e libera a pessoa na hora.
+      // A fila é enviada sozinha assim que a conexão voltar.
+      if (ehFalhaDeRede(e)) {
+        registrarCheckinOffline(reservaId);
+        $("input-busca").value = "";
+        $("container-resultados").innerHTML = "";
+        $("input-busca").focus();
+        return;
+      }
       if (e?.status === 401 || e?.status === 403) {
         await encerrarSessaoLocal(e.message || "Acesso não autorizado.");
         return;
@@ -536,6 +707,21 @@
       btn.disabled = false;
       btn.textContent = "LIBERAR";
     }
+  });
+  // Entrada manual — só aparece quando a internet está fora e a busca não achou
+  // ninguém. Serve pra quem comprou online durante a queda e por isso não está
+  // na lista que ficou guardada na máquina.
+  $("container-resultados").addEventListener("click", event => {
+    const btn = event.target.closest("button[data-manual]");
+    if (!btn) return;
+    const nome = btn.dataset.manual;
+    const evento = eventoAtivoAgora();
+    if (!evento) return mostrarAviso("Nenhum evento no ar agora para lançar entrada manual.");
+    if (!confirm(`LIBERAR ENTRADA MANUAL?\n\nNome: ${nome}\nEvento: ${evento.nome}\n\nEssa entrada vai ficar marcada para você conferir no Dashboard.`)) return;
+    registrarEntradaManualOffline(nome, evento);
+    $("input-busca").value = "";
+    $("container-resultados").innerHTML = "";
+    $("input-busca").focus();
   });
   $("painelLoginNormal").addEventListener("submit", async event => {
     event.preventDefault();
