@@ -192,6 +192,16 @@
         // banco a cada letra digitada.
         let listaCompletaCache = null;
         let carregandoListaCompleta = null;
+        // ===== MODO OFFLINE =====
+        // A lista fica guardada na própria máquina pra sobreviver a um reinício no
+        // meio da queda, e a fila guarda liberações e cadastros feitos sem internet
+        // até conseguir mandar pro servidor.
+        const CHAVE_LISTA_LOCAL = 'eclub_solteiras_lista_offline_v1';
+        const CHAVE_FILA_OFFLINE = 'eclub_solteiras_fila_offline_v1';
+        // Lista guardada há mais de 20h é descartada: evita liberar na noite
+        // seguinte usando dados da festa anterior.
+        const VALIDADE_LISTA_MS = 20 * 60 * 60 * 1000;
+        let sincronizando = false;
         // Limpa dado digitado por qualquer pessoa (nome, telefone, CPF, observação, motivo de
         // bloqueio etc.) antes de colocar na tela — evita que um valor com código HTML/script
         // rode dentro da sessão autenticada de quem usa o painel de Solteiras.
@@ -219,10 +229,11 @@
             aplicarTemaSolteiras(novo);
         });
         aplicarTemaSolteiras(localStorage.getItem('eclub_solteiras_tema_visual_v1') || 'claro');
-        window.addEventListener('offline', () => document.getElementById('status-conexao').classList.remove('hidden'));
+        window.addEventListener('offline', () => atualizarAvisoOffline());
         window.addEventListener('online', () => {
-            document.getElementById('status-conexao').classList.add('hidden');
-            if (auth.currentUser && sessionTokenAtual) atualizarPainelSeguro();
+            atualizarAvisoOffline();
+            // Primeiro sobe o que ficou pendente, depois atualiza os números.
+            if (auth.currentUser && sessionTokenAtual) sincronizarFilaOffline().catch(()=>{});
         });
         function normalizarDataNascimento(d) {
             if (!d) return null;
@@ -277,11 +288,71 @@
         // (10 em 10s, mesmo ritmo que o resto da tela já usa) só depois da
         // primeira vez que for carregada, então nunca fica desatualizada por mais
         // que isso enquanto a busca está em uso.
+        // ---- lista guardada na máquina ----
+        function salvarListaLocal(lista) {
+            try { localStorage.setItem(CHAVE_LISTA_LOCAL, JSON.stringify({em:Date.now(), lista})); } catch(_) {}
+        }
+        function lerListaLocal() {
+            try {
+                const bruto = localStorage.getItem(CHAVE_LISTA_LOCAL);
+                if (!bruto) return null;
+                const o = JSON.parse(bruto);
+                if (!o || !Array.isArray(o.lista)) return null;
+                if (Date.now() - Number(o.em || 0) > VALIDADE_LISTA_MS) return null;
+                return o.lista;
+            } catch(_) { return null; }
+        }
+        // ---- fila de operações feitas sem internet ----
+        function lerFila() {
+            try { const f = JSON.parse(localStorage.getItem(CHAVE_FILA_OFFLINE)); return Array.isArray(f) ? f : []; }
+            catch(_) { return []; }
+        }
+        function salvarFila(f) {
+            try { localStorage.setItem(CHAVE_FILA_OFFLINE, JSON.stringify(f)); } catch(_) {}
+            atualizarAvisoOffline();
+        }
+        function enfileirar(item) {
+            const f = lerFila();
+            f.push({...item, criadoEm:new Date().toISOString()});
+            salvarFila(f);
+        }
+        // Falha de rede (internet caiu) x erro do servidor (respondeu recusando).
+        // Rede a gente guarda pra depois; recusa do servidor não adianta repetir.
+        function ehFalhaDeRede(e) {
+            if (!navigator.onLine) return true;
+            if (e?.status) return false;
+            return e instanceof TypeError || /fetch|network|failed|load/i.test(String(e?.message || ''));
+        }
+        function atualizarAvisoOffline() {
+            const pendentes = lerFila().length;
+            const semNet = !navigator.onLine;
+            const el = document.getElementById('status-conexao');
+            if (!el) return;
+            if (!semNet && !pendentes) { el.classList.add('hidden'); return; }
+            el.classList.remove('hidden');
+            el.classList.toggle('bg-red-600', semNet);
+            el.classList.toggle('bg-yellow-600', !semNet);
+            el.textContent = semNet
+                ? `🔴 SEM INTERNET — OPERAÇÃO CONTINUA NORMAL${pendentes ? ` · ${pendentes} PENDENTE(S)` : ''}`
+                : `🟡 ENVIANDO ${pendentes} REGISTRO(S) FEITO(S) SEM INTERNET...`;
+        }
         function garantirListaCompleta() {
             if (listaCompletaCache) return Promise.resolve(listaCompletaCache);
             if (!carregandoListaCompleta) {
                 carregandoListaCompleta = apiSolteiras('listar_tudo')
-                    .then(data => { listaCompletaCache = Array.isArray(data.clientes) ? data.clientes : []; return listaCompletaCache; })
+                    .then(data => {
+                        listaCompletaCache = Array.isArray(data.clientes) ? data.clientes : [];
+                        salvarListaLocal(listaCompletaCache);
+                        return listaCompletaCache;
+                    })
+                    .catch(e => {
+                        // Sem internet: usa a lista guardada na máquina. É isso que
+                        // permite continuar liberando durante a queda, inclusive se o
+                        // computador tiver sido reiniciado no meio.
+                        const local = lerListaLocal();
+                        if (local) { listaCompletaCache = local; return listaCompletaCache; }
+                        throw e;
+                    })
                     .finally(() => { carregandoListaCompleta = null; });
             }
             return carregandoListaCompleta;
@@ -289,8 +360,113 @@
         function atualizarListaCompletaEmSegundoPlano() {
             if (!listaCompletaCache) return;
             apiSolteiras('listar_tudo').then(data => {
-                listaCompletaCache = Array.isArray(data.clientes) ? data.clientes : [];
+                const novos = Array.isArray(data.clientes) ? data.clientes : [];
+                // Não deixa a lista do servidor apagar o que ainda está na fila:
+                // clientes cadastradas offline sumiriam da busca até subirem.
+                const fila = lerFila();
+                const idsPendentes = new Set(fila.filter(i => i.tipo === 'checkin').map(i => i.clienteId));
+                if (idsPendentes.size) {
+                    novos.forEach(c => { if (idsPendentes.has(c.id)) c.ultima_visita = new Date().toISOString(); });
+                }
+                fila.filter(i => i.tipo === 'cadastro').forEach(i => {
+                    if (!novos.some(c => c.id === i.cliente.id)) novos.push(i.cliente);
+                });
+                listaCompletaCache = novos;
+                salvarListaLocal(listaCompletaCache);
             }).catch(() => {});
+        }
+        // ---- operações offline ----
+        function registrarCheckinOffline(id) {
+            enfileirar({tipo:'checkin', clienteId:id, dataEntrada:new Date().toISOString()});
+            if (Array.isArray(listaCompletaCache)) {
+                const c = listaCompletaCache.find(x => x.id === id);
+                if (c) c.ultima_visita = new Date().toISOString();
+                salvarListaLocal(listaCompletaCache);
+            }
+            const idx = clientesCache.findIndex(x => x.id === id);
+            if (idx >= 0) clientesCache[idx].ultima_visita = new Date().toISOString();
+            mostrarAviso('SEM INTERNET — LIBERADA E GUARDADA', true);
+        }
+        // Cliente nova cadastrada durante a queda ganha um código temporário só
+        // pra aparecer na busca da própria máquina. Quando a internet volta, o
+        // servidor cria o cadastro de verdade e o temporário é descartado.
+        function registrarCadastroOffline(dados) {
+            const idTemp = 'local_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+            const cliente = {
+                id: idTemp,
+                nome: String(dados.nome || '').toUpperCase(),
+                tel: dados.tel || '',
+                cpf: dados.cpf || '',
+                data_nascimento: dados.data_nascimento || '',
+                obs: dados.obs || '',
+                bloqueada: false,
+                motivo_bloqueio: '',
+                ultima_visita: new Date().toISOString(),
+                pendente_envio: true
+            };
+            enfileirar({tipo:'cadastro', cliente, dados, dataEntrada:new Date().toISOString()});
+            if (Array.isArray(listaCompletaCache)) {
+                listaCompletaCache.push(cliente);
+                salvarListaLocal(listaCompletaCache);
+            }
+            clientesCache.push(cliente);
+            mostrarAviso('SEM INTERNET — CADASTRADA E LIBERADA', true);
+        }
+        // Confere duplicidade de CPF/telefone na lista guardada, quando não dá pra
+        // perguntar ao servidor.
+        function duplicidadeLocal(cpf, tel) {
+            const lista = listaCompletaCache || [];
+            const soDigitos = v => String(v || '').replace(/\D/g, '');
+            const c = soDigitos(cpf), t = soDigitos(tel);
+            return lista.find(x =>
+                (c && soDigitos(x.cpf) === c) || (t && soDigitos(x.tel) === t)
+            ) || null;
+        }
+        // Manda pro servidor tudo que ficou pendente.
+        async function sincronizarFilaOffline() {
+            if (sincronizando || !navigator.onLine || !auth.currentUser || !sessionTokenAtual) return;
+            const fila = lerFila();
+            if (!fila.length) return;
+
+            sincronizando = true;
+            atualizarAvisoOffline();
+            const restantes = [];
+            let enviados = 0, jaConstavam = 0, recusados = 0;
+
+            for (const item of fila) {
+                try {
+                    if (item.tipo === 'checkin') {
+                        await apiSolteiras('checkin', {id:item.clienteId, dataEntradaOffline:item.dataEntrada});
+                    } else if (item.tipo === 'cadastro') {
+                        await apiSolteiras('salvar_cliente', {...item.dados, id:'', dataEntradaOffline:item.dataEntrada});
+                    }
+                    enviados++;
+                } catch (e) {
+                    if (ehFalhaDeRede(e)) { restantes.push(item); continue; }
+                    // Servidor recusou: repetir não resolve. Cadastro duplicado
+                    // acontece quando outra máquina já cadastrou a mesma cliente.
+                    if (/já cadastrado|ja cadastrado/i.test(String(e?.message || ''))) jaConstavam++;
+                    else { recusados++; console.warn('sincronizacao recusada:', item, e?.message); }
+                }
+            }
+
+            salvarFila(restantes);
+            sincronizando = false;
+            atualizarAvisoOffline();
+
+            if (enviados || recusados || jaConstavam) {
+                const partes = [];
+                if (enviados) partes.push(`${enviados} ENVIADO(S)`);
+                if (jaConstavam) partes.push(`${jaConstavam} JÁ CONSTAVA(M)`);
+                if (recusados) partes.push(`${recusados} RECUSADO(S)`);
+                mostrarAviso(`SINCRONIZADO: ${partes.join(' · ')}`, recusados === 0);
+            }
+            if (!restantes.length) {
+                // Descarta os códigos temporários e recarrega tudo do servidor.
+                listaCompletaCache = null;
+                await garantirListaCompleta().catch(() => {});
+                await atualizarPainelSeguro();
+            }
         }
         window.mostrarAviso = (msg,isSucesso=false) => {
             const toast=document.getElementById('toast-aviso');
@@ -366,6 +542,8 @@
             document.getElementById('telaLogin').classList.add('hidden'); document.getElementById('conteudo-sistema').classList.remove('hidden');
             await atualizarPainelSeguro(); iniciarAtualizacaoPeriodica();
             garantirListaCompleta().catch(()=>{}); // pré-carrega a lista da busca em segundo plano, sem travar o login
+            atualizarAvisoOffline();
+            sincronizarFilaOffline().catch(()=>{}); // sobe o que ficou de uma queda anterior
         }
         async function bloquearTelaSessao(msg) {
             if (intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao=null;
@@ -389,7 +567,14 @@
                 else console.error(e);
             }
         }
-        function iniciarAtualizacaoPeriodica(){ if(intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao=setInterval(atualizarPainelSeguro,10000); }
+        function iniciarAtualizacaoPeriodica(){
+            if(intervaloAtualizacao) clearInterval(intervaloAtualizacao);
+            intervaloAtualizacao=setInterval(()=>{
+                // Se sobrou coisa na fila, prioriza mandar ela antes de atualizar.
+                if (lerFila().length) sincronizarFilaOffline().catch(()=>{});
+                else atualizarPainelSeguro();
+            },10000);
+        }
         window.verificarOuLogar = async (event) => {
             if (event) event.preventDefault();
             const email=document.getElementById('inputNomeUsuario').value.trim().toLowerCase();
@@ -410,7 +595,21 @@
             window.mostrarLoginNormalSolteiras?.();
         };
         function limparFocarBusca(){const c=document.getElementById('buscaCliente');c.value='';render(clientesCache,false);c.focus();}
-        window.dispararCheckin = async id => { try{await apiSolteiras('checkin',{id});mostrarAviso('Liberada com sucesso!',true);limparFocarBusca();await atualizarPainelSeguro();}catch(e){mostrarAviso(e.message||'Erro ao liberar a cliente!');} };
+        window.dispararCheckin = async id => {
+            // Cliente cadastrada offline ainda não existe no servidor: a liberação
+            // dela já foi registrada junto com o cadastro, não precisa de outra.
+            if (String(id).startsWith('local_')) { mostrarAviso('JÁ LIBERADA — SOBE QUANDO A INTERNET VOLTAR', true); limparFocarBusca(); return; }
+            try {
+                await apiSolteiras('checkin',{id});
+                mostrarAviso('Liberada com sucesso!',true);
+                limparFocarBusca();
+                await atualizarPainelSeguro();
+            } catch(e) {
+                // Internet caiu: libera na hora e guarda pra enviar depois.
+                if (ehFalhaDeRede(e)) { registrarCheckinOffline(id); limparFocarBusca(); return; }
+                mostrarAviso(e.message||'Erro ao liberar a cliente!');
+            }
+        };
         window.bloquearDesbloquear = async (id,acaoBloquear) => {
             try{
                 if(acaoBloquear){const motivo=prompt('Qual o motivo do bloqueio?');if(!motivo)return;await apiSolteiras('bloquear',{id,motivo});mostrarAviso('Cliente bloqueada!',true);}
@@ -448,12 +647,36 @@
         window.validarDuplicidade=async()=>{
             const cpf=document.getElementById('cpf').value,tel=document.getElementById('tel').value;
             if(cpf.replace(/\D/g,'').length<11&&tel.replace(/\D/g,'').length<10)return;
-            try{const data=await apiSolteiras('duplicidade',{cpf,tel,excludeId:document.getElementById('editId').value});if(!data.duplicado||!data.cliente)return;const c=data.cliente;if(c.bloqueada){mostrarAviso(`🚨 PROIBIDA! Motivo: ${c.motivo_bloqueio||'Sem motivo.'}`);window.limparFormulario();return;}if(!clientesCache.some(x=>x.id===c.id))clientesCache.push(c);if(confirm(`CLIENTE ENCONTRADA: ${c.nome}\n\nOK: Fazer Check-in (Ela já pagou).\nCANCELAR: Editar dados dela.`)){await window.dispararCheckin(c.id);window.limparFormulario();}else window.prepararEdicao(c.id);}catch(e){mostrarAviso(e.message||'Erro ao verificar cadastro.');}
+            try{
+                let data;
+                try { data=await apiSolteiras('duplicidade',{cpf,tel,excludeId:document.getElementById('editId').value}); }
+                catch(erro){
+                    // Sem internet: confere na lista guardada na máquina em vez de
+                    // simplesmente deixar passar (o que criaria cadastro duplicado).
+                    if (!ehFalhaDeRede(erro)) throw erro;
+                    const achou = duplicidadeLocal(cpf, tel);
+                    data = achou ? {duplicado:true, cliente:achou} : {duplicado:false};
+                }
+                if(!data.duplicado||!data.cliente)return;const c=data.cliente;if(c.bloqueada){mostrarAviso(`🚨 PROIBIDA! Motivo: ${c.motivo_bloqueio||'Sem motivo.'}`);window.limparFormulario();return;}if(!clientesCache.some(x=>x.id===c.id))clientesCache.push(c);if(confirm(`CLIENTE ENCONTRADA: ${c.nome}\n\nOK: Fazer Check-in (Ela já pagou).\nCANCELAR: Editar dados dela.`)){await window.dispararCheckin(c.id);window.limparFormulario();}else window.prepararEdicao(c.id);}catch(e){mostrarAviso(e.message||'Erro ao verificar cadastro.');}
         };
         document.getElementById('formSolteira').addEventListener('submit',async e=>{
             e.preventDefault();const btn=document.getElementById('btnSalvar'),idEx=document.getElementById('editId').value;btn.disabled=true;btn.innerText='SALVANDO...';
-            try{await apiSolteiras('salvar_cliente',{id:idEx,nome:document.getElementById('nome').value,tel:document.getElementById('tel').value,cpf:document.getElementById('cpf').value,data_nascimento:document.getElementById('nascimento').value,obs:document.getElementById('obs').value});mostrarAviso(idEx?'Dados atualizados e entrada registrada!':'Cadastro salvo e liberado!',true);window.limparFormulario();limparFocarBusca();await atualizarPainelSeguro();}
-            catch(e){mostrarAviso(e.message||'Erro ao salvar os dados!');}
+            const dados={id:idEx,nome:document.getElementById('nome').value,tel:document.getElementById('tel').value,cpf:document.getElementById('cpf').value,data_nascimento:document.getElementById('nascimento').value,obs:document.getElementById('obs').value};
+            try{await apiSolteiras('salvar_cliente',dados);mostrarAviso(idEx?'Dados atualizados e entrada registrada!':'Cadastro salvo e liberado!',true);window.limparFormulario();limparFocarBusca();await atualizarPainelSeguro();}
+            catch(e){
+                // Internet caiu no meio do cadastro.
+                if (ehFalhaDeRede(e)) {
+                    // Edição de cadastro existente NÃO é enfileirada: sem o servidor
+                    // não dá pra garantir em cima de qual versão a alteração entra, e
+                    // sobrescrever depois poderia apagar mudança feita em outra máquina.
+                    if (idEx) { mostrarAviso('SEM INTERNET — EDIÇÃO SÓ QUANDO A CONEXÃO VOLTAR'); }
+                    else {
+                        const jaExiste = duplicidadeLocal(dados.cpf, dados.tel);
+                        if (jaExiste) { mostrarAviso(`JÁ CADASTRADA: ${jaExiste.nome}`); }
+                        else { registrarCadastroOffline(dados); window.limparFormulario(); limparFocarBusca(); }
+                    }
+                } else mostrarAviso(e.message||'Erro ao salvar os dados!');
+            }
             finally{btn.disabled=false;btn.innerText=idEx?'ATUALIZAR DADOS':'Confirmar e Liberar';}
         });
         // Busca agora filtra em cima do cache local (garantirListaCompleta), carregado
@@ -475,7 +698,7 @@
             if(authReady)return;authReady=true;
             if(!user){document.getElementById('telaLogin').classList.remove('hidden');window.mostrarLoginNormalSolteiras?.();return;}
             if(!sessionTokenAtual){try{await signOut(auth);}catch(_){}return;}
-            try{const data=await apiSolteiras('bootstrap');operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();garantirListaCompleta().catch(()=>{});}
+            try{const data=await apiSolteiras('bootstrap');operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();garantirListaCompleta().catch(()=>{});atualizarAvisoOffline();sincronizarFilaOffline().catch(()=>{});}
             catch(_){sessionTokenAtual='';sessionStorage.removeItem('eclub_solteiras_session');try{await signOut(auth);}catch(_){}}
         });
     </script>
