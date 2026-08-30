@@ -143,6 +143,10 @@
                 <button onclick="sairSistema()" class="bg-red-100 border border-red-300 text-red-600 px-4 py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-red-200 transition-colors">Sair</button>
             </div>
         </header>
+        <div id="faixaTravaTurno" class="hidden mb-8 rounded-3xl border-2 border-red-500 bg-red-50 p-5 text-center">
+            <p class="text-red-700 font-black uppercase italic text-lg leading-tight">🔒 <span id="faixaTravaMotivo">CASA FECHADA</span></p>
+            <p class="text-red-600 font-bold uppercase text-[10px] tracking-widest mt-2">Liberar entrada e cadastro novo estão bloqueados. Consultar e editar continuam liberados.</p>
+        </div>
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
             <aside class="lg:col-span-1">
                 <div class="glass-card p-6 rounded-[2rem] sticky top-8">
@@ -562,7 +566,9 @@
         // pra operadora ver o cadeado antes de clicar em vez de tomar um erro.
         let turnoAtual = null;
         function pintarTurno(t) {
+            const antes = turnoAtual ? String(turnoAtual.aberto) : 'nulo';
             turnoAtual = t || null;
+            const mudou = antes !== (turnoAtual ? String(turnoAtual.aberto) : 'nulo');
             const el = document.getElementById('statusTurno');
             const caixa = document.getElementById('caixaTurno');
             if (!el || !caixa) return;
@@ -575,6 +581,40 @@
                 el.innerText = `🔒 ${t.motivo || 'TRAVADO'}`;
                 el.className = 'text-[11px] font-black uppercase leading-tight mt-1 text-red-600';
                 caixa.className = 'bg-red-50 border border-red-300 p-3 rounded-2xl text-center min-w-[190px]';
+            }
+            const faixa = document.getElementById('faixaTravaTurno');
+            if (faixa) {
+                if (travadoAgora()) {
+                    document.getElementById('faixaTravaMotivo').innerText =
+                        t.motivo === 'SEM EVENTO ATIVO PARA HOJE' ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE' : 'CASA FECHADA — FORA DO HORÁRIO (21H ÀS 8H)';
+                    faixa.classList.remove('hidden');
+                } else faixa.classList.add('hidden');
+            }
+            aplicarTravaNoFormulario();
+            // Os botões "Liberar" da lista são desenhados pelo render(): se o
+            // estado virou, redesenha pra eles trocarem de cara na hora.
+            if (mudou && Array.isArray(clientesCache)) {
+                try { render(clientesCache, !!document.getElementById('buscaCliente')?.value.trim()); } catch (_) {}
+            }
+        }
+        function travadoAgora() {
+            // Sem internet a tela não tem como saber o estado real, então não trava:
+            // o registro entra pela fila offline com o horário verdadeiro e o
+            // servidor decide na hora de sincronizar.
+            return !!(navigator.onLine && turnoAtual && !turnoAtual.aberto);
+        }
+        function aplicarTravaNoFormulario() {
+            const btn = document.getElementById('btnSalvar');
+            if (!btn) return;
+            const editando = !!document.getElementById('editId')?.value;
+            if (travadoAgora() && !editando) {
+                btn.disabled = true;
+                btn.innerText = '🔒 TRAVADO';
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.innerText = editando ? 'ATUALIZAR DADOS' : 'Confirmar e Liberar';
             }
         }
         // Só bloqueia na tela quando TEM internet e o servidor disse que está
@@ -659,7 +699,7 @@
             const c=clientesCache.find(x=>x.id===id); if(!c)return;
             const norm=normalizarDataNascimento(c.data_nascimento||c.nascimento);
             document.getElementById('editId').value=c.id; document.getElementById('nome').value=c.nome||''; document.getElementById('tel').value=c.tel||''; document.getElementById('cpf').value=c.cpf||''; document.getElementById('nascimento').value=norm?norm.raw:''; document.getElementById('obs').value=c.obs||'';
-            window.updateIdade(norm?norm.raw:null); document.getElementById('btnSalvar').innerText='ATUALIZAR DADOS'; document.getElementById('btnCancelarEdicao').classList.remove('hidden'); document.getElementById('tituloForm').scrollIntoView({behavior:'smooth'});
+            window.updateIdade(norm?norm.raw:null); document.getElementById('btnSalvar').innerText='ATUALIZAR DADOS'; aplicarTravaNoFormulario(); document.getElementById('btnCancelarEdicao').classList.remove('hidden'); document.getElementById('tituloForm').scrollIntoView({behavior:'smooth'});
         };
         function render(dados,isBusca=false){
             const container=document.getElementById('listaSolteiras'), corte=corteTurno();
@@ -673,7 +713,10 @@
                 let painel='',info='';
                 if(c.bloqueada){info=`<div class="mt-3 bg-red-100 p-3 rounded-xl border border-red-300"><span class="text-[9px] font-black uppercase text-red-600 block mb-1">🚨 PROIBIDA A ENTRADA. MOTIVO:</span><span class="text-xs font-bold text-zinc-900">${escapeHtml(c.motivo_bloqueio)||'Sem motivo detalhado.'}</span></div>`;painel=`<div class="flex flex-col items-end gap-2"><button onclick="bloquearDesbloquear('${c.id}', false)" class="bg-red-600 text-white hover:bg-red-700 px-6 py-4 rounded-xl text-[10px] font-black uppercase transition-all mb-1 shadow-md">Desbloquear 🔓</button><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button></div>`;}
                 else if(naCasa){painel=`<div class="flex flex-col items-end gap-2"><span class="text-green-600 text-3xl font-black">✓</span><div class="flex gap-4 mt-2"><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-[10px] font-black uppercase text-red-500 opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button></div></div>`;}
-                else{painel=`<div class="flex flex-col items-end gap-2"><button onclick="dispararCheckin('${c.id}')" class="bg-green-600 text-white px-8 py-4 rounded-xl text-[11px] font-black uppercase hover:bg-green-500 transition-all shadow-[0_4px_10px_rgba(22,163,74,0.3)] w-[130px]">Liberar</button><div class="flex gap-4 mt-2 w-[130px] justify-center"><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-red-500 text-[10px] font-black uppercase opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button></div></div>`;}
+                else{const btnLiberar = travadoAgora()
+                        ? `<button type="button" disabled title="Casa fechada" class="bg-zinc-400 text-white px-8 py-4 rounded-xl text-[11px] font-black uppercase w-[130px] opacity-60 cursor-not-allowed">🔒 Travado</button>`
+                        : `<button onclick="dispararCheckin('${c.id}')" class="bg-green-600 text-white px-8 py-4 rounded-xl text-[11px] font-black uppercase hover:bg-green-500 transition-all shadow-[0_4px_10px_rgba(22,163,74,0.3)] w-[130px]">Liberar</button>`;
+                    painel=`<div class="flex flex-col items-end gap-2">${btnLiberar}<div class="flex gap-4 mt-2 w-[130px] justify-center"><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-red-500 text-[10px] font-black uppercase opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button></div></div>`;}
                 div.innerHTML=`<div class="flex-grow pr-4 w-full"><div class="flex flex-wrap items-center gap-2 mb-2"><h3 class="text-xl font-black uppercase ${c.bloqueada?'text-red-600':'text-zinc-900'}">${escapeHtml(c.nome)}</h3><span class="text-zinc-600 font-bold text-sm bg-zinc-200 px-2 py-0.5 rounded-lg border border-zinc-300">📱 ${escapeHtml(c.tel)||'---'}</span>${isNiver&&!c.bloqueada?'<span class="bg-yellow-400 text-black px-4 py-1.5 rounded-xl text-[10px] font-black border-2 border-yellow-600 shadow-[0_3px_10px_rgba(234,179,8,0.35)] uppercase tracking-widest animate-pulse">🎂 ANIVERSARIANTE DA SEMANA</span>':''}</div><p class="text-[11px] text-zinc-500 font-bold uppercase mt-1">🆔 <span class="text-zinc-700">${escapeHtml(c.cpf)||'---'}</span> | 📅 VISITA: <span class="${naCasa?'text-green-600 font-black':'text-zinc-700'}">${textoVisita}</span> | 🎂 NIVER: <span class="${isNiver&&!c.bloqueada?'text-yellow-800 bg-yellow-200 px-2 py-0.5 rounded-lg border border-yellow-500 font-black':'text-zinc-700'}">${niverData}</span></p>${c.obs&&!c.bloqueada?`<p class="mt-3 text-[10px] font-bold text-blue-700 uppercase bg-blue-50 inline-block px-3 py-1 rounded border border-blue-200">📌 ${escapeHtml(c.obs)}</p>`:''}${info}</div><div class="flex-none text-right">${painel}</div>`;
                 container.appendChild(div);
             });
@@ -681,7 +724,7 @@
         window.maskCPF=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');i.value=v;};
         window.maskTel=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d)(\d{4})$/,'$1-$2');i.value=v;};
         window.updateIdade=v=>{if(!v){document.getElementById('idadeDisplay').innerText='--';return;}const norm=normalizarDataNascimento(v);if(!norm){document.getElementById('idadeDisplay').innerText='--';return;}const h=new Date(),n=new Date(norm.raw+'T12:00:00');let i=h.getFullYear()-n.getFullYear();if(h.getMonth()<n.getMonth()||(h.getMonth()===n.getMonth()&&h.getDate()<n.getDate()))i--;document.getElementById('idadeDisplay').innerText=isNaN(i)?'--':i;};
-        window.limparFormulario=()=>{document.getElementById('formSolteira').reset();document.getElementById('editId').value='';document.getElementById('btnSalvar').innerText='Confirmar e Liberar';document.getElementById('btnCancelarEdicao').classList.add('hidden');document.getElementById('idadeDisplay').innerText='--';};
+        window.limparFormulario=()=>{document.getElementById('formSolteira').reset();document.getElementById('editId').value='';document.getElementById('btnSalvar').innerText='Confirmar e Liberar';document.getElementById('btnCancelarEdicao').classList.add('hidden');document.getElementById('idadeDisplay').innerText='--';aplicarTravaNoFormulario();};
         window.validarDuplicidade=async()=>{
             const cpf=document.getElementById('cpf').value,tel=document.getElementById('tel').value;
             if(cpf.replace(/\D/g,'').length<11&&tel.replace(/\D/g,'').length<10)return;
