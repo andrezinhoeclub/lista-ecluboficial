@@ -649,14 +649,21 @@
             if (!isNaN(val) && Number(val) > 10000) return new Date(Math.round((Number(val) - 25569) * 86400 * 1000)).getTime();
             return 0;
         };
+        // JANELA FIXA DE FUNCIONAMENTO DA CASA: 21h do dia do evento até 8h da
+        // manhã seguinte. Só o que acontece dentro dela conta como presença.
+        // Antes a contagem abria ao meio-dia, então qualquer movimento na tela de
+        // Solteiras durante a tarde já entrava na conta da noite — a festa das 21h
+        // aparecia com presenças desde as 12h, com a casa ainda fechada.
+        const HORA_ABERTURA = 21;   // 21h do dia do evento
+        const HORA_FECHAMENTO = 8;  // 8h da manhã seguinte
         const getSolteirasParaEvento = (ev) => {
             if (!ev || !ev.data) return [];
             const partesData = ev.data.split('-');
             if(partesData.length < 3) return [];
-            const inicioEvento = new Date(partesData[0], partesData[1] - 1, partesData[2], 12, 0, 0);
-            const fimEvento = new Date(inicioEvento);
+            const inicioEvento = new Date(partesData[0], partesData[1] - 1, partesData[2], HORA_ABERTURA, 0, 0);
+            const fimEvento = new Date(partesData[0], partesData[1] - 1, partesData[2], HORA_ABERTURA, 0, 0);
             fimEvento.setDate(fimEvento.getDate() + 1);
-            fimEvento.setHours(6, 0, 0, 0);
+            fimEvento.setHours(HORA_FECHAMENTO, 0, 0, 0);
             const presPortaria = dadosSolteiras.filter(s => {
                 let d = parseVisita(s.ultima_visita);
                 return d && !isNaN(d) && d >= inicioEvento && d <= fimEvento;
@@ -665,7 +672,20 @@
             const presSite = dadosReservas.filter(r => {
                 if (!r.entrou) return false;
                 if (!mesmaChaveReservaEclub(r.evento, ev.nome)) return false;
-                return String(r.tipo_entrada).toUpperCase().includes('SOLTEIRA');
+                if (!String(r.tipo_entrada).toUpperCase().includes('SOLTEIRA')) return false;
+                // A MESMA janela de 21h-08h vale aqui. Esta é a segunda fonte da
+                // contagem: cada liberação na tela de Solteiras também cria um
+                // registro de entrada no evento. Sem este filtro, uma liberação
+                // feita de tarde continuava sendo contada pelo outro caminho —
+                // foi por isso que as presenças de antes das 21h não sumiram na
+                // primeira correção.
+                const dEnt = parseVisita(r.data_entrada);
+                // Registro sem horário gravado (base antiga) continua contando: não
+                // dá pra saber se foi dentro ou fora do horário, e descartar mudaria
+                // número de evento passado sem motivo. Só é excluído o que a gente
+                // SABE que ficou fora da janela.
+                if (!dEnt || isNaN(dEnt)) return true;
+                return dEnt >= inicioEvento && dEnt <= fimEvento;
             });
             const unicas = []; const map = new Map();
             for (const c of [...presPortaria, ...presSite]) {
@@ -1798,13 +1818,62 @@ No próximo acesso, o funcionário deverá criar uma nova senha.`)) return;
             if(textArea) { textArea.value = copyText; if(painel) painel.classList.remove('hidden'); }
         };
         window.copiarTextoMarketing = () => { document.getElementById('texto-copy-gerado').select(); document.execCommand('copy'); mostrarAviso("Copy de vendas copiado!", true); };
+        // ===== COMPRESSÃO DA CAPA DO EVENTO =====
+        // Antes isso subia o arquivo exatamente como saiu do celular/designer. Um
+        // cartaz de 3 a 8 MB era baixado INTEIRO por cada pessoa que abria a página
+        // de listas — e essa era a razão principal da página demorar pra abrir e as
+        // imagens da programação aparecerem devagar.
+        // Aqui a imagem é reduzida no próprio navegador antes de subir: no máximo
+        // 1400px no lado maior e qualidade 82%, o que na prática deixa o arquivo em
+        // torno de 150-350 KB sem diferença visível na tela. Se qualquer coisa der
+        // errado na conversão, sobe o arquivo original — nunca deixa de salvar.
+        const CAPA_LADO_MAXIMO = 1400;
+        const CAPA_QUALIDADE = 0.82;
+        function comprimirCapa(arquivo) {
+            return new Promise(resolve => {
+                // PNG com transparência e GIF animado passam direto: converter
+                // estragaria o visual. Só JPEG/PNG grandes são reprocessados.
+                if (!arquivo || !arquivo.type.startsWith('image/') || arquivo.type === 'image/gif') return resolve(arquivo);
+                if (arquivo.size <= 400 * 1024) return resolve(arquivo); // já está pequeno
+                const url = URL.createObjectURL(arquivo);
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const escala = Math.min(1, CAPA_LADO_MAXIMO / Math.max(img.width, img.height));
+                        const largura = Math.round(img.width * escala);
+                        const altura = Math.round(img.height * escala);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = largura; canvas.height = altura;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, largura, altura);
+                        canvas.toBlob(blob => {
+                            URL.revokeObjectURL(url);
+                            // Só usa a versão comprimida se ela ficou realmente menor.
+                            if (!blob || blob.size >= arquivo.size) return resolve(arquivo);
+                            const nomeBase = (arquivo.name || 'capa').replace(/\.[^.]+$/, '');
+                            resolve(new File([blob], `${nomeBase}.jpg`, { type: 'image/jpeg' }));
+                        }, 'image/jpeg', CAPA_QUALIDADE);
+                    } catch (_) {
+                        URL.revokeObjectURL(url);
+                        resolve(arquivo);
+                    }
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); resolve(arquivo); };
+                img.src = url;
+            });
+        }
         document.getElementById('formEvento').addEventListener('submit', async e => {
             e.preventDefault(); const btn = document.getElementById('btnSalvarEvento'); btn.innerText = "SALVANDO..."; btn.disabled = true;
             try {
                 const id = document.getElementById('edit_evento_id').value; const arq = document.getElementById('upload_capa').files[0]; let url = document.getElementById('url_imagem_atual').value;
                 const urlImagemAntiga = url;
                 if (arq) {
-                    const sr = ref(storage, `eventos/${Date.now()}_${arq.name}`); await uploadBytes(sr, arq); url = await getDownloadURL(sr);
+                    btn.innerText = "OTIMIZANDO IMAGEM...";
+                    const arqOtimizado = await comprimirCapa(arq);
+                    btn.innerText = "SALVANDO...";
+                    const sr = ref(storage, `eventos/${Date.now()}_${arqOtimizado.name}`); await uploadBytes(sr, arqOtimizado); url = await getDownloadURL(sr);
                     // Troca de capa: a imagem antiga deixa de estar ligada a qualquer evento,
                     // então apaga ela do armazenamento pra não acumular arquivo órfão.
                     if (urlImagemAntiga && urlImagemAntiga.includes('firebasestorage') && urlImagemAntiga !== url) {
