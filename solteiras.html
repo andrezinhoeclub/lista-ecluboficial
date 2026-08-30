@@ -132,6 +132,10 @@
                 </div>
             </div>
             <div class="flex items-center gap-4">
+                <div id="caixaTurno" class="bg-zinc-100 border border-zinc-300 p-3 rounded-2xl text-center min-w-[190px]">
+                    <p class="text-[9px] font-black text-zinc-600 uppercase">Situação da Casa</p>
+                    <p id="statusTurno" class="text-sm font-black uppercase leading-tight mt-1 text-zinc-500">VERIFICANDO...</p>
+                </div>
                 <div class="bg-zinc-100 border border-zinc-300 p-3 rounded-2xl text-center min-w-[120px]">
                     <p class="text-[9px] font-black text-zinc-600 uppercase">Check-ins Turno</p>
                     <p id="contagemEvento" class="text-2xl font-black text-green-600 leading-none mt-1">0</p>
@@ -552,10 +556,43 @@
             document.getElementById('telaBloqueio').classList.remove('hidden'); document.getElementById('telaBloqueio').classList.add('flex');
             mostrarAviso(msg || '🚨 CONEXÃO ENCERRADA.');
         }
+        // ===== SITUAÇÃO DA CASA (aberto / travado) =====
+        // Quem manda de verdade é o servidor: ele recusa liberar e cadastrar fora
+        // do horário ou em dia sem evento. O que está aqui é só o aviso na tela,
+        // pra operadora ver o cadeado antes de clicar em vez de tomar um erro.
+        let turnoAtual = null;
+        function pintarTurno(t) {
+            turnoAtual = t || null;
+            const el = document.getElementById('statusTurno');
+            const caixa = document.getElementById('caixaTurno');
+            if (!el || !caixa) return;
+            if (!t) { el.innerText='VERIFICANDO...'; el.className='text-sm font-black uppercase leading-tight mt-1 text-zinc-500'; return; }
+            if (t.aberto) {
+                el.innerText = t.motivo ? `● ABERTO (${t.motivo})` : '● ABERTO';
+                el.className = 'text-sm font-black uppercase leading-tight mt-1 text-green-600';
+                caixa.className = 'bg-green-50 border border-green-300 p-3 rounded-2xl text-center min-w-[190px]';
+            } else {
+                el.innerText = `🔒 ${t.motivo || 'TRAVADO'}`;
+                el.className = 'text-[11px] font-black uppercase leading-tight mt-1 text-red-600';
+                caixa.className = 'bg-red-50 border border-red-300 p-3 rounded-2xl text-center min-w-[190px]';
+            }
+        }
+        // Só bloqueia na tela quando TEM internet e o servidor disse que está
+        // travado. Sem internet a tela não tem como saber, então deixa passar e
+        // o registro entra pela fila offline com o horário real.
+        function turnoBloqueadoNaTela() {
+            if (!navigator.onLine) return false;
+            if (!turnoAtual || turnoAtual.aberto) return false;
+            mostrarAviso(turnoAtual.motivo === 'SEM EVENTO ATIVO PARA HOJE'
+                ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE — PEÇA LIBERAÇÃO AO ADMINISTRADOR'
+                : 'CASA FECHADA (21H ÀS 8H) — PEÇA LIBERAÇÃO AO ADMINISTRADOR');
+            return true;
+        }
         async function atualizarPainelSeguro() {
             if (!auth.currentUser || !sessionTokenAtual) return;
             try {
                 const data=await apiSolteiras('bootstrap');
+                pintarTurno(data.turno);
                 operadorLogado=data.operator || operadorLogado; eventoHojeCache=data.eventoHoje || null; clientesCache=Array.isArray(data.clientes)?data.clientes:[];
                 document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();
                 document.getElementById('contagemEvento').innerText=Number(data.contagemTurno || clientesCache.length);
@@ -599,6 +636,7 @@
             // Cliente cadastrada offline ainda não existe no servidor: a liberação
             // dela já foi registrada junto com o cadastro, não precisa de outra.
             if (String(id).startsWith('local_')) { mostrarAviso('JÁ LIBERADA — SOBE QUANDO A INTERNET VOLTAR', true); limparFocarBusca(); return; }
+            if (turnoBloqueadoNaTela()) return;
             try {
                 await apiSolteiras('checkin',{id});
                 mostrarAviso('Liberada com sucesso!',true);
@@ -660,7 +698,11 @@
                 if(!data.duplicado||!data.cliente)return;const c=data.cliente;if(c.bloqueada){mostrarAviso(`🚨 PROIBIDA! Motivo: ${c.motivo_bloqueio||'Sem motivo.'}`);window.limparFormulario();return;}if(!clientesCache.some(x=>x.id===c.id))clientesCache.push(c);if(confirm(`CLIENTE ENCONTRADA: ${c.nome}\n\nOK: Fazer Check-in (Ela já pagou).\nCANCELAR: Editar dados dela.`)){await window.dispararCheckin(c.id);window.limparFormulario();}else window.prepararEdicao(c.id);}catch(e){mostrarAviso(e.message||'Erro ao verificar cadastro.');}
         };
         document.getElementById('formSolteira').addEventListener('submit',async e=>{
-            e.preventDefault();const btn=document.getElementById('btnSalvar'),idEx=document.getElementById('editId').value;btn.disabled=true;btn.innerText='SALVANDO...';
+            e.preventDefault();const btn=document.getElementById('btnSalvar'),idEx=document.getElementById('editId').value;
+            // Editar cadastro já existente continua liberado a qualquer hora.
+            // O que trava é CADASTRO NOVO, que vale como entrada na casa.
+            if (!idEx && turnoBloqueadoNaTela()) return;
+            btn.disabled=true;btn.innerText='SALVANDO...';
             const dados={id:idEx,nome:document.getElementById('nome').value,tel:document.getElementById('tel').value,cpf:document.getElementById('cpf').value,data_nascimento:document.getElementById('nascimento').value,obs:document.getElementById('obs').value};
             try{await apiSolteiras('salvar_cliente',dados);mostrarAviso(idEx?'Dados atualizados e entrada registrada!':'Cadastro salvo e liberado!',true);window.limparFormulario();limparFocarBusca();await atualizarPainelSeguro();}
             catch(e){
@@ -698,7 +740,7 @@
             if(authReady)return;authReady=true;
             if(!user){document.getElementById('telaLogin').classList.remove('hidden');window.mostrarLoginNormalSolteiras?.();return;}
             if(!sessionTokenAtual){try{await signOut(auth);}catch(_){}return;}
-            try{const data=await apiSolteiras('bootstrap');operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();garantirListaCompleta().catch(()=>{});atualizarAvisoOffline();sincronizarFilaOffline().catch(()=>{});}
+            try{const data=await apiSolteiras('bootstrap');pintarTurno(data.turno);operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();garantirListaCompleta().catch(()=>{});atualizarAvisoOffline();sincronizarFilaOffline().catch(()=>{});}
             catch(_){sessionTokenAtual='';sessionStorage.removeItem('eclub_solteiras_session');try{await signOut(auth);}catch(_){}}
         });
     </script>
