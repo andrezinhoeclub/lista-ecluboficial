@@ -345,6 +345,9 @@
                 : `🟡 ENVIANDO ${pendentes} REGISTRO(S) FEITO(S) SEM INTERNET...`;
         }
         function garantirListaCompleta() {
+            // Travado = nenhum dado de cliente na tela, nem do servidor nem do
+            // que estava guardado na máquina.
+            if (travadoAgora()) { limparCacheClientes(); return Promise.resolve([]); }
             if (listaCompletaCache) return Promise.resolve(listaCompletaCache);
             if (!carregandoListaCompleta) {
                 carregandoListaCompleta = apiSolteiras('listar_tudo')
@@ -354,6 +357,10 @@
                         return listaCompletaCache;
                     })
                     .catch(e => {
+                        // Recusa por horário (423) não é queda de internet: aí não
+                        // vale cair pra lista guardada, senão a trava não serviria
+                        // pra nada.
+                        if (Number(e?.status) === 423) { limparCacheClientes(); throw e; }
                         // Sem internet: usa a lista guardada na máquina. É isso que
                         // permite continuar liberando durante a queda, inclusive se o
                         // computador tiver sido reiniciado no meio.
@@ -366,6 +373,7 @@
             return carregandoListaCompleta;
         }
         function atualizarListaCompletaEmSegundoPlano() {
+            if (travadoAgora()) { limparCacheClientes(); return; }
             if (!listaCompletaCache) return;
             apiSolteiras('listar_tudo').then(data => {
                 const novos = Array.isArray(data.clientes) ? data.clientes : [];
@@ -548,7 +556,7 @@
             operadorLogado=data.operator || auth.currentUser?.email || 'OPERADOR';
             document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();
             document.getElementById('telaLogin').classList.add('hidden'); document.getElementById('conteudo-sistema').classList.remove('hidden');
-            await atualizarPainelSeguro(); iniciarAtualizacaoPeriodica();
+            await atualizarPainelSeguro(); iniciarAtualizacaoPeriodica(); revisarTrava();
             garantirListaCompleta().catch(()=>{}); // pré-carrega a lista da busca em segundo plano, sem travar o login
             atualizarAvisoOffline();
             sincronizarFilaOffline().catch(()=>{}); // sobe o que ficou de uma queda anterior
@@ -591,17 +599,65 @@
                 } else faixa.classList.add('hidden');
             }
             aplicarTravaNoFormulario();
+            aplicarTravaNaBusca();
+            if (travadoAgora()) limparCacheClientes();
             // Os botões "Liberar" da lista são desenhados pelo render(): se o
             // estado virou, redesenha pra eles trocarem de cara na hora.
-            if (mudou && Array.isArray(clientesCache)) {
-                try { render(clientesCache, !!document.getElementById('buscaCliente')?.value.trim()); } catch (_) {}
+            if (mudou) {
+                try { render(clientesCache || [], !!document.getElementById('buscaCliente')?.value.trim()); } catch (_) {}
             }
         }
+        // Fora do horário pelo relógio da máquina. Serve só pro caso SEM internet,
+        // em que a tela não tem como perguntar ao servidor.
+        function foraDoHorarioLocal() {
+            const h = new Date().getHours();
+            return !(h >= 21 || h < 8);
+        }
         function travadoAgora() {
-            // Sem internet a tela não tem como saber o estado real, então não trava:
-            // o registro entra pela fila offline com o horário verdadeiro e o
-            // servidor decide na hora de sincronizar.
-            return !!(navigator.onLine && turnoAtual && !turnoAtual.aberto);
+            // Com internet, quem manda é a resposta do servidor.
+            if (navigator.onLine) return !!(turnoAtual && !turnoAtual.aberto);
+            // Sem internet, decide pelo relógio da máquina. Dentro do horário a
+            // tela continua funcionando normalmente (é o modo offline do evento);
+            // fora do horário, esconde e apaga os dados guardados.
+            return foraDoHorarioLocal();
+        }
+        // Apaga da máquina tudo que é dado de cliente. A FILA de operações
+        // pendentes NUNCA é apagada aqui — ela guarda entradas já feitas que
+        // ainda não subiram, e perder isso seria perder presença de verdade.
+        function limparCacheClientes() {
+            clientesCache = [];
+            listaCompletaCache = null;
+            try { localStorage.removeItem(CHAVE_LISTA_LOCAL); } catch (_) {}
+        }
+        function revisarTrava() {
+            aplicarTravaNaBusca();
+            aplicarTravaNoFormulario();
+            const faixa = document.getElementById('faixaTravaTurno');
+            if (travadoAgora()) {
+                limparCacheClientes();
+                if (faixa) {
+                    document.getElementById('faixaTravaMotivo').innerText =
+                        (turnoAtual && turnoAtual.motivo === 'SEM EVENTO ATIVO PARA HOJE')
+                            ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE'
+                            : 'CASA FECHADA — FORA DO HORÁRIO (21H ÀS 8H)';
+                    faixa.classList.remove('hidden');
+                }
+                try { render([], false); } catch (_) {}
+            } else if (faixa && turnoAtual && turnoAtual.aberto) faixa.classList.add('hidden');
+        }
+        function aplicarTravaNaBusca() {
+            const busca = document.getElementById('buscaCliente');
+            if (!busca) return;
+            if (travadoAgora()) {
+                busca.value = '';
+                busca.disabled = true;
+                busca.placeholder = '🔒 CONSULTA BLOQUEADA FORA DO HORÁRIO';
+                busca.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                busca.disabled = false;
+                busca.placeholder = 'BUSCAR POR NOME, CPF OU TELEFONE...';
+                busca.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
         }
         function aplicarTravaNoFormulario() {
             const btn = document.getElementById('btnSalvar');
@@ -647,10 +703,15 @@
         function iniciarAtualizacaoPeriodica(){
             if(intervaloAtualizacao) clearInterval(intervaloAtualizacao);
             intervaloAtualizacao=setInterval(()=>{
+                // Revisa a trava a cada volta, mesmo se a chamada ao servidor
+                // falhar: às 8h em ponto a tela tem que se fechar sozinha, com
+                // internet ou sem.
+                revisarTrava();
                 // Se sobrou coisa na fila, prioriza mandar ela antes de atualizar.
                 if (lerFila().length) sincronizarFilaOffline().catch(()=>{});
                 else atualizarPainelSeguro();
             },10000);
+            revisarTrava();
         }
         window.verificarOuLogar = async (event) => {
             if (event) event.preventDefault();
@@ -703,6 +764,10 @@
         };
         function render(dados,isBusca=false){
             const container=document.getElementById('listaSolteiras'), corte=corteTurno();
+            if (travadoAgora()) {
+                container.innerHTML='<div class="p-20 text-center"><p class="text-red-600 font-black text-2xl uppercase italic">\ud83d\udd12 Tela bloqueada</p><p class="text-zinc-500 font-bold text-[11px] uppercase tracking-widest mt-3">Nenhum dado de cliente fica disponível fora do horário de funcionamento</p></div>';
+                return;
+            }
             let paraExibir=isBusca?dados:dados.filter(c=>{const d=dataVisita(c);return d&&d>=corte;});
             if(!paraExibir.length){container.innerHTML='<div class="p-20 text-center text-zinc-500 font-black text-sm uppercase italic">NENHUM RESULTADO NA TELA</div>';return;}
             container.innerHTML='';
@@ -770,6 +835,7 @@
         // de 100 itens), só que instantâneo depois da primeira carga.
         window.filtrarClientes=()=>{if(buscaTimer)clearTimeout(buscaTimer);buscaTimer=setTimeout(async()=>{
             const termo=document.getElementById('buscaCliente').value.trim();
+            if(travadoAgora()){aplicarTravaNaBusca();render([],false);return;}
             if(!termo){render(clientesCache,false);return;}
             try{
                 const lista=await garantirListaCompleta();
@@ -783,7 +849,7 @@
             if(authReady)return;authReady=true;
             if(!user){document.getElementById('telaLogin').classList.remove('hidden');window.mostrarLoginNormalSolteiras?.();return;}
             if(!sessionTokenAtual){try{await signOut(auth);}catch(_){}return;}
-            try{const data=await apiSolteiras('bootstrap');pintarTurno(data.turno);operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();garantirListaCompleta().catch(()=>{});atualizarAvisoOffline();sincronizarFilaOffline().catch(()=>{});}
+            try{const data=await apiSolteiras('bootstrap');pintarTurno(data.turno);operadorLogado=data.operator||user.email||'OPERADOR';eventoHojeCache=data.eventoHoje||null;clientesCache=Array.isArray(data.clientes)?data.clientes:[];document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();document.getElementById('contagemEvento').innerText=Number(data.contagemTurno||clientesCache.length);document.getElementById('telaLogin').classList.add('hidden');document.getElementById('conteudo-sistema').classList.remove('hidden');render(clientesCache,false);iniciarAtualizacaoPeriodica();revisarTrava();garantirListaCompleta().catch(()=>{});atualizarAvisoOffline();sincronizarFilaOffline().catch(()=>{});}
             catch(_){sessionTokenAtual='';sessionStorage.removeItem('eclub_solteiras_session');try{await signOut(auth);}catch(_){}}
         });
     </script>
