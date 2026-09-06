@@ -551,7 +551,7 @@
         let dadosReservas = []; let dadosEventos = []; let dadosModelosEventos = []; let dadosPromoters = []; let dadosAniv = []; let dadosOperadores = []; let dadosValletOperadores = [];
         let dadosValletAtendimentos = []; let dadosValletVeiculos = []; let configSistemaDashboard = {};
         let valletAtendimentosCarregados = false; let valletVeiculosCarregados = false; let limpezaValletEmAndamento = false;
-        let dadosSolteiras = []; let modoTesteAtivo = false; let modoTesteValletAtivo = false; let custoSistemaGlobal = 125.00;
+        let dadosSolteiras = []; let dadosAuditSolteiras = []; let mapaSolteirasPorId = new Map(); let modoTesteAtivo = false; let modoTesteValletAtivo = false; let custoSistemaGlobal = 125.00;
         // Limpa dado digitado por qualquer pessoa (nome de reserva pública, observação etc.)
         // antes de colocar na tela — evita que um nome com código HTML/script rode dentro
         // da sessão autenticada de quem está usando o Dashboard.
@@ -716,12 +716,41 @@
                 }
                 return dEnt >= inicioEvento && dEnt <= fimEvento;
             });
-            const unicas = []; const map = new Map();
-            for (const c of presencas) {
-                const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
-                if (!map.has(tel) && tel.length > 5) { map.set(tel, true); unicas.push(c); }
+            // ===== FONTE PRINCIPAL: a auditoria =====
+            // O registro em lista_eventos só era criado quando o servidor achava
+            // um evento com a data de HOJE. Depois da meia-noite "hoje" já é o dia
+            // seguinte, o evento da noite não era encontrado e a entrada NÃO virava
+            // registro de evento. Como a maioria das mulheres entra depois da 00h,
+            // faltava quase metade da noite. A auditoria não tem esse furo: ela
+            // grava toda liberação, a qualquer hora.
+            const porChave = new Map();
+            const registrar = (chave, obj) => { if (chave && !porChave.has(chave)) porChave.set(chave, obj); };
+            const telDe = (o) => String(o?.tel || o?.telefone || '').replace(/\D/g, '');
+
+            for (const a of dadosAuditSolteiras) {
+                if (a.action !== 'CHECKIN' && a.action !== 'CHECKIN_OFFLINE') continue;
+                // Liberação feita sem internet carrega a hora REAL da entrada em
+                // details.entradaEm; o createdAt seria a hora em que a fila subiu,
+                // que pode ser de manhã e cairia fora da janela da noite.
+                const d = parseVisita(a.details?.entradaEm) || parseVisita(a.createdAt);
+                if (!d || isNaN(d) || d < inicioEvento || d > fimEvento) continue;
+                const cid = a.details?.clientId;
+                if (!cid) continue;
+                const cli = mapaSolteirasPorId.get(cid);
+                const tel = telDe(cli);
+                registrar(tel.length > 5 ? tel : `id:${cid}`, cli || { id: cid, nome: '(cadastro removido)', tel: '' });
             }
-            return unicas;
+
+            // ===== SEGUNDA FONTE: os registros de entrada do evento =====
+            // Cobre o período anterior à auditoria e qualquer entrada que tenha
+            // chegado por outro caminho. Como a junção é por telefone, quem já veio
+            // pela auditoria não é contada duas vezes.
+            for (const r of presencas) {
+                const tel = telDe(r);
+                if (tel.length > 5) registrar(tel, r);
+            }
+
+            return [...porChave.values()];
         };
         window.mostrarAviso = (msg, isSucesso = false) => {
             const toast = document.getElementById('toast-aviso');
@@ -1410,6 +1439,23 @@
                 mostrarAviso("Erro ao remover modelo.");
             }
         };
+        // ===== AUDITORIA DAS SOLTEIRAS: a fonte definitiva da contagem =====
+        // Cada liberação grava aqui uma linha PRÓPRIA, com a hora do servidor, e
+        // essa linha nunca é sobrescrita nem alterada. É o único lugar que sabe
+        // quantas mulheres entraram em CADA noite, separadamente.
+        // O filtro por data aqui é seguro (diferente do caso do lista_eventos
+        // comentado mais abaixo): toda linha desta coleção nasce com createdAt,
+        // então nenhum documento fica de fora do filtro por não ter o campo.
+        const CORTE_AUDITORIA_DIAS = 180;
+        onSnapshot(
+            query(collection(db, "audit_solteiras"),
+                  where("createdAt", ">=", Timestamp.fromMillis(Date.now() - CORTE_AUDITORIA_DIAS * 86400000))),
+            snap => {
+                dadosAuditSolteiras = snap.docs.map(d => d.data());
+                renderRelatorios();
+            },
+            () => { dadosAuditSolteiras = []; }
+        );
         onSnapshot(collection(db, "solteiras"), snap => {
             const agora = new Date(); const batch = writeBatch(db); let del = false;
             dadosSolteiras = snap.docs.map(d => {
@@ -1418,6 +1464,7 @@
                 if (ref && !isNaN(ref) && (agora - ref) / (1000 * 60 * 60 * 24) > 90) { batch.delete(d.ref); del = true; return null; }
                 return { id: d.id, ...data };
             }).filter(s => s !== null);
+            mapaSolteirasPorId = new Map(dadosSolteiras.map(c => [c.id, c]));
             if(del) batch.commit();
             renderSolteiras();
 
