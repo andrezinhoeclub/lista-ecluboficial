@@ -728,7 +728,15 @@
             const telDe = (o) => String(o?.tel || o?.telefone || '').replace(/\D/g, '');
 
             for (const a of dadosAuditSolteiras) {
-                if (a.action !== 'CHECKIN' && a.action !== 'CHECKIN_OFFLINE') continue;
+                // Toda ação de presença entra aqui. São DUAS famílias:
+                //   CHECKIN / CHECKIN_OFFLINE  -> cliente que já era cadastrada
+                //   CLIENTE_CRIADA_E_CHECKIN(_OFFLINE) -> cadastrada na hora, na porta
+                // A segunda estava de fora e por isso faltava toda mulher que veio
+                // pela primeira vez naquela noite. Usar "contém CHECKIN" cobre as
+                // duas e qualquer variante nova. As outras ações da auditoria
+                // (LOGIN, LOGOUT, CLIENTE_ATUALIZADA, CLIENTE_BLOQUEADA/
+                // DESBLOQUEADA) não têm CHECKIN no nome e continuam de fora.
+                if (!String(a.action || '').includes('CHECKIN')) continue;
                 // Liberação feita sem internet carrega a hora REAL da entrada em
                 // details.entradaEm; o createdAt seria a hora em que a fila subiu,
                 // que pode ser de manhã e cairia fora da janela da noite.
