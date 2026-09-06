@@ -675,31 +675,49 @@
             const fimEvento = new Date(partesData[0], partesData[1] - 1, partesData[2], HORA_ABERTURA, 0, 0);
             fimEvento.setDate(fimEvento.getDate() + 1);
             fimEvento.setHours(HORA_FECHAMENTO, 0, 0, 0);
-            const presPortaria = dadosSolteiras.filter(s => {
-                let d = parseVisita(s.ultima_visita);
-                return d && !isNaN(d) && d >= inicioEvento && d <= fimEvento;
-            });
-            const evNomeLimpo = String(ev.nome || '').trim().toUpperCase();
-            const presSite = dadosReservas.filter(r => {
+            // ATENÇÃO — NÃO volte a somar aqui a coleção "solteiras" pelo campo
+            // ultima_visita. Foi assim até 06/09/2026 e ERA UM BUG SILENCIOSO:
+            // cada cadastro de solteira guarda UM ÚNICO campo de última visita,
+            // que é SOBRESCRITO toda vez que ela volta. Então a mulher que veio
+            // na quinta e voltou no sábado saía da contagem da quinta e entrava
+            // na do sábado. Na prática, o número de um evento PASSADO diminuía
+            // sozinho toda vez que uma cliente antiga voltava — quinta apareceu
+            // com 24 e virou 20 depois do sábado, sem ninguém apagar nada.
+            //
+            // A contagem correta sai de lista_eventos: ali cada liberação vira
+            // um registro PRÓPRIO daquela noite, com data e hora, e ele não é
+            // sobrescrito quando a cliente volta. Quem veio duas vezes tem dois
+            // registros. Por isso número de evento passado não muda mais.
+            // Nome de evento pode se repetir (festa semanal com o mesmo nome).
+            // Calculado UMA vez, fora do filtro, pra não refazer a cada registro.
+            const nomeSeRepete = dadosEventos.filter(e => mesmaChaveReservaEclub(e.nome, ev.nome)).length > 1;
+            const presencas = dadosReservas.filter(r => {
                 if (!r.entrou) return false;
-                if (!mesmaChaveReservaEclub(r.evento, ev.nome)) return false;
                 if (!String(r.tipo_entrada).toUpperCase().includes('SOLTEIRA')) return false;
-                // A MESMA janela de 21h-08h vale aqui. Esta é a segunda fonte da
-                // contagem: cada liberação na tela de Solteiras também cria um
-                // registro de entrada no evento. Sem este filtro, uma liberação
-                // feita de tarde continuava sendo contada pelo outro caminho —
-                // foi por isso que as presenças de antes das 21h não sumiram na
-                // primeira correção.
+                // Casar pelo ID do evento quando o registro tiver: dois eventos
+                // podem ter o MESMO NOME em datas diferentes (ex.: uma festa que
+                // se repete toda semana), e aí só o nome confundiria um com o
+                // outro. Registros antigos, sem o id, continuam pelo nome.
+                if (r.evento_id) { if (r.evento_id !== ev.id) return false; }
+                else if (!mesmaChaveReservaEclub(r.evento, ev.nome)) return false;
+                // Janela de 21h às 8h da manhã seguinte: é o que impede uma
+                // liberação feita de tarde, com a casa fechada, de entrar na
+                // conta da noite.
                 const dEnt = parseVisita(r.data_entrada);
-                // Registro sem horário gravado (base antiga) continua contando: não
-                // dá pra saber se foi dentro ou fora do horário, e descartar mudaria
-                // número de evento passado sem motivo. Só é excluído o que a gente
-                // SABE que ficou fora da janela.
-                if (!dEnt || isNaN(dEnt)) return true;
+                if (!dEnt || isNaN(dEnt)) {
+                    // Sem horário gravado (base antiga). Se o registro traz o id
+                    // do evento, não há dúvida de qual noite é: conta.
+                    if (r.evento_id) return true;
+                    // Sem id E sem horário, só o nome sobra. Se esse nome existe
+                    // em mais de um evento, contar aqui somaria a MESMA pessoa em
+                    // todas as edições da festa e inflaria o relatório. Nesse caso
+                    // fica de fora; com nome único, continua contando.
+                    return !nomeSeRepete;
+                }
                 return dEnt >= inicioEvento && dEnt <= fimEvento;
             });
             const unicas = []; const map = new Map();
-            for (const c of [...presPortaria, ...presSite]) {
+            for (const c of presencas) {
                 const tel = String(c.tel || c.telefone || '').replace(/\D/g, '');
                 if (!map.has(tel) && tel.length > 5) { map.set(tel, true); unicas.push(c); }
             }
