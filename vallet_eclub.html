@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#050508" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>E-CLUB Vallet • v50</title>
-  <!-- E-CLUB Vallet v51: impressão em 2 vias 80mm, barcode na via 1 e observações na via 2 -->
+  <title>E-CLUB Vallet • v52</title>
+  <!-- E-CLUB Vallet v52: login por e-mail e senha (Acessos do Dashboard) e todo acesso ao banco pela função valletApi -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -804,7 +804,7 @@
     }
   </style>
 </head>
-<body data-build="51">
+<body data-build="52">
   <div id="vallet-mobile-bloqueio" class="deviceOverlay" aria-live="assertive" role="alert">
     <div class="deviceCard">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
@@ -844,41 +844,23 @@
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
       <div id="loginEyebrowVallet" class="loginEyebrow">Acesso restrito</div>
       <h2>Vallet E-Club</h2>
-      <p class="loginSub">Entre com o usuário e a senha do operador.</p>
+      <p class="loginSub">Entre com o e-mail e a senha cadastrados no Dashboard.</p>
       <div id="loginModoTesteVallet" class="loginModeNotice testActive hidden">🧪 Modo teste Vallet ativo • acesso liberado</div>
-
       <form id="loginBox" class="loginBox" onsubmit="fazerLogin(event)">
-        <div id="loginOfflineNotice" class="loginModeNotice hidden">Modo offline: usando os operadores já salvos neste aparelho.</div>
+        <div id="loginOfflineNotice" class="loginModeNotice hidden">Sem internet: só entra quem já acessou neste computador antes.</div>
         <div class="loginFields">
-          <input id="loginUsuario" name="usuario" autocomplete="username" placeholder="USUÁRIO" required />
-          <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="SENHA" minlength="4" required />
-          <div id="primeiroAcessoCampos" class="hidden">
-            <div class="loginModeNotice" style="margin:0 0 11px">Primeiro acesso: crie sua senha pessoal para este usuário.</div>
-            <input id="loginSenha2" name="senha2" type="password" autocomplete="new-password" placeholder="CONFIRME A NOVA SENHA" minlength="4" />
-          </div>
+          <input id="loginUsuario" name="email" type="email" autocomplete="username" placeholder="E-MAIL" required />
+          <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="SENHA" minlength="6" required />
         </div>
         <label class="loginRemember">
           <input id="loginLembrar" type="checkbox" />
           manter acesso neste aparelho
         </label>
         <button id="btnEntrarVallet" class="btn yellow full" type="submit">Entrar</button>
-        <p class="loginHint">Os funcionários são administrados na aba Equipe da dashboard. No primeiro acesso, cada funcionário cria a própria senha.</p>
-      </form>
-
-      <form id="setupBox" class="setupBox" onsubmit="criarPrimeiroOperador(event)">
-        <div class="loginModeNotice">Primeiro acesso: crie o operador administrador inicial.</div>
-        <div class="loginFields">
-          <input id="setupUsuario" name="usuario" autocomplete="username" placeholder="USUÁRIO DE ACESSO" required />
-          <input id="setupNome" name="nome" placeholder="NOME DO OPERADOR" required />
-          <input id="setupSenha" name="senha" type="password" autocomplete="new-password" placeholder="CRIE UMA SENHA (MÍN. 4)" minlength="4" required />
-          <input id="setupSenha2" name="senha2" type="password" autocomplete="new-password" placeholder="CONFIRME A SENHA" minlength="4" required />
-        </div>
-        <button id="btnCriarOperador" class="btn yellow full" type="submit" style="margin-top:15px">Criar operador e entrar</button>
-        <p class="loginHint">Faça este primeiro cadastro com internet para disponibilizar o operador nos demais terminais.</p>
+        <p class="loginHint">Os acessos são criados na aba Acessos do Dashboard, marcando "Permitir Vallet". Esqueceu a senha? Peça uma nova ao administrador.</p>
       </form>
     </div>
   </div>
-
   <div id="appPrincipal" class="wrap" hidden>
     <header class="topbar">
       <div class="brand">
@@ -1336,6 +1318,10 @@
     const LOGIN_SESSION_KEY = 'eclub_vallet_login_session';
     const LOGIN_REMEMBER_KEY = 'eclub_vallet_login_remember';
     const THEME_KEY = 'eclub_vallet_theme';
+    // Endereço da função valletApi. A partir daqui, TODA leitura e gravação passa
+    // por ela. A tela não fala mais direto com o banco — antes falava, sem login
+    // nenhum, e por isso o banco recusava tudo e o Vallet não funcionava.
+    const VALLET_API = 'https://valletapi-163395694876.us-central1.run.app';
 
     function aplicarTema(tema) {
       const modoClaro = tema === 'light';
@@ -1551,47 +1537,89 @@
     async function salvarMeta(key, value) { await put(STORE_META, { id: key, value }); }
     async function lerMeta(key) { const m = await getOne(STORE_META, key); return m ? m.value : null; }
 
+    // Só o LOGIN usa o Firebase direto agora, e apenas para conferir a senha e
+    // pegar o comprovante de sessão. Nenhum dado de cliente passa por aqui.
     async function initFirebase() {
-      if (firebase || !navigator.onLine) return firebase;
+      if (firebase) return firebase;
       try {
         const appMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
-        const fsMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
-        const app = appMod.initializeApp(FIREBASE_CONFIG);
-        const db = fsMod.getFirestore(app);
-        firebase = { db, ...fsMod };
+        const authMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+        const app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(FIREBASE_CONFIG);
+        const auth = authMod.getAuth(app);
+        // A sessão fica guardada neste computador: é isso que permite continuar
+        // trabalhando sem internet depois do primeiro login.
+        try { await authMod.setPersistence(auth, authMod.browserLocalPersistence); } catch (_) {}
+        firebase = { app, auth, ...authMod };
         return firebase;
       } catch (e) {
-        console.warn('Firebase indisponível', e);
+        console.warn('Não foi possível carregar o login do Firebase', e);
         firebase = null;
         return null;
       }
     }
+    // Chama a valletApi levando o comprovante de sessão do operador.
+    async function apiVallet(action, corpo = {}) {
+      const fb = await initFirebase();
+      const user = fb?.auth?.currentUser;
+      if (!user) { const e = new Error('Sessão encerrada. Entre novamente.'); e.semSessao = true; throw e; }
+      let token;
+      try { token = await user.getIdToken(); }
+      catch (_) { const e = new Error('Não foi possível confirmar a sessão.'); e.semSessao = true; throw e; }
+      let r;
+      try {
+        r = await fetch(VALLET_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ action, ...corpo })
+        });
+      } catch (_) {
+        // Sem internet: quem chamou decide o que fazer (normalmente, guardar na fila).
+        const e = new Error('Sem conexão com o servidor.'); e.semRede = true; throw e;
+      }
+      let dados = {};
+      try { dados = await r.json(); } catch (_) {}
+      if (!r.ok || dados.ok === false) {
+        const e = new Error(dados.error || 'Erro no servidor do Vallet.');
+        e.status = r.status;
+        if (r.status === 401 || r.status === 403) e.semSessao = true;
+        throw e;
+      }
+      return dados;
+    }
 
     async function processarFila() {
-      if (sincronizando || !navigator.onLine) return;
+      if (sincronizando || !navigator.onLine || !operadorAtual) return;
       sincronizando = true;
       atualizarStatus('Sincronizando...');
       try {
-        const fb = await initFirebase();
-        if (!fb) throw new Error('Firebase não carregou');
         await carregarLocal();
-        for (const item of fila) {
-          const refDoc = fb.doc(fb.db, item.collectionName, item.docId);
-          if (item.action === 'delete') {
-            await fb.deleteDoc(refDoc);
-          } else {
-            await fb.setDoc(refDoc, {
-              ...item.data,
-              sync_origem: deviceId(),
-              sync_at: agoraISO()
-            }, { merge: true });
+        if (!fila.length) { await puxarFirebase(); return; }
+        // Manda em blocos de 100. O servidor confere item por item e devolve
+        // quais aceitou — só esses saem da fila. Um registro com defeito é
+        // recusado sozinho, sem travar o resto da noite.
+        for (let i = 0; i < fila.length; i += 100) {
+          const bloco = fila.slice(i, i + 100);
+          const resp = await apiVallet('gravar', {
+            itens: bloco.map(item => ({
+              id: item.id, action: item.action, collectionName: item.collectionName,
+              docId: item.docId, data: item.data || null
+            }))
+          });
+          const aceitos = new Set(resp.aceitos || []);
+          for (const item of bloco) if (aceitos.has(item.id)) await del(STORE_QUEUE, item.id);
+          if (Array.isArray(resp.recusados) && resp.recusados.length) {
+            resp.recusados.forEach(rec => console.warn('Registro recusado pelo servidor:', rec));
+            // Recusado sai da fila também: se ficasse, tentaria para sempre e a
+            // sincronização nunca mais terminaria.
+            for (const rec of resp.recusados) await del(STORE_QUEUE, rec.id).catch(() => {});
+            toast(resp.recusados.length + ' registro(s) recusado(s) pelo servidor.');
           }
-          await del(STORE_QUEUE, item.id);
         }
         await salvarMeta('last_sync', horaLocal());
         await puxarFirebase();
       } catch (e) {
-        console.warn('Falha na sincronização', e);
+        if (e?.semSessao) { toast('Sessão encerrada. Entre novamente.'); await sairOperador(); }
+        else if (!e?.semRede) console.warn('Falha na sincronização', e);
       } finally {
         sincronizando = false;
         await carregarLocal();
@@ -1599,50 +1627,36 @@
         atualizarStatus();
       }
     }
-
+    // ANTES esta função baixava as COLEÇÕES INTEIRAS a cada 10 segundos. Com
+    // alguns milhares de registros e três terminais, passava de meio milhão de
+    // leituras por hora e estouraria a cota gratuita do Google na primeira noite.
+    // Agora o servidor devolve só o que mudou desde a última vez.
     async function puxarFirebase() {
-      if (!navigator.onLine) return;
-      const fb = await initFirebase();
-      if (!fb) return;
+      if (!navigator.onLine || !operadorAtual) return;
       try {
-        const [setSnap, modSnap, corSnap, veiSnap, atSnap, opSnap, evtSnap, configSnap] = await Promise.all([
-          fb.getDocs(fb.collection(fb.db, 'vallet_setores')),
-          fb.getDocs(fb.collection(fb.db, 'vallet_modelos')),
-          fb.getDocs(fb.collection(fb.db, 'vallet_cores')),
-          fb.getDocs(fb.collection(fb.db, 'vallet_veiculos')),
-          fb.getDocs(fb.collection(fb.db, 'vallet_atendimentos')),
-          fb.getDocs(fb.collection(fb.db, 'vallet_operadores')),
-          fb.getDocs(fb.collection(fb.db, 'eventos')),
-          fb.getDoc(fb.doc(fb.db, 'configuracoes', 'sistema'))
-        ]);
-        await Promise.all([
-          clearStore(STORE_SETOR),
-          clearStore(STORE_MODELO),
-          clearStore(STORE_COR),
-          clearStore(STORE_EVENTO)
-        ]);
+        const desde = await lerMeta('sync_desde');
+        const dados = await apiVallet('sync', desde ? { desde } : {});
+        modoTesteValletAtivo = dados.operacao?.modoTeste === true;
         const puts = [];
-        setSnap.forEach(d => puts.push(put(STORE_SETOR, { id: d.id, ...d.data() })));
-        modSnap.forEach(d => puts.push(put(STORE_MODELO, { id: d.id, ...d.data() })));
-        corSnap.forEach(d => puts.push(put(STORE_COR, { id: d.id, ...d.data() })));
-        veiSnap.forEach(d => puts.push(put(STORE_VEICULO, { id: d.id, ...d.data() })));
-        opSnap.forEach(d => puts.push(put(STORE_OPERADOR, { id: d.id, ...d.data() })));
-        evtSnap.forEach(d => puts.push(put(STORE_EVENTO, { id: d.id, ...d.data() })));
-        if (configSnap.exists()) {
-          modoTesteValletAtivo = configSnap.data()?.modo_teste_vallet === true;
-          puts.push(salvarMeta('modo_teste_vallet', modoTesteValletAtivo));
-          atualizarIndicadorModoTesteLogin();
-        }
-        atSnap.forEach(d => {
-          const data = { id: d.id, ...d.data() };
-          if (data.data_operacao === dataLocal() || data.ativo === true) puts.push(put(STORE_ATEND, data));
-        });
+        // Catálogos são pequenos e vêm inteiros: limpa e regrava.
+        await Promise.all([clearStore(STORE_SETOR), clearStore(STORE_MODELO), clearStore(STORE_COR), clearStore(STORE_EVENTO)]);
+        (dados.setores || []).forEach(d => puts.push(put(STORE_SETOR, d)));
+        (dados.modelos || []).forEach(d => puts.push(put(STORE_MODELO, d)));
+        (dados.cores || []).forEach(d => puts.push(put(STORE_COR, d)));
+        (dados.eventos || []).forEach(d => puts.push(put(STORE_EVENTO, d)));
+        // Veículos e atendimentos NÃO são limpos: vêm por diferença, então
+        // apagar antes perderia tudo que não mudou nesta rodada.
+        (dados.veiculos || []).forEach(d => puts.push(put(STORE_VEICULO, d)));
+        (dados.atendimentos || []).forEach(d => puts.push(put(STORE_ATEND, d)));
+        puts.push(salvarMeta('modo_teste_vallet', modoTesteValletAtivo));
+        if (dados.servidor_em) puts.push(salvarMeta('sync_desde', dados.servidor_em));
         await Promise.all(puts);
+        atualizarIndicadorModoTesteLogin();
       } catch (e) {
-        console.warn('Falha ao puxar Firebase', e);
+        if (e?.semSessao) { toast('Sessão encerrada. Entre novamente.'); await sairOperador(); }
+        else if (!e?.semRede) console.warn('Falha ao buscar dados do servidor', e);
       }
     }
-
     async function criarMovimento(atendimento, tipo, descricao='') {
       const movimento = {
         id: `${atendimento.id}_${tipo}_${Date.now()}`,
@@ -1668,10 +1682,9 @@
     }
 
     function getOperador() {
-      return normalize(operadorAtual?.nome || operadorAtual?.usuario || localStorage.getItem(OPERADOR_KEY) || 'OPERADOR');
+      // O nome vem do cadastro em Acessos, não de um campo digitado na tela.
+      return normalize(operadorAtual?.nome || operadorAtual?.email || localStorage.getItem(OPERADOR_KEY) || 'OPERADOR');
     }
-
-
     function eventoEhModeloVallet(ev) {
       const nome = normalize(ev?.nome || '');
       return ev?.is_modelo === true || nome.includes('MODELO');
@@ -1814,34 +1827,23 @@
       return controle;
     }
 
+    // ANTES isto era uma escuta direta no banco. Agora pergunta ao servidor de
+    // tempos em tempos: mais barato e sem acesso direto ao banco pela tela.
     async function iniciarMonitorConfiguracaoVallet() {
-      if (!navigator.onLine || unsubscribeConfigVallet) return;
-      const fb = await initFirebase();
-      if (!fb?.onSnapshot) return;
-
-      const configRef = fb.doc(fb.db, 'configuracoes', 'sistema');
-      unsubscribeConfigVallet = fb.onSnapshot(configRef, async (snap) => {
-        const novoModoTeste = snap.exists() && snap.data()?.modo_teste_vallet === true;
+      if (!navigator.onLine || !operadorAtual) return;
+      try {
+        const resp = await apiVallet('estado');
+        const novoModoTeste = resp.operacao?.modoTeste === true;
         const mudou = novoModoTeste !== modoTesteValletAtivo;
         modoTesteValletAtivo = novoModoTeste;
         await salvarMeta('modo_teste_vallet', modoTesteValletAtivo).catch(() => {});
         atualizarIndicadorModoTesteLogin();
-
-        const controle = atualizarControleHorarioVallet({ forcarTela: true });
-        if (controle.acessoPermitido) {
-          $('vallet-horario-bloqueio')?.classList.remove('show');
-          if (!operadorAtual || $('appPrincipal')?.hidden) await iniciarAutenticacao();
-        }
-
-        if (mudou) {
-          toast(modoTesteValletAtivo ? 'Modo teste Vallet ativado.' : 'Modo teste Vallet finalizado.', modoTesteValletAtivo);
-        }
-      }, (erro) => {
-        console.warn('Monitor do modo teste Vallet indisponível', erro);
-        unsubscribeConfigVallet = null;
-      });
+        atualizarControleHorarioVallet({ forcarTela: true });
+        if (mudou) toast(modoTesteValletAtivo ? 'Modo teste Vallet ativado.' : 'Modo teste Vallet finalizado.', modoTesteValletAtivo);
+      } catch (e) {
+        if (e?.semSessao) { toast('Sessão encerrada. Entre novamente.'); await sairOperador(); }
+      }
     }
-
     function parseDataVallet(valor) {
       if (!valor) return null;
       if (typeof valor.toDate === 'function') return valor.toDate();
@@ -1850,299 +1852,144 @@
       return isNaN(d) ? null : d;
     }
 
-    async function limparVeiculosInativos180Dias() {
-      if (!navigator.onLine) return;
-      const hoje = dataLocal();
-      if (await lerMeta('limpeza_180_dias') === hoje) return;
-      const ativos = new Set(atendimentosAtivosAgora().map(a => normPlaca(a.placa_norm || a.placa)).filter(Boolean));
-      const ultimaPorPlaca = new Map();
-      atendimentos.forEach(a => {
-        const placa = normPlaca(a.placa_norm || a.placa);
-        const data = parseDataVallet(a.recebido_em || a.criado_em || a.atualizado_em);
-        if (!placa || !data) return;
-        const atual = ultimaPorPlaca.get(placa);
-        if (!atual || data > atual) ultimaPorPlaca.set(placa, data);
-      });
-      const limite = Date.now() - 180 * 24 * 60 * 60 * 1000;
-      const expirados = veiculos.filter(v => {
-        const placa = normPlaca(v.placa_norm || v.placa || v.id);
-        if (!placa || ativos.has(placa)) return false;
-        const datas = [parseDataVallet(v.ultima_visita), ultimaPorPlaca.get(placa), parseDataVallet(v.criado_em || v.data_cadastro || v.atualizado_em)].filter(Boolean);
-        if (!datas.length) return false;
-        return Math.max(...datas.map(d => d.getTime())) < limite;
-      });
-      for (const veiculo of expirados) {
-        await del(STORE_VEICULO, veiculo.id).catch(() => {});
-        await queueDelete('vallet_veiculos', veiculo.id);
-      }
-      await salvarMeta('limpeza_180_dias', hoje);
-      if (expirados.length) toast(`${expirados.length} cadastro(s) antigo(s) removido(s).`, true);
-    }
-
-    async function reservarPlacaAtivaGlobal(placa, atendimentoId, janela) {
+    // DESLIGADA DE PROPÓSITO. Esta função apagava veículos do banco com base no
+    // que estava salvo NESTE aparelho. Com a cópia local incompleta (terminal
+    // novo, sincronização pela metade), apagava cadastro que não devia. Limpeza
+    // de base é tarefa de servidor — e o Dashboard já tem o botão para isso.
+    async function limparVeiculosInativos180Dias() { return; }
+    async function reservarPlacaAtivaGlobal(placa, atendimentoId) {
+      // Impede o mesmo carro de ser recebido em dois terminais ao mesmo tempo.
+      // A conferência é no servidor, em transação — é o único lugar que enxerga
+      // todos os terminais de uma vez.
       if (!navigator.onLine) return { reservado: false, offline: true };
-      const fb = await initFirebase();
-      if (!fb) return { reservado: false, offline: true };
-
-      const ativosSnap = await fb.getDocs(fb.query(
-        fb.collection(fb.db, 'vallet_atendimentos'),
-        fb.where('placa_norm', '==', placa)
-      ));
-      let ativoExistente = null;
-      ativosSnap.forEach(d => {
-        const a = { id: d.id, ...d.data() };
-        if (a.ativo !== false && a.status !== 'ENTREGUE' && a.id !== atendimentoId) ativoExistente = a;
-      });
-      if (ativoExistente) throw new Error(`A placa ${placa} já está ativa no ticket #${ativoExistente.ticket || '---'}. Entregue o veículo antes de cadastrar novamente.`);
-
-      const lockRef = fb.doc(fb.db, 'vallet_placas_ativas', placa);
-      await fb.runTransaction(fb.db, async transaction => {
-        const lockSnap = await transaction.get(lockRef);
-        if (lockSnap.exists()) {
-          const lock = lockSnap.data() || {};
-          if (lock.ativo !== false && lock.atendimento_id !== atendimentoId) {
-            throw new Error(`A placa ${placa} já está ativa em outro terminal.`);
-          }
-        }
-        transaction.set(lockRef, {
-          placa,
-          ativo: true,
-          atendimento_id: atendimentoId,
-          evento_id: janela?.evento?.id || '',
-          evento_nome: janela?.evento?.nome || '',
-          evento_data: janela?.evento?.data || '',
-          reservado_em: agoraISO(),
-          operador: getOperador(),
-          origem_dispositivo: deviceId()
-        });
-      });
-      return { reservado: true, offline: false };
+      try {
+        await apiVallet('reservar_placa', { placa, atendimentoId });
+        return { reservado: true, offline: false };
+      } catch (e) {
+        if (e?.semRede) return { reservado: false, offline: true };
+        throw e;
+      }
     }
-
     async function liberarPlacaAtivaGlobal(placa, atendimentoId = '') {
       const p = normPlaca(placa);
-      if (!p) return;
-      if (!navigator.onLine) {
-        await queueDelete('vallet_placas_ativas', p);
-        return;
-      }
-      try {
-        const fb = await initFirebase();
-        if (!fb) throw new Error('Firebase indisponível');
-        const ref = fb.doc(fb.db, 'vallet_placas_ativas', p);
-        await fb.runTransaction(fb.db, async transaction => {
-          const snap = await transaction.get(ref);
-          if (!snap.exists()) return;
-          const lock = snap.data() || {};
-          if (!atendimentoId || !lock.atendimento_id || lock.atendimento_id === atendimentoId) transaction.delete(ref);
-        });
-      } catch (e) {
-        await queueDelete('vallet_placas_ativas', p);
-      }
+      if (!p || !navigator.onLine) return;
+      try { await apiVallet('liberar_placa', { placa: p, atendimentoId }); }
+      catch (e) { console.warn('Não foi possível liberar a placa agora.', e); }
     }
-
-    function gerarSalt() {
-      const bytes = new Uint8Array(16);
-      crypto.getRandomValues(bytes);
-      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function hashSenha(senha, salt) {
-      const texto = `${salt}|ECLUB_VALLET|${String(senha || '')}`;
-      if (crypto?.subtle) {
-        const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
-        return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-      }
-      return btoa(unescape(encodeURIComponent(texto)));
-    }
-
-    function usuarioId(usuario) {
-      const limpo = normalize(usuario).replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-      return limpo || ('OPERADOR_' + Date.now());
-    }
-
-    function operadoresAtivos() {
-      return operadores.filter(o => o.ativo !== false && o.usuario);
-    }
-
-    function operadorDigitadoNoLogin() {
-      const usuario = normalize($('loginUsuario')?.value || '');
-      if (!usuario) return null;
-      return operadoresAtivos().find(o => normalize(o.usuario) === usuario || normalize(o.nome) === usuario) || null;
-    }
-
-    function verificarPrimeiroAcessoVallet() {
-      const operador = operadorDigitadoNoLogin();
-      const primeiroAcesso = Boolean(operador && !operador.senha_hash);
-      $('primeiroAcessoCampos')?.classList.toggle('hidden', !primeiroAcesso);
-      const confirmar = $('loginSenha2');
-      if (confirmar) {
-        confirmar.required = primeiroAcesso;
-        if (!primeiroAcesso) confirmar.value = '';
-      }
-      const btn = $('btnEntrarVallet');
-      if (btn && !btn.disabled) btn.textContent = primeiroAcesso ? 'CRIAR SENHA E ENTRAR' : 'ENTRAR';
-      return primeiroAcesso;
-    }
-
+    // O LOGIN CASEIRO FOI REMOVIDO INTEIRO, e é bom saber por quê:
+    //  - a lista de operadores, COM as senhas embaralhadas, era baixada para o
+    //    aparelho e a conferência acontecia dentro do navegador;
+    //  - num computador novo, se a lista não baixasse, a tela oferecia "criar o
+    //    operador administrador inicial" — qualquer pessoa que abrisse o
+    //    endereço ganhava um administrador;
+    //  - e a senha mínima era de 4 caracteres.
+    // Agora é o mesmo login da Portaria e das Solteiras: e-mail e senha criados
+    // na aba Acessos do Dashboard, com "Permitir Vallet" marcado.
     function atualizarIndicadorModoTesteLogin() {
       const aviso = $('loginModoTesteVallet');
       const eyebrow = $('loginEyebrowVallet');
       aviso?.classList.toggle('hidden', !modoTesteValletAtivo);
       if (eyebrow) eyebrow.textContent = modoTesteValletAtivo ? 'Modo teste ativo' : 'Acesso restrito';
     }
-
     function atualizarTelaLogin() {
       atualizarIndicadorModoTesteLogin();
-      const semOperadores = operadoresAtivos().length === 0;
-      $('loginBox').classList.toggle('hidden', semOperadores);
-      $('setupBox').classList.toggle('active', semOperadores);
-      $('loginOfflineNotice').classList.toggle('hidden', navigator.onLine);
-      if (!semOperadores) {
-        verificarPrimeiroAcessoVallet();
-        setTimeout(() => $('loginUsuario')?.focus(), 50);
-      } else setTimeout(() => $('setupUsuario')?.focus(), 50);
+      $('loginOfflineNotice')?.classList.toggle('hidden', navigator.onLine);
+      setTimeout(() => $('loginUsuario')?.focus(), 50);
     }
-
-    async function concluirLogin(operador, lembrar=false) {
+    async function concluirLogin(operador, lembrar = false) {
       const controleHorario = atualizarControleHorarioVallet();
-      if (!controleHorario.acessoPermitido) {
-        $('vallet-horario-bloqueio').classList.add('show');
-        return;
-      }
+      if (!controleHorario.acessoPermitido) { $('vallet-horario-bloqueio').classList.add('show'); return; }
       operadorAtual = operador;
-      localStorage.setItem(OPERADOR_KEY, operador.nome || operador.usuario);
-      sessionStorage.setItem(LOGIN_SESSION_KEY, operador.id);
-      if (lembrar) localStorage.setItem(LOGIN_REMEMBER_KEY, operador.id);
+      localStorage.setItem(OPERADOR_KEY, operador.nome || operador.email);
+      if (lembrar) localStorage.setItem(LOGIN_REMEMBER_KEY, '1');
       else localStorage.removeItem(LOGIN_REMEMBER_KEY);
-      $('operadorNome').textContent = normalize(operador.nome || operador.usuario);
+      $('operadorNome').textContent = normalize(operador.nome || operador.email);
       $('vallet-login').classList.add('hidden');
       $('appPrincipal').hidden = false;
+      if (navigator.onLine) { await processarFila(); await carregarLocal(); }
       await atualizarTicketPreview();
       renderTudo();
     }
-
+    // Pergunta ao servidor quem é este operador. É aqui que a permissão
+    // "Permitir Vallet" é conferida de verdade.
+    async function carregarOperadorDoServidor() {
+      const resp = await apiVallet('bootstrap');
+      modoTesteValletAtivo = resp.operacao?.modoTeste === true;
+      await salvarMeta('modo_teste_vallet', modoTesteValletAtivo).catch(() => {});
+      return { nome: normalize(resp.operador?.nome || ''), email: resp.operador?.email || '', uid: resp.operador?.uid || '' };
+    }
     async function iniciarAutenticacao() {
       await carregarLocal();
-      const controleHorario = atualizarControleHorarioVallet({ forcarTela: true });
-      if (!controleHorario.acessoPermitido) return;
-      const lembrado = localStorage.getItem(LOGIN_REMEMBER_KEY);
-      const sessao = sessionStorage.getItem(LOGIN_SESSION_KEY);
-      const operadorId = lembrado || sessao;
-      const salvo = operadoresAtivos().find(o => o.id === operadorId);
-      if (salvo) {
-        await concluirLogin(salvo, Boolean(lembrado));
-        return;
+      const fb = await initFirebase();
+      if (!fb) { $('appPrincipal').hidden = true; $('vallet-login').classList.remove('hidden'); atualizarTelaLogin(); return; }
+      // Espera o Firebase dizer se já existe alguém logado neste computador.
+      const user = await new Promise(resolve => {
+        const parar = fb.onAuthStateChanged(fb.auth, u => { parar(); resolve(u); });
+      });
+      if (!user) { $('appPrincipal').hidden = true; $('vallet-login').classList.remove('hidden'); atualizarTelaLogin(); return; }
+      try {
+        const operador = await carregarOperadorDoServidor();
+        const controleHorario = atualizarControleHorarioVallet({ forcarTela: true });
+        if (!controleHorario.acessoPermitido) return;
+        await concluirLogin(operador, localStorage.getItem(LOGIN_REMEMBER_KEY) === '1');
+      } catch (e) {
+        if (e?.semRede) {
+          // Sem internet, mas este computador já entrou antes: segue com o nome
+          // guardado. É o que mantém o Vallet trabalhando durante uma queda.
+          const salvo = localStorage.getItem(OPERADOR_KEY);
+          if (salvo) { await concluirLogin({ nome: salvo, email: user.email || '' }, true); return; }
+        }
+        toast(e?.message || 'Não foi possível confirmar seu acesso.');
+        try { await fb.signOut(fb.auth); } catch (_) {}
+        $('appPrincipal').hidden = true;
+        $('vallet-login').classList.remove('hidden');
+        atualizarTelaLogin();
       }
-      $('appPrincipal').hidden = true;
-      $('vallet-login').classList.remove('hidden');
-      atualizarTelaLogin();
     }
-
     async function fazerLogin(event) {
       event.preventDefault();
-      const usuario = normalize($('loginUsuario').value);
+      const email = String($('loginUsuario').value || '').trim().toLowerCase();
       const senha = $('loginSenha').value;
       const btn = $('btnEntrarVallet');
       btn.disabled = true;
       btn.textContent = 'VERIFICANDO...';
       try {
-        let operador = operadoresAtivos().find(o => normalize(o.usuario) === usuario || normalize(o.nome) === usuario);
-        if (!operador) throw new Error('Usuário não encontrado. Peça o cadastro na dashboard.');
-
-        if (!operador.senha_hash) {
-          const senha2 = $('loginSenha2').value;
-          if (senha.length < 4) throw new Error('Crie uma senha com pelo menos 4 caracteres.');
-          if (senha !== senha2) throw new Error('As senhas não conferem.');
-          const salt = gerarSalt();
-          operador = {
-            ...operador,
-            senha_salt: salt,
-            senha_hash: await hashSenha(senha, salt),
-            atualizado_em: agoraISO(),
-            ultimo_login: agoraISO()
-          };
-          await put(STORE_OPERADOR, operador);
-          await queueSet('vallet_operadores', operador.id, operador);
-          await carregarLocal();
-          toast('Senha criada com sucesso.', true);
-        } else {
-          const hash = await hashSenha(senha, operador.senha_salt || operador.id);
-          if (hash !== operador.senha_hash) throw new Error('Senha incorreta.');
-          operador = { ...operador, ultimo_login: agoraISO(), atualizado_em: agoraISO() };
-          await put(STORE_OPERADOR, operador);
-          await queueSet('vallet_operadores', operador.id, operador);
+        if (!navigator.onLine) throw new Error('Sem internet: o primeiro acesso neste computador precisa de conexão.');
+        const fb = await initFirebase();
+        if (!fb) throw new Error('Não foi possível carregar o login. Verifique a internet.');
+        try { await fb.signInWithEmailAndPassword(fb.auth, email, senha); }
+        catch (_) { throw new Error('E-mail ou senha inválidos.'); }
+        let operador;
+        try { operador = await carregarOperadorDoServidor(); }
+        catch (erro) {
+          // Entrou no Firebase mas não tem permissão de Vallet: derruba a sessão
+          // para não deixar o computador "meio logado".
+          try { await fb.signOut(fb.auth); } catch (_) {}
+          throw new Error(erro?.message || 'Sem permissão para o módulo Vallet.');
         }
-
         $('loginSenha').value = '';
-        $('loginSenha2').value = '';
         await concluirLogin(operador, $('loginLembrar').checked);
-        toast(`Bem-vindo, ${normalize(operador.nome || operador.usuario)}.`, true);
+        toast('Bem-vindo, ' + normalize(operador.nome || operador.email) + '.', true);
       } catch (e) {
         toast(e.message || 'Não foi possível entrar.');
       } finally {
         btn.disabled = false;
-        verificarPrimeiroAcessoVallet();
+        btn.textContent = 'ENTRAR';
       }
     }
-
-    async function criarPrimeiroOperador(event) {
-      event.preventDefault();
-      if (operadoresAtivos().length > 0) {
-        atualizarTelaLogin();
-        return toast('Já existe operador cadastrado. Faça o login.');
-      }
-      const usuario = normalize($('setupUsuario').value);
-      const nome = normalize($('setupNome').value);
-      const senha = $('setupSenha').value;
-      const senha2 = $('setupSenha2').value;
-      if (!usuario || !nome) return toast('Preencha usuário e nome do operador.');
-      if (senha.length < 4) return toast('A senha precisa ter pelo menos 4 caracteres.');
-      if (senha !== senha2) return toast('As senhas não conferem.');
-      const btn = $('btnCriarOperador');
-      btn.disabled = true;
-      btn.textContent = 'CRIANDO...';
-      try {
-        const salt = gerarSalt();
-        const operador = {
-          id: usuarioId(usuario),
-          usuario,
-          nome,
-          senha_salt: salt,
-          senha_hash: await hashSenha(senha, salt),
-          perfil: 'ADMIN',
-          ativo: true,
-          criado_em: agoraISO(),
-          atualizado_em: agoraISO(),
-          origem_dispositivo: deviceId()
-        };
-        await put(STORE_OPERADOR, operador);
-        await queueSet('vallet_operadores', operador.id, operador);
-        await carregarLocal();
-        await concluirLogin(operador, true);
-        toast('Primeiro operador criado com sucesso.', true);
-      } catch (e) {
-        toast(e.message || 'Não foi possível criar o operador.');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'CRIAR OPERADOR E ENTRAR';
-      }
-    }
-
-    function sairOperador() {
+    async function sairOperador() {
       operadorAtual = null;
-      sessionStorage.removeItem(LOGIN_SESSION_KEY);
       localStorage.removeItem(LOGIN_REMEMBER_KEY);
       localStorage.removeItem(OPERADOR_KEY);
+      sessionStorage.removeItem(LOGIN_SESSION_KEY);
+      try { const fb = await initFirebase(); if (fb) await fb.signOut(fb.auth); } catch (_) {}
       $('appPrincipal').hidden = true;
       $('operadorNome').textContent = 'SEM LOGIN';
-      $('loginSenha').value = '';
-      $('loginSenha2').value = '';
-      $('loginLembrar').checked = false;
+      if ($('loginSenha')) $('loginSenha').value = '';
+      if ($('loginLembrar')) $('loginLembrar').checked = false;
       $('vallet-login').classList.remove('hidden');
       atualizarTelaLogin();
     }
-
     function maiorTicketLocalDoDia() {
       const hoje = dataOperacaoAtual();
       return atendimentos
@@ -2158,65 +2005,30 @@
     }
 
     async function lerContadorTicketGlobal() {
-      if (!navigator.onLine) return 0;
-      const fb = await initFirebase();
-      if (!fb) return 0;
-      try {
-        const refContador = fb.doc(fb.db, 'vallet_contadores', chaveContadorTicket());
-        const snap = await fb.getDoc(refContador);
-        return snap.exists() ? Number(snap.data()?.ultimo_ticket || 0) : 0;
-      } catch (e) {
-        console.warn('Não foi possível consultar o contador global de tickets.', e);
-        return 0;
-      }
+      if (!navigator.onLine || !operadorAtual) return 0;
+      try { return Number((await apiVallet('contador_ticket')).ultimo_ticket || 0); }
+      catch (e) { console.warn('Não foi possível consultar o contador de tickets.', e); return 0; }
     }
-
     async function proximoTicket() {
       const key = chaveContadorTicket();
-      const maiorLocal = Math.max(
-        maiorTicketLocalDoDia(),
-        Number(await lerMeta(key) || 0)
-      );
-
-      // Com internet, o número é reservado em uma transação no Firebase.
-      // Isso impede que dois terminais online emitam o mesmo ticket.
+      const maiorLocal = Math.max(maiorTicketLocalDoDia(), Number(await lerMeta(key) || 0));
+      // Com internet o número é reservado no servidor, em transação. É isso que
+      // impede dois terminais de emitirem o mesmo ticket.
       if (navigator.onLine) {
-        const fb = await initFirebase();
-        if (!fb) throw new Error('Não foi possível conectar ao contador central de tickets. Tente novamente.');
-
         try {
-          const refContador = fb.doc(fb.db, 'vallet_contadores', key);
-          const proximo = await fb.runTransaction(fb.db, async (transaction) => {
-            const snap = await transaction.get(refContador);
-            const ultimoGlobal = snap.exists() ? Number(snap.data()?.ultimo_ticket || 0) : 0;
-            const numero = Math.max(ultimoGlobal, maiorLocal) + 1;
-
-            transaction.set(refContador, {
-              data_operacao: dataOperacaoAtual(),
-              ultimo_ticket: numero,
-              atualizado_em: agoraISO(),
-              ultimo_dispositivo: deviceId(),
-              ultimo_operador: getOperador()
-            }, { merge: true });
-
-            return numero;
-          });
-
-          await salvarMeta(key, proximo);
-          return String(proximo).padStart(3, '0');
+          const resp = await apiVallet('proximo_ticket', { minimo: maiorLocal });
+          await salvarMeta(key, Number(resp.numero || 0));
+          return resp.ticket;
         } catch (e) {
-          console.error('Falha ao reservar ticket global.', e);
-          throw new Error('Não foi possível reservar o próximo ticket global. Verifique a internet e tente novamente.');
+          if (!e?.semRede) throw new Error(e?.message || 'Não foi possível reservar o próximo ticket.');
         }
       }
-
-      // Sem internet, usa a maior numeração já conhecida neste aparelho.
-      // A sequência entre aparelhos diferentes só pode ser garantida quando eles estão online.
+      // Sem internet, segue a maior numeração conhecida neste aparelho. A
+      // sequência entre terminais só é garantida quando há internet.
       const proximoLocal = maiorLocal + 1;
       await salvarMeta(key, proximoLocal);
       return String(proximoLocal).padStart(3, '0');
     }
-
     async function atualizarTicketPreview() {
       const key = chaveContadorTicket();
       const [metaLocal, contadorGlobal] = await Promise.all([
@@ -4022,7 +3834,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
-    const VALLET_BUILD_VERSION = '49';
+    const VALLET_BUILD_VERSION = '52';
 
     async function prepararAtualizacaoPWA() {
       try {
@@ -4057,7 +3869,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=48', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=52', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -4077,8 +3889,6 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         await carregarLocal();
       }
 
-      $('loginUsuario')?.addEventListener('input', verificarPrimeiroAcessoVallet);
-      $('loginUsuario')?.addEventListener('change', verificarPrimeiroAcessoVallet);
       await limparVeiculosInativos180Dias();
       atualizarControleHorarioVallet({ forcarTela: true });
       await iniciarMonitorConfiguracaoVallet();
@@ -4091,7 +3901,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=48', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=52', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
