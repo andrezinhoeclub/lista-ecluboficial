@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB Vallet • v52</title>
-  <!-- E-CLUB Vallet v52: login por e-mail e senha (Acessos do Dashboard) e todo acesso ao banco pela função valletApi -->
+  <!-- E-CLUB Vallet v52: login por e-mail e senha (Acessos do Dashboard) e todo acesso ao banco via função valletApi -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -1537,8 +1537,8 @@
     async function salvarMeta(key, value) { await put(STORE_META, { id: key, value }); }
     async function lerMeta(key) { const m = await getOne(STORE_META, key); return m ? m.value : null; }
 
-    // Só o LOGIN usa o Firebase direto agora, e apenas para conferir a senha e
-    // pegar o comprovante de sessão. Nenhum dado de cliente passa por aqui.
+    // Só o LOGIN usa o Firebase direto agora (e olhe lá: só para conferir a
+    // senha e pegar o comprovante de sessão). Nenhum dado de cliente passa por aqui.
     async function initFirebase() {
       if (firebase) return firebase;
       try {
@@ -1546,7 +1546,7 @@
         const authMod = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
         const app = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(FIREBASE_CONFIG);
         const auth = authMod.getAuth(app);
-        // A sessão fica guardada neste computador: é isso que permite continuar
+        // A sessão fica guardada neste computador. É isso que permite continuar
         // trabalhando sem internet depois do primeiro login.
         try { await authMod.setPersistence(auth, authMod.browserLocalPersistence); } catch (_) {}
         firebase = { app, auth, ...authMod };
@@ -1595,24 +1595,27 @@
         await carregarLocal();
         if (!fila.length) { await puxarFirebase(); return; }
         // Manda em blocos de 100. O servidor confere item por item e devolve
-        // quais aceitou — só esses saem da fila. Um registro com defeito é
-        // recusado sozinho, sem travar o resto da noite.
+        // quais aceitou — só esses saem da fila. Se um registro vier com defeito,
+        // ele é recusado sozinho, sem travar todo o resto da noite.
         for (let i = 0; i < fila.length; i += 100) {
           const bloco = fila.slice(i, i + 100);
           const resp = await apiVallet('gravar', {
             itens: bloco.map(item => ({
-              id: item.id, action: item.action, collectionName: item.collectionName,
-              docId: item.docId, data: item.data || null
+              id: item.id,
+              action: item.action,
+              collectionName: item.collectionName,
+              docId: item.docId,
+              data: item.data || null
             }))
           });
           const aceitos = new Set(resp.aceitos || []);
           for (const item of bloco) if (aceitos.has(item.id)) await del(STORE_QUEUE, item.id);
           if (Array.isArray(resp.recusados) && resp.recusados.length) {
             resp.recusados.forEach(rec => console.warn('Registro recusado pelo servidor:', rec));
-            // Recusado sai da fila também: se ficasse, tentaria para sempre e a
-            // sincronização nunca mais terminaria.
+            // Registro recusado sai da fila também: se ficasse, tentaria para
+            // sempre e a sincronização nunca mais terminaria.
             for (const rec of resp.recusados) await del(STORE_QUEUE, rec.id).catch(() => {});
-            toast(resp.recusados.length + ' registro(s) recusado(s) pelo servidor.');
+            toast(`${resp.recusados.length} registro(s) recusado(s) pelo servidor. Confira no relatório.`);
           }
         }
         await salvarMeta('last_sync', horaLocal());
@@ -1637,8 +1640,9 @@
         const desde = await lerMeta('sync_desde');
         const dados = await apiVallet('sync', desde ? { desde } : {});
         modoTesteValletAtivo = dados.operacao?.modoTeste === true;
+        window.__operacaoServidor = dados.operacao || null;
         const puts = [];
-        // Catálogos são pequenos e vêm inteiros: limpa e regrava.
+        // Catálogos vêm inteiros (são pequenos): limpa e regrava.
         await Promise.all([clearStore(STORE_SETOR), clearStore(STORE_MODELO), clearStore(STORE_COR), clearStore(STORE_EVENTO)]);
         (dados.setores || []).forEach(d => puts.push(put(STORE_SETOR, d)));
         (dados.modelos || []).forEach(d => puts.push(put(STORE_MODELO, d)));
@@ -1828,7 +1832,7 @@
     }
 
     // ANTES isto era uma escuta direta no banco. Agora pergunta ao servidor de
-    // tempos em tempos: mais barato e sem acesso direto ao banco pela tela.
+    // tempos em tempos — mais barato e sem acesso direto ao banco pela tela.
     async function iniciarMonitorConfiguracaoVallet() {
       if (!navigator.onLine || !operadorAtual) return;
       try {
@@ -1836,6 +1840,7 @@
         const novoModoTeste = resp.operacao?.modoTeste === true;
         const mudou = novoModoTeste !== modoTesteValletAtivo;
         modoTesteValletAtivo = novoModoTeste;
+        window.__operacaoServidor = resp.operacao || null;
         await salvarMeta('modo_teste_vallet', modoTesteValletAtivo).catch(() => {});
         atualizarIndicadorModoTesteLogin();
         atualizarControleHorarioVallet({ forcarTela: true });
@@ -1852,15 +1857,16 @@
       return isNaN(d) ? null : d;
     }
 
-    // DESLIGADA DE PROPÓSITO. Esta função apagava veículos do banco com base no
-    // que estava salvo NESTE aparelho. Com a cópia local incompleta (terminal
-    // novo, sincronização pela metade), apagava cadastro que não devia. Limpeza
-    // de base é tarefa de servidor — e o Dashboard já tem o botão para isso.
+    // DESLIGADA DE PROPÓSITO. Esta função apagava veículos do banco com base
+    // no que estava salvo NESTE aparelho. Se a cópia local estivesse incompleta
+    // (terminal novo, sincronização pela metade), ela apagava cadastro que não
+    // devia. Limpeza de base é tarefa de servidor, com a visão completa — e o
+    // Dashboard já tem o botão de limpeza do Vallet para isso.
     async function limparVeiculosInativos180Dias() { return; }
     async function reservarPlacaAtivaGlobal(placa, atendimentoId) {
       // Impede o mesmo carro de ser recebido em dois terminais ao mesmo tempo.
-      // A conferência é no servidor, em transação — é o único lugar que enxerga
-      // todos os terminais de uma vez.
+      // A conferência é feita no servidor, em transação — é o único lugar que
+      // enxerga todos os terminais de uma vez.
       if (!navigator.onLine) return { reservado: false, offline: true };
       try {
         await apiVallet('reservar_placa', { placa, atendimentoId });
@@ -1879,9 +1885,9 @@
     // O LOGIN CASEIRO FOI REMOVIDO INTEIRO, e é bom saber por quê:
     //  - a lista de operadores, COM as senhas embaralhadas, era baixada para o
     //    aparelho e a conferência acontecia dentro do navegador;
-    //  - num computador novo, se a lista não baixasse, a tela oferecia "criar o
-    //    operador administrador inicial" — qualquer pessoa que abrisse o
-    //    endereço ganhava um administrador;
+    //  - num computador novo, se a lista não baixasse, a tela oferecia
+    //    "criar o operador administrador inicial" — qualquer pessoa que abrisse
+    //    o endereço ganhava um administrador;
     //  - e a senha mínima era de 4 caracteres.
     // Agora é o mesmo login da Portaria e das Solteiras: e-mail e senha criados
     // na aba Acessos do Dashboard, com "Permitir Vallet" marcado.
@@ -1914,6 +1920,7 @@
     // "Permitir Vallet" é conferida de verdade.
     async function carregarOperadorDoServidor() {
       const resp = await apiVallet('bootstrap');
+      window.__operacaoServidor = resp.operacao || null;
       modoTesteValletAtivo = resp.operacao?.modoTeste === true;
       await salvarMeta('modo_teste_vallet', modoTesteValletAtivo).catch(() => {});
       return { nome: normalize(resp.operador?.nome || ''), email: resp.operador?.email || '', uid: resp.operador?.uid || '' };
@@ -1926,7 +1933,12 @@
       const user = await new Promise(resolve => {
         const parar = fb.onAuthStateChanged(fb.auth, u => { parar(); resolve(u); });
       });
-      if (!user) { $('appPrincipal').hidden = true; $('vallet-login').classList.remove('hidden'); atualizarTelaLogin(); return; }
+      if (!user) {
+        $('appPrincipal').hidden = true;
+        $('vallet-login').classList.remove('hidden');
+        atualizarTelaLogin();
+        return;
+      }
       try {
         const operador = await carregarOperadorDoServidor();
         const controleHorario = atualizarControleHorarioVallet({ forcarTela: true });
@@ -1935,7 +1947,7 @@
       } catch (e) {
         if (e?.semRede) {
           // Sem internet, mas este computador já entrou antes: segue com o nome
-          // guardado. É o que mantém o Vallet trabalhando durante uma queda.
+          // guardado. É o que mantém o Vallet funcionando durante uma queda.
           const salvo = localStorage.getItem(OPERADOR_KEY);
           if (salvo) { await concluirLogin({ nome: salvo, email: user.email || '' }, true); return; }
         }
@@ -1957,11 +1969,15 @@
         if (!navigator.onLine) throw new Error('Sem internet: o primeiro acesso neste computador precisa de conexão.');
         const fb = await initFirebase();
         if (!fb) throw new Error('Não foi possível carregar o login. Verifique a internet.');
-        try { await fb.signInWithEmailAndPassword(fb.auth, email, senha); }
-        catch (_) { throw new Error('E-mail ou senha inválidos.'); }
+        try {
+          await fb.signInWithEmailAndPassword(fb.auth, email, senha);
+        } catch (_) {
+          throw new Error('E-mail ou senha inválidos.');
+        }
         let operador;
-        try { operador = await carregarOperadorDoServidor(); }
-        catch (erro) {
+        try {
+          operador = await carregarOperadorDoServidor();
+        } catch (erro) {
           // Entrou no Firebase mas não tem permissão de Vallet: derruba a sessão
           // para não deixar o computador "meio logado".
           try { await fb.signOut(fb.auth); } catch (_) {}
@@ -1969,7 +1985,7 @@
         }
         $('loginSenha').value = '';
         await concluirLogin(operador, $('loginLembrar').checked);
-        toast('Bem-vindo, ' + normalize(operador.nome || operador.email) + '.', true);
+        toast(`Bem-vindo, ${normalize(operador.nome || operador.email)}.`, true);
       } catch (e) {
         toast(e.message || 'Não foi possível entrar.');
       } finally {
@@ -2005,14 +2021,14 @@
     }
 
     async function lerContadorTicketGlobal() {
-      if (!navigator.onLine || !operadorAtual) return 0;
+      if (!navigator.onLine) return 0;
       try { return Number((await apiVallet('contador_ticket')).ultimo_ticket || 0); }
       catch (e) { console.warn('Não foi possível consultar o contador de tickets.', e); return 0; }
     }
     async function proximoTicket() {
       const key = chaveContadorTicket();
       const maiorLocal = Math.max(maiorTicketLocalDoDia(), Number(await lerMeta(key) || 0));
-      // Com internet o número é reservado no servidor, em transação. É isso que
+      // Com internet, o número é reservado no servidor, em transação. É isso que
       // impede dois terminais de emitirem o mesmo ticket.
       if (navigator.onLine) {
         try {
@@ -2024,7 +2040,7 @@
         }
       }
       // Sem internet, segue a maior numeração conhecida neste aparelho. A
-      // sequência entre terminais só é garantida quando há internet.
+      // sequência entre terminais diferentes só é garantida quando há internet.
       const proximoLocal = maiorLocal + 1;
       await salvarMeta(key, proximoLocal);
       return String(proximoLocal).padStart(3, '0');
