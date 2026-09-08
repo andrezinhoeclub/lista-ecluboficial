@@ -66,6 +66,7 @@
       align-items: center;
       gap: 14px;
       margin: 8px 0 18px;
+      flex-wrap: wrap;
     }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand img { width: 42px; height: 42px; object-fit: contain; }
@@ -267,7 +268,7 @@
       border: 1px solid var(--border);
       background: rgba(12,12,18,.70);
       border-radius: 22px;
-      margin-bottom: 18px;
+      flex: 0 0 auto;
     }
     .tabBtn {
       background: transparent;
@@ -611,13 +612,21 @@
     body.theme-light .chipBtn { background: rgba(255,255,255,.86); color: #344054; border-color: rgba(15,23,42,.14); }
     body.theme-light .chipBtn.active { background: var(--yellow); color: #050505; border-color: var(--yellow); }
     body.theme-light .colorDot { border-color: rgba(15,23,42,.22); }
-    .themeToggle {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-height: 35px;
+    /* Botão de tema no mesmo padrão da Portaria: pílula pequena e fixa, fora do
+       fluxo da página. Aqui ela fica embaixo à esquerda porque o canto de cima é
+       do logo, e o de baixo à direita é do aviso de conexão. */
+    .theme-toggle {
+      position: fixed; left: 14px; bottom: 14px; z-index: 10050;
+      display: flex; align-items: center; gap: 5px;
+      padding: 8px 12px; border-radius: 999px;
+      border: 1px solid rgba(234,179,8,.45);
+      background: rgba(0,0,0,.72); color: #facc15;
+      font-family: inherit; font-size: 9px; font-weight: 900;
+      text-transform: uppercase; letter-spacing: .06em; cursor: pointer;
+      box-shadow: 0 0 16px rgba(234,179,8,.12); backdrop-filter: blur(10px);
     }
+    .theme-toggle:hover { border-color: rgba(234,179,8,.8); }
+    body.theme-light .theme-toggle { background: rgba(255,255,255,.92); color: #854d0e; border-color: rgba(202,138,4,.5); }
     body.theme-light {
       --bg: #f4f6fb;
       --card: rgba(255, 255, 255, .92);
@@ -934,6 +943,9 @@
     })();
   </script>
 
+  <!-- Botão de tema no mesmo padrão da Portaria: pílula fixa e discreta. -->
+  <button id="themeToggle" class="theme-toggle" type="button" onclick="alternarTema()" aria-label="Alternar tema">🌙 <span>Escuro</span></button>
+
   <div id="toast" class="toast"></div>
 
   <!-- Aviso de conexão no padrão da Portaria: fica escondido quando está tudo
@@ -1001,16 +1013,12 @@
           </div>
         </div>
       </div>
-      <div class="statusBox">
-        <span id="eventoValletStatus" class="pill">Evento...</span>
-        <button id="themeToggle" class="pill themeToggle" onclick="alternarTema()" type="button" aria-label="Alternar tema">☀️ Modo claro</button>
-      </div>
+      <!-- As duas abas subiram para cá, no lugar da tarja com o nome da festa. -->
+      <nav class="tabs">
+        <button class="tabBtn active" data-tab="atendimento" onclick="trocarTab('atendimento', this)">Atendimento</button>
+        <button class="tabBtn" data-tab="cadastros" onclick="trocarTab('cadastros', this)">Cadastros</button>
+      </nav>
     </header>
-
-    <nav class="tabs">
-      <button class="tabBtn active" data-tab="atendimento" onclick="trocarTab('atendimento', this)">Atendimento</button>
-      <button class="tabBtn" data-tab="cadastros" onclick="trocarTab('cadastros', this)">Cadastros</button>
-    </nav>
 
     <datalist id="datalistModelos"></datalist>
     <datalist id="datalistCores"></datalist>
@@ -1398,9 +1406,10 @@
       document.documentElement.style.colorScheme = modoClaro ? 'light' : 'dark';
       const metaTheme = document.querySelector('meta[name="theme-color"]');
       if (metaTheme) metaTheme.setAttribute('content', modoClaro ? '#f4f6fb' : '#050508');
+      // Mesma redação da Portaria: o botão mostra o tema em que a tela ESTÁ.
       const btn = document.getElementById('themeToggle');
       if (btn) {
-        btn.textContent = modoClaro ? '🌙 Modo escuro' : '☀️ Modo claro';
+        btn.innerHTML = modoClaro ? '☀️ <span>Claro</span>' : '🌙 <span>Escuro</span>';
         btn.setAttribute('aria-label', modoClaro ? 'Usar modo escuro' : 'Usar modo claro');
       }
     }
@@ -1722,7 +1731,10 @@
         (dados.veiculos || []).forEach(d => puts.push(put(STORE_VEICULO, d)));
         (dados.atendimentos || []).forEach(d => puts.push(put(STORE_ATEND, d)));
         puts.push(salvarMeta('modo_teste_vallet', modoTesteValletAtivo));
-        if (dados.servidor_em) puts.push(salvarMeta('sync_desde', dados.servidor_em));
+        // Fora do horário o servidor manda só o que está no pátio. Nesse caso o
+        // marcador NÃO anda, senão as mudanças feitas com a casa fechada seriam
+        // puladas quando o vallet reabrisse.
+        if (dados.servidor_em && !dados.base_restrita) puts.push(salvarMeta('sync_desde', dados.servidor_em));
         await Promise.all(puts);
         atualizarIndicadorModoTesteLogin();
       } catch (e) {
