@@ -281,6 +281,14 @@
     }
     .tabBtn.active { background: var(--yellow); color: #050505; box-shadow: 0 8px 28px rgba(234,179,8,.20); }
 
+    /* Selo de conexão, igual ao da Portaria: canto inferior direito, some
+       sozinho quando não há nada para avisar. */
+    .netBadge { position: fixed; right: 16px; bottom: 16px; z-index: 9999; max-width: min(92vw, 420px); padding: 13px 17px; border-radius: 18px; background: #dc2626; color: #fff; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .1em; line-height: 1.4; box-shadow: 0 0 24px rgba(220,38,38,.45); animation: netPulse 2s ease-in-out infinite; }
+    .netBadge.enviando { background: #ca8a04; box-shadow: 0 0 24px rgba(202,138,4,.45); }
+    .netBadge.hidden { display: none; }
+    @keyframes netPulse { 0%,100% { opacity: 1; } 50% { opacity: .72; } }
+    @media (prefers-reduced-motion: reduce) { .netBadge { animation: none; } }
+
     /* ===== ABA CADASTROS ===== */
     /* Sub-abas leves: só sublinhado, sem caixa. Mostram um painel por vez. */
     .subTabs { display: flex; gap: 4px; overflow-x: auto; margin: 0 0 14px; padding: 0 2px; }
@@ -928,6 +936,10 @@
 
   <div id="toast" class="toast"></div>
 
+  <!-- Aviso de conexão no padrão da Portaria: fica escondido quando está tudo
+       certo, e é a única coisa na tela que fala de sincronização. -->
+  <div id="avisoConexaoVallet" class="netBadge hidden" aria-live="polite">🔴 Sem internet</div>
+
   <div id="vallet-horario-bloqueio" class="scheduleOverlay" aria-live="polite">
     <div class="scheduleCard">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
@@ -990,18 +1002,14 @@
         </div>
       </div>
       <div class="statusBox">
-        <span id="netStatus" class="pill">Verificando...</span>
-        <span id="syncStatus" class="pill">0 pendentes</span>
         <span id="eventoValletStatus" class="pill">Evento...</span>
         <button id="themeToggle" class="pill themeToggle" onclick="alternarTema()" type="button" aria-label="Alternar tema">☀️ Modo claro</button>
-        <button class="pill" onclick="forcarSincronizacao()">Sincronizar</button>
       </div>
     </header>
 
     <nav class="tabs">
       <button class="tabBtn active" data-tab="atendimento" onclick="trocarTab('atendimento', this)">Atendimento</button>
       <button class="tabBtn" data-tab="cadastros" onclick="trocarTab('cadastros', this)">Cadastros</button>
-      <button class="tabBtn" data-tab="sincronizacao" onclick="trocarTab('sincronizacao', this)">Sincronização</button>
     </nav>
 
     <datalist id="datalistModelos"></datalist>
@@ -1199,23 +1207,6 @@
       </div>
     </section>
 
-    <section id="tab-sincronizacao" class="section">
-      <div class="grid grid2">
-        <div class="card">
-          <div class="title"><div><h2>Status de sincronização</h2><p>Fila local enviada ao Firebase quando houver internet.</p></div></div>
-          <div class="row two">
-            <button class="btn green" onclick="forcarSincronizacao()">Forçar sincronização</button>
-            <button class="btn ghost" onclick="exportarBackupLocal()">Exportar backup local</button>
-          </div>
-          <p id="syncResumo" class="smallText"></p>
-          <div class="notice">Não use “limpar dados do navegador” no aparelho antes de sincronizar. Registros offline ficam salvos no IndexedDB deste dispositivo.</div>
-        </div>
-        <div class="card">
-          <div class="title"><div><h2>Fila pendente</h2><p>Itens ainda não confirmados na nuvem.</p></div></div>
-          <div id="listaQueue" class="list"></div>
-        </div>
-      </div>
-    </section>
   </div>
 
   <div id="modalVistoriaAvarias" class="drawer inspectionDrawer" role="dialog" aria-modal="true" aria-labelledby="tituloVistoriaAvarias">
@@ -1668,7 +1659,7 @@
     async function processarFila() {
       if (sincronizando || !navigator.onLine || !operadorAtual) return;
       sincronizando = true;
-      atualizarStatus('Sincronizando...');
+      atualizarStatus();
       try {
         await carregarLocal();
         if (!fila.length) { await puxarFirebase(); return; }
@@ -4038,13 +4029,6 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       renderSetoresOperacao();
     }
 
-    function renderQueue() {
-      $('syncResumo').textContent = `Status: ${navigator.onLine ? 'online' : 'offline'} • Pendentes: ${fila.length} • Última sincronização: carregando...`;
-      lerMeta('last_sync').then(last => $('syncResumo').textContent = `Status: ${navigator.onLine ? 'online' : 'offline'} • Pendentes: ${fila.length} • Última sincronização: ${last || 'ainda não sincronizou'}`);
-      const box = $('listaQueue');
-      if (!fila.length) { box.innerHTML = '<div class="empty">Nada pendente. Tudo sincronizado neste aparelho.</div>'; return; }
-      box.innerHTML = fila.slice(0, 50).map(q => `<div class="syncItem">${q.collectionName}<br><span class="muted">${q.docId}</span><br>${new Date(q.created_at).toLocaleString('pt-BR')}</div>`).join('');
-    }
 
     function renderTudo() {
       montarSelectSetores();
@@ -4057,17 +4041,25 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       renderAtendimentos();
       renderVeiculos();
       renderSetores();
-      renderQueue();
       atualizarStatus();
       atualizarControleHorarioVallet();
     }
 
-    function atualizarStatus(msg='') {
-      const online = navigator.onLine;
-      $('netStatus').textContent = online ? '🟢 Online' : '🔴 Offline';
-      $('netStatus').className = 'pill ' + (online ? 'online' : 'offline');
-      $('syncStatus').textContent = msg || `${fila.length} pendente${fila.length === 1 ? '' : 's'}`;
-      $('syncStatus').className = 'pill ' + (fila.length ? 'offline' : 'online');
+    // ===== AVISO DE CONEXÃO (mesmo padrão da Portaria e das Solteiras) =====
+    // Um selo no canto, e só. Quando está tudo certo ele não existe na tela.
+    // Vermelho: sem internet, o Vallet continua funcionando e guardando tudo
+    // no aparelho. Amarelo: a internet voltou e o que ficou parado está subindo.
+    function atualizarStatus() {
+      const el = $('avisoConexaoVallet');
+      if (!el) return;
+      const pendentes = fila.length;
+      const semNet = !navigator.onLine;
+      if (!semNet && !pendentes) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      el.classList.toggle('enviando', !semNet);
+      el.textContent = semNet
+        ? `🔴 SEM INTERNET — VALLET FUNCIONANDO NORMAL${pendentes ? ` · ${pendentes} PENDENTE(S)` : ''}`
+        : `🟡 ENVIANDO ${pendentes} REGISTRO(S) PENDENTE(S)...`;
     }
 
     // Sub-abas de Cadastros. Guarda a última escolhida para quem entra na aba
@@ -4105,25 +4097,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
 
     function limparBuscaAtendimento() { setorOperacaoSelecionado = null; $('buscaAtendimentos').value = ''; $('filtroStatus').value = 'ativos'; renderTudo(); }
 
-    async function forcarSincronizacao() {
-      await processarFila();
-      if (!fila.length) toast('Sincronização concluída.', true);
-      else toast('Ainda existem pendências. Verifique a internet.');
-    }
 
-    async function exportarBackupLocal() {
-      await carregarLocal();
-      const payload = { gerado_em: agoraISO(), device_id: deviceId(), setores, modelos, cores, veiculos, atendimentos, fila };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `backup_vallet_${dataLocal()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
 
     function maskTel(i) {
       let v = i.value.replace(/\D/g, '').substring(0, 11);
@@ -4263,8 +4237,22 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       setInterval(renderFilaSolicitados, 20000);
     }
 
-    window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await puxarFirebase(); await carregarLocal(); await iniciarMonitorConfiguracaoVallet(); await atualizarTicketPreview(); atualizarControleHorarioVallet({ forcarTela: true }); });
-    window.addEventListener('offline', () => { atualizarStatus(); toast('Sem internet. Salvando neste aparelho.'); });
+    // Igual à Portaria: quando a internet volta, o que ficou parado sobe
+    // sozinho. O operador não precisa apertar nada.
+    window.addEventListener('online', async () => {
+      atualizarStatus();
+      toast('Internet voltou. Enviando o que ficou pendente.', true);
+      await processarFila();
+      await puxarFirebase();
+      await carregarLocal();
+      await iniciarMonitorConfiguracaoVallet();
+      await atualizarTicketPreview();
+      atualizarControleHorarioVallet({ forcarTela: true });
+      atualizarStatus();
+    });
+    // Sem toast aqui: o selo do canto já diz que está sem internet, e dois
+    // avisos ao mesmo tempo para a mesma coisa é ruído.
+    window.addEventListener('offline', () => atualizarStatus());
     window.addEventListener('afterprint', () => { const t = document.getElementById('ticketImpressao'); if (t) t.setAttribute('aria-hidden', 'true'); });
     document.addEventListener('click', (event) => {
       if (event.target === $('modalVistoriaAvarias')) fecharVistoriaAvarias();
