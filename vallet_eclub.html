@@ -280,6 +280,39 @@
       white-space: nowrap;
     }
     .tabBtn.active { background: var(--yellow); color: #050505; box-shadow: 0 8px 28px rgba(234,179,8,.20); }
+
+    /* ===== ABA CADASTROS ===== */
+    /* Sub-abas leves: só sublinhado, sem caixa. Mostram um painel por vez. */
+    .subTabs { display: flex; gap: 4px; overflow-x: auto; margin: 0 0 14px; padding: 0 2px; }
+    .subTabBtn { cursor: pointer; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); font-family: inherit; font-size: 10px; font-weight: 950; text-transform: uppercase; letter-spacing: .1em; padding: 9px 14px; white-space: nowrap; transition: color .15s, border-color .15s; }
+    .subTabBtn:hover { color: var(--text); }
+    .subTabBtn.active { color: var(--yellow); border-bottom-color: var(--yellow); }
+    .subPanel { display: none; }
+    .subPanel.active { display: block; }
+    /* Cada item cadastrado é UMA linha, não um cartão com um botão vermelho
+       gigante. Com 25 modelos e 12 cores, a versão anterior virava um muro. */
+    .regList { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 7px; }
+    .regItem { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.025); }
+    .regItem .regNome { flex: 1 1 auto; min-width: 0; color: var(--text); font-size: 11px; font-weight: 950; letter-spacing: .02em; overflow-wrap: anywhere; }
+    .regItem .regMeta { display: block; margin-top: 2px; color: var(--muted); font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .07em; }
+    .regDel { flex: 0 0 auto; cursor: pointer; width: 28px; height: 28px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; line-height: 1; font-family: inherit; transition: all .15s; }
+    .regDel:hover { border-color: rgba(239,68,68,.6); background: rgba(239,68,68,.12); color: #fca5a5; }
+    body.theme-light .regItem { background: rgba(255,255,255,.65); border-color: rgba(15,23,42,.10); }
+    /* Uma linha só para adicionar: campo grande, campos de apoio e o botão.
+       Enter em qualquer campo salva — é o que torna o cadastro rápido. */
+    .addRow { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .addRow > * { flex: 0 1 auto; }
+    .addRow .addMain { flex: 3 1 220px; min-width: 0; }
+    .addRow select, .addRow input:not(.addMain) { flex: 1 1 140px; min-width: 0; }
+    .addRow input[type=color] { flex: 0 0 58px; padding: 6px; min-width: 58px; }
+    .addGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+    .addBtn { white-space: nowrap; padding: 15px 20px; flex: 0 0 auto; }
+    .addGrid .addBtn { grid-column: 1 / -1; }
+    @media (max-width: 760px) {
+      .addRow { flex-direction: column; }
+      .addRow > *, .addRow .addMain { flex: 1 1 auto; width: 100%; }
+      .addGrid { grid-template-columns: 1fr; }
+    }
     .grid { display: grid; gap: 16px; }
     .grid2 { grid-template-columns: 1.05fr .95fr; align-items: start; }
     .grid3 { grid-template-columns: repeat(3, 1fr); }
@@ -968,8 +1001,6 @@
     <nav class="tabs">
       <button class="tabBtn active" data-tab="atendimento" onclick="trocarTab('atendimento', this)">Atendimento</button>
       <button class="tabBtn" data-tab="cadastros" onclick="trocarTab('cadastros', this)">Cadastros</button>
-      <button class="tabBtn" data-tab="veiculos" onclick="trocarTab('veiculos', this)">Veículos</button>
-      <button class="tabBtn" data-tab="setores" onclick="trocarTab('setores', this)">Setores</button>
       <button class="tabBtn" data-tab="sincronizacao" onclick="trocarTab('sincronizacao', this)">Sincronização</button>
     </nav>
 
@@ -1101,101 +1132,70 @@
       </div>
     </section>
 
+    <!-- Cadastros, Veículos e Setores eram três abas. Viraram uma só, com
+         sub-abas internas: aparece UM formulário e UMA lista por vez, em vez
+         de quatro cartões brigando pela tela. -->
     <section id="tab-cadastros" class="section">
-      <div class="card" style="margin-bottom:16px;">
-        <div class="title">
-          <div>
-            <h2>Cadastros rápidos</h2>
-            <p>Use listas padronizadas para reduzir erro de digitação no atendimento.</p>
-          </div>
+      <nav class="subTabs">
+        <button class="subTabBtn active" data-sub="setores" onclick="trocarSubCadastro('setores', this)">Setores</button>
+        <button class="subTabBtn" data-sub="modelos" onclick="trocarSubCadastro('modelos', this)">Modelos</button>
+        <button class="subTabBtn" data-sub="cores" onclick="trocarSubCadastro('cores', this)">Cores</button>
+        <button class="subTabBtn" data-sub="veiculos" onclick="trocarSubCadastro('veiculos', this)">Veículos</button>
+      </nav>
+
+      <div id="sub-setores" class="card subPanel active">
+        <div class="addRow">
+          <input id="setorNome" class="addMain" placeholder="NOME DO SETOR" />
+          <select id="setorTipo">
+            <option value="INTERNO">Interno</option>
+            <option value="EXTERNO">Externo</option>
+            <option value="RUA">Rua / Apoio</option>
+            <option value="VIP">VIP</option>
+            <option value="OUTRO">Outro</option>
+          </select>
+          <input id="setorObs" placeholder="OBSERVAÇÃO (OPCIONAL)" />
+          <button class="btn yellow addBtn" onclick="salvarSetor()">+ Adicionar</button>
         </div>
-        <div class="notice">Modelos e cores ficam salvos no aparelho e sincronizam com o Firebase quando houver internet. Na correria, o operador escolhe por botão ou busca, em vez de digitar livremente.</div>
+        <div id="listaSetores" class="list"></div>
       </div>
 
-      <div class="cadastroGrid">
-        <div class="card">
-          <div class="title"><div><h2>Modelos de veículos</h2><p>Exemplos: Corolla, Civic, Onix, HB20, Compass.</p></div></div>
-          <div class="row two">
-            <input id="modeloNome" placeholder="NOME DO MODELO" />
-            <select id="modeloCategoria">
-              <option value="CARRO">Carro</option>
-              <option value="SUV">SUV</option>
-              <option value="CAMINHONETE">Caminhonete</option>
-              <option value="MOTO">Moto</option>
-              <option value="OUTRO">Outro</option>
-            </select>
-          </div>
-          <button class="btn blue full" onclick="salvarModelo()">Salvar modelo</button>
-          <div id="listaModelos" class="list" style="margin-top:14px;"></div>
+      <div id="sub-modelos" class="card subPanel">
+        <div class="addRow">
+          <input id="modeloNome" class="addMain" placeholder="NOME DO MODELO. EX: ONIX, CIVIC, COMPASS" />
+          <select id="modeloCategoria">
+            <option value="CARRO">Carro</option>
+            <option value="SUV">SUV</option>
+            <option value="CAMINHONETE">Caminhonete</option>
+            <option value="MOTO">Moto</option>
+            <option value="OUTRO">Outro</option>
+          </select>
+          <button class="btn yellow addBtn" onclick="salvarModelo()">+ Adicionar</button>
         </div>
-
-        <div class="card">
-          <div class="title"><div><h2>Cores padronizadas</h2><p>Evita variações como preto, pretto, pt, cinza/chumbo.</p></div></div>
-          <div class="row two">
-            <input id="corNome" placeholder="NOME DA COR" />
-            <input id="corHex" type="color" value="#777777" title="Cor visual" />
-          </div>
-          <button class="btn purple full" onclick="salvarCor()">Salvar cor</button>
-          <div id="listaCores" class="list" style="margin-top:14px;"></div>
-        </div>
+        <div id="listaModelos" class="list"></div>
       </div>
-    </section>
 
-    <section id="tab-veiculos" class="section">
-      <div class="grid grid2">
-        <div class="card">
-          <div class="title"><div><h2>Cadastrar veículo</h2><p>Base de veículos reaproveitada nos próximos atendimentos.</p></div></div>
-          <div class="row two">
-            <div><input id="cadPlaca" placeholder="PLACA" maxlength="7" minlength="7" pattern="[A-Za-z]{3}([0-9]{4}|[0-9][A-Za-z][0-9]{2})" required autocapitalize="characters" spellcheck="false" oninput="normalizarCampoPlaca('cadPlaca')" /><div class="plateRule">7 caracteres: AAA0000 ou AAA0A00</div></div>
-            <input id="cadClienteTel" placeholder="TELEFONE" oninput="maskTel(this)" />
-          </div>
-          <div class="row two">
-            <div>
-              <input id="cadModelo" list="datalistModelos" placeholder="MODELO" oninput="aoEditarModelo('cadModelo')" />
-            </div>
-            <div>
-              <input id="cadCor" list="datalistCores" placeholder="COR" oninput="aoEditarCor('cadCor')" />
-            </div>
-          </div>
-          <div class="row">
-            <input id="cadClienteNome" placeholder="NOME DO CLIENTE" />
-          </div>
-          <div class="row">
-            <textarea id="cadObs" placeholder="OBSERVAÇÕES DO VEÍCULO"></textarea>
-          </div>
-          <button class="btn blue full" onclick="salvarVeiculoManual()">Salvar veículo</button>
+      <div id="sub-cores" class="card subPanel">
+        <div class="addRow">
+          <input id="corNome" class="addMain" placeholder="NOME DA COR. EX: PRETO, PRATA, BRANCO" />
+          <input id="corHex" type="color" value="#777777" title="Cor visual" />
+          <button class="btn yellow addBtn" onclick="salvarCor()">+ Adicionar</button>
         </div>
-        <div class="card">
-          <div class="title"><div><h2>Consulta</h2><p>Busca por placa, modelo, cor, nome ou telefone.</p></div></div>
-          <input id="buscaVeiculos" placeholder="BUSCAR VEÍCULO" oninput="renderTudo()" />
-          <div id="listaVeiculos" class="list" style="margin-top:14px;"></div>
-        </div>
+        <div id="listaCores" class="list"></div>
       </div>
-    </section>
 
-    <section id="tab-setores" class="section">
-      <div class="grid grid2">
-        <div class="card">
-          <div class="title"><div><h2>Cadastrar setor</h2><p>Exemplos: estacionamento interno, externo, setor A, setor B, rua lateral.</p></div></div>
-          <div class="row two">
-            <input id="setorNome" placeholder="NOME DO SETOR" />
-            <select id="setorTipo">
-              <option value="INTERNO">Interno</option>
-              <option value="EXTERNO">Externo</option>
-              <option value="RUA">Rua / Apoio</option>
-              <option value="VIP">VIP</option>
-              <option value="OUTRO">Outro</option>
-            </select>
-          </div>
-          <div class="row">
-            <textarea id="setorObs" placeholder="OBSERVAÇÃO DO SETOR"></textarea>
-          </div>
-          <button class="btn purple full" onclick="salvarSetor()">Salvar setor</button>
+      <div id="sub-veiculos" class="card subPanel">
+        <div class="addGrid">
+          <input id="cadPlaca" placeholder="PLACA" maxlength="7" minlength="7" pattern="[A-Za-z]{3}([0-9]{4}|[0-9][A-Za-z][0-9]{2})" autocapitalize="characters" spellcheck="false" oninput="normalizarCampoPlaca('cadPlaca')" />
+          <input id="cadModelo" list="datalistModelos" placeholder="MODELO" oninput="aoEditarModelo('cadModelo')" />
+          <input id="cadCor" list="datalistCores" placeholder="COR" oninput="aoEditarCor('cadCor')" />
+          <input id="cadClienteNome" placeholder="NOME DO CLIENTE" />
+          <input id="cadClienteTel" placeholder="TELEFONE" oninput="maskTel(this)" />
+          <input id="cadObs" placeholder="OBSERVAÇÕES (OPCIONAL)" />
+          <button class="btn yellow addBtn" onclick="salvarVeiculoManual()">+ Adicionar</button>
         </div>
-        <div class="card">
-          <div class="title"><div><h2>Setores cadastrados</h2><p>Exclua os setores que não serão mais usados na operação.</p></div></div>
-          <div id="listaSetores" class="list"></div>
-        </div>
+        <div class="smallText" style="margin:2px 0 12px;">Normalmente não precisa: o carro é cadastrado sozinho quando entra pela portaria.</div>
+        <input id="buscaVeiculos" placeholder="BUSCAR POR PLACA, MODELO, NOME OU TELEFONE" oninput="renderTudo()" />
+        <div id="listaVeiculos" class="list" style="margin-top:12px;"></div>
       </div>
     </section>
 
@@ -2278,6 +2278,7 @@
       $('modeloNome').value = '';
       await carregarLocal(); renderTudo();
       toast('Modelo salvo.', true);
+      $('modeloNome').focus();
     }
 
     async function excluirModelo(id) {
@@ -2311,6 +2312,7 @@
       $('corHex').value = '#777777';
       await carregarLocal(); renderTudo();
       toast('Cor salva.', true);
+      $('corNome').focus();
     }
 
     async function excluirCor(id) {
@@ -2673,6 +2675,7 @@
       $('setorNome').value = ''; $('setorObs').value = '';
       await carregarLocal(); renderTudo();
       toast('Setor salvo.', true);
+      $('setorNome').focus(); // pronto para o próximo, sem tirar a mão do teclado
     }
 
     async function excluirSetor(id) {
@@ -3592,35 +3595,33 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
     function renderModelos() {
       const box = $('listaModelos');
       if (!box) return;
-      if (!modelos.length) { box.innerHTML = '<div class="empty">Nenhum modelo cadastrado.</div>'; return; }
-      box.innerHTML = modelos.map(m => `<div class="vehicleCard">
-        <div class="vehicleTop"><div><strong>${m.nome}</strong><div class="meta muted">${m.categoria || 'CARRO'}</div></div></div>
-        <div class="actions" style="grid-template-columns:1fr;">
-          <button class="tinyBtn red" onclick="excluirModelo('${m.id}')">Excluir</button>
-        </div>
+      if (!modelos.length) { box.className = 'list'; box.innerHTML = '<div class="empty">Nenhum modelo cadastrado.</div>'; return; }
+      box.className = 'regList';
+      box.innerHTML = modelos.map(m => `<div class="regItem">
+        <div class="regNome">${m.nome}<span class="regMeta">${m.categoria || 'CARRO'}</span></div>
+        <button class="regDel" onclick="excluirModelo('${m.id}')" title="Excluir modelo" aria-label="Excluir modelo">&times;</button>
       </div>`).join('');
     }
 
     function renderCores() {
       const box = $('listaCores');
       if (!box) return;
-      if (!cores.length) { box.innerHTML = '<div class="empty">Nenhuma cor cadastrada.</div>'; return; }
-      box.innerHTML = cores.map(c => `<div class="vehicleCard">
-        <div class="vehicleTop"><div><strong><span class="colorDot" style="--dot:${c.hex || corHexPadrao(c.nome)}"></span> ${c.nome}</strong><div class="meta muted">${c.hex || corHexPadrao(c.nome)}</div></div></div>
-        <div class="actions" style="grid-template-columns:1fr;">
-          <button class="tinyBtn red" onclick="excluirCor('${c.id}')">Excluir</button>
-        </div>
+      if (!cores.length) { box.className = 'list'; box.innerHTML = '<div class="empty">Nenhuma cor cadastrada.</div>'; return; }
+      box.className = 'regList';
+      box.innerHTML = cores.map(c => `<div class="regItem">
+        <span class="colorDot" style="--dot:${c.hex || corHexPadrao(c.nome)}"></span>
+        <div class="regNome">${c.nome}</div>
+        <button class="regDel" onclick="excluirCor('${c.id}')" title="Excluir cor" aria-label="Excluir cor">&times;</button>
       </div>`).join('');
     }
 
     function renderSetores() {
       const box = $('listaSetores');
-      if (!setores.length) { box.innerHTML = '<div class="empty">Nenhum setor cadastrado.</div>'; return; }
-      box.innerHTML = setores.map(s => `<div class="vehicleCard">
-        <div class="vehicleTop"><div><strong>${s.nome}</strong><div class="meta muted">${s.tipo || 'OUTRO'}${s.obs ? ' • ' + s.obs : ''}</div></div></div>
-        <div class="actions" style="grid-template-columns:1fr;">
-          <button class="tinyBtn red" onclick="excluirSetor('${s.id}')">Excluir</button>
-        </div>
+      if (!setores.length) { box.className = 'list'; box.innerHTML = '<div class="empty">Nenhum setor cadastrado.</div>'; return; }
+      box.className = 'regList';
+      box.innerHTML = setores.map(s => `<div class="regItem">
+        <div class="regNome">${s.nome}<span class="regMeta">${s.tipo || 'OUTRO'}${s.obs ? ' • ' + s.obs : ''}</span></div>
+        <button class="regDel" onclick="excluirSetor('${s.id}')" title="Excluir setor" aria-label="Excluir setor">&times;</button>
       </div>`).join('');
     }
 
@@ -4069,6 +4070,31 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       $('syncStatus').className = 'pill ' + (fila.length ? 'offline' : 'online');
     }
 
+    // Sub-abas de Cadastros. Guarda a última escolhida para quem entra na aba
+    // não cair sempre em Setores quando estava mexendo em Modelos.
+    const SUB_CADASTRO_KEY = 'eclub_vallet_sub_cadastro';
+    function trocarSubCadastro(nome, btn) {
+      document.querySelectorAll('.subPanel').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.subTabBtn').forEach(b => b.classList.remove('active'));
+      $('sub-' + nome)?.classList.add('active');
+      const alvo = btn || document.querySelector(`.subTabBtn[data-sub="${nome}"]`);
+      alvo?.classList.add('active');
+      try { localStorage.setItem(SUB_CADASTRO_KEY, nome); } catch (_) {}
+      // Só leva o cursor quando o próprio operador clicou na sub-aba. Ao abrir
+      // a página, quem manda no foco é a tela de login.
+      if (btn) {
+        const primeiro = $('sub-' + nome)?.querySelector('input:not([type=color]), select');
+        setTimeout(() => primeiro?.focus(), 60);
+      }
+    }
+    // Enter salva. Sem isso o operador precisa tirar a mão do teclado a cada
+    // item, e cadastrar dez cores vira um exercício de paciência.
+    function enterSalva(ids, salvar) {
+      ids.forEach(id => $(id)?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); salvar(); }
+      }));
+    }
+
     function trocarTab(tab, btn) {
       document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
       document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
@@ -4179,6 +4205,15 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         }
         return;
       }
+
+      enterSalva(['setorNome', 'setorObs'], salvarSetor);
+      enterSalva(['modeloNome'], salvarModelo);
+      enterSalva(['corNome'], salvarCor);
+      enterSalva(['cadPlaca', 'cadModelo', 'cadCor', 'cadClienteNome', 'cadClienteTel', 'cadObs'], salvarVeiculoManual);
+      try {
+        const sub = localStorage.getItem(SUB_CADASTRO_KEY);
+        if (sub && $('sub-' + sub)) trocarSubCadastro(sub);
+      } catch (_) {}
 
       $('btnAbrirRecuperarVallet')?.addEventListener('click', mostrarRecuperarSenhaVallet);
       $('btnVoltarLoginVallet')?.addEventListener('click', mostrarLoginNormalVallet);
