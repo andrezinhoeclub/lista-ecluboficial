@@ -330,6 +330,48 @@
     button.stat { width: 100%; color: inherit; font-family: inherit; cursor: pointer; }
     button.stat:hover { border-color: rgba(249,115,22,.55); background: rgba(249,115,22,.08); transform: translateY(-1px); }
     button.stat.active { border-color: rgba(249,115,22,.85); box-shadow: 0 0 0 1px rgba(249,115,22,.25); background: rgba(249,115,22,.12); }
+    /* ===== BLOCO "MAIS DADOS" DA FICHA DE ENTRADA ===== */
+    .extraFields { margin: 14px 0 4px; border: 1px solid var(--border); border-radius: 20px; background: rgba(255,255,255,.03); }
+    .extraFields > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-radius: 20px; }
+    .extraFields > summary::-webkit-details-marker { display: none; }
+    .extraFields > summary::after { content: '▾'; color: var(--muted); font-size: 13px; transition: transform .2s; }
+    .extraFields[open] > summary::after { transform: rotate(180deg); }
+    .extraFields > summary:hover { background: rgba(255,255,255,.04); }
+    .extraFieldsTitle { color: var(--text); font-size: 9px; font-weight: 950; text-transform: uppercase; letter-spacing: .12em; }
+    .extraFieldsResumo { flex: 1 1 auto; min-width: 0; color: var(--muted); font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; overflow-wrap: anywhere; }
+    .extraFieldsResumo.preenchido { color: var(--yellow); }
+    .extraFieldsBody { padding: 0 16px 14px; }
+    .extraFields[open] { border-color: rgba(234,179,8,.28); }
+
+    /* ===== FILA DE SOLICITADOS ===== */
+    /* Faixa fixa com quem está esperando o carro. O tempo de espera é o número
+       maior da linha de propósito: é ele que diz para quem correr primeiro. */
+    .waitQueue { border: 1px solid rgba(249,115,22,.34); background: rgba(249,115,22,.07); border-radius: 24px; padding: 15px 16px 13px; margin: -6px 0 16px; }
+    .waitQueue.hidden { display: none; }
+    .waitQueueHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .waitQueueHead strong { color: #fdba74; font-size: 12px; font-weight: 950; text-transform: uppercase; font-style: italic; letter-spacing: .04em; }
+    .waitQueueHead span { color: var(--muted); font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; }
+    .waitList { display: grid; gap: 9px; }
+    .waitRow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 12px 14px; border-radius: 18px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.22); }
+    .waitTime { min-width: 76px; text-align: center; }
+    .waitTime b { display: block; font-size: 23px; font-weight: 950; line-height: 1; color: #fdba74; }
+    .waitTime i { display: block; margin-top: 3px; font-style: normal; font-size: 7px; font-weight: 900; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+    .waitRow.atrasado { border-color: rgba(234,179,8,.45); background: rgba(234,179,8,.09); }
+    .waitRow.atrasado .waitTime b { color: var(--yellow); }
+    .waitRow.critico { border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.10); animation: waitPulse 2s ease-in-out infinite; }
+    .waitRow.critico .waitTime b { color: #fca5a5; }
+    @keyframes waitPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } 50% { box-shadow: 0 0 0 4px rgba(239,68,68,.13); } }
+    @media (prefers-reduced-motion: reduce) { .waitRow.critico { animation: none; } }
+    .waitInfo { flex: 1 1 210px; min-width: 0; }
+    .waitInfo strong { display: block; color: var(--text); font-size: 13px; font-weight: 950; letter-spacing: .02em; }
+    .waitInfo span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; overflow-wrap: anywhere; }
+    .waitActions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .waitActions .tinyBtn { padding: 12px 15px; font-size: 9px; }
+    @media (max-width: 720px) {
+      .waitRow { gap: 10px; }
+      .waitActions { width: 100%; }
+      .waitActions .tinyBtn { flex: 1 1 0; }
+    }
     .sectorStats { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 10px; margin: -6px 0 16px; }
     .sectorStat { border: 1px solid rgba(234,179,8,.18); background: rgba(234,179,8,.055); border-radius: 20px; padding: 13px 14px; min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; text-align: left; color: inherit; }
     button.sectorStat { cursor: pointer; }
@@ -391,6 +433,12 @@
       outline: 3px solid rgba(234,179,8,.45);
       outline-offset: 2px;
     }
+    /* Na lista os botões são menores que os da busca: são cinco ou seis cards
+       na tela ao mesmo tempo, e com o tamanho da busca a lista virava um
+       corredor de botões gigantes. */
+    .operationListItem .actions { margin-top: 11px; gap: 7px; }
+    .operationListItem .searchAction { min-height: 42px; padding: 9px 8px; font-size: 9px; border-radius: 13px; gap: 5px; }
+    .operationListItem .searchAction .actionIcon { font-size: 13px; }
     .operationListItem { padding: 12px 14px; }
     .operationListItem .operationHeader { align-items: center; }
     .operationListItem .operationMain { gap: 10px; }
@@ -927,6 +975,10 @@
         <div class="stat"><small>Entregues hoje</small><strong id="kpiEntregue">0</strong></div>
       </div>
 
+      <!-- Fila de quem está esperando o carro. Fica sempre à vista, com o tempo
+           de espera correndo, para ninguém ser esquecido no balcão. -->
+      <div id="filaSolicitados" class="waitQueue hidden" aria-live="polite"></div>
+
       <div id="resumoSetoresOperacao" class="sectorStats" aria-live="polite"></div>
 
       <div class="grid grid2">
@@ -956,17 +1008,9 @@
           <div id="avisoVeiculoNovo" class="notice hidden">Veículo ainda não cadastrado. Ao receber, ele será salvo na base de veículos.</div>
           <div id="avisoVeiculoEncontrado" class="historyBox hidden">Veículo encontrado • Histórico da placa</div>
 
-          <div class="row two">
-            <div>
-              <label class="fieldLabel">Modelo</label>
-              <input id="modelo" list="datalistModelos" placeholder="BUSQUE O MODELO" oninput="aoEditarModelo('modelo')" />
-            </div>
-            <div>
-              <label class="fieldLabel">Cor</label>
-              <input id="cor" list="datalistCores" placeholder="BUSQUE A COR" oninput="aoEditarCor('cor')" />
-            </div>
-          </div>
-
+          <!-- Na porta, o que resolve é placa + onde o carro ficou. O resto
+               desce para o bloco "mais dados", que abre sozinho quando a placa
+               é nova (aí modelo e cor precisam mesmo ser digitados). -->
           <div class="row two">
             <div>
               <label class="fieldLabel">Setor onde ficará estacionado</label>
@@ -975,24 +1019,6 @@
             <div>
               <label class="fieldLabel">Vaga / referência</label>
               <input id="vaga" placeholder="EX: A12, FUNDO, RAMPA" />
-            </div>
-          </div>
-
-          <div class="row two">
-            <div>
-              <label class="fieldLabel">Nome do cliente</label>
-              <input id="clienteNome" placeholder="NOME DO CLIENTE" />
-            </div>
-            <div>
-              <label class="fieldLabel">Telefone cliente</label>
-              <input id="clienteTel" placeholder="(41) 99999-9999" oninput="maskTel(this)" />
-            </div>
-          </div>
-
-          <div class="row">
-            <div>
-              <label class="fieldLabel">Observações sobre o carro</label>
-              <textarea id="obs" class="obsGrande" placeholder="EX: ARRANHÃO, CHAVE COM CONTROLE, SEM ESTEPE, OBJETO NO PORTA-MALAS"></textarea>
             </div>
           </div>
 
@@ -1009,6 +1035,41 @@
             </div>
             <button id="btnAbrirVistoria" type="button" class="btn blue inspectionOpenBtn" onclick="abrirVistoriaAvarias()">Abrir vistoria</button>
           </div>
+
+          <details id="dadosExtras" class="extraFields">
+            <summary>
+              <span class="extraFieldsTitle">Mais dados do carro e do cliente</span>
+              <span id="resumoDadosExtras" class="extraFieldsResumo">modelo, cor, nome, telefone e observações</span>
+            </summary>
+            <div class="extraFieldsBody">
+              <div class="row two">
+                <div>
+                  <label class="fieldLabel">Modelo</label>
+                  <input id="modelo" list="datalistModelos" placeholder="BUSQUE O MODELO" oninput="aoEditarModelo('modelo'); atualizarResumoDadosExtras();" />
+                </div>
+                <div>
+                  <label class="fieldLabel">Cor</label>
+                  <input id="cor" list="datalistCores" placeholder="BUSQUE A COR" oninput="aoEditarCor('cor'); atualizarResumoDadosExtras();" />
+                </div>
+              </div>
+              <div class="row two">
+                <div>
+                  <label class="fieldLabel">Nome do cliente</label>
+                  <input id="clienteNome" placeholder="NOME DO CLIENTE" oninput="atualizarResumoDadosExtras()" />
+                </div>
+                <div>
+                  <label class="fieldLabel">Telefone cliente</label>
+                  <input id="clienteTel" placeholder="(41) 99999-9999" oninput="maskTel(this); atualizarResumoDadosExtras();" />
+                </div>
+              </div>
+              <div class="row">
+                <div>
+                  <label class="fieldLabel">Observações sobre o carro</label>
+                  <textarea id="obs" class="obsGrande" placeholder="EX: ARRANHÃO, CHAVE COM CONTROLE, SEM ESTEPE, OBJETO NO PORTA-MALAS" oninput="atualizarResumoDadosExtras()"></textarea>
+                </div>
+              </div>
+            </div>
+          </details>
 
           <div class="row" style="margin-top:4px;">
             <button id="btnReceberImprimir" class="btn yellow full" onclick="receberVeiculo(true)">Receber e imprimir</button>
@@ -3074,6 +3135,35 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         : (reparadas ? `Confirmar • ${reparadas} reparada(s)` : 'Confirmar sem avarias');
     }
 
+    // ===== BLOCO "MAIS DADOS" =====
+    // Fica fechado quando a placa já é conhecida (modelo, cor e cliente vêm
+    // preenchidos sozinhos) e abre sozinho quando o carro é novo ou quando
+    // falta algo para receber. O resumo na tampa mostra o que já está lá dentro,
+    // para ninguém precisar abrir só para conferir.
+    function abrirDadosExtras(focoId) {
+      const bloco = $('dadosExtras');
+      if (bloco) bloco.open = true;
+      if (focoId) setTimeout(() => { const c = $(focoId); if (c) { c.focus(); c.select?.(); } }, 60);
+    }
+    function atualizarResumoDadosExtras() {
+      const alvo = $('resumoDadosExtras');
+      if (!alvo) return;
+      const partes = [];
+      const modelo = normalize($('modelo')?.value || '');
+      const cor = normalize($('cor')?.value || '');
+      const nome = normalize($('clienteNome')?.value || '');
+      const tel = String($('clienteTel')?.value || '').trim();
+      const obs = normalize($('obs')?.value || '');
+      if (modelo) partes.push(modelo);
+      if (cor) partes.push(cor);
+      if (nome) partes.push(nome);
+      else if (tel) partes.push(tel);
+      if (obs) partes.push('COM OBSERVAÇÃO');
+      const cheio = partes.length > 0;
+      alvo.textContent = cheio ? partes.join(' • ') : 'modelo, cor, nome, telefone e observações';
+      alvo.classList.toggle('preenchido', cheio);
+    }
+
     function aoDigitarPlaca() {
       normalizarCampoPlaca('placa');
       const placa = formatarEntradaPlaca($('placa').value);
@@ -3082,6 +3172,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (placa.length < 7 || !placaValida(placa)) {
         if (vistoriaPlacaAtual && vistoriaPlacaAtual !== placa) resetarVistoriaAvarias();
         atualizarResumoVistoria();
+        atualizarResumoDadosExtras();
         return;
       }
       const v = getVeiculoPorPlaca(placa);
@@ -3094,10 +3185,15 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         $('obs').value = v.obs || '';
         $('avisoVeiculoEncontrado').innerHTML = resumoHistoricoVeiculo(v);
         $('avisoVeiculoEncontrado').classList.remove('hidden');
+        // Carro conhecido: já veio tudo preenchido, não precisa abrir nada.
+        if (!normalize(v.modelo) || !normalize(v.cor)) abrirDadosExtras();
       } else {
         $('avisoVeiculoNovo').classList.remove('hidden');
+        // Carro novo: modelo e cor são obrigatórios, então já deixa aberto.
+        abrirDadosExtras('modelo');
       }
       atualizarResumoVistoria();
+      atualizarResumoDadosExtras();
       renderChipsPadrao();
     }
 
@@ -3111,8 +3207,10 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (!getOperador() || getOperador() === 'OPERADOR') return toast('Informe o operador.');
       const setor = getSetorById($('setorAtendimento').value);
       if (!setor) return toast('Selecione o setor onde o veículo ficará.');
-      if (!normalize($('modelo').value)) return toast('Escolha ou informe o modelo do veículo.');
-      if (!normalize($('cor').value)) return toast('Escolha a cor do veículo.');
+      // Se faltar modelo ou cor, abre o bloco e leva o cursor até o campo —
+      // senão o operador veria só um aviso sem enxergar onde está o problema.
+      if (!normalize($('modelo').value)) { abrirDadosExtras('modelo'); return toast('Escolha ou informe o modelo do veículo.'); }
+      if (!normalize($('cor').value)) { abrirDadosExtras('cor'); return toast('Escolha a cor do veículo.'); }
       if (vistoriaPlacaAtual !== placa) prepararVistoriaPlaca(placa, getVeiculoPorPlaca(placa));
       if (!vistoriaConfirmada) {
         receberAposVistoriaPendente = {
@@ -3219,7 +3317,12 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       ['placa','modelo','cor','clienteNome','clienteTel','vaga','obs'].forEach(id => $(id).value = '');
       $('avisoVeiculoNovo').classList.add('hidden');
       $('avisoVeiculoEncontrado').classList.add('hidden');
+      // Fecha o bloco de dados extras e devolve o cursor para a placa, que é
+      // por onde sempre começa o próximo carro.
+      if ($('dadosExtras')) $('dadosExtras').open = false;
+      atualizarResumoDadosExtras();
       resetarVistoriaAvarias();
+      setTimeout(() => $('placa')?.focus(), 60);
     }
 
     async function atualizarAtendimento(id, patch, movimentoTipo, descricao='') {
@@ -3261,7 +3364,27 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
     }
 
     async function solicitarVeiculo(id) {
-      await atualizarAtendimento(id, { status: 'SOLICITADO', solicitado_em: agoraISO() }, 'SOLICITADO', 'Cliente solicitou o veículo');
+      const a = atendimentos.find(x => x.id === id);
+      if (a && a.status === 'SOLICITADO') return toast('Esse veículo já está na fila de solicitados.');
+      await atualizarAtendimento(id, {
+        status: 'SOLICITADO',
+        solicitado_em: agoraISO(),
+        // Guarda de onde ele veio para conseguir voltar se o chamado for cancelado.
+        status_antes_solicitacao: a?.status || 'RECEBIDO'
+      }, 'SOLICITADO', 'Cliente solicitou o veículo');
+    }
+    // O cliente desistiu, ou o chamado foi no carro errado. Sem isso a fila de
+    // solicitados só esvaziaria entregando o carro.
+    async function cancelarSolicitacao(id) {
+      const a = atendimentos.find(x => x.id === id);
+      if (!a || a.status !== 'SOLICITADO') return;
+      if (!confirm('Cancelar o chamado deste veículo? Ele volta para a lista do pátio.')) return;
+      const anterior = a.status_antes_solicitacao || (a.setor_id ? 'ESTACIONADO' : 'RECEBIDO');
+      await atualizarAtendimento(id, {
+        status: anterior,
+        solicitado_em: '',
+        status_antes_solicitacao: ''
+      }, anterior, 'Chamado cancelado pelo operador');
     }
     async function entregarVeiculo(id) {
       if (!confirm('Confirmar entrega do veículo?')) return;
@@ -3277,9 +3400,66 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (novo) {
         await salvarHistoricoVeiculoAtendimento(novo, { entrega: true, quando });
         await liberarPlacaAtivaGlobal(novo.placa_norm || novo.placa, novo.id);
+        // Deixa o ticket recém-entregue na busca. O card que aparece ali traz o
+        // botão "Desfazer entrega" — se o clique foi no carro errado, a correção
+        // está a um toque, sem ter que lembrar o número do ticket.
+        if ($('buscaAtendimentos')) {
+          $('buscaAtendimentos').value = String(novo.ticket || '');
+          renderBuscaOperacao();
+        }
       }
       atualizarControleHorarioVallet({ forcarTela: true });
     }
+    // ===== DESFAZER ENTREGA =====
+    // Clicar "Entregar" no carro errado acontece. Antes não tinha volta: a tela
+    // mandava cadastrar a placa de novo, o que criava um segundo ticket para o
+    // mesmo carro e bagunçava o relatório. A janela é curta de propósito —
+    // é para corrigir um clique errado, não para reabrir a noite passada.
+    const MINUTOS_PARA_DESFAZER_ENTREGA = 10;
+
+    function minutosDesdeEntrega(a) {
+      const quando = new Date(a?.entregue_em || a?.atualizado_em || 0).getTime();
+      if (!quando || Number.isNaN(quando)) return Infinity;
+      return (Date.now() - quando) / 60000;
+    }
+    function podeDesfazerEntrega(a) {
+      return !!a && a.status === 'ENTREGUE' && minutosDesdeEntrega(a) <= MINUTOS_PARA_DESFAZER_ENTREGA;
+    }
+    async function desfazerEntrega(id) {
+      const a = atendimentos.find(x => x.id === id);
+      if (!a) return;
+      if (!podeDesfazerEntrega(a)) {
+        return toast(`Só dá para desfazer a entrega nos primeiros ${MINUTOS_PARA_DESFAZER_ENTREGA} minutos.`);
+      }
+      if (!confirm(`Desfazer a entrega do ticket #${a.ticket} (${a.placa})? O veículo volta para o pátio.`)) return;
+      const placa = a.placa_norm || a.placa;
+      // Reserva a placa de novo ANTES de reabrir o atendimento: se outro
+      // terminal já recebeu esse mesmo carro, é melhor falhar aqui do que
+      // deixar dois atendimentos abertos para a mesma placa.
+      // Sem internet a reserva não acontece e a função devolve offline:true —
+      // aí seguimos, igual ao recebimento faz. Só um "não" vindo do servidor
+      // (placa já em outro atendimento) é que bloqueia de verdade.
+      try {
+        await reservarPlacaAtivaGlobal(placa, a.id);
+      } catch (e) {
+        if (e?.semSessao) return toast('Sua sessão expirou. Entre de novo para desfazer a entrega.');
+        return toast(e?.message || 'Não foi possível liberar essa placa. A entrega não foi desfeita.');
+      }
+      const quando = agoraISO();
+      const voltarPara = a.status_antes_solicitacao || (a.setor_id ? 'ESTACIONADO' : 'RECEBIDO');
+      await atualizarAtendimento(id, {
+        status: voltarPara,
+        ativo: true,
+        entregue_em: '',
+        operador_entrega: '',
+        entrega_desfeita_em: quando,
+        entrega_desfeita_por: getOperador(),
+        ultima_alteracao_em: quando,
+        ultima_alteracao_operador: getOperador()
+      }, 'ENTREGA_DESFEITA', 'Entrega desfeita pelo operador');
+      toast('Entrega desfeita. O veículo voltou para o pátio.', true);
+    }
+
     function abrirModalEdicao(id) {
       const a = atendimentos.find(x => x.id === id);
       if (!a) return;
@@ -3584,7 +3764,12 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         <div class="notice" style="margin-top:14px;border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.08);color:#fecaca;">
           VEÍCULO JÁ ENTREGUE${entregueEm ? ' • ' + formatarDataHoraCurta(entregueEm) : ''}${operadorEntrega ? ' • ' + operadorEntrega : ''}
         </div>
-        <div class="smallText" style="margin-top:10px;">Esse ticket não está mais ativo na operação. Para nova entrada, cadastre novamente a placa no recebimento.</div>
+        ${podeDesfazerEntrega(a)
+          ? `<div class="actions" style="grid-template-columns:1fr;">
+               <button class="tinyBtn orange searchAction" onclick="desfazerEntrega('${a.id}')" title="Desfazer esta entrega" aria-label="Desfazer entrega"><span class="actionIcon">↩️</span><span>Desfazer entrega</span></button>
+             </div>
+             <div class="smallText" style="margin-top:10px;">Marcou entregue sem querer? Dá para desfazer nos primeiros ${MINUTOS_PARA_DESFAZER_ENTREGA} minutos.</div>`
+          : `<div class="smallText" style="margin-top:10px;">Esse ticket não está mais ativo na operação. Para nova entrada, cadastre novamente a placa no recebimento.</div>`}
       </div>`;
     }
 
@@ -3601,15 +3786,13 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
               <span>${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
             </div>
           </div>
-          <div class="actions buscaQuickActions">
-            <button class="tinyBtn purple searchAction" onclick="abrirModalEdicao('${a.id}')" title="Editar atendimento" aria-label="Editar atendimento"><span class="actionIcon">✏️</span><span>Editar</span></button>
-            <button class="tinyBtn blue searchAction" onclick="imprimirTicketPorId('${a.id}')" title="Reimprimir ticket" aria-label="Reimprimir ticket"><span class="actionIcon">🖨️</span><span>Imprimir</span></button>
-            <button class="tinyBtn orange searchAction" onclick="solicitarVeiculo('${a.id}')" title="Marcar veículo como solicitado" aria-label="Marcar veículo como solicitado"><span class="actionIcon">🔔</span><span>Solicitar</span></button>
-            <button class="tinyBtn green searchAction" onclick="entregarVeiculo('${a.id}')" title="Entregar veículo" aria-label="Entregar veículo"><span class="actionIcon">✅</span><span>Entregar</span></button>
-          </div>
+          ${montarAcoesAtendimento(a, 'buscaQuickActions')}
         </div>`;
       }
 
+      // Os mesmos botões da busca aparecem aqui na lista. Antes não apareciam, e
+      // o operador era obrigado a digitar a placa na busca só para poder clicar
+      // em Solicitar ou Entregar — digitação à toa a noite inteira.
       return `<div class="vehicleCard operationCard operationListItem">
         <div class="operationHeader">
           <div class="operationMain">
@@ -3622,6 +3805,23 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
           </div>
           <span class="tag ${tagStatus}">${tagStatus}</span>
         </div>
+        ${montarAcoesAtendimento(a)}
+      </div>`;
+    }
+
+    // Linha de botões usada na lista da operação e na consulta por setor.
+    // Quando o carro já foi chamado, "Solicitar" não faz sentido: vira
+    // "Cancelar chamado", senão a fila de solicitados só sairia com a entrega.
+    function montarAcoesAtendimento(a, classeExtra = '') {
+      const chamado = a.status === 'SOLICITADO';
+      const botaoChamada = chamado
+        ? `<button class="tinyBtn searchAction" onclick="cancelarSolicitacao('${a.id}')" title="Cancelar o chamado do veículo" aria-label="Cancelar chamado"><span class="actionIcon">↩️</span><span>Cancelar chamado</span></button>`
+        : `<button class="tinyBtn orange searchAction" onclick="solicitarVeiculo('${a.id}')" title="Marcar veículo como solicitado" aria-label="Marcar veículo como solicitado"><span class="actionIcon">🔔</span><span>Solicitar</span></button>`;
+      return `<div class="actions ${classeExtra}">
+        <button class="tinyBtn purple searchAction" onclick="abrirModalEdicao('${a.id}')" title="Editar atendimento" aria-label="Editar atendimento"><span class="actionIcon">✏️</span><span>Editar</span></button>
+        <button class="tinyBtn blue searchAction" onclick="imprimirTicketPorId('${a.id}')" title="Reimprimir ticket" aria-label="Reimprimir ticket"><span class="actionIcon">🖨️</span><span>Imprimir</span></button>
+        ${botaoChamada}
+        <button class="tinyBtn green searchAction" onclick="entregarVeiculo('${a.id}')" title="Entregar veículo" aria-label="Entregar veículo"><span class="actionIcon">✅</span><span>Entregar</span></button>
       </div>`;
     }
 
@@ -3707,21 +3907,10 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       return (setorRef.id && id === setorRef.id) || (setorRef.nome && nome === normalize(setorRef.nome));
     }
 
+    // A consulta por setor mostra exatamente o mesmo card da lista — inclusive
+    // com os botões. Antes era uma cópia sem ação nenhuma.
     function montarCardConsultaSetor(a) {
-      const tagStatus = a.status === 'OCORRENCIA' ? 'RECEBIDO' : a.status;
-      return `<div class="vehicleCard operationCard operationListItem">
-        <div class="operationHeader">
-          <div class="operationMain">
-            <div class="ticket">#${a.ticket}</div>
-            <span class="plate">${a.placa}</span>
-            <div class="operationText meta">
-              <strong>${a.modelo || 'MODELO NÃO INFORMADO'}</strong> • ${a.cor || 'COR NÃO INFORMADA'}<br>
-              <span class="muted">${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • ' + a.vaga : ''}</span>
-            </div>
-          </div>
-          <span class="tag ${tagStatus}">${tagStatus}</span>
-        </div>
-      </div>`;
+      return montarCardAtendimento(a, false);
     }
 
     window.abrirConsultaSetorOperacao = (id, nome) => {
@@ -3826,6 +4015,57 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       box.innerHTML = htmlSetores + htmlSemSetor;
     }
 
+    // ===== FILA DE SOLICITADOS =====
+    // Antes, "Solicitados" era só um número que você precisava clicar para ver.
+    // Quem vai buscar o carro precisa da informação na cara: qual carro, onde
+    // está, e há quanto tempo o cliente espera.
+    const ESPERA_ATENCAO_MIN = 5;   // amarelo
+    const ESPERA_CRITICA_MIN = 10;  // vermelho piscando
+
+    function minutosEsperando(a) {
+      const inicio = new Date(a.solicitado_em || a.atualizado_em || 0).getTime();
+      if (!inicio || Number.isNaN(inicio)) return 0;
+      return Math.max(0, Math.floor((Date.now() - inicio) / 60000));
+    }
+    function textoEspera(min) {
+      if (min < 1) return { valor: 'AGORA', unidade: 'chamado' };
+      if (min < 60) return { valor: String(min), unidade: min === 1 ? 'minuto' : 'minutos' };
+      const h = Math.floor(min / 60);
+      return { valor: h + 'h' + String(min % 60).padStart(2, '0'), unidade: 'esperando' };
+    }
+    function renderFilaSolicitados() {
+      const box = $('filaSolicitados');
+      if (!box) return;
+      const lista = getVeiculosNoPatio()
+        .filter(a => a.status === 'SOLICITADO')
+        .sort((a, b) => String(a.solicitado_em || '').localeCompare(String(b.solicitado_em || '')));
+      if (!lista.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+      box.classList.remove('hidden');
+      const linhas = lista.map(a => {
+        const min = minutosEsperando(a);
+        const t = textoEspera(min);
+        const nivel = min >= ESPERA_CRITICA_MIN ? ' critico' : (min >= ESPERA_ATENCAO_MIN ? ' atrasado' : '');
+        const local = `${a.setor_nome || 'LOCAL NÃO INFORMADO'}${a.vaga ? ' • VAGA ' + a.vaga : ''}`;
+        const cliente = a.cliente_nome ? ' • ' + a.cliente_nome : '';
+        return `<div class="waitRow${nivel}">
+          <div class="waitTime"><b>${t.valor}</b><i>${t.unidade}</i></div>
+          <div class="waitInfo">
+            <strong>#${a.ticket} • ${a.placa || '---'} • ${a.modelo || 'MODELO NÃO INFORMADO'}</strong>
+            <span>${local}${cliente}</span>
+          </div>
+          <div class="waitActions">
+            <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')" title="Entregar veículo">✅ Entregar</button>
+            <button class="tinyBtn" onclick="cancelarSolicitacao('${a.id}')" title="Cancelar o chamado">↩️ Cancelar</button>
+          </div>
+        </div>`;
+      }).join('');
+      box.innerHTML = `<div class="waitQueueHead">
+          <strong>🔔 Clientes esperando o carro</strong>
+          <span>${lista.length} na fila • mais antigo primeiro</span>
+        </div>
+        <div class="waitList">${linhas}</div>`;
+    }
+
     function renderKpis() {
       const lista = getAtendimentosOperacaoAtual();
       $('kpiRecebido').textContent = lista.filter(a => a.status === 'RECEBIDO').length;
@@ -3833,6 +4073,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       $('kpiEntregue').textContent = lista.filter(a => a.status === 'ENTREGUE').length;
       const btnSolicitados = $('statSolicitados');
       if (btnSolicitados) btnSolicitados.classList.toggle('active', consultaStatusOperacaoSelecionada === 'SOLICITADO');
+      renderFilaSolicitados();
       renderSetoresOperacao();
     }
 
@@ -4022,6 +4263,9 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         }
         atualizarControleHorarioVallet({ forcarTela: true });
       }, 10000);
+      // O relógio da fila de solicitados anda sozinho, mesmo sem internet.
+      // É só redesenhar essa faixa — não mexe no resto da tela.
+      setInterval(renderFilaSolicitados, 20000);
     }
 
     window.addEventListener('online', async () => { toast('Internet voltou. Sincronizando...', true); await processarFila(); await puxarFirebase(); await carregarLocal(); await iniciarMonitorConfiguracaoVallet(); await atualizarTicketPreview(); atualizarControleHorarioVallet({ forcarTela: true }); });
