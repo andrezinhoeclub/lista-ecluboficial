@@ -7,7 +7,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>E-CLUB Vallet • v52</title>
-  <!-- E-CLUB Vallet v52: login por e-mail e senha (Acessos do Dashboard) e todo acesso ao banco via função valletApi -->
+  <!-- E-CLUB Vallet v52: login por e-mail e senha (Acessos do Dashboard) e todo acesso ao banco via função valletApi.
+       Tela de login no mesmo padrão da Portaria: mensagem de erro dentro do cartão
+       e "Esqueci minha senha" com envio do link de redefinição pelo Firebase. -->
   <link rel="manifest" href="vallet_manifest.json" />
   <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" />
   <style>
@@ -221,9 +223,17 @@
     .loginHint { margin-top: 16px; color: #62626e; font-size: 8px; font-weight: 800; text-transform: uppercase; line-height: 1.5; }
     .loginModeNotice { margin-bottom: 15px; padding: 11px 13px; border-radius: 16px; background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.20); color: #7dd3fc; font-size: 8px; font-weight: 900; text-transform: uppercase; line-height: 1.45; }
     .loginModeNotice.testActive { background: rgba(168,85,247,.12); border-color: rgba(168,85,247,.35); color: #d8b4fe; box-shadow: 0 0 24px rgba(168,85,247,.10); letter-spacing: .08em; }
+    /* Mensagem dentro do cartão de login (mesmo papel do "mensagem-auth" da Portaria).
+       Fica na tela, ao lado do campo, em vez de sumir junto com o toast. */
+    .loginMsg { margin-top: 14px; min-height: 18px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; line-height: 1.5; color: #f87171; }
+    .loginMsg.ok { color: #4ade80; }
+    /* Link discreto "esqueci minha senha" / "voltar para o login". */
+    .loginLink { display: block; width: 100%; margin-top: 12px; padding: 8px 0; background: none; border: 0; cursor: pointer; color: #62626e; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .18em; text-decoration: underline; text-underline-offset: 4px; transition: color .2s; }
+    .loginLink:hover { color: var(--yellow); }
     .setupBox { display: none; }
     .setupBox.active { display: block; }
     .loginBox.hidden { display: none; }
+    .loginPanel.hidden { display: none; }
     .titleRight { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
     .ticketCorner { min-width: 138px; border: 1px solid rgba(234,179,8,.32); background: rgba(234,179,8,.075); border-radius: 18px; padding: 10px 12px; text-align: center; }
     .ticketCorner span { display: block; color: var(--muted); font-size: 7px; font-weight: 950; text-transform: uppercase; letter-spacing: .14em; margin-bottom: 5px; }
@@ -844,21 +854,36 @@
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" />
       <div id="loginEyebrowVallet" class="loginEyebrow">Acesso restrito</div>
       <h2>Vallet E-Club</h2>
-      <p class="loginSub">Entre com o e-mail e a senha cadastrados no Dashboard.</p>
+      <p id="loginSubVallet" class="loginSub">Entre com o e-mail e a senha cadastrados no Dashboard.</p>
       <div id="loginModoTesteVallet" class="loginModeNotice testActive hidden">🧪 Modo teste Vallet ativo • acesso liberado</div>
-      <form id="loginBox" class="loginBox" onsubmit="fazerLogin(event)">
-        <div id="loginOfflineNotice" class="loginModeNotice hidden">Sem internet: só entra quem já acessou neste computador antes.</div>
+      <div id="painelLoginNormalVallet" class="loginPanel">
+        <form id="loginBox" class="loginBox" onsubmit="fazerLogin(event)">
+          <div id="loginOfflineNotice" class="loginModeNotice hidden">Sem internet: só entra quem já acessou neste computador antes.</div>
+          <div class="loginFields">
+            <input id="loginUsuario" name="email" type="email" autocomplete="username" placeholder="E-MAIL" required />
+            <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="SENHA" minlength="6" required />
+          </div>
+          <label class="loginRemember">
+            <input id="loginLembrar" type="checkbox" />
+            manter acesso neste aparelho
+          </label>
+          <button id="btnEntrarVallet" class="btn yellow full" type="submit">Entrar</button>
+          <p id="mensagem-auth-vallet" class="loginMsg"></p>
+          <button type="button" id="btnAbrirRecuperarVallet" class="loginLink">Esqueci minha senha</button>
+          <p class="loginHint">Os acessos são criados na aba Acessos do Dashboard, marcando "Permitir Vallet".</p>
+        </form>
+      </div>
+      <div id="painelRecuperarVallet" class="loginPanel hidden">
+        <div class="loginEyebrow" style="margin-bottom:6px">Recuperar acesso</div>
+        <p class="loginSub" style="margin-bottom:16px">Informe o e-mail do seu acesso. Enviamos um link para você criar uma senha nova.</p>
         <div class="loginFields">
-          <input id="loginUsuario" name="email" type="email" autocomplete="username" placeholder="E-MAIL" required />
-          <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="SENHA" minlength="6" required />
+          <input id="emailRecuperarVallet" type="email" autocomplete="username" placeholder="SEU E-MAIL" />
         </div>
-        <label class="loginRemember">
-          <input id="loginLembrar" type="checkbox" />
-          manter acesso neste aparelho
-        </label>
-        <button id="btnEntrarVallet" class="btn yellow full" type="submit">Entrar</button>
-        <p class="loginHint">Os acessos são criados na aba Acessos do Dashboard, marcando "Permitir Vallet". Esqueceu a senha? Peça uma nova ao administrador.</p>
-      </form>
+        <button type="button" id="btnEnviarRecuperarVallet" class="btn yellow full" style="margin-top:15px">Enviar link</button>
+        <p id="mensagem-recuperar-vallet" class="loginMsg"></p>
+        <button type="button" id="btnVoltarLoginVallet" class="loginLink">Voltar para o login</button>
+        <p class="loginHint">O e-mail pode cair na caixa de spam. Se não chegar, fale com o administrador.</p>
+      </div>
     </div>
   </div>
   <div id="appPrincipal" class="wrap" hidden>
@@ -1900,7 +1925,66 @@
     function atualizarTelaLogin() {
       atualizarIndicadorModoTesteLogin();
       $('loginOfflineNotice')?.classList.toggle('hidden', navigator.onLine);
+      mostrarLoginNormalVallet();
+    }
+    // ===== MENSAGENS DENTRO DO CARTÃO DE LOGIN =====
+    // Iguais às da Portaria: ficam paradas na tela em vez de sumir como o toast,
+    // porque quem errou a senha precisa reler o motivo com calma.
+    function mensagemAuthVallet(msg, sucesso = false) {
+      const el = $('mensagem-auth-vallet');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.className = 'loginMsg' + (sucesso ? ' ok' : '');
+    }
+    function mensagemRecuperarVallet(msg, sucesso = false) {
+      const el = $('mensagem-recuperar-vallet');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.className = 'loginMsg' + (sucesso ? ' ok' : '');
+    }
+    // ===== RECUPERAÇÃO DE SENHA (o mesmo padrão da Portaria) =====
+    // Quem não foi cadastrado na aba Acessos do Dashboard não tem conta no
+    // Firebase Authentication. Por isso o próprio envio do e-mail já funciona
+    // como a conferência "esse e-mail existe?" — não precisa de função nova.
+    function mostrarRecuperarSenhaVallet() {
+      mensagemAuthVallet('');
+      mensagemRecuperarVallet('');
+      $('painelLoginNormalVallet')?.classList.add('hidden');
+      $('painelRecuperarVallet')?.classList.remove('hidden');
+      // O subtítulo do cartão fala de "entrar"; some enquanto a tela é de recuperação.
+      if ($('loginSubVallet')) $('loginSubVallet').style.display = 'none';
+      const emailAtual = String($('loginUsuario')?.value || '').trim();
+      if ($('emailRecuperarVallet')) $('emailRecuperarVallet').value = emailAtual;
+      setTimeout(() => $('emailRecuperarVallet')?.focus(), 50);
+    }
+    function mostrarLoginNormalVallet() {
+      mensagemRecuperarVallet('');
+      $('painelRecuperarVallet')?.classList.add('hidden');
+      $('painelLoginNormalVallet')?.classList.remove('hidden');
+      if ($('loginSubVallet')) $('loginSubVallet').style.display = '';
       setTimeout(() => $('loginUsuario')?.focus(), 50);
+    }
+    async function enviarRecuperacaoVallet() {
+      const email = String($('emailRecuperarVallet')?.value || '').trim();
+      if (!email) return mensagemRecuperarVallet('Digite seu e-mail.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return mensagemRecuperarVallet('E-mail inválido.');
+      if (!navigator.onLine) return mensagemRecuperarVallet('Sem internet. Conecte-se para pedir a nova senha.');
+      const btn = $('btnEnviarRecuperarVallet');
+      if (btn) { btn.disabled = true; btn.textContent = 'ENVIANDO...'; }
+      try {
+        const fb = await initFirebase();
+        if (!fb) throw new Error('offline');
+        await fb.sendPasswordResetEmail(fb.auth, email);
+        mensagemRecuperarVallet('Se esse e-mail tiver acesso liberado, o link para criar a nova senha já foi enviado. Confira também o spam.', true);
+      } catch (e) {
+        console.warn('Falha ao enviar recuperação de senha do Vallet:', e?.code || e?.message || e);
+        if (e?.code === 'auth/user-not-found') mensagemRecuperarVallet('Esse e-mail não está cadastrado. Fale com o administrador.');
+        else if (e?.code === 'auth/invalid-email') mensagemRecuperarVallet('E-mail inválido.');
+        else if (e?.code === 'auth/too-many-requests') mensagemRecuperarVallet('Muitas tentativas. Espere alguns minutos.');
+        else mensagemRecuperarVallet('Não foi possível enviar agora. Tente de novo.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'ENVIAR LINK'; }
+      }
     }
     async function concluirLogin(operador, lembrar = false) {
       const controleHorario = atualizarControleHorarioVallet();
@@ -1965,6 +2049,7 @@
       const btn = $('btnEntrarVallet');
       btn.disabled = true;
       btn.textContent = 'VERIFICANDO...';
+      mensagemAuthVallet('');
       try {
         if (!navigator.onLine) throw new Error('Sem internet: o primeiro acesso neste computador precisa de conexão.');
         const fb = await initFirebase();
@@ -1987,6 +2072,7 @@
         await concluirLogin(operador, $('loginLembrar').checked);
         toast(`Bem-vindo, ${normalize(operador.nome || operador.email)}.`, true);
       } catch (e) {
+        mensagemAuthVallet(e.message || 'Não foi possível entrar.');
         toast(e.message || 'Não foi possível entrar.');
       } finally {
         btn.disabled = false;
@@ -2003,6 +2089,7 @@
       $('operadorNome').textContent = 'SEM LOGIN';
       if ($('loginSenha')) $('loginSenha').value = '';
       if ($('loginLembrar')) $('loginLembrar').checked = false;
+      mensagemAuthVallet('');
       $('vallet-login').classList.remove('hidden');
       atualizarTelaLogin();
     }
@@ -3891,6 +3978,10 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
         }
         return;
       }
+
+      $('btnAbrirRecuperarVallet')?.addEventListener('click', mostrarRecuperarSenhaVallet);
+      $('btnVoltarLoginVallet')?.addEventListener('click', mostrarLoginNormalVallet);
+      $('btnEnviarRecuperarVallet')?.addEventListener('click', enviarRecuperacaoVallet);
 
       idb = await openDB();
       deviceId();
