@@ -246,6 +246,15 @@
                 Selecione o evento, confira as passageiras e clique no botão para copiar a rota e abrir o WhatsApp.
             </p>
 
+            <div class="flex items-center justify-between gap-3 mb-2 mt-2">
+                <span id="rotas-ultima-carga" class="text-[9px] font-bold uppercase tracking-widest text-zinc-500">Carregando...</span>
+                <button onclick="atualizarRotasAgora()" id="btn-atualizar-rotas" class="text-[9px] font-black uppercase tracking-widest text-blue-400 hover:text-white border border-blue-500/40 hover:border-blue-400 px-4 py-2 rounded-xl transition-all">
+                    ⟳ Atualizar
+                </button>
+            </div>
+
+            <div id="rotas-aviso-corte" class="hidden bg-yellow-950/60 border border-yellow-500/50 p-3 rounded-xl mb-3 text-[9px] font-black uppercase text-yellow-400 leading-relaxed text-center"></div>
+
             <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full site-input p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none mt-2">
                 <option value="">Aguardando reservas...</option>
             </select>
@@ -253,7 +262,7 @@
             <textarea id="output-rotas-carona" readonly class="w-full site-input rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-6 h-[380px] resize-none whitespace-pre" placeholder="Aguardando seleção do evento..."></textarea>
 
             <button onclick="abrirWhatsappRotasCarona()" class="w-full bg-green-600 hover:bg-green-500 text-white font-black uppercase text-xs py-5 rounded-2xl transition-colors shadow-[0_0_20px_rgba(34,197,94,0.4)]">
-                📲 Copiar Rotas e Abrir WhatsApp
+                📋 Copiar Rotas
             </button>
         </div>
     </div>
@@ -905,6 +914,19 @@
                 reservasCaronaMemoria = Array.isArray(data.reservas) ?
                     data.reservas : [];
 
+                marcarHoraDaCarga(reservasCaronaMemoria.length);
+
+                const avisoCorte = document.getElementById("rotas-aviso-corte");
+                if (avisoCorte) {
+                    if (data.truncado === true) {
+                        avisoCorte.innerText =
+                            "A lista bateu no limite do sistema e pode estar faltando gente. Avise o administrador para limpar eventos antigos.";
+                        avisoCorte.classList.remove("hidden");
+                    } else {
+                        avisoCorte.classList.add("hidden");
+                    }
+                }
+
                 const selectCarona =
                     document.getElementById("filtro-evento-carona");
                 const valAtual = selectCarona.value;
@@ -951,10 +973,32 @@
             }
         }
 
+        // O painel NAO recarrega sozinho. Antes ele repetia a consulta a cada 10
+        // segundos, e cada repeticao baixava todas as caronas ja cadastradas: uma
+        // noite de painel aberto passava de 100 mil leituras no banco, mais que o
+        // dobro da cota gratuita do dia inteiro. Agora carrega uma vez ao entrar e
+        // depois so quando o motorista clicar em Atualizar.
         function iniciarSistemaRotas() {
             if (intervalRotas) clearInterval(intervalRotas);
+            intervalRotas = null;
             atualizarRotasSeguras();
-            intervalRotas = setInterval(atualizarRotasSeguras, 10000);
+        }
+
+        window.atualizarRotasAgora = async function() {
+            const btn = document.getElementById("btn-atualizar-rotas");
+            if (btn) { btn.disabled = true; btn.innerText = "ATUALIZANDO..."; }
+            try {
+                await atualizarRotasSeguras();
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = "⟳ Atualizar"; }
+            }
+        };
+
+        function marcarHoraDaCarga(qtd) {
+            const alvo = document.getElementById("rotas-ultima-carga");
+            if (!alvo) return;
+            const agora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+            alvo.innerText = `${qtd} solicitaç${qtd === 1 ? "ão" : "ões"} • atualizado ${agora}`;
         }
 
         window.gerarRelatorioCaronas = function() {
@@ -1060,7 +1104,7 @@
 
             copiarTextoRotas(texto);
 
-            mostrarAviso("Rotas copiadas para o motorista!", true);
+            mostrarAviso("Rotas copiadas! Cole na conversa do motorista.", true);
         };
 
         document.addEventListener("DOMContentLoaded", function() {
