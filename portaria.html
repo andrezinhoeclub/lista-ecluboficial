@@ -233,6 +233,18 @@
   // carregarBootstrap), então nunca fica desatualizada por mais tempo do que
   // o resto da tela já fica.
   // ---- lista guardada na máquina ----
+  // ===== HORÁRIO DE TRABALHO (mesma janela das Solteiras e do Vallet) =====
+  // Quem manda é o servidor; isto aqui é só para a tela não mostrar dado antigo
+  // guardado no computador quando estiver fora do horário E sem internet.
+  const HORA_ABERTURA_PORTARIA = 21;
+  const HORA_FECHAMENTO_PORTARIA = 8;
+  let foraDoTurnoPortaria = false;
+  let mensagemForaDoTurnoPortaria = "";
+  function dentroDoTurnoLocalPortaria() {
+    const h = new Date().getHours();
+    return h >= HORA_ABERTURA_PORTARIA || h < HORA_FECHAMENTO_PORTARIA;
+  }
+
   function salvarListaLocal(lista) {
     try { localStorage.setItem(CHAVE_LISTA_LOCAL, JSON.stringify({ em: Date.now(), lista })); } catch {}
   }
@@ -243,6 +255,9 @@
       const o = JSON.parse(bruto);
       if (!o || !Array.isArray(o.lista)) return null;
       if (Date.now() - Number(o.em || 0) > VALIDADE_LISTA_MS) return null;
+      // Fora do horário nem a lista guardada é usada. Sem isto, bastaria tirar a
+      // máquina da internet numa terça de manhã para ver a base inteira.
+      if (!dentroDoTurnoLocalPortaria()) return null;
       return o.lista;
     } catch { return null; }
   }
@@ -286,6 +301,17 @@
     if (!carregandoCandidatos) {
       carregandoCandidatos = api("listar_candidatos")
         .then(dados => {
+          if (dados.fora_do_turno) {
+            // Fora do horário o servidor não manda ninguém. Aqui NÃO se guarda
+            // nada e, principalmente, NÃO se apaga a lista que já está salva na
+            // máquina: ela é a rede de segurança para uma queda de internet no
+            // começo do próximo turno. Deixar candidatosCache nulo faz a tela
+            // tentar de novo quando o horário abrir.
+            foraDoTurnoPortaria = true;
+            mensagemForaDoTurnoPortaria = dados.mensagem || "";
+            return [];
+          }
+          foraDoTurnoPortaria = false;
           candidatosCache = Array.isArray(dados.resultados) ? dados.resultados : [];
           salvarListaLocal(candidatosCache);
           return candidatosCache;
@@ -305,6 +331,16 @@
   function atualizarCandidatosEmSegundoPlano() {
     if (!candidatosCache) return;
     api("listar_candidatos").then(dados => {
+      if (dados.fora_do_turno) {
+        // Virou 8h com a tela aberta: limpa o que está na memória para a busca
+        // parar de responder, mas mantém o arquivo guardado no computador.
+        foraDoTurnoPortaria = true;
+        mensagemForaDoTurnoPortaria = dados.mensagem || "";
+        candidatosCache = null;
+        $("container-resultados").innerHTML = "";
+        return;
+      }
+      foraDoTurnoPortaria = false;
       const novos = Array.isArray(dados.resultados) ? dados.resultados : [];
       // Não deixa a lista vinda do servidor "apagar" entradas que ainda estão na
       // fila esperando subir — senão elas voltariam a aparecer como não liberadas.
@@ -570,6 +606,16 @@
   }
   function renderResultados(resultados, limitado=false) {
     const cont = $("container-resultados");
+    if (foraDoTurnoPortaria) {
+      cont.innerHTML = `
+        <div class="py-16 text-center">
+          <div class="font-black uppercase text-yellow-500 text-sm">Consulta bloqueada fora do horário</div>
+          <p class="mt-3 mx-auto max-w-md text-[11px] font-bold uppercase tracking-wider text-zinc-500 leading-relaxed">
+            ${escapeHtml(mensagemForaDoTurnoPortaria || "A consulta de clientes funciona das 21h às 8h.")}
+          </p>
+        </div>`;
+      return;
+    }
     if (!Array.isArray(resultados) || !resultados.length) {
       // Sem internet, quem comprou online agorinha não está na lista guardada.
       // Nesse caso (e só nesse) oferece a liberação manual pelo nome digitado.
