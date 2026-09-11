@@ -242,6 +242,11 @@
       border:1px solid var(--pt-cardb);border-radius:11px;padding:7px 12px;
       font-size:12px;font-weight:800;color:var(--pt-mut);white-space:nowrap}
     .pt-pill i{font-style:normal;color:var(--pt-fraco);font-size:10px;opacity:.8}
+    .pt-desfazer{width:28px;height:28px;border-radius:8px;border:1px solid var(--pt-teclab);
+      background:var(--pt-tecla);color:var(--pt-am);font-size:14px;font-weight:900;
+      cursor:pointer;font-family:inherit;line-height:1;padding:0}
+    .pt-desfazer:hover{border-color:var(--pt-am)}
+    .pt-desfazer:disabled{opacity:.45;cursor:not-allowed}
     .pt-vazio-pill{font-size:11px;font-weight:700;color:var(--pt-fraco);opacity:.6;letter-spacing:.5px}
   </style>
 </head>
@@ -826,9 +831,22 @@
       return l.filter(i => Date.now() - Number(i.em || 0) < VALIDADE_ULTIMOS_MS);
     } catch { return []; }
   }
-  function registrarUltimo(nome) {
+  // Janela para desfazer: a mesma do servidor. Passou disso, o ↩ some do rodapé.
+  const MINUTOS_PARA_DESFAZER = 10;
+  function registrarUltimo(nome, reservaId) {
     const d = new Date();
-    const lista = [{ nome: String(nome || "").toUpperCase(), hora: `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`, em: Date.now() }, ...lerUltimos()].slice(0, 6);
+    const item = {
+      nome: String(nome || "").toUpperCase(),
+      hora: `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`,
+      em: Date.now(),
+      id: String(reservaId || "")
+    };
+    const lista = [item, ...lerUltimos()].slice(0, 6);
+    try { localStorage.setItem(CHAVE_ULTIMOS, JSON.stringify(lista)); } catch {}
+    renderUltimos();
+  }
+  function removerDosUltimos(reservaId) {
+    const lista = lerUltimos().filter(i => String(i.id || "") !== String(reservaId));
     try { localStorage.setItem(CHAVE_ULTIMOS, JSON.stringify(lista)); } catch {}
     renderUltimos();
   }
@@ -836,11 +854,29 @@
     const cont = $("pt-ultimos");
     if (!cont) return;
     const lista = lerUltimos();
-    cont.innerHTML = lista.length
-      ? lista.map(i => `<span class="pt-pill">${escapeHtml(i.nome)} <i>${escapeHtml(i.hora)}</i></span>`).join("")
-      : `<span class="pt-vazio-pill">Ninguém liberado ainda nesta máquina.</span>`;
+    if (!lista.length) {
+      cont.innerHTML = `<span class="pt-vazio-pill">Ninguém liberado ainda nesta máquina.</span>`;
+      return;
+    }
+    cont.innerHTML = lista.map(i => {
+      const dentroDaJanela = i.id && (Date.now() - Number(i.em || 0)) < MINUTOS_PARA_DESFAZER * 60000;
+      return `<span class="pt-pill">${escapeHtml(i.nome)} <i>${escapeHtml(i.hora)}</i>${
+        dentroDaJanela ? `<button type="button" class="pt-desfazer" data-desfazer="${escapeHtml(i.id)}" title="Desfazer esta liberação">↩</button>` : ""
+      }</span>`;
+    }).join("");
   }
   renderUltimos();
+  setInterval(renderUltimos, 30000); // o ↩ some sozinho quando passa da janela
+  // Tira um item da fila offline (usado quando o operador desfaz uma entrada que
+  // ainda nem chegou no servidor).
+  function removerDaFila(condicao) {
+    const f = lerFila();
+    const i = f.findIndex(condicao);
+    if (i < 0) return false;
+    f.splice(i, 1);
+    salvarFila(f);
+    return true;
+  }
   function tagClass(tag) {
     const t = String(tag || "").toUpperCase();
     if (t.includes("DONO")) return "bg-green-900/30 text-green-400 border-green-500/20";
@@ -1004,7 +1040,7 @@
       const acao = card.querySelector(".pt-acao");
       if (acao) acao.innerHTML = `<div class="pt-okbox"><span>✓</span><b>LIBERADO</b></div>`;
     }
-    registrarUltimo(nome);
+    registrarUltimo(nome, btn?.dataset?.checkin || "");
     cartoesLiberaveis = [];
     selecionado = -1;
     setTimeout(limparBusca, TEMPO_CONFIRMACAO_MS);
@@ -1044,6 +1080,60 @@
       mostrarAviso(e.message || "Erro ao confirmar check-in.");
       btn.disabled = false;
       btn.textContent = "LIBERAR";
+    }
+  });
+  // ---- desfazer uma liberação errada ----
+  // Dois caminhos: se a entrada ainda está na fila esperando internet, basta
+  // apagar da fila (não chegou no servidor). Se já subiu, pede ao servidor para
+  // voltar atrás — ele só aceita dentro da mesma janela de 10 minutos e guarda
+  // quem desfez na auditoria.
+  $("pt-ultimos").addEventListener("click", async event => {
+    const btn = event.target.closest("button[data-desfazer]");
+    if (!btn) return;
+    const reservaId = btn.dataset.desfazer;
+    if (!reservaId) return;
+    if (!confirm("DESFAZER ESTA LIBERAÇÃO?\n\nA pessoa volta a constar como NÃO liberada e pode ser liberada de novo.")) return;
+
+    btn.disabled = true;
+
+    // 1) ainda na fila offline: some daqui mesmo, sem servidor
+    const eraDaFila = removerDaFila(i => i.tipo === "checkin" && i.reservaId === reservaId);
+    if (eraDaFila) {
+      if (Array.isArray(candidatosCache)) {
+        const c = candidatosCache.find(x => x.id === reservaId);
+        if (c) { c.entrou = false; delete c.porteiro; }
+        salvarListaLocal(candidatosCache);
+      }
+      removerDosUltimos(reservaId);
+      mostrarAviso("LIBERAÇÃO DESFEITA (AINDA NÃO TINHA SUBIDO)", true);
+      return;
+    }
+
+    // 2) já está no servidor
+    try {
+      await api("desfazer_checkin", { reservaId });
+      if (Array.isArray(candidatosCache)) {
+        const c = candidatosCache.find(x => x.id === reservaId);
+        if (c) { c.entrou = false; delete c.porteiro; }
+        salvarListaLocal(candidatosCache);
+      }
+      removerDosUltimos(reservaId);
+      mostrarAviso("LIBERAÇÃO DESFEITA — PODE LIBERAR DE NOVO", true);
+      carregarBootstrap().catch(() => {});
+    } catch (e) {
+      btn.disabled = false;
+      if (ehFalhaDeRede(e)) {
+        // Desfazer não pode ficar na fila: se a internet voltasse depois de a
+        // pessoa já ter entrado de verdade, a correção chegaria atrasada e
+        // bagunçaria a contagem. Melhor avisar e deixar para quando houver rede.
+        mostrarAviso("SEM INTERNET — NÃO DÁ PRA DESFAZER AGORA");
+        return;
+      }
+      if (e?.status === 401 || e?.status === 403) {
+        await encerrarSessaoLocal(e.message || "Acesso não autorizado.");
+        return;
+      }
+      mostrarAviso(e.message || "Não foi possível desfazer.");
     }
   });
   // ---- teclado ----
