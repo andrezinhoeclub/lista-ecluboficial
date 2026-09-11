@@ -917,7 +917,7 @@
   // a tela, qual arquivo aquela máquina realmente carregou — o navegador guarda a
   // página antiga em cache e continua rodando ela mesmo depois de você publicar
   // uma nova no GitHub.
-  const VERSAO_PAGINA = "11set-3";
+  const VERSAO_PAGINA = "11set-4";
 
   const AVISO_SEM_ARMAZENAMENTO =
     `<span class="pt-alerta" title="Sem isto a portaria não funciona durante uma queda de internet.">⚠️ ESTA MÁQUINA NÃO ESTÁ GUARDANDO DADOS — NÃO USE SEM INTERNET</span>`;
@@ -1167,6 +1167,16 @@
   // e o botão vira "✓ LIBERADO". Nada cobre a tela. Depois a busca se limpa
   // sozinha, pronta para o próximo da fila.
   const TEMPO_CONFIRMACAO_MS = 1100;
+  // Copia sem nunca segurar a operação: dispara e esquece. Se der certo, avisa;
+  // se falhar ou não responder, a portaria segue como se nada fosse.
+  function copiarTelefoneSemTravar(telefone) {
+    try {
+      const p = navigator.clipboard?.writeText(telefone);
+      if (p && typeof p.then === "function") {
+        p.then(() => mostrarAviso("TELEFONE COPIADO", true)).catch(() => {});
+      }
+    } catch {}
+  }
   function confirmarNoCartao(btn, nome) {
     const card = btn?.closest(".pt-card");
     if (card) {
@@ -1189,16 +1199,15 @@
     btn.textContent = "LIBERANDO...";
     try {
       const r = await api("checkin", { reservaId });
-      let copiou = false;
-      if (r.telefoneCopia) {
-        try {
-          await navigator.clipboard.writeText(String(r.telefoneCopia));
-          copiou = true;
-        } catch {}
-      }
-      if (copiou) mostrarAviso("CHECK-IN OK E TELEFONE COPIADO!", true);
+      // A TELA VEM PRIMEIRO. Copiar o telefone é um extra e não pode ficar na
+      // frente da confirmação: navigator.clipboard.writeText pode ficar pendurada
+      // para sempre quando a janela perde o foco ou o navegador segura a
+      // permissão — ela não dá erro, simplesmente nunca responde. Com o await
+      // aqui, o cliente entrava de verdade (o servidor registrava), mas a tela
+      // ficava parada no "LIBERANDO...", sem cartão verde e sem o nome no rodapé.
       confirmarNoCartao(btn, nomeCliente);
       carregarBootstrap().catch(() => {});
+      if (r.telefoneCopia) copiarTelefoneSemTravar(String(r.telefoneCopia));
     } catch (e) {
       // Internet caiu: guarda a entrada na máquina e libera a pessoa na hora.
       // A fila é enviada sozinha assim que a conexão voltar.
