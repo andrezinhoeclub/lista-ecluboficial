@@ -164,6 +164,12 @@
     }
 
     .pt-card{
+      /* flex:0 0 auto e obrigatorio: a lista e uma coluna flex de altura fixa, e
+         por padrao os filhos ENCOLHEM para caber. Com poucos resultados ninguem
+         via; com 14 nomes na tela os cartoes eram espremidos a metade da altura,
+         o nome subia para fora e as linhas se sobrepunham. Agora eles mantem o
+         tamanho e a lista rola, que era a intencao desde o comeco. */
+      flex:0 0 auto;
       position:relative; display:flex; align-items:center; gap:16px;
       background:var(--pt-card); border:1px solid var(--pt-cardb); border-radius:16px;
       padding:15px 18px 15px 24px; overflow:hidden; transition:background .15s,border-color .15s;
@@ -207,8 +213,14 @@
     /* O valor ganhou coluna e cor próprias: é a informação que decide se o
        operador cobra alguma coisa antes de deixar entrar. */
     .pt-valor{flex:0 0 auto;text-align:right;padding-right:20px;margin-right:18px;
-      border-right:1px solid var(--pt-cardb);min-width:132px}
+      border-right:1px solid var(--pt-cardb);min-width:132px;max-width:300px}
     .pt-valor b{display:block;font-size:23px;font-weight:900;letter-spacing:-.6px;line-height:1}
+    /* Nem todo valor e "R$ 120,00": em muitas reservas o campo traz a condicao
+       inteira, tipo "R$ 120,00 de entrada com direito a R$ 50,00 de consumacao".
+       Em 23px isso tomava metade da tela. Texto longo cai para um tamanho de
+       leitura e quebra em linhas, mantendo a cor que diz se cobra ou nao. */
+    .pt-valor b.longo{font-size:12.5px;font-weight:800;line-height:1.45;letter-spacing:0;
+      white-space:normal;text-transform:uppercase}
     .pt-valor span{display:block;margin-top:5px;font-size:9px;font-weight:900;letter-spacing:1.4px}
     .pt-valor.cobrar b{color:#f59e0b} .pt-valor.cobrar span{color:#f59e0b;opacity:.8}
     .pt-valor.pago b{color:var(--pt-vd)} .pt-valor.pago span{color:var(--pt-vd);opacity:.75}
@@ -946,7 +958,7 @@
   // a tela, qual arquivo aquela máquina realmente carregou — o navegador guarda a
   // página antiga em cache e continua rodando ela mesmo depois de você publicar
   // uma nova no GitHub.
-  const VERSAO_PAGINA = "11set-5";
+  const VERSAO_PAGINA = "11set-6";
 
   const AVISO_SEM_ARMAZENAMENTO =
     `<span class="pt-alerta" title="Sem isto a portaria não funciona durante uma queda de internet.">⚠️ ESTA MÁQUINA NÃO ESTÁ GUARDANDO DADOS — NÃO USE SEM INTERNET</span>`;
@@ -1144,7 +1156,7 @@
           <div class="pt-meta">${tags}${partes.join("")}</div>
         </div>
         <div class="pt-valor ${classeValor}">
-          <b>${escapeHtml(textoValor)}</b>
+          <b class="${String(textoValor).length > 16 ? "longo" : ""}">${escapeHtml(textoValor)}</b>
           <span>${rotuloValor}</span>
         </div>
         <div class="pt-acao">
