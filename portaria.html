@@ -274,6 +274,10 @@
     .pt-desfazer:hover{border-color:var(--pt-am)}
     .pt-desfazer:disabled{opacity:.45;cursor:not-allowed}
     .pt-vazio-pill{font-size:11px;font-weight:700;color:var(--pt-fraco);opacity:.6;letter-spacing:.5px}
+    .pt-alerta{display:inline-block;padding:7px 12px;border-radius:11px;white-space:nowrap;
+      background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.45);color:#fca5a5;
+      font-size:11px;font-weight:900;letter-spacing:.6px}
+    body.tema-claro .pt-alerta{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
   </style>
 </head>
 <body class="flex h-screen relative">
@@ -407,6 +411,24 @@
     }
   }
   const MAQUINA_ID = idDestaMaquina();
+
+  // ===== ESTA MÁQUINA CONSEGUE GUARDAR DADOS? =====
+  // Tudo que protege a portaria numa queda de internet depende de gravar no
+  // armazenamento do navegador: a lista de clientes, a fila de entradas e o
+  // código desta máquina. Se esse armazenamento estiver cheio, bloqueado ou em
+  // janela anônima, a gravação falha SEM ERRO NENHUM — e a portaria parece
+  // normal até a internet cair e as entradas se perderem. Por isso a checagem é
+  // feita na abertura e o aviso fica fixo na tela enquanto o problema durar.
+  function armazenamentoFunciona() {
+    try {
+      const chave = "__eclub_teste__";
+      localStorage.setItem(chave, "1");
+      const leu = localStorage.getItem(chave) === "1";
+      localStorage.removeItem(chave);
+      return leu;
+    } catch { return false; }
+  }
+  const ARMAZENAMENTO_OK = armazenamentoFunciona();
 
   const CHAVE_LISTA_LOCAL = "eclub_portaria_lista_offline_v1";
   const CHAVE_FILA_OFFLINE = "eclub_portaria_fila_offline_v1";
@@ -888,14 +910,29 @@
   }
   // ---- últimos liberados (rodapé) ----
   // Fica guardado na máquina só para sobreviver a um F5 no meio da noite.
+  const AVISO_SEM_ARMAZENAMENTO =
+    `<span class="pt-alerta" title="Sem isto a portaria não funciona durante uma queda de internet.">⚠️ ESTA MÁQUINA NÃO ESTÁ GUARDANDO DADOS — NÃO USE SEM INTERNET</span>`;
   const CHAVE_ULTIMOS = "eclub_portaria_ultimos_v1";
   const VALIDADE_ULTIMOS_MS = 12 * 60 * 60 * 1000;
+  // A lista vive na MEMÓRIA; o armazenamento da máquina é só cópia de segurança
+  // para sobreviver a um F5. Antes era o contrário, e numa máquina cujo
+  // armazenamento está cheio ou bloqueado a gravação falhava calada: o nome do
+  // cliente recém-liberado não aparecia no rodapé e o ↩ nunca surgia.
+  let ultimosNaMemoria = null;
   function lerUltimos() {
-    try {
-      const l = JSON.parse(localStorage.getItem(CHAVE_ULTIMOS));
-      if (!Array.isArray(l)) return [];
-      return l.filter(i => Date.now() - Number(i.em || 0) < VALIDADE_ULTIMOS_MS);
-    } catch { return []; }
+    if (!Array.isArray(ultimosNaMemoria)) {
+      try {
+        const l = JSON.parse(localStorage.getItem(CHAVE_ULTIMOS));
+        ultimosNaMemoria = Array.isArray(l) ? l : [];
+      } catch { ultimosNaMemoria = []; }
+    }
+    ultimosNaMemoria = ultimosNaMemoria.filter(i => Date.now() - Number(i.em || 0) < VALIDADE_ULTIMOS_MS);
+    return ultimosNaMemoria;
+  }
+  function gravarUltimos(lista) {
+    ultimosNaMemoria = lista;                                  // isto é o que a tela mostra
+    try { localStorage.setItem(CHAVE_ULTIMOS, JSON.stringify(lista)); } catch {}  // isto é só backup
+    renderUltimos();
   }
   // Janela para desfazer: a mesma do servidor. Passou disso, o ↩ some do rodapé.
   const MINUTOS_PARA_DESFAZER = 10;
@@ -907,24 +944,21 @@
       em: Date.now(),
       id: String(reservaId || "")
     };
-    const lista = [item, ...lerUltimos()].slice(0, 6);
-    try { localStorage.setItem(CHAVE_ULTIMOS, JSON.stringify(lista)); } catch {}
-    renderUltimos();
+    gravarUltimos([item, ...lerUltimos()].slice(0, 6));
   }
   function removerDosUltimos(reservaId) {
-    const lista = lerUltimos().filter(i => String(i.id || "") !== String(reservaId));
-    try { localStorage.setItem(CHAVE_ULTIMOS, JSON.stringify(lista)); } catch {}
-    renderUltimos();
+    gravarUltimos(lerUltimos().filter(i => String(i.id || "") !== String(reservaId)));
   }
   function renderUltimos() {
     const cont = $("pt-ultimos");
     if (!cont) return;
     const lista = lerUltimos();
     if (!lista.length) {
-      cont.innerHTML = `<span class="pt-vazio-pill">Ninguém liberado ainda nesta máquina.</span>`;
+      cont.innerHTML = (ARMAZENAMENTO_OK ? "" : AVISO_SEM_ARMAZENAMENTO)
+        + `<span class="pt-vazio-pill">Ninguém liberado ainda nesta máquina.</span>`;
       return;
     }
-    cont.innerHTML = lista.map(i => {
+    cont.innerHTML = (ARMAZENAMENTO_OK ? "" : AVISO_SEM_ARMAZENAMENTO) + lista.map(i => {
       const dentroDaJanela = i.id && (Date.now() - Number(i.em || 0)) < MINUTOS_PARA_DESFAZER * 60000;
       return `<span class="pt-pill">${escapeHtml(i.nome)} <i>${escapeHtml(i.hora)}</i>${
         dentroDaJanela ? `<button type="button" class="pt-desfazer" data-desfazer="${escapeHtml(i.id)}" title="Desfazer esta liberação">↩</button>` : ""
