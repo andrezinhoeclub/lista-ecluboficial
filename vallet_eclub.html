@@ -918,6 +918,25 @@
       .ticketPrintObsTitle { font-size: 9pt; font-weight: 900; text-align: center; margin-bottom: 2mm; }
       .ticketPrintObs { font-size: 8.5pt; font-weight: 700; line-height: 1.35; white-space: pre-wrap; word-break: break-word; text-align: left; border: 1px solid #000; padding: 2mm; min-height: 16mm; }
     }
+    /* ===== CAIXA DE CONFIRMACAO DA CASA =====
+       No lugar das caixas do navegador, que mostravam "andrezinhoeclub.github.io
+       diz" em cima da pergunta e travavam a tela inteira enquanto abertas.
+       Usa as mesmas variaveis de cor do resto, entao acompanha claro e escuro. */
+    .vModal { position: fixed; inset: 0; z-index: 100010; display: flex; align-items: center;
+      justify-content: center; padding: 24px; background: rgba(0,0,0,.66); backdrop-filter: blur(4px); }
+    .vModal[hidden] { display: none !important; }
+    body.theme-light .vModal { background: rgba(15,23,42,.42); }
+    .vModalCard { width: 100%; max-width: 420px; padding: 26px; border-radius: var(--radius);
+      background: var(--card); border: 1px solid var(--border); box-shadow: var(--shadow);
+      backdrop-filter: blur(14px); text-align: center; }
+    .vModalCard h3 { margin: 0 0 10px; font-size: 15px; font-weight: 950; letter-spacing: .05em;
+      text-transform: uppercase; color: var(--text); }
+    .vModalCard p { margin: 0 0 22px; font-size: 12px; font-weight: 700; line-height: 1.7; color: var(--muted); }
+    .vModalBtns { display: flex; gap: 9px; }
+    .vModalBtn { flex: 1; padding: 15px 12px; border-radius: 18px; font-size: 11px; font-weight: 950;
+      letter-spacing: .06em; text-transform: uppercase; background: var(--yellow); color: #111; }
+    .vModalBtn.quiet { background: var(--card2); border: 1px solid var(--border); color: var(--muted); }
+    .vModalBtn:active { transform: scale(.97); }
   </style>
 </head>
 <body data-build="52">
@@ -947,6 +966,17 @@
   <button id="themeToggle" class="theme-toggle" type="button" onclick="alternarTema()" aria-label="Alternar tema">🌙 <span>Escuro</span></button>
 
   <div id="toast" class="toast"></div>
+
+  <div id="vConfirma" class="vModal" hidden>
+    <div class="vModalCard">
+      <h3 id="vConfirmaTitulo">Confirmar</h3>
+      <p id="vConfirmaTexto"></p>
+      <div class="vModalBtns">
+        <button type="button" id="vConfirmaNao" class="vModalBtn quiet">Cancelar</button>
+        <button type="button" id="vConfirmaSim" class="vModalBtn">Confirmar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Aviso de conexão no padrão da Portaria: fica escondido quando está tudo
        certo, e é a única coisa na tela que fala de sincronização. -->
@@ -1493,6 +1523,41 @@
       return id;
     };
 
+    // Pergunta no padrao da casa. Devolve true/false, igual ao confirm() do
+    // navegador, mas sem travar a tela e acompanhando o tema.
+    let responderConfirmaVallet = null;
+    function perguntar({ titulo, texto, confirmar = 'Confirmar', cancelar = 'Cancelar' }) {
+      return new Promise(resolve => {
+        const caixa = $('vConfirma');
+        const sim = $('vConfirmaSim');
+        const nao = $('vConfirmaNao');
+        $('vConfirmaTitulo').textContent = titulo;
+        $('vConfirmaTexto').textContent = texto;
+        sim.textContent = confirmar;
+        nao.textContent = cancelar;
+        caixa.hidden = false;
+        setTimeout(() => sim.focus(), 30);
+        const terminar = resposta => {
+          if (!responderConfirmaVallet) return;
+          responderConfirmaVallet = null;
+          caixa.hidden = true;
+          sim.onclick = null; nao.onclick = null; caixa.onclick = null;
+          resolve(resposta);
+        };
+        responderConfirmaVallet = terminar;
+        sim.onclick = () => terminar(true);
+        nao.onclick = () => terminar(false);
+        caixa.onclick = ev => { if (ev.target === caixa) terminar(false); };
+      });
+    }
+    // Enter confirma, Esc cancela. Em fase de captura e travando a propagacao,
+    // para o Enter nao chegar nos campos de cadastro que salvam sozinhos.
+    document.addEventListener('keydown', ev => {
+      if (!responderConfirmaVallet) return;
+      if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); responderConfirmaVallet(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); responderConfirmaVallet(false); }
+    }, true);
+
     function toast(msg, ok=false) {
       const el = $('toast');
       el.textContent = msg;
@@ -1730,6 +1795,10 @@
         // apagar antes perderia tudo que não mudou nesta rodada.
         (dados.veiculos || []).forEach(d => puts.push(put(STORE_VEICULO, d)));
         (dados.atendimentos || []).forEach(d => puts.push(put(STORE_ATEND, d)));
+        // Placas que a faxina apagou no servidor saem também daqui. A
+        // sincronização por diferença só sabe acrescentar: sem esta linha, tudo
+        // que foi limpo lá continuaria neste aparelho para sempre.
+        (dados.veiculos_apagados || []).forEach(id => puts.push(del(STORE_VEICULO, id).catch(() => {})));
         puts.push(salvarMeta('modo_teste_vallet', modoTesteValletAtivo));
         // Fora do horário o servidor manda só o que está no pátio. Nesse caso o
         // marcador NÃO anda, senão as mudanças feitas com a casa fechada seriam
@@ -2287,7 +2356,7 @@
     async function excluirModelo(id) {
       const modelo = modelos.find(m => m.id === id);
       if (!modelo) return;
-      if (!confirm(`Excluir definitivamente o modelo ${modelo.nome}? Os atendimentos já registrados não serão alterados.`)) return;
+      if (!await perguntar({ titulo: 'Excluir modelo?', texto: `${modelo.nome} sai da lista. Os atendimentos já registrados não mudam.`, confirmar: 'Excluir' })) return;
       await del(STORE_MODELO, id);
       await queueDelete('vallet_modelos', id);
       await carregarLocal();
@@ -2321,7 +2390,7 @@
     async function excluirCor(id) {
       const cor = cores.find(c => c.id === id);
       if (!cor) return;
-      if (!confirm(`Excluir definitivamente a cor ${cor.nome}? Os atendimentos já registrados não serão alterados.`)) return;
+      if (!await perguntar({ titulo: 'Excluir cor?', texto: `${cor.nome} sai da lista. Os atendimentos já registrados não mudam.`, confirmar: 'Excluir' })) return;
       await del(STORE_COR, id);
       await queueDelete('vallet_cores', id);
       await carregarLocal();
@@ -2684,7 +2753,7 @@
     async function excluirSetor(id) {
       const setor = setores.find(s => s.id === id);
       if (!setor) return;
-      if (!confirm(`Excluir definitivamente o setor ${setor.nome}? Os atendimentos já registrados manterão o nome do setor no histórico.`)) return;
+      if (!await perguntar({ titulo: 'Excluir setor?', texto: `${setor.nome} sai da lista. Os atendimentos já registrados mantêm o nome no histórico.`, confirmar: 'Excluir' })) return;
       await del(STORE_SETOR, id);
       await queueDelete('vallet_setores', id);
       await carregarLocal();
@@ -3009,7 +3078,7 @@
       atualizarResumoVistoria();
     }
 
-    function alternarAvariaHistoricaReparada(id, event = null) {
+    async function alternarAvariaHistoricaReparada(id, event = null) {
       if (event) event.stopPropagation();
       const avaria = vistoriaAvariasHistoricas.find(a => String(a.id) === String(id));
       if (!avaria) return toast('Avaria anterior não encontrada.');
@@ -3019,9 +3088,11 @@
         toast('Avaria restaurada como ativa.', true);
       } else {
         const rotulo = ROTULOS_TIPO_AVARIA[avaria.tipo] || avaria.tipo;
-        if (!confirm(`Marcar a avaria "${rotulo}" como reparada?
-
-Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continuará registrada no histórico.`)) return;
+        if (!await perguntar({
+          titulo: 'Marcar como reparada?',
+          texto: `"${rotulo}" deixa de aparecer como avaria ativa nos próximos check-ins, mas continua registrada no histórico.`,
+          confirmar: 'Marcar reparada'
+        })) return;
         vistoriaAvariasReparadas.push({
           ...avaria,
           reparada_em: agoraISO(),
@@ -3034,9 +3105,9 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       atualizarResumoVistoria();
     }
 
-    function restaurarTodasAvariasReparadas() {
+    async function restaurarTodasAvariasReparadas() {
       if (!vistoriaAvariasReparadas.length) return toast('Nenhuma avaria foi marcada como reparada.');
-      if (!confirm('Restaurar todas as avarias reparadas desta vistoria como ativas?')) return;
+      if (!await perguntar({ titulo: 'Restaurar avarias?', texto: 'Todas as avarias marcadas como reparadas nesta vistoria voltam a ficar ativas.', confirmar: 'Restaurar' })) return;
       vistoriaAvariasReparadas = [];
       vistoriaConfirmada = false;
       renderVistoriaAvarias();
@@ -3052,9 +3123,9 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       atualizarResumoVistoria();
     }
 
-    function limparNovasAvarias() {
+    async function limparNovasAvarias() {
       if (!vistoriaAvariasNovas.length) return toast('Nenhuma nova avaria registrada.');
-      if (!confirm('Remover todas as novas avarias marcadas nesta vistoria?')) return;
+      if (!await perguntar({ titulo: 'Remover avarias novas?', texto: 'Todas as avarias que você marcou nesta vistoria serão apagadas.', confirmar: 'Remover' })) return;
       vistoriaAvariasNovas = [];
       vistoriaConfirmada = false;
       renderVistoriaAvarias();
@@ -3376,7 +3447,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
     async function cancelarSolicitacao(id) {
       const a = atendimentos.find(x => x.id === id);
       if (!a || a.status !== 'SOLICITADO') return;
-      if (!confirm('Cancelar o chamado deste veículo? Ele volta para a lista do pátio.')) return;
+      if (!await perguntar({ titulo: 'Cancelar o chamado?', texto: 'O veículo volta para a lista do pátio.', confirmar: 'Cancelar chamado', cancelar: 'Voltar' })) return;
       const anterior = a.status_antes_solicitacao || (a.setor_id ? 'ESTACIONADO' : 'RECEBIDO');
       await atualizarAtendimento(id, {
         status: anterior,
@@ -3385,7 +3456,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       }, anterior, 'Chamado cancelado pelo operador');
     }
     async function entregarVeiculo(id) {
-      if (!confirm('Confirmar entrega do veículo?')) return;
+      if (!await perguntar({ titulo: 'Confirmar entrega?', texto: 'O veículo sai do pátio e o atendimento é encerrado.', confirmar: 'Entregar' })) return;
       const quando = agoraISO();
       const novo = await atualizarAtendimento(id, {
         status: 'ENTREGUE',
@@ -3429,7 +3500,7 @@ Ela deixará de aparecer como avaria ativa nos próximos check-ins, mas continua
       if (!podeDesfazerEntrega(a)) {
         return toast(`Só dá para desfazer a entrega nos primeiros ${MINUTOS_PARA_DESFAZER_ENTREGA} minutos.`);
       }
-      if (!confirm(`Desfazer a entrega do ticket #${a.ticket} (${a.placa})? O veículo volta para o pátio.`)) return;
+      if (!await perguntar({ titulo: 'Desfazer a entrega?', texto: `Ticket #${a.ticket} — ${a.placa}. O veículo volta para o pátio.`, confirmar: 'Desfazer' })) return;
       const placa = a.placa_norm || a.placa;
       // Reserva a placa de novo ANTES de reabrir o atendimento: se outro
       // terminal já recebeu esse mesmo carro, é melhor falhar aqui do que
