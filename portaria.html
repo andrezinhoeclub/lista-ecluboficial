@@ -758,6 +758,11 @@
     // Primeiro sobe o que ficou pendente, depois recarrega os números — nessa
     // ordem, senão o total de check-ins apareceria desatualizado por um instante.
     if (auth.currentUser) sincronizarFilaOffline().catch(()=>{});
+    // Refaz sozinha a busca que ficou na tela: o operador não precisa digitar de
+    // novo só porque a conexão piscou.
+    if (auth.currentUser && $("input-busca") && $("input-busca").value.trim().length >= 3) {
+      setTimeout(() => executarBusca().catch(() => {}), 400);
+    }
   });
   // ===== RECUPERAÇÃO DE SENHA (self-service) =====
   // O operador informa o e-mail e recebe (se ele já tiver acesso liberado pelo
@@ -960,7 +965,7 @@
   // a tela, qual arquivo aquela máquina realmente carregou — o navegador guarda a
   // página antiga em cache e continua rodando ela mesmo depois de você publicar
   // uma nova no GitHub.
-  const VERSAO_PAGINA = "11set-8";
+  const VERSAO_PAGINA = "11set-10";
 
   const AVISO_SEM_ARMAZENAMENTO =
     `<span class="pt-alerta" title="Sem isto a portaria não funciona durante uma queda de internet.">⚠️ ESTA MÁQUINA NÃO ESTÁ GUARDANDO DADOS — NÃO USE SEM INTERNET</span>`;
@@ -1209,8 +1214,56 @@
         await encerrarSessaoLocal(e.message || "Acesso não autorizado.");
         return;
       }
-      cont.innerHTML = `<div class="py-20 text-center font-black uppercase text-red-500 text-sm">${escapeHtml(e.message || "Erro na busca")}</div>`;
+      // Internet caída E sem lista guardada nesta máquina. Antes aparecia o erro
+      // cru do navegador — "Failed to fetch" — e o operador ficava sem saber o
+      // que fazer e sem nenhuma saída na tela. Agora a situação é explicada em
+      // português e a liberação manual é oferecida aqui também: é exatamente
+      // neste momento que ela existe para servir.
+      if (ehFalhaDeRede(e)) { renderSemListaOffline(); return; }
+      const recado = /failed to fetch|networkerror|load failed/i.test(String(e?.message || ""))
+        ? "Sem conexão com o servidor. Tente de novo em instantes."
+        : (e.message || "Erro na busca");
+      cont.innerHTML = `<div class="pt-vazio"><h4 class="alerta">${escapeHtml(recado)}</h4></div>`;
     }
+  }
+  // Tela de quando não há internet nem lista salva.
+  function renderSemListaOffline() {
+    const cont = $("container-resultados");
+    cartoesLiberaveis = [];
+    selecionado = -1;
+    // Fora do horário a lista guardada na máquina também fica bloqueada — é a
+    // regra que impede puxar base de cliente numa terça de manhã. Sem internet
+    // para o servidor explicar isso, a tela precisa dizer por conta própria,
+    // senão parece defeito quando é a trava funcionando.
+    if (!dentroDoTurnoLocalPortaria()) {
+      cont.innerHTML = `
+        <div class="pt-vazio">
+          <h4 class="alerta">Fora do horário de funcionamento</h4>
+          <p>A consulta de clientes funciona das ${HORA_ABERTURA_PORTARIA}h às ${HORA_FECHAMENTO_PORTARIA}h.
+             Sem internet, a lista guardada nesta máquina também fica bloqueada nesse período.</p>
+        </div>`;
+      return;
+    }
+    const termo = $("input-busca").value.trim();
+    const evento = eventoAtivoAgora();
+    const podeManual = termo.length >= 3 && evento;
+    cont.innerHTML = `
+      <div class="pt-vazio">
+        <h4 class="alerta">Sem internet e sem lista guardada nesta máquina</h4>
+        <p>A lista de clientes ainda não foi baixada neste computador. Assim que a
+           internet voltar ela carrega sozinha — não precisa fazer nada.</p>
+        ${podeManual ? `
+        <div class="pt-manual">
+          <b>ENQUANTO ISSO</b>
+          <p>Você pode liberar pelo nome. A entrada fica registrada e marcada para
+             conferência no Dashboard.</p>
+          <button type="button" data-manual="${escapeHtml(termo)}" class="pt-btn" style="width:100%">
+            Liberar manualmente: ${escapeHtml(termo)}
+          </button>
+        </div>` : `
+        <p style="margin-top:18px">Digite o nome do cliente (3 letras ou mais) para
+           poder liberar manualmente.</p>`}
+      </div>`;
   }
   $("input-busca").addEventListener("input", () => {
     clearTimeout(debounceBusca);
