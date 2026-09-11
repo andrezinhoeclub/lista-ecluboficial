@@ -388,6 +388,26 @@
   // Chaves de armazenamento na própria máquina. A lista fica guardada aqui pra
   // sobreviver a um reinício do computador no meio da queda, e a fila guarda as
   // entradas feitas sem internet até conseguir mandar pro servidor.
+  // ===== UMA CONTA, UM COMPUTADOR =====
+  // Cada máquina ganha um código próprio, guardado nela mesma. Ele vai junto em
+  // toda chamada; o servidor só aceita se for a máquina que entrou por último.
+  const CHAVE_MAQUINA = "eclub_portaria_maquina_v1";
+  function idDestaMaquina() {
+    try {
+      let id = localStorage.getItem(CHAVE_MAQUINA);
+      if (!id || !/^[A-Za-z0-9_-]{6,64}$/.test(id)) {
+        id = "m" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+        localStorage.setItem(CHAVE_MAQUINA, id);
+      }
+      return id;
+    } catch {
+      // Navegador sem armazenamento: usa um código só desta aba.
+      if (!window.__maquinaTemporaria) window.__maquinaTemporaria = "m" + Math.random().toString(36).slice(2, 14);
+      return window.__maquinaTemporaria;
+    }
+  }
+  const MAQUINA_ID = idDestaMaquina();
+
   const CHAVE_LISTA_LOCAL = "eclub_portaria_lista_offline_v1";
   const CHAVE_FILA_OFFLINE = "eclub_portaria_fila_offline_v1";
   // Lista guardada há mais de 20 horas é descartada: evita a porta abrir na
@@ -571,6 +591,7 @@
       }
       candidatosCache = novos;
       salvarListaLocal(candidatosCache);
+      repintarBuscaAtual();
     }).catch(() => {});
   }
   // Qual evento está no ar agora — usado pra registrar a entrada manual no
@@ -614,6 +635,14 @@
         enviadas++;
       } catch (e) {
         if (ehFalhaDeRede(e)) { restantes.push(item); continue; } // a internet caiu de novo
+        // Sessão tomada por outra máquina: NÃO descarta nada. Estas entradas são
+        // de gente que já está lá dentro; elas ficam guardadas e sobem quando
+        // esta máquina entrar de novo.
+        if (e?.codigo === "SESSAO_EM_OUTRA_MAQUINA") {
+          restantes.push(item);
+          fila.slice(fila.indexOf(item) + 1).forEach(resto => restantes.push(resto));
+          break;
+        }
         // O servidor respondeu recusando: repetir não resolve.
         if (/j[áa] realizado/i.test(String(e?.message || ""))) jaConstavam++;
         else { recusadas++; console.warn("sincronizacao recusada:", item, e?.message); }
@@ -736,7 +765,7 @@
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify({ action, ...body }),
+      body: JSON.stringify({ action, maquinaId: MAQUINA_ID, ...body }),
       cache: "no-store",
       signal: controller?.signal
     });
@@ -749,6 +778,12 @@
     if (!response.ok || payload?.ok === false) {
       const err = new Error(payload?.error || `Erro ${response.status}`);
       err.status = response.status;
+      err.codigo = payload?.codigo || "";
+      // A conta foi aberta em outro computador: esta tela sai do ar na hora, em
+      // qualquer ponto do sistema em que o erro apareça.
+      if (err.codigo === "SESSAO_EM_OUTRA_MAQUINA") {
+        encerrarSessaoLocal(err.message).catch(() => {});
+      }
       throw err;
     }
     return payload;
@@ -763,7 +798,12 @@
       throw Object.assign(new Error("USUÁRIO SEM PERMISSÃO DE PORTARIA."), { status:403 });
     }
     operadorLogado = portariaId;
-    $("operadorAtivo").innerText = `OPERADOR: ${portariaId.toUpperCase()}`;
+    $("operadorAtivo").innerText = portariaId.toUpperCase();
+    // Entrar aqui derruba a mesma conta em qualquer outro computador.
+    const sessao = await api("abrir_sessao");
+    if (sessao?.derrubouOutra) {
+      mostrarAviso("ESTE ACESSO FOI FECHADO NO OUTRO COMPUTADOR", true);
+    }
     // O bootstrap passa pelo backend e confirma também /acessos/{uid}
     // e o operador ativo. Nenhuma leitura direta do Firestore ocorre aqui.
     await carregarBootstrap();
@@ -922,6 +962,26 @@
     cartoesLiberaveis.forEach((c, i) => c.classList.toggle("pt-sel", i === selecionado));
     if (selecionado >= 0) cartoesLiberaveis[selecionado]?.scrollIntoView({ block: "nearest" });
   }
+  // Chega lista nova do servidor (a cada 30s): os cartões que já estão na tela
+  // se atualizam sozinhos. Assim, quando a OUTRA portaria libera alguém, o nome
+  // vira "JÁ ENTROU" na frente deste operador, sem ele precisar buscar de novo.
+  // Guarda quem estava selecionado pelo id, pra seta e Enter não pularem de
+  // pessoa no meio do atendimento.
+  function repintarBuscaAtual() {
+    if (!Array.isArray(candidatosCache)) return;
+    const q = $("input-busca").value.trim();
+    if (q.length < 3) return;
+    // Confirmação em andamento na tela: não mexe, senão o verde some no meio.
+    if (document.querySelector(".pt-card.pt-ok")) return;
+    const idSelecionado = selecionado >= 0 ? cartoesLiberaveis[selecionado]?.dataset.id : null;
+    const terms = normalizeTextCliente(q).split(/\s+/).filter(Boolean);
+    const resultados = candidatosCache.filter(c => candidatoCombinaBusca(c, terms));
+    renderResultados(resultados.slice(0, MAX_RESULTADOS_TELA), resultados.length > MAX_RESULTADOS_TELA);
+    if (idSelecionado) {
+      const i = cartoesLiberaveis.findIndex(c => c.dataset.id === idSelecionado);
+      if (i >= 0) { selecionado = i; aplicarSelecao(); }
+    }
+  }
   function limparBusca() {
     $("input-busca").value = "";
     $("container-resultados").innerHTML = "";
@@ -1004,7 +1064,7 @@
       ].filter(x => String(x.texto).trim())
        .map((x, n) => `<span class="${x.classe}">${n ? '<span class="sep">·</span>' : ""}${escapeHtml(x.texto)}</span>`);
       return `
-      <div class="pt-card ${c.entrou ? "entrou" : ""} ${c.pixForaTurno ? "pix-fora" : ""}">
+      <div class="pt-card ${c.entrou ? "entrou" : ""} ${c.pixForaTurno ? "pix-fora" : ""}" data-id="${escapeHtml(c.id)}">
         <div class="pt-pos">${i + 1}</div>
         <div class="pt-info">
           <div class="pt-nome"><span class="txt">${escapeHtml(c.nome || "SEM NOME")}</span><span class="pt-fone ${repetido ? "destaque" : ""}">${escapeHtml(formatarTelefone(c.telefone))}</span></div>
