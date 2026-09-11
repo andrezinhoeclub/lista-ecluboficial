@@ -124,7 +124,22 @@
       background:rgba(59,130,246,.10);border:1px solid rgba(59,130,246,.3);color:#60a5fa}
 
     /* ---- lista ---- */
-    .pt-lista{flex:1;overflow-y:auto;padding:4px 16px 12px;display:flex;flex-direction:column;gap:9px}
+    /* Largura máxima: em monitor largo (16:9 esticado) a lista parava de respirar
+       e os nomes ficavam amontoados de um lado só. Agora o conteúdo tem um limite
+       e fica centralizado, igual numa tela quadrada. */
+    .pt-lista{flex:1;overflow-y:auto;padding:6px 16px 14px;display:flex;flex-direction:column;gap:14px}
+    .pt-card, .pt-vazio, .pt-lista > .pt-avisoteste{width:100%;max-width:1680px;align-self:center}
+    .pt-buscawrap{max-width:1712px;width:100%;margin:0 auto}
+    /* Monitor baixo (1366x768 e parecidos): encolhe um pouco pra caber mais gente
+       na tela sem voltar a ficar apertado. */
+    @media (max-height:820px){
+      .pt-lista{gap:11px}
+      .pt-card{padding:11px 16px 11px 22px}
+      .pt-nome{font-size:25px}
+      .pt-fone{font-size:19px}
+      .pt-busca input{height:54px;font-size:18px}
+      .pt-lupa{top:15px}
+    }
 
     .pt-card{
       position:relative; display:flex; align-items:center; gap:16px;
@@ -163,6 +178,22 @@
     .pt-meta .tag{margin-right:8px;padding:2px 7px;border-radius:5px;font-size:10px;
       font-weight:900;letter-spacing:.5px;text-transform:uppercase}
 
+    /* O valor ganhou coluna e cor próprias: é a informação que decide se o
+       operador cobra alguma coisa antes de deixar entrar. */
+    .pt-valor{flex:0 0 auto;text-align:right;padding-right:20px;margin-right:18px;
+      border-right:1px solid var(--pt-cardb);min-width:132px}
+    .pt-valor b{display:block;font-size:23px;font-weight:900;letter-spacing:-.6px;line-height:1}
+    .pt-valor span{display:block;margin-top:5px;font-size:9px;font-weight:900;letter-spacing:1.4px}
+    .pt-valor.cobrar b{color:#f59e0b} .pt-valor.cobrar span{color:#f59e0b;opacity:.8}
+    .pt-valor.pago b{color:var(--pt-vd)} .pt-valor.pago span{color:var(--pt-vd);opacity:.75}
+    .pt-valor.cortesia b{color:#d946ef} .pt-valor.cortesia span{color:#d946ef;opacity:.8}
+    body.tema-claro .pt-valor.cobrar b, body.tema-claro .pt-valor.cobrar span{color:#b45309}
+    body.tema-claro .pt-valor.cortesia b, body.tema-claro .pt-valor.cortesia span{color:#a21caf}
+    .pt-card.entrou .pt-valor b, .pt-card.entrou .pt-valor span{color:var(--pt-fraco);opacity:.5}
+    /* hierarquia dentro da linha de baixo: tipo de entrada em destaque,
+       promoter e evento em segundo plano */
+    .pt-meta .tipo{color:var(--pt-txt);font-weight:900;letter-spacing:.3px}
+    .pt-meta .ev{opacity:.6}
     .pt-acao{flex:0 0 auto;display:flex;align-items:center}
     .pt-btn{height:50px;min-width:164px;border:0;border-radius:13px;background:var(--pt-vd);
       color:#04210f;font-size:15px;font-weight:900;letter-spacing:.6px;cursor:pointer;
@@ -884,14 +915,27 @@
       const tags = (Array.isArray(c.tags) ? c.tags : []).map(tag =>
         `<span class="tag border ${tagClass(tag)}">${escapeHtml(tag)}</span>`
       ).join("");
-      const pgto = String(c.pagamento || "PORTARIA");
-      const classePgto = pgto.includes("PIX") ? "pago" : pgto.includes("PROMO") ? "promo" : "";
+      // Valor: é o que decide se o operador cobra alguma coisa na porta. Por isso
+      // saiu do meio do texto cinza e virou coluna própria, com cor:
+      //   verde  = já pago (PIX)   ·   roxo = cortesia   ·   laranja = A COBRAR
+      const pgto = String(c.pagamento || "PORTARIA").toUpperCase();
+      const valorBruto = String(c.total || "").trim();
+      const temValor = /\d/.test(valorBruto);
+      let classeValor, rotuloValor, textoValor;
+      if (pgto.includes("PIX")) {
+        classeValor = "pago"; rotuloValor = "JÁ PAGO";
+        textoValor = temValor ? valorBruto : "PAGO";
+      } else if (pgto.includes("PROMO") || /CORTESIA|GRATIS|GRÁTIS|FREE/i.test(valorBruto)) {
+        classeValor = "cortesia"; rotuloValor = "SEM COBRANÇA";
+        textoValor = temValor ? valorBruto : "CORTESIA";
+      } else {
+        classeValor = "cobrar"; rotuloValor = "A COBRAR";
+        textoValor = temValor ? valorBruto : (valorBruto || "PORTARIA");
+      }
       const partes = [
-        `<span>${escapeHtml(c.tipo || "---")}</span>`,
+        `<span class="tipo">${escapeHtml(c.tipo || "---")}</span>`,
         `<span>${escapeHtml(c.promoter || "DIRETO")}</span>`,
-        `<span class="${classePgto}">${escapeHtml(pgto)}</span>`,
-        `<span>${escapeHtml(c.total || "PORTARIA")}</span>`,
-        `<span>${escapeHtml(c.evento || "")}</span>`
+        `<span class="ev">${escapeHtml(c.evento || "")}</span>`
       ].filter(x => !/>\s*<\/span>$/.test(x));
       return `
       <div class="pt-card ${c.entrou ? "entrou" : ""} ${c.pixForaTurno ? "pix-fora" : ""}">
@@ -899,6 +943,10 @@
         <div class="pt-info">
           <div class="pt-nome">${escapeHtml(c.nome || "SEM NOME")}<span class="pt-fone ${repetido ? "destaque" : ""}">${escapeHtml(formatarTelefone(c.telefone))}</span></div>
           <div class="pt-meta">${tags}${partes.join('<span class="sep">·</span>')}</div>
+        </div>
+        <div class="pt-valor ${classeValor}">
+          <b>${escapeHtml(textoValor)}</b>
+          <span>${rotuloValor}</span>
         </div>
         <div class="pt-acao">
           ${c.entrou
