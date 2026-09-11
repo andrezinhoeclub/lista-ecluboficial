@@ -113,7 +113,8 @@
     .pt-buscawrap{padding:16px 16px 10px;display:flex;gap:14px;align-items:center}
     .pt-busca{position:relative;flex:1 1 auto;min-width:0}
     .pt-busca input{
-      width:100%; height:60px; border-radius:16px; font-size:19px; font-weight:800;
+      width:100%; height:clamp(46px, 7vh, 60px); border-radius:16px;
+      font-size:clamp(16px, 1.9vh, 19px); font-weight:800;
       letter-spacing:.5px; padding:0 20px 0 56px; text-transform:uppercase;
     }
     .pt-lupa{position:absolute;left:21px;top:18px;font-size:20px;opacity:.5}
@@ -129,7 +130,8 @@
     /* Largura máxima: em monitor largo (16:9 esticado) a lista parava de respirar
        e os nomes ficavam amontoados de um lado só. Agora o conteúdo tem um limite
        e fica centralizado, igual numa tela quadrada. */
-    .pt-lista{flex:1;overflow-y:auto;padding:6px 16px 14px;display:flex;flex-direction:column;gap:14px}
+    .pt-lista{flex:1;overflow-y:auto;padding:6px 16px 14px;display:flex;flex-direction:column;
+      gap:clamp(7px, 1.3vh, 14px)}
     .pt-card, .pt-vazio, .pt-lista > .pt-avisoteste{width:100%;max-width:1680px;align-self:center}
     .pt-buscawrap{max-width:1712px;width:100%;margin:0 auto}
     /* Monitor baixo (1366x768 e parecidos): encolhe um pouco pra caber mais gente
@@ -154,14 +156,8 @@
       .pt-fone{font-size:17px}
       .pt-btn{min-width:108px}
     }
-    @media (max-height:820px){
-      .pt-lista{gap:11px}
-      .pt-card{padding:11px 16px 11px 22px}
-      .pt-nome{font-size:25px}
-      .pt-fone{font-size:19px}
-      .pt-busca input{height:54px;font-size:18px}
-      .pt-lupa{top:15px}
-    }
+    /* A lupa acompanha a altura do campo de busca. */
+    @media (max-height:900px){ .pt-lupa{top:14px;font-size:18px} }
 
     .pt-card{
       /* flex:0 0 auto e obrigatorio: a lista e uma coluna flex de altura fixa, e
@@ -172,7 +168,8 @@
       flex:0 0 auto;
       position:relative; display:flex; align-items:center; gap:16px;
       background:var(--pt-card); border:1px solid var(--pt-cardb); border-radius:16px;
-      padding:15px 18px 15px 24px; overflow:hidden; transition:background .15s,border-color .15s;
+      padding:clamp(9px, 1.4vh, 15px) 18px clamp(9px, 1.4vh, 15px) 24px;
+      overflow:hidden; transition:background .15s,border-color .15s;
     }
     .pt-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--pt-vd)}
     .pt-card.entrou::before{background:#3f3f46}
@@ -196,10 +193,14 @@
        é o NOME (com reticências). O telefone nunca encolhe nem some — é por ele
        que o operador confere a pessoa. */
     .pt-nome{display:flex;align-items:baseline;gap:13px;min-width:0;
-      font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1.08;
+      /* clamp = mínimo, ideal, máximo. O "vh" é a altura da tela: numa tela
+         baixa o nome encolhe até 21px, numa alta cresce até 28px, e entre as
+         duas ele acompanha suavemente em vez de pular de degrau. É isso que faz
+         a mesma página caber bem em monitor quadrado e em monitor esticado. */
+      font-size:clamp(21px, 2.55vh, 28px);font-weight:900;letter-spacing:-1px;line-height:1.08;
       text-transform:uppercase;color:var(--pt-txt);white-space:nowrap}
     .pt-nome .txt{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
-    .pt-fone{flex:0 0 auto;font-size:21px;font-weight:800;letter-spacing:-.2px;
+    .pt-fone{flex:0 0 auto;font-size:clamp(16px, 1.95vh, 21px);font-weight:800;letter-spacing:-.2px;
       color:var(--pt-fone);font-variant-numeric:tabular-nums}
     .pt-fone.destaque{color:var(--pt-am)}
     .pt-meta{margin-top:6px;font-size:13px;font-weight:700;color:var(--pt-mut);
@@ -214,14 +215,15 @@
        operador cobra alguma coisa antes de deixar entrar. */
     .pt-valor{flex:0 0 auto;text-align:right;padding-right:20px;margin-right:18px;
       border-right:1px solid var(--pt-cardb);min-width:132px;max-width:300px}
-    .pt-valor b{display:block;font-size:23px;font-weight:900;letter-spacing:-.6px;line-height:1}
+    .pt-valor b{display:block;font-size:clamp(17px, 2.1vh, 23px);font-weight:900;letter-spacing:-.6px;line-height:1}
     /* Nem todo valor e "R$ 120,00": em muitas reservas o campo traz a condicao
        inteira, tipo "R$ 120,00 de entrada com direito a R$ 50,00 de consumacao".
        Em 23px isso tomava metade da tela. Texto longo cai para um tamanho de
        leitura e quebra em linhas, mantendo a cor que diz se cobra ou nao. */
     .pt-valor b.longo{font-size:12.5px;font-weight:800;line-height:1.45;letter-spacing:0;
       white-space:normal;text-transform:uppercase}
-    .pt-valor span{display:block;margin-top:5px;font-size:9px;font-weight:900;letter-spacing:1.4px}
+    .pt-valor span{display:block;margin-top:5px;font-size:9px;font-weight:900;
+      letter-spacing:1.2px;line-height:1.5;white-space:normal}
     .pt-valor.cobrar b{color:#f59e0b} .pt-valor.cobrar span{color:#f59e0b;opacity:.8}
     .pt-valor.pago b{color:var(--pt-vd)} .pt-valor.pago span{color:var(--pt-vd);opacity:.75}
     .pt-valor.cortesia b{color:#d946ef} .pt-valor.cortesia span{color:#d946ef;opacity:.8}
@@ -233,7 +235,7 @@
     .pt-meta .tipo{color:var(--pt-txt);font-weight:900;letter-spacing:.3px}
     .pt-meta .ev{opacity:.6}
     .pt-acao{flex:0 0 auto;display:flex;align-items:center}
-    .pt-btn{height:50px;min-width:164px;border:0;border-radius:13px;background:var(--pt-vd);
+    .pt-btn{height:clamp(40px, 5.4vh, 50px);min-width:164px;border:0;border-radius:13px;background:var(--pt-vd);
       color:#04210f;font-size:15px;font-weight:900;letter-spacing:.6px;cursor:pointer;
       font-family:inherit;transition:filter .15s}
     .pt-btn:hover{filter:brightness(1.08)}
@@ -958,7 +960,7 @@
   // a tela, qual arquivo aquela máquina realmente carregou — o navegador guarda a
   // página antiga em cache e continua rodando ela mesmo depois de você publicar
   // uma nova no GitHub.
-  const VERSAO_PAGINA = "11set-6";
+  const VERSAO_PAGINA = "11set-8";
 
   const AVISO_SEM_ARMAZENAMENTO =
     `<span class="pt-alerta" title="Sem isto a portaria não funciona durante uma queda de internet.">⚠️ ESTA MÁQUINA NÃO ESTÁ GUARDANDO DADOS — NÃO USE SEM INTERNET</span>`;
@@ -1127,6 +1129,13 @@
       //   verde  = já pago (PIX)   ·   roxo = cortesia   ·   laranja = A COBRAR
       const pgto = String(c.pagamento || "PORTARIA").toUpperCase();
       const valorBruto = String(c.total || "").trim();
+      // Convidado de aniversário: o valor vem do campo "ANIV." do cadastro do
+      // evento, e a regra da casa é que esse valor sempre vira consumo. Quem
+      // preenche no Dashboard costuma pôr só o número, então a portaria mostrava
+      // "R$ 80,00" seco e o operador não sabia explicar ao cliente o que era.
+      // Isto não inventa nada: escreve a regra que já vale para esse campo.
+      const ehAniversario = (Array.isArray(c.tags) ? c.tags : [])
+        .some(t => /^ANIV/i.test(String(t || "").trim()));
       const temValor = /\d/.test(valorBruto);
       let classeValor, rotuloValor, textoValor;
       if (pgto.includes("PIX")) {
@@ -1142,6 +1151,9 @@
       // Cada pedaço carrega o próprio "·" na frente. Assim, quando a tela é estreita
       // e o nome do evento some, o pontinho dele some junto (sem sobrar separador
       // solto no fim da linha).
+      // Só complementa quando o valor vem como número solto. Se o cadastro do
+      // evento já explica a condição por escrito, não repete nada.
+      if (ehAniversario && !/[A-Za-zÀ-ÿ]{4,}/.test(valorBruto)) rotuloValor += " · VIRA CONSUMO";
       const partes = [
         { classe: "tipo", texto: c.tipo || "---" },
         { classe: "", texto: c.promoter || "DIRETO" },
