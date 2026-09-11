@@ -82,10 +82,12 @@
     .pt-marca{display:flex;align-items:center;gap:8px;flex:0 0 auto}
     .pt-marca img{height:22px}
     .pt-marca b{font-style:italic;font-weight:900;letter-spacing:-.5px;font-size:15px;color:var(--pt-am)}
-    .pt-eventos{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;
-      border-left:1px solid var(--pt-linha);padding-left:18px}
+    .pt-eventos{flex:1 1 auto;display:flex;align-items:center;gap:14px;min-width:0;
+      overflow:hidden;border-left:1px solid var(--pt-linha);padding-left:18px}
     .pt-ev{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;
-      color:var(--pt-mut);letter-spacing:.3px;white-space:nowrap}
+      color:var(--pt-mut);letter-spacing:.3px;white-space:nowrap;min-width:0}
+    /* o nome da festa pode ser enorme; ele encurta, o resto da barra fica inteiro */
+    .pt-ev .nm{overflow:hidden;text-overflow:ellipsis;max-width:280px}
     .pt-ev.off{opacity:.45}
     .pt-ev .pt-no{color:var(--pt-vd);font-size:10px}
     .pt-ev .pt-qt{color:var(--pt-am);font-weight:900}
@@ -132,6 +134,26 @@
     .pt-buscawrap{max-width:1712px;width:100%;margin:0 auto}
     /* Monitor baixo (1366x768 e parecidos): encolhe um pouco pra caber mais gente
        na tela sem voltar a ficar apertado. */
+    /* Monitor estreito: o que sai da frente é o texto de apoio, nunca o telefone,
+       o valor ou o botão. */
+    @media (max-width:1200px){
+      .pt-dica{display:none}
+      .pt-ev .nm{max-width:150px}
+      .pt-ev:not(:first-child){display:none}
+      .pt-nome{font-size:24px;gap:10px}
+      .pt-fone{font-size:18px}
+      .pt-meta .ev{display:none}
+      .pt-valor{min-width:104px;padding-right:14px;margin-right:12px}
+      .pt-valor b{font-size:20px}
+      .pt-btn{min-width:128px;font-size:14px}
+      .pt-card{gap:10px;padding:13px 14px 13px 20px}
+    }
+    @media (max-width:980px){
+      .pt-op, .pt-relogio{display:none}
+      .pt-nome{font-size:21px}
+      .pt-fone{font-size:17px}
+      .pt-btn{min-width:108px}
+    }
     @media (max-height:820px){
       .pt-lista{gap:11px}
       .pt-card{padding:11px 16px 11px 22px}
@@ -164,15 +186,19 @@
     .pt-card.pt-sel .pt-pos{background:var(--pt-am);border-color:var(--pt-am);color:#000}
 
     .pt-info{flex:1;min-width:0}
-    .pt-nome{font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1.08;
-      text-transform:uppercase;color:var(--pt-txt);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .pt-fone{font-size:21px;font-weight:800;letter-spacing:-.2px;margin-left:13px;
+    /* Nome e telefone são duas peças separadas: quando falta espaço, quem encurta
+       é o NOME (com reticências). O telefone nunca encolhe nem some — é por ele
+       que o operador confere a pessoa. */
+    .pt-nome{display:flex;align-items:baseline;gap:13px;min-width:0;
+      font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1.08;
+      text-transform:uppercase;color:var(--pt-txt);white-space:nowrap}
+    .pt-nome .txt{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+    .pt-fone{flex:0 0 auto;font-size:21px;font-weight:800;letter-spacing:-.2px;
       color:var(--pt-fone);font-variant-numeric:tabular-nums}
     .pt-fone.destaque{color:var(--pt-am)}
     .pt-meta{margin-top:6px;font-size:13px;font-weight:700;color:var(--pt-mut);
       display:flex;align-items:center;gap:0;flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
-    .pt-meta .sep{color:var(--pt-fraco);opacity:.5;margin:0 8px}
+    .pt-meta .sep{display:inline-block;color:var(--pt-fraco);opacity:.5;margin:0 8px}
     .pt-meta .pago{color:var(--pt-vd);font-weight:900}
     .pt-meta .promo{color:#d946ef;font-weight:900}
     .pt-meta .tag{margin-right:8px;padding:2px 7px;border-radius:5px;font-size:10px;
@@ -787,7 +813,7 @@
       const online = ev.status === "ONLINE";
       return `<span class="pt-ev ${online ? "" : "off"}">
         <span class="pt-no">${online ? "●" : "🔒"}</span>
-        ${escapeHtml(ev.nome)}
+        <span class="nm">${escapeHtml(ev.nome)}</span>
         <span class="pt-qt">${Number(ev.total || 0)}</span>
       </span>`;
     }).join("");
@@ -968,17 +994,21 @@
         classeValor = "cobrar"; rotuloValor = "A COBRAR";
         textoValor = temValor ? valorBruto : (valorBruto || "PORTARIA");
       }
+      // Cada pedaço carrega o próprio "·" na frente. Assim, quando a tela é estreita
+      // e o nome do evento some, o pontinho dele some junto (sem sobrar separador
+      // solto no fim da linha).
       const partes = [
-        `<span class="tipo">${escapeHtml(c.tipo || "---")}</span>`,
-        `<span>${escapeHtml(c.promoter || "DIRETO")}</span>`,
-        `<span class="ev">${escapeHtml(c.evento || "")}</span>`
-      ].filter(x => !/>\s*<\/span>$/.test(x));
+        { classe: "tipo", texto: c.tipo || "---" },
+        { classe: "", texto: c.promoter || "DIRETO" },
+        { classe: "ev", texto: c.evento || "" }
+      ].filter(x => String(x.texto).trim())
+       .map((x, n) => `<span class="${x.classe}">${n ? '<span class="sep">·</span>' : ""}${escapeHtml(x.texto)}</span>`);
       return `
       <div class="pt-card ${c.entrou ? "entrou" : ""} ${c.pixForaTurno ? "pix-fora" : ""}">
         <div class="pt-pos">${i + 1}</div>
         <div class="pt-info">
-          <div class="pt-nome">${escapeHtml(c.nome || "SEM NOME")}<span class="pt-fone ${repetido ? "destaque" : ""}">${escapeHtml(formatarTelefone(c.telefone))}</span></div>
-          <div class="pt-meta">${tags}${partes.join('<span class="sep">·</span>')}</div>
+          <div class="pt-nome"><span class="txt">${escapeHtml(c.nome || "SEM NOME")}</span><span class="pt-fone ${repetido ? "destaque" : ""}">${escapeHtml(formatarTelefone(c.telefone))}</span></div>
+          <div class="pt-meta">${tags}${partes.join("")}</div>
         </div>
         <div class="pt-valor ${classeValor}">
           <b>${escapeHtml(textoValor)}</b>
