@@ -274,6 +274,24 @@
     .pt-desfazer:hover{border-color:var(--pt-am)}
     .pt-desfazer:disabled{opacity:.45;cursor:not-allowed}
     .pt-vazio-pill{font-size:11px;font-weight:700;color:var(--pt-fraco);opacity:.6;letter-spacing:.5px}
+    /* ---- caixa de confirmacao no padrao da casa (no lugar da do navegador) ---- */
+    .pt-modal{position:fixed;inset:0;z-index:10060;display:flex;align-items:center;justify-content:center;
+      padding:24px;background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
+    .pt-modal[hidden]{display:none!important}
+    body.tema-claro .pt-modal{background:rgba(15,23,42,.45)}
+    .pt-modal-card{width:100%;max-width:440px;padding:28px;border-radius:22px;
+      background:var(--pt-card);border:1px solid var(--pt-cardb);
+      box-shadow:0 24px 60px rgba(0,0,0,.55);text-align:center}
+    body.tema-claro .pt-modal-card{box-shadow:0 24px 60px rgba(15,23,42,.22)}
+    .pt-modal-card h3{margin:0 0 12px;font-size:19px;font-weight:900;letter-spacing:-.4px;
+      text-transform:uppercase;color:var(--pt-txt)}
+    .pt-modal-card p{margin:0 0 24px;font-size:13px;font-weight:700;line-height:1.7;color:var(--pt-mut)}
+    .pt-modal-acoes{display:flex;gap:10px}
+    .pt-modal-btn{flex:1;height:50px;border:0;border-radius:13px;cursor:pointer;font-family:inherit;
+      font-size:14px;font-weight:900;letter-spacing:.6px;background:var(--pt-am);color:#000}
+    body.tema-claro .pt-modal-btn{color:#fff}
+    .pt-modal-btn.quiet{background:var(--pt-tecla);border:1px solid var(--pt-teclab);color:var(--pt-mut)}
+    .pt-modal-btn:active{transform:scale(.97)}
     .pt-versao{margin-left:auto;flex:0 0 auto;font-size:10px;font-weight:800;
       letter-spacing:1px;color:var(--pt-fraco);opacity:.45}
     .pt-alerta{display:inline-block;padding:7px 12px;border-radius:11px;white-space:nowrap;
@@ -355,6 +373,17 @@
     </div>
 
     <main id="container-resultados" class="pt-lista"></main>
+
+    <div id="pt-confirma" class="pt-modal" hidden>
+      <div class="pt-modal-card">
+        <h3 id="pt-confirma-titulo">Confirmar</h3>
+        <p id="pt-confirma-texto"></p>
+        <div class="pt-modal-acoes">
+          <button type="button" id="pt-confirma-nao" class="pt-modal-btn quiet">CANCELAR</button>
+          <button type="button" id="pt-confirma-sim" class="pt-modal-btn">CONFIRMAR</button>
+        </div>
+      </div>
+    </div>
 
     <footer class="pt-rodape">
       <span class="pt-rot" style="margin-top:0">ÚLTIMOS LIBERADOS</span>
@@ -917,7 +946,7 @@
   // a tela, qual arquivo aquela máquina realmente carregou — o navegador guarda a
   // página antiga em cache e continua rodando ela mesmo depois de você publicar
   // uma nova no GitHub.
-  const VERSAO_PAGINA = "11set-4";
+  const VERSAO_PAGINA = "11set-5";
 
   const AVISO_SEM_ARMAZENAMENTO =
     `<span class="pt-alerta" title="Sem isto a portaria não funciona durante uma queda de internet.">⚠️ ESTA MÁQUINA NÃO ESTÁ GUARDANDO DADOS — NÃO USE SEM INTERNET</span>`;
@@ -1225,6 +1254,38 @@
       btn.textContent = "LIBERAR";
     }
   });
+  // ---- caixa de confirmação própria ----
+  // A do navegador (confirm) mostrava "andrezinhoeclub.github.io diz" em cima da
+  // pergunta, fora do padrão visual da casa. Esta segue o tema claro/escuro e
+  // responde ao teclado: Enter confirma, Esc cancela.
+  let responderConfirma = null;
+  function perguntar({ titulo, texto, confirmar = "CONFIRMAR", cancelar = "CANCELAR" }) {
+    return new Promise(resolve => {
+      const caixa = $("pt-confirma");
+      const sim = $("pt-confirma-sim");
+      const nao = $("pt-confirma-nao");
+      $("pt-confirma-titulo").textContent = titulo;
+      $("pt-confirma-texto").textContent = texto;
+      sim.textContent = confirmar;
+      nao.textContent = cancelar;
+      caixa.hidden = false;
+      setTimeout(() => sim.focus(), 30);
+      const terminar = resposta => {
+        if (!responderConfirma) return;
+        responderConfirma = null;
+        caixa.hidden = true;
+        sim.onclick = null;
+        nao.onclick = null;
+        caixa.onclick = null;
+        resolve(resposta);
+      };
+      responderConfirma = terminar;
+      sim.onclick = () => terminar(true);
+      nao.onclick = () => terminar(false);
+      caixa.onclick = ev => { if (ev.target === caixa) terminar(false); };
+    });
+  }
+
   // ---- desfazer uma liberação errada ----
   // Dois caminhos: se a entrada ainda está na fila esperando internet, basta
   // apagar da fila (não chegou no servidor). Se já subiu, pede ao servidor para
@@ -1235,7 +1296,12 @@
     if (!btn) return;
     const reservaId = btn.dataset.desfazer;
     if (!reservaId) return;
-    if (!confirm("DESFAZER ESTA LIBERAÇÃO?\n\nA pessoa volta a constar como NÃO liberada e pode ser liberada de novo.")) return;
+    const confirmado = await perguntar({
+      titulo: "Desfazer esta liberação?",
+      texto: "A pessoa volta a constar como NÃO liberada e pode ser liberada de novo.",
+      confirmar: "DESFAZER"
+    });
+    if (!confirmado) return;
 
     btn.disabled = true;
 
@@ -1285,6 +1351,13 @@
   // quando o operador procura pelo telefone.
   document.addEventListener("keydown", event => {
     if ($("interfacePrincipal").classList.contains("hidden")) return;
+    // Com a caixa de confirmação aberta, o teclado é dela: Enter confirma, Esc
+    // cancela, e nada chega na lista atrás dela.
+    if (responderConfirma) {
+      if (event.key === "Enter") { event.preventDefault(); responderConfirma(true); }
+      else if (event.key === "Escape") { event.preventDefault(); responderConfirma(false); }
+      return;
+    }
     if (event.key === "Escape") { limparBusca(); return; }
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       if (!cartoesLiberaveis.length) return;
@@ -1306,13 +1379,18 @@
   // Entrada manual — só aparece quando a internet está fora e a busca não achou
   // ninguém. Serve pra quem comprou online durante a queda e por isso não está
   // na lista que ficou guardada na máquina.
-  $("container-resultados").addEventListener("click", event => {
+  $("container-resultados").addEventListener("click", async event => {
     const btn = event.target.closest("button[data-manual]");
     if (!btn) return;
     const nome = btn.dataset.manual;
     const evento = eventoAtivoAgora();
     if (!evento) return mostrarAviso("Nenhum evento no ar agora para lançar entrada manual.");
-    if (!confirm(`LIBERAR ENTRADA MANUAL?\n\nNome: ${nome}\nEvento: ${evento.nome}\n\nEssa entrada vai ficar marcada para você conferir no Dashboard.`)) return;
+    const confirmado = await perguntar({
+      titulo: "Liberar entrada manual?",
+      texto: `${nome} — ${evento.nome}. Essa entrada fica marcada para você conferir no Dashboard.`,
+      confirmar: "LIBERAR"
+    });
+    if (!confirmado) return;
     registrarEntradaManualOffline(nome, evento);
     registrarUltimo(nome);
     limparBusca();
