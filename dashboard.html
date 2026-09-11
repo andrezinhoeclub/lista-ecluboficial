@@ -433,7 +433,8 @@
                         <p class="text-[9px] text-zinc-500 font-bold uppercase leading-relaxed mb-4 text-center">
                             Apaga eventos anteriores à data e tudo que está ligado a eles — reservas, camarotes,
                             listas de aniversário e atendimentos do vallet — e, no fim, as fotos que ficarem sem dono.
-                            Mostra o que vai apagar antes de apagar.
+                            Mostra o que vai apagar antes de apagar. Já vem com a data de hoje —
+                            é só clicar para limpar tudo que já passou.
                         </p>
                         <input type="date" id="data_corte_limpeza" class="w-full bg-[#0a0a0f] border border-red-500/30 p-3 rounded-xl text-[11px] font-black uppercase text-white outline-none mb-3">
                         <button id="btn_limpeza_data" onclick="faxinaPorData()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto">Analisar e limpar</button>
@@ -1797,14 +1798,30 @@
         // sem guardar cópia, foi removido: o "Zerar Tudo" já faz isso e ainda
         // arquiva antes. Não fazia sentido manter dois caminhos para o mesmo
         // estrago, um deles sem rede de segurança.
+        // Deixa o campo já com a data de hoje, para o botão ser um clique só.
+        (function preencherDataDaFaxina() {
+            const aplicar = () => {
+                const campo = document.getElementById('data_corte_limpeza');
+                if (!campo || campo.value) return;
+                const d = new Date();
+                campo.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            };
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', aplicar);
+            else aplicar();
+        })();
         window.faxinaPorData = async () => {
             const campo = document.getElementById('data_corte_limpeza');
             const btn = document.getElementById('btn_limpeza_data');
-            const corte = String(campo?.value || '').trim();
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(corte)) return mostrarAviso("Escolha a data de corte primeiro.");
-
             const agora = new Date();
             const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+
+            // Sem data escolhida, a faxina é "tudo que já passou" — que é a rotina
+            // de domingo: limpar a semana anterior antes de cadastrar a próxima.
+            // O campo é preenchido com hoje para o botão funcionar num clique, e
+            // fica à vista para quando for preciso um corte diferente.
+            let corte = String(campo?.value || '').trim();
+            if (!corte) { corte = hoje; if (campo) campo.value = hoje; }
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(corte)) return mostrarAviso("Data inválida.");
             // Trava contra o erro de digitação clássico (ano errado): uma data no
             // futuro apagaria eventos que ainda vão acontecer.
             if (corte > hoje) return mostrarAviso("A data não pode ser no futuro — isso apagaria eventos que ainda vão acontecer.");
