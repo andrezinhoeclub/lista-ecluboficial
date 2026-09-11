@@ -428,22 +428,22 @@
                         <h3 class="text-cyan-400 font-black uppercase tracking-widest text-[11px] mb-2">Modo Teste Vallet</h3>
                         <button id="btnModoTesteVallet" onclick="toggleModoTesteVallet()" class="w-full bg-cyan-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-cyan-500 transition-all">🔓 LIBERAR TESTE</button>
                     </div>
-                    <div class="bg-red-500/5 border border-red-500/20 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
-                        <h3 class="text-red-400 font-black uppercase tracking-widest text-[11px] mb-2">Limpar Clientes</h3>
-                        <button onclick="limparBaseDeDados()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto" title="Não apaga as Solteiras cadastradas.">Limpar Base</button>
+                    <div class="bg-red-500/10 border border-red-500/40 p-6 rounded-3xl flex flex-col md:col-span-3 lg:col-span-3">
+                        <h3 class="text-red-400 font-black uppercase tracking-widest text-[11px] mb-2 text-center">Faxina por data</h3>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase leading-relaxed mb-4 text-center">
+                            Apaga eventos anteriores à data e tudo que está ligado a eles — reservas, camarotes,
+                            listas de aniversário e atendimentos do vallet — e, no fim, as fotos que ficarem sem dono.
+                            Mostra o que vai apagar antes de apagar.
+                        </p>
+                        <input type="date" id="data_corte_limpeza" class="w-full bg-[#0a0a0f] border border-red-500/30 p-3 rounded-xl text-[11px] font-black uppercase text-white outline-none mb-3">
+                        <button id="btn_limpeza_data" onclick="faxinaPorData()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto">Analisar e limpar</button>
                     </div>
                     <div class="bg-red-500/10 border border-red-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
                         <h3 class="text-red-500 font-black uppercase tracking-widest text-[11px] mb-2">Zerar Sistema</h3>
                         <button onclick="zerarSistemaCompleto()" class="w-full bg-red-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto" title="Não apaga as Solteiras cadastradas nem os Modelos.">⚠️ ZERAR TUDO</button>
                     </div>
-                    <div class="bg-orange-500/10 border border-orange-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
-                        <h3 class="text-orange-500 font-black uppercase tracking-widest text-[11px] mb-2">Eventos Antigos</h3>
-                        <button onclick="limparEventosAntigos()" class="w-full bg-orange-600/10 border border-orange-600/30 text-orange-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-orange-600 hover:text-white transition-all mt-auto" title="Apaga por completo eventos antes de uma data, com tudo que está ligado a eles.">Limpar Antigos</button>
-                    </div>
-                    <div class="bg-pink-500/10 border border-pink-500/40 p-6 rounded-3xl text-center flex flex-col justify-between lg:col-span-1">
-                        <h3 class="text-pink-500 font-black uppercase tracking-widest text-[11px] mb-2">Imagens Órfãs</h3>
-                        <button onclick="limparImagensOrfas()" class="w-full bg-pink-600/10 border border-pink-600/30 text-pink-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-pink-600 hover:text-white transition-all mt-auto" title="Apaga do armazenamento as fotos de capa que não pertencem a nenhum evento existente.">Limpar Imagens</button>
-                    </div>
+
+
                     <div class="bg-yellow-500/10 border border-yellow-500/40 p-6 rounded-3xl text-center flex flex-col justify-between md:col-span-3 lg:col-span-2">
                         <h3 class="text-yellow-500 font-black uppercase tracking-widest text-[11px] mb-4">Taxa de Serviço PIX</h3>
                         <div class="flex gap-2 mb-4">
@@ -1782,49 +1782,124 @@
                 mostrarAviso(`Excluído com sucesso! (${refs.length} registro(s) apagado(s))`, true);
             } catch (e) { console.error('Erro ao excluir:', e); mostrarAviso("Erro ao excluir."); }
         };
-        window.limparEventosAntigos = async () => {
-            const dataCorte = prompt("Apagar TODOS os eventos com data ANTES de qual dia?\n\nDigite no formato AAAA-MM-DD (ex: 2026-08-01). Tudo o que for desse evento — reservas, camarotes, listas de aniversário e atendimentos do Vallet — será apagado de vez.");
-            if (!dataCorte) return;
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(dataCorte.trim())) return mostrarAviso("Data inválida. Use o formato AAAA-MM-DD.");
-            const corte = dataCorte.trim();
-            const alvos = dadosEventos.filter(ev => !isEventoModeloAntigo(ev) && String(ev.data || '') < corte);
-            if (alvos.length === 0) return mostrarAviso("Nenhum evento antes dessa data.");
-            if (!confirm(`Isso vai apagar PERMANENTEMENTE ${alvos.length} evento(s) anterior(es) a ${corte.split('-').reverse().join('/')}, com tudo que está ligado a eles (reservas, camarotes, listas de aniversário, atendimentos do Vallet). Não tem como desfazer. Confirma?`)) return;
+        // ===== FAXINA POR DATA =====
+        // Antes eram três botões que faziam pedaços da mesma coisa: apagar a base
+        // de clientes, apagar eventos antigos e apagar fotos sem dono. Além de
+        // confuso, a ordem importava e ninguém sabia: apagar as fotos antes dos
+        // eventos não adiantava nada, porque as fotos só ficam órfãs depois.
+        //
+        // Agora é um só, com uma data de corte, e ele faz na ordem certa:
+        //   1. eventos anteriores à data, com tudo que está pendurado neles;
+        //   2. reservas que sobraram apontando para evento que não existe mais;
+        //   3. fotos de capa que ficaram sem dono.
+        //
+        // O botão "Limpar Base", que apagava TODAS as reservas sem olhar data e
+        // sem guardar cópia, foi removido: o "Zerar Tudo" já faz isso e ainda
+        // arquiva antes. Não fazia sentido manter dois caminhos para o mesmo
+        // estrago, um deles sem rede de segurança.
+        window.faxinaPorData = async () => {
+            const campo = document.getElementById('data_corte_limpeza');
+            const btn = document.getElementById('btn_limpeza_data');
+            const corte = String(campo?.value || '').trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(corte)) return mostrarAviso("Escolha a data de corte primeiro.");
+
+            const agora = new Date();
+            const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+            // Trava contra o erro de digitação clássico (ano errado): uma data no
+            // futuro apagaria eventos que ainda vão acontecer.
+            if (corte > hoje) return mostrarAviso("A data não pode ser no futuro — isso apagaria eventos que ainda vão acontecer.");
+
+            const rotulo = btn ? btn.textContent : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'ANALISANDO...'; }
             try {
-                const todosOsRefs = [];
+                const alvos = dadosEventos.filter(ev =>
+                    !isEventoModeloAntigo(ev) && String(ev.data || '') && String(ev.data) < corte);
+
+                // Nomes dos eventos que FICAM (inclui modelos antigos). É por eles
+                // que se descobre qual reserva ficou órfã.
+                const idsAlvo = new Set(alvos.map(ev => ev.id));
+                const nomesQueFicam = new Set(
+                    dadosEventos.filter(ev => !idsAlvo.has(ev.id))
+                                .map(ev => String(ev.nome || '').trim())
+                                .filter(Boolean));
+
+                // 1) tudo que está pendurado nos eventos alvo
+                const porCaminho = new Map();
                 for (const ev of alvos) {
-                    if (ev.imagem && ev.imagem.includes('firebasestorage')) { await deleteObject(ref(storage, ev.imagem)).catch(()=>{}); }
-                    todosOsRefs.push(...await refsParaExcluirEvento(ev.id, ev.nome));
-                    todosOsRefs.push(doc(db, 'eventos', ev.id));
+                    for (const r of await refsParaExcluirEvento(ev.id, ev.nome)) porCaminho.set(r.path, r);
+                    const refEv = doc(db, 'eventos', ev.id);
+                    porCaminho.set(refEv.path, refEv);
                 }
-                await excluirDocsEmLotes(todosOsRefs);
-                mostrarAviso(`${alvos.length} evento(s) antigo(s) apagado(s) por completo (${todosOsRefs.length} registro(s) no total).`, true);
-            } catch (e) { console.error('Erro ao limpar eventos antigos:', e); mostrarAviso("A limpeza foi interrompida por segurança."); }
-        };
-        // Varre a pasta "eventos" do Storage e apaga qualquer foto de capa que não
-        // esteja mais ligada a nenhum evento cadastrado agora (evento excluído antes
-        // dessa função existir, capa trocada sem apagar a antiga, upload que falhou
-        // no meio do caminho etc.). Serve de "faxina" pra pegar o que ficou pra trás,
-        // além da limpeza automática que já roda ao excluir ou trocar a capa de um evento.
-        window.limparImagensOrfas = async () => {
-            if (!confirm("Isso vai apagar do armazenamento TODAS as fotos de capa que não pertencem a nenhum evento existente agora. As fotos dos eventos atuais (ativos, inativos ou modelos) não são afetadas. Confirma?")) return;
-            try {
+
+                // 2) reservas órfãs: apontam para evento que não existe mais.
+                //    Reserva sem nome de evento NÃO é tocada — na dúvida, fica.
+                const todasReservas = await getDocs(collection(db, "lista_eventos"));
+                let orfas = 0;
+                todasReservas.docs.forEach(d => {
+                    const nome = String(d.data()?.evento || '').trim();
+                    if (!nome || nomesQueFicam.has(nome)) return;
+                    if (!porCaminho.has(d.ref.path)) orfas++;
+                    porCaminho.set(d.ref.path, d.ref);
+                });
+
+                // 3) fotos sem dono, contadas com os eventos alvo já fora
                 const emUso = new Set();
                 dadosEventos.forEach(ev => {
+                    if (idsAlvo.has(ev.id)) return;
                     if (ev.imagem && ev.imagem.includes('firebasestorage')) {
                         try { emUso.add(ref(storage, ev.imagem).fullPath); } catch (_) {}
                     }
                 });
-                const pasta = await listAll(ref(storage, 'eventos'));
-                const orfas = pasta.items.filter(item => !emUso.has(item.fullPath));
-                if (orfas.length === 0) { mostrarAviso("Nenhuma imagem órfã encontrada. Tudo limpo!", true); return; }
-                let apagadas = 0;
-                for (const item of orfas) {
-                    await deleteObject(item).catch(() => {});
-                    apagadas++;
+                // As capas dos eventos que vão sumir são apagadas à parte (assim
+                // saem mesmo se a varredura do armazenamento falhar) e por isso
+                // ficam de fora da lista de órfãs — senão entravam duas vezes e a
+                // contagem mostrada saía inflada.
+                const capasDosAlvos = new Set();
+                alvos.forEach(ev => {
+                    if (ev.imagem && ev.imagem.includes('firebasestorage')) {
+                        try { capasDosAlvos.add(ref(storage, ev.imagem).fullPath); } catch (_) {}
+                    }
+                });
+                let fotos = [];
+                try {
+                    const pasta = await listAll(ref(storage, 'eventos'));
+                    fotos = pasta.items.filter(item => !emUso.has(item.fullPath) && !capasDosAlvos.has(item.fullPath));
+                } catch (_) { fotos = []; }
+
+                const totalDocs = porCaminho.size;
+                if (!totalDocs && !fotos.length) {
+                    mostrarAviso("Nada para limpar antes dessa data. Tudo certo!", true);
+                    return;
                 }
-                mostrarAviso(`${apagadas} imagem(ns) órfã(s) apagada(s) do armazenamento.`, true);
-            } catch (e) { console.error('Erro ao limpar imagens órfãs:', e); mostrarAviso("Erro ao limpar imagens órfãs."); }
+
+                const dataBonita = corte.split('-').reverse().join('/');
+                const ok = confirm(
+                    `FAXINA ATÉ ${dataBonita}\n\n` +
+                    `• ${alvos.length} evento(s) anterior(es) a essa data\n` +
+                    `• ${totalDocs} registro(s) no total (reservas, camarotes, listas de aniversário e atendimentos do vallet)\n` +
+                    `• ${orfas} reserva(s) órfã(s) de evento que não existe mais\n` +
+                    `• ${capasDosAlvos.size + fotos.length} foto(s) de capa a remover\n\n` +
+                    `Isso não pode ser desfeito. Confirma?`
+                );
+                if (!ok) return;
+
+                if (btn) btn.textContent = 'LIMPANDO...';
+                for (const ev of alvos) {
+                    if (ev.imagem && ev.imagem.includes('firebasestorage')) {
+                        await deleteObject(ref(storage, ev.imagem)).catch(() => {});
+                    }
+                }
+                await excluirDocsEmLotes([...porCaminho.values()]);
+                let apagadas = capasDosAlvos.size;
+                for (const item of fotos) { await deleteObject(item).catch(() => {}); apagadas++; }
+
+                mostrarAviso(`Faxina concluída: ${alvos.length} evento(s), ${totalDocs} registro(s) e ${apagadas} foto(s).`, true);
+            } catch (e) {
+                console.error('Erro na faxina por data:', e);
+                mostrarAviso("A limpeza foi interrompida por segurança.");
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = rotulo || 'Analisar e limpar'; }
+            }
         };
         window.renderCamarotesVendidos = () => {
             const tb = document.getElementById('tabela-camarotes-body'); if(!tb) return;
@@ -1945,23 +2020,6 @@
                 const batch = writeBatch(db);
                 itens.slice(inicio, inicio + LIMITE_POR_LOTE).forEach(item => batch.delete(item.ref));
                 await batch.commit();
-            }
-        };
-
-        window.limparBaseDeDados = async () => {
-            const confirmarLimpeza = confirm(
-                "LIMPAR BASE OPERACIONAL?\n\n" +
-                "As reservas serão apagadas DE VEZ das listas e da portaria — sem guardar cópia de arquivo. Essa ação não pode ser desfeita."
-            );
-            if (!confirmarLimpeza) return;
-            try {
-                const q = await getDocs(collection(db, "lista_eventos"));
-                const total = q.docs.length;
-                await excluirDocsEmLotes(q.docs.map(d => d.ref));
-                mostrarAviso(`${total} reserva(s) apagada(s) definitivamente.`, true);
-            } catch (e) {
-                console.error("Erro ao limpar a base:", e);
-                mostrarAviso("A limpeza foi cancelada por segurança.");
             }
         };
 
