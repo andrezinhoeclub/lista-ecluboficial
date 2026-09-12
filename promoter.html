@@ -256,7 +256,7 @@
         <div class="mt-12 text-center opacity-40 hover:opacity-100 transition-all">
             <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-sky-400 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
-                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-600">v12set-3</span>
+                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-600">v12set-4</span>
             </a>
         </div>
         <footer id="navAcoes" class="fixed bottom-0 left-0 w-full p-4 bg-black/60 backdrop-blur-md border-t border-white/5 z-40">
@@ -527,7 +527,7 @@
         const aplicarDadosSeguros = (dados) => {
             dadosPromoter = dados.perfil || null;
             logado = String(dadosPromoter?.id || '').toLowerCase().trim();
-            eventos = pmEventosAbertos(dados.eventos);
+            eventos = Array.isArray(dados.eventos) ? dados.eventos : [];
             linksAniv = Array.isArray(dados.links) ? dados.links : [];
         };
         const atualizarDadosSeguros = async (silencioso = true) => {
@@ -679,27 +679,22 @@
             return { dia: PM_DIAS[d.getDay()], curta: m[3] + '/' + m[2] };
         }
 
-        // ===== SO FESTA QUE AINDA VAI ACONTECER =====
-        // Mesma regua da tela de listas: a festa some depois que o dia dela
-        // passa. Com uma folga: a noite vira madrugada, e uma festa de sexta as
-        // 23h ainda esta rolando as 3h de sabado. Entao a festa de ontem
-        // continua na lista ate as 6 da manha.
+        // ===== O SELETOR MOSTRA SO A FESTA DE HOJE =====
+        // Mesma regua da tela de listas: deu meia-noite, a festa da noite
+        // anterior fecha e ninguem poe mais nome nela. Como a tela se repinta
+        // sozinha a cada 15 segundos, na virada do dia a caixa de adicionar
+        // some sem ninguem precisar atualizar a pagina.
+        //
+        // Isto vale APENAS aqui em cima, onde o promoter escolhe a festa. A
+        // lista de performance la embaixo continua mostrando todos os eventos.
         const pmISO = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
             + '-' + String(d.getDate()).padStart(2, '0');
 
-        function pmEventosAbertos(lista) {
+        function pmEventosDeHoje() {
             const hoje = pmISO(new Date());
-            const ontemData = new Date(); ontemData.setDate(ontemData.getDate() - 1);
-            const ontem = pmISO(ontemData);
-            const madrugada = new Date().getHours() < 6;
-            return (Array.isArray(lista) ? lista : [])
-                .filter(e => {
-                    const d = String(e.data || '').slice(0, 10);
-                    if (!d) return false;
-                    if (d >= hoje) return true;
-                    return madrugada && d === ontem;
-                })
-                .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+            return (Array.isArray(eventos) ? eventos : [])
+                .filter(e => String(e.data || '').slice(0, 10) === hoje)
+                .sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')));
         }
 
         function pmIniciaisDe(nome) {
@@ -727,7 +722,7 @@
             const ini = document.getElementById('pmIniciais');
             if (ini) ini.textContent = pmIniciaisDe(dadosPromoter?.nome || logado);
 
-            const lista = Array.isArray(eventos) ? eventos : [];
+            const lista = pmEventosDeHoje();
             const nomes = lista.map(e => String(e.nome || ''));
             if (!pmFestaAtual || !nomes.includes(pmFestaAtual)) pmFestaAtual = nomes[0] || '';
 
@@ -748,7 +743,13 @@
             if (caixa) caixa.style.display = (pmPerfil() === 'visualizar' || !pmFestaAtual) ? 'none' : '';
             if (!lista.length) {
                 const vazio = document.getElementById('pmLista');
-                if (vazio) vazio.innerHTML = '<div class="pm-vazio">Nenhuma festa aberta no momento.<br>Assim que o evento for criado na dashboard ele aparece aqui.</div>';
+                if (vazio) vazio.innerHTML = '<div class="pm-vazio">Hoje não tem festa aberta.<br>No dia da festa a lista abre aqui, e fecha à meia-noite.</div>';
+                const cont = document.getElementById('pmContagem');
+                if (cont) cont.textContent = '';
+                ['pmTotal', 'pmEntraram', 'pmPagos'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = '0';
+                });
             }
         }
 
@@ -761,14 +762,19 @@
             const elNome = document.getElementById('pmFestaNome');
             const elSeta = document.getElementById('pmFestaSeta');
             const btn = document.getElementById('pmBtnAdd');
-            const lista = Array.isArray(eventos) ? eventos : [];
+            const lista = pmEventosDeHoje();
             const ev = lista.find(e => String(e.nome || '') === pmFestaAtual);
             if (elSeta) elSeta.style.display = lista.length > 1 ? '' : 'none';
 
             if (!ev) {
-                if (elDia) elDia.textContent = 'NENHUMA FESTA ABERTA';
-                if (elNome) elNome.textContent = 'Crie o evento na dashboard para ele aparecer aqui';
+                if (elDia) elDia.textContent = 'NENHUMA FESTA HOJE';
+                if (elNome) elNome.textContent = 'A lista abre no dia da próxima festa';
                 if (btn) btn.textContent = 'ADICIONAR À LISTA';
+                if (raiz) {
+                    raiz.style.removeProperty('--pmCor');
+                    raiz.style.removeProperty('--pmCorFraca');
+                    raiz.style.removeProperty('--pmCorMedia');
+                }
                 return;
             }
             const d = pmDiaDaFesta(ev.data);
@@ -946,15 +952,21 @@
 
             if (cont2) {
                 const n = pmClientes.length;
-                cont2.textContent = busca
-                    ? (filtrados.length + ' de ' + n)
-                    : (n + (n === 1 ? ' nome' : ' nomes'));
+                cont2.textContent = !pmFestaAtual
+                    ? ''
+                    : (busca ? (filtrados.length + ' de ' + n)
+                             : (n + (n === 1 ? ' nome' : ' nomes')));
             }
 
             if (!filtrados.length) {
-                cont.innerHTML = busca
-                    ? '<div class="pm-vazio">Nenhum nome encontrado nesta busca.</div>'
-                    : '<div class="pm-vazio">Você ainda não colocou ninguém nesta festa.<br>Use o campo acima para começar.</div>';
+                // Sem festa hoje o recado tem que ser outro: nao e que a lista
+                // esteja vazia, e que ela nem abriu.
+                const semFesta = '<div class="pm-vazio">Hoje não tem festa aberta.<br>No dia da festa a lista abre aqui, e fecha à meia-noite.</div>';
+                cont.innerHTML = !pmFestaAtual
+                    ? semFesta
+                    : (busca
+                        ? '<div class="pm-vazio">Nenhum nome encontrado nesta busca.</div>'
+                        : '<div class="pm-vazio">Você ainda não colocou ninguém nesta festa.<br>Use o campo acima para começar.</div>');
                 return;
             }
 
