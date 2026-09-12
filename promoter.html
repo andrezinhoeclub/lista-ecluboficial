@@ -148,6 +148,16 @@
     .pm-tag.pago{background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.4);color:#86efac}
     .pm-tag.entrou{background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.4);color:#7dd3fc}
     .pm-vazio{text-align:center;padding:22px 10px;font-size:11px;font-weight:700;color:#6b7280;line-height:1.7}
+    /* ===== PERFIL "APENAS VISUALIZAR" =====
+       Esse perfil nao coloca nome em lista nenhuma: ele acompanha o mapa de
+       camarotes. Tudo o que e da lista sai da tela dele, e o cabecalho volta a
+       ser o do arquivo antigo, que e o que ele ja conhecia. */
+    #painel.pm-visualizar .pm-top,
+    #painel.pm-visualizar .pm-festa,
+    #painel.pm-visualizar .pm-kpis,
+    #painel.pm-visualizar .pm-add,
+    #painel.pm-visualizar #pmSecaoLista{display:none !important}
+    #painel.pm-visualizar .theme-toggle{margin-right:2px}
     .pm-zap{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:15px;
       border-radius:15px;background:#25d366;color:#052e14;font-size:13px;font-weight:900;
       text-transform:uppercase;letter-spacing:.04em;margin-top:12px}
@@ -187,6 +197,17 @@
         </div>
     </div>
     <div id="painel" class="hidden max-w-md mx-auto pb-44">
+        <!-- Cabecalho do perfil "apenas visualizar": o mesmo do arquivo antigo.
+             Fica escondido para todo mundo e so aparece para esse perfil. -->
+        <header id="cabecalhoVisualizar" class="hidden flex justify-between items-center gap-3 mb-8">
+            <div class="min-w-0">
+                <p class="text-sky-400 text-[9px] font-black uppercase tracking-[0.3em] mb-1 italic">E-CLUB OFFICIAL</p>
+                <h1 id="nomeHeaderVisualizar" class="text-3xl font-black uppercase italic leading-none">---</h1>
+            </div>
+            <div class="flex items-center gap-2 flex-none" id="acoesVisualizar">
+                <button onclick="sairSeguro()" class="bg-red-900/20 text-red-500 border border-red-900/30 px-4 py-2 rounded-xl font-black text-[9px] uppercase italic">Sair</button>
+            </div>
+        </header>
         <header class="pm-top">
             <div class="pm-av" id="pmIniciais">--</div>
             <div class="pm-quem">
@@ -240,7 +261,7 @@
             <button class="pm-btn" style="background:transparent;border:1px solid rgba(255,255,255,.12);color:#9ca3af;margin-top:10px" onclick="pmNovoNome()">ADICIONAR OUTRO NOME</button>
         </div>
 
-        <section style="margin-bottom:26px">
+        <section id="pmSecaoLista" style="margin-bottom:26px">
             <div class="pm-sec"><h3>Minha lista desta festa</h3><em id="pmContagem">0 nomes</em></div>
             <input type="text" id="pmBusca" class="pm-busca" placeholder="🔍  Buscar na minha lista…" oninput="pmRenderLista()" autocomplete="off">
             <div id="pmLista"></div>
@@ -256,7 +277,7 @@
         <div class="mt-12 text-center opacity-40 hover:opacity-100 transition-all">
             <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-sky-400 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
-                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-600">v12set-4</span>
+                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-600">v12set-5</span>
             </a>
         </div>
         <footer id="navAcoes" class="fixed bottom-0 left-0 w-full p-4 bg-black/60 backdrop-blur-md border-t border-white/5 z-40">
@@ -716,7 +737,37 @@
         // Com três festas abertas no mesmo fim de semana, colocar o cliente na
         // noite errada é o erro mais fácil de cometer. Por isso o seletor fica
         // no topo, sempre visível, e nunca fica em branco.
+        // ===== A TELA DO PERFIL "APENAS VISUALIZAR" =====
+        // Volta a ser a do arquivo antigo: cabecalho grande, sem barra de festa,
+        // sem contadores e sem lista. E chamada toda vez que a tela se repinta,
+        // entao pode rodar quantas vezes for — nao faz nada duas vezes.
+        function pmAplicarModoVisualizar() {
+            const painel = document.getElementById('painel');
+            const classico = document.getElementById('cabecalhoVisualizar');
+            if (!painel || !classico) return false;
+
+            if (pmPerfil() !== 'visualizar') {
+                painel.classList.remove('pm-visualizar');
+                classico.classList.add('hidden');
+                return false;
+            }
+
+            painel.classList.add('pm-visualizar');
+            classico.classList.remove('hidden');
+            const nome = document.getElementById('nomeHeaderVisualizar');
+            if (nome) nome.innerText = String(dadosPromoter?.nome || logado || '').toUpperCase() || '---';
+
+            // O botao de tema mora dentro do cabecalho novo, que fica escondido
+            // aqui. Ele e mudado de lugar, e nao copiado: assim continua com o
+            // mesmo clique ligado nele.
+            const acoes = document.getElementById('acoesVisualizar');
+            const tema = document.getElementById('btnTemaPromoter');
+            if (acoes && tema && tema.parentElement !== acoes) acoes.insertBefore(tema, acoes.firstChild);
+            return true;
+        }
+
         function pmMontarSeletor() {
+            if (pmAplicarModoVisualizar()) return;
             const sel = document.getElementById('pmEvento');
             if (!sel) return;
             const ini = document.getElementById('pmIniciais');
@@ -904,6 +955,8 @@
         // "Meu nome tá lá?" e "ele já entrou?" são as perguntas que o promoter
         // mais recebe. O servidor devolve só os nomes dele.
         async function pmCarregarLista(forcar = false) {
+            // Esse perfil nao tem lista propria: nao ha o que buscar no servidor.
+            if (pmPerfil() === 'visualizar') return;
             if (!pmFestaAtual) { pmClientes = []; pmRenderLista(); return; }
             if (pmCarregandoLista) return;
             // Sem o freio, a atualização de 15 segundos leria a lista da festa
