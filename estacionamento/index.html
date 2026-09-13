@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#050508" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>E-CLUB Vallet • v54</title>
+  <title>E-CLUB Vallet • v55</title>
   <!-- E-CLUB Vallet v52: login por e-mail e senha (Acessos do Dashboard) e todo acesso ao banco via função valletApi.
        Tela de login no mesmo padrão da Portaria: mensagem de erro dentro do cartão
        e "Esqueci minha senha" com envio do link de redefinição pelo Firebase. -->
@@ -227,13 +227,14 @@
     .loginFields { display: grid; gap: 11px; text-align: left; }
     .loginFields input { text-transform: none; font-size: 13px; padding: 17px; }
     .loginFields input[name=usuario], .loginFields input[name=nome] { text-transform: uppercase; }
-    .loginRemember { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 15px 0; color: var(--muted); font-size: 9px; font-weight: 900; text-transform: uppercase; cursor: pointer; }
-    .loginRemember input { width: 16px; height: 16px; accent-color: var(--yellow); }
     .loginHint { margin-top: 16px; color: #62626e; font-size: 8px; font-weight: 800; text-transform: uppercase; line-height: 1.5; }
     .loginModeNotice { margin-bottom: 15px; padding: 11px 13px; border-radius: 16px; background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.20); color: #7dd3fc; font-size: 8px; font-weight: 900; text-transform: uppercase; line-height: 1.45; }
     .loginModeNotice.testActive { background: rgba(168,85,247,.12); border-color: rgba(168,85,247,.35); color: #d8b4fe; box-shadow: 0 0 24px rgba(168,85,247,.10); letter-spacing: .08em; }
     /* Mensagem dentro do cartão de login (mesmo papel do "mensagem-auth" da Portaria).
        Fica na tela, ao lado do campo, em vez de sumir junto com o toast. */
+    /* A caixinha de "manter acesso" fazia esta folga antes de existir o botao.
+       Sem ela, a senha e o ENTRAR ficavam colados. */
+    #btnEntrarVallet { margin-top: 15px; }
     .loginMsg { margin-top: 14px; min-height: 18px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; line-height: 1.5; color: #f87171; }
     .loginMsg.ok { color: #4ade80; }
     /* Link discreto "esqueci minha senha" / "voltar para o login". */
@@ -947,7 +948,7 @@
     .vModalBtn:active { transform: scale(.97); }
   </style>
 </head>
-<body data-build="54">
+<body data-build="55">
   <div id="vallet-mobile-bloqueio" class="deviceOverlay" aria-live="assertive" role="alert">
     <div class="deviceCard">
       <img src="../logo.png" alt="E-Club" />
@@ -1004,10 +1005,6 @@
             <input id="loginUsuario" name="email" type="email" autocomplete="username" placeholder="E-MAIL" required />
             <input id="loginSenha" name="senha" type="password" autocomplete="current-password" placeholder="SENHA" minlength="6" required />
           </div>
-          <label class="loginRemember">
-            <input id="loginLembrar" type="checkbox" />
-            manter acesso neste aparelho
-          </label>
           <button id="btnEntrarVallet" class="btn yellow full" type="submit">Entrar</button>
           <p id="mensagem-auth-vallet" class="loginMsg"></p>
           <button type="button" id="btnAbrirRecuperarVallet" class="loginLink">Esqueci minha senha</button>
@@ -2217,7 +2214,7 @@
           throw new Error(erro?.message || 'Sem permissão para o módulo Vallet.');
         }
         $('loginSenha').value = '';
-        await concluirLogin(operador, $('loginLembrar').checked);
+        await concluirLogin(operador, true);
         toast(`Bem-vindo, ${normalize(operador.nome || operador.email)}.`, true);
       } catch (e) {
         mensagemAuthVallet(e.message || 'Não foi possível entrar.');
@@ -2236,7 +2233,6 @@
       $('appPrincipal').hidden = true;
       $('operadorNome').textContent = 'SEM LOGIN';
       if ($('loginSenha')) $('loginSenha').value = '';
-      if ($('loginLembrar')) $('loginLembrar').checked = false;
       mensagemAuthVallet('');
       $('vallet-login').classList.remove('hidden');
       atualizarTelaLogin();
@@ -4244,7 +4240,7 @@
       if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
-    const VALLET_BUILD_VERSION = '54';
+    const VALLET_BUILD_VERSION = '55';
 
     async function prepararAtualizacaoPWA() {
       try {
@@ -4277,7 +4273,7 @@
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=54', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=55', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -4322,7 +4318,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=54', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=55', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
