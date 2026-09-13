@@ -7,31 +7,39 @@
 <link rel="icon" type="image/png" href="../logo.png">
 
 <!-- ===== ENDERECO CURTO DO VALLET =====
-     O arquivo de verdade e o vallet_eclub.html, la na raiz. Esta pasta existe
-     so para o endereco curto continuar funcionando:
+     O arquivo de verdade e o vallet_eclub.html, la na raiz. Esta pagina existe
+     so para o endereco curto funcionar:
 
          abreaporta.com.br/estacionamento
 
-     No dominio antigo isso era um encaminhamento configurado fora do GitHub.
-     Aqui e uma pagina que manda o navegador para o arquivo certo.
-
-     Tres camadas, de proposito:
-       1. O <meta refresh> abaixo, que funciona ate com JavaScript desligado.
-       2. O location.replace, que e instantaneo e NAO deixa rastro no historico
-          (sem ele, o botao "voltar" do celular traria o operador para ca de
-          novo, num vai-e-volta sem fim).
-       3. O link na tela, para o caso de as duas primeiras serem bloqueadas.
+     ELA PRECISA SE CHAMAR  estacionamento/index.html  — dentro da pasta.
+     Se for colada por cima de outro arquivo, ela PERCEBE e nao faz nada, em vez
+     de mandar o navegador para si mesma e ficar piscando sem parar.
 
      O que vier depois do endereco (?v=52, por exemplo) vai junto. -->
 
-<meta http-equiv="refresh" content="0; url=../vallet_eclub.html">
 <script>
   (function () {
+    var destino = '../vallet_eclub.html';
     try {
-      var extra = window.location.search + window.location.hash;
-      window.location.replace('../vallet_eclub.html' + extra);
+      var alvo = new URL(destino, window.location.href);
+
+      // A trava: se o destino for esta mesma pagina, este arquivo foi colado no
+      // lugar errado. Melhor mostrar o recado do que entrar em volta sem fim.
+      if (alvo.pathname === window.location.pathname) {
+        document.addEventListener('DOMContentLoaded', function () {
+          var aviso = document.getElementById('aviso');
+          if (aviso) {
+            aviso.textContent = 'Este arquivo está no lugar errado. Ele deveria se chamar estacionamento/index.html.';
+            aviso.style.color = '#fca5a5';
+          }
+        });
+        return;
+      }
+
+      window.location.replace(alvo.pathname + window.location.search + window.location.hash);
     } catch (e) {
-      window.location.href = '../vallet_eclub.html';
+      window.location.href = destino;
     }
   })();
 </script>
@@ -41,9 +49,9 @@
   body{min-height:100vh;background:#050508;color:#f4f4f5;
     font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
     display:flex;align-items:center;justify-content:center;padding:28px 20px;text-align:center}
-  .caixa{max-width:320px}
+  .caixa{max-width:330px}
   img{width:74px;height:auto;margin:0 auto 20px;display:block;opacity:.9}
-  p{margin:0 0 20px;font-size:11px;font-weight:800;letter-spacing:.16em;
+  p{margin:0 0 20px;font-size:11px;font-weight:800;letter-spacing:.14em;
     text-transform:uppercase;color:#71717a;line-height:1.8}
   a{display:block;padding:16px;border-radius:16px;text-decoration:none;
     background:#38bdf8;color:#05202e;
@@ -53,7 +61,7 @@
 <body>
   <div class="caixa">
     <img src="../logo.png" alt="E-Club">
-    <p>Abrindo o estacionamento…</p>
+    <p id="aviso">Abrindo o estacionamento…</p>
     <a href="../vallet_eclub.html">Abrir agora</a>
   </div>
 </body>
