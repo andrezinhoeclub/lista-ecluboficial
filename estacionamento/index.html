@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#050508" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>E-CLUB Vallet • v53</title>
+  <title>E-CLUB Vallet • v54</title>
   <!-- E-CLUB Vallet v52: login por e-mail e senha (Acessos do Dashboard) e todo acesso ao banco via função valletApi.
        Tela de login no mesmo padrão da Portaria: mensagem de erro dentro do cartão
        e "Esqueci minha senha" com envio do link de redefinição pelo Firebase. -->
@@ -202,6 +202,14 @@
     @keyframes schedulePulse { 0% { box-shadow: 0 0 0 0 rgba(96,165,250,.45); } 70% { box-shadow: 0 0 0 8px rgba(96,165,250,0); } 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); } }
     .operationScheduleBanner { display: none !important; margin: 0 !important; padding: 0 !important; height: 0 !important; overflow: hidden !important; }
     .operationScheduleBanner.exitOnly { border-color: rgba(249,115,22,.30); background: rgba(249,115,22,.09); color: #fdba74; }
+    /* Recado de casa fechada. Usa as mesmas variaveis de cor do resto da tela,
+       entao acompanha o tema claro e o escuro sem tratamento separado. */
+    .semEvento { margin: 0 0 16px; padding: 15px 16px; border-radius: 18px;
+      border: 1px solid rgba(249,115,22,.32); background: rgba(249,115,22,.08); }
+    .semEvento[hidden] { display: none !important; }
+    .semEvento b { display: block; font-size: 12.5px; font-weight: 950; letter-spacing: .06em;
+      text-transform: uppercase; color: #fdba74; margin-bottom: 5px; }
+    .semEvento span { display: block; font-size: 11.5px; font-weight: 700; line-height: 1.7; color: var(--muted); }
     .btn[disabled], input[disabled], select[disabled], textarea[disabled] { opacity: .48; cursor: not-allowed; }
     .loginCard {
       width: min(100%, 410px);
@@ -939,7 +947,7 @@
     .vModalBtn:active { transform: scale(.97); }
   </style>
 </head>
-<body data-build="53">
+<body data-build="54">
   <div id="vallet-mobile-bloqueio" class="deviceOverlay" aria-live="assertive" role="alert">
     <div class="deviceCard">
       <img src="../logo.png" alt="E-Club" />
@@ -981,16 +989,6 @@
   <!-- Aviso de conexão no padrão da Portaria: fica escondido quando está tudo
        certo, e é a única coisa na tela que fala de sincronização. -->
   <div id="avisoConexaoVallet" class="netBadge hidden" aria-live="polite">🔴 Sem internet</div>
-
-  <div id="vallet-horario-bloqueio" class="scheduleOverlay" aria-live="polite">
-    <div class="scheduleCard">
-      <img src="../logo.png" alt="E-Club" />
-      <div class="loginEyebrow">Vallet E-Club</div>
-      <h2>Acesso indisponível</h2>
-      <p id="vallet-horario-mensagem">Aguarde a liberação do sistema.</p>
-      <div class="scheduleAutoStatus"><span class="scheduleAutoDot" aria-hidden="true"></span> Atualização automática ativa</div>
-    </div>
-  </div>
 
   <div id="vallet-login" class="loginOverlay">
     <div class="loginCard">
@@ -1074,6 +1072,14 @@
                 <input id="ticketPreview" readonly tabindex="-1" aria-label="Ticket automático" />
               </div>
             </div>
+          </div>
+
+          <!-- Recado de casa fechada, no mesmo lugar em que a Portaria avisa que
+               não há lista. Aparece dentro da tela, com o operador já logado,
+               em vez de trancar tudo antes do login. -->
+          <div id="valletSemEvento" class="semEvento" hidden>
+            <b id="valletSemEventoTitulo">Sem festa hoje</b>
+            <span id="valletSemEventoTexto">Os campos abrem sozinhos quando a próxima festa começar. Não precisa sair nem atualizar a página.</span>
           </div>
 
           <div class="row">
@@ -1906,14 +1912,26 @@
       return `${janela.inicio.toLocaleDateString('pt-BR')} às 21:00 • ${normalize(janela.evento?.nome || 'EVENTO')}`;
     }
 
-    function definirCamposRecepcaoHabilitados(habilitado) {
+    function definirCamposRecepcaoHabilitados(habilitado, motivo = 'NOVOS CHECK-INS ENCERRADOS') {
       const ids = ['placa','modelo','cor','setorAtendimento','vaga','clienteNome','clienteTel','obs'];
       ids.forEach(id => { const el = $(id); if (el) el.disabled = !habilitado; });
       const btn = $('btnReceberImprimir');
       if (btn) {
         btn.disabled = !habilitado;
-        btn.textContent = habilitado ? 'RECEBER E IMPRIMIR' : 'NOVOS CHECK-INS ENCERRADOS';
+        btn.textContent = habilitado ? 'RECEBER E IMPRIMIR' : motivo;
       }
+    }
+
+    // O recado de casa fechada, ligado e desligado num lugar so.
+    function mostrarRecadoSemEvento(mostrar, titulo, texto) {
+      const caixa = $('valletSemEvento');
+      if (!caixa) return;
+      caixa.hidden = !mostrar;
+      if (!mostrar) return;
+      const t = $('valletSemEventoTitulo');
+      const x = $('valletSemEventoTexto');
+      if (t) t.textContent = titulo;
+      if (x) x.textContent = texto;
     }
 
     function avaliarControleHorarioVallet() {
@@ -1935,6 +1953,7 @@
 
       atualizarIndicadorModoTesteLogin();
       definirCamposRecepcaoHabilitados(Boolean(controle.janela));
+      mostrarRecadoSemEvento(false);
 
       if (controle.emModoTeste) {
         overlay?.classList.remove('show');
@@ -1958,6 +1977,9 @@
         }
       } else if (controle.pendentes.length) {
         overlay?.classList.remove('show');
+        definirCamposRecepcaoHabilitados(false, 'HORÁRIO ENCERRADO');
+        mostrarRecadoSemEvento(true, 'Horário encerrado',
+          `Novos check-ins estão bloqueados. Falta entregar ${controle.pendentes.length} veículo(s) — a entrega continua liberada normalmente.`);
         if (status) {
           status.textContent = `🟠 SOMENTE ENTREGAS • ${controle.pendentes.length}`;
           status.className = 'pill offline';
@@ -1967,15 +1989,16 @@
           banner.textContent = `HORÁRIO ENCERRADO • NOVOS CHECK-INS BLOQUEADOS • FINALIZE A ENTREGA DOS ${controle.pendentes.length} VEÍCULO(S) AINDA ATIVO(S)`;
         }
       } else {
+        // ANTES esta tela trancava tudo: escondia o login e o painel e mostrava
+        // um aviso em cima de tudo. Agora segue o padrao das outras telas da
+        // casa — o operador entra, ve o patio, e os campos de receber veiculo
+        // e que ficam desligados, com o motivo escrito na tela.
+        definirCamposRecepcaoHabilitados(false, 'SEM FESTA HOJE');
+        mostrarRecadoSemEvento(true, 'Sem festa hoje',
+          'Os campos de receber veículo abrem sozinhos quando a próxima festa começar. Não precisa sair nem atualizar a página.');
         if (status) {
           status.textContent = '🔴 VALLET FECHADO';
           status.className = 'pill offline';
-        }
-        if (mensagem) mensagem.textContent = 'AGUARDE A LIBERAÇÃO DO SISTEMA.';
-        if (forcarTela || operadorAtual || !$('vallet-login')?.classList.contains('hidden')) {
-          $('appPrincipal').hidden = true;
-          $('vallet-login').classList.add('hidden');
-          overlay?.classList.add('show');
         }
       }
       return controle;
@@ -2112,8 +2135,8 @@
       }
     }
     async function concluirLogin(operador, lembrar = false) {
-      const controleHorario = atualizarControleHorarioVallet();
-      if (!controleHorario.acessoPermitido) { $('vallet-horario-bloqueio').classList.add('show'); return; }
+      // Entrar sempre pode, mesmo com a casa fechada. O que fica bloqueado e
+      // receber veiculo — e isso a propria tela explica.
       operadorAtual = operador;
       localStorage.setItem(OPERADOR_KEY, operador.nome || operador.email);
       if (lembrar) localStorage.setItem(LOGIN_REMEMBER_KEY, '1');
@@ -2124,6 +2147,7 @@
       if (navigator.onLine) { await processarFila(); await carregarLocal(); }
       await atualizarTicketPreview();
       renderTudo();
+      atualizarControleHorarioVallet();
     }
     // Pergunta ao servidor quem é este operador. É aqui que a permissão
     // "Permitir Vallet" é conferida de verdade.
@@ -2150,9 +2174,8 @@
       }
       try {
         const operador = await carregarOperadorDoServidor();
-        const controleHorario = atualizarControleHorarioVallet({ forcarTela: true });
-        if (!controleHorario.acessoPermitido) return;
         await concluirLogin(operador, localStorage.getItem(LOGIN_REMEMBER_KEY) === '1');
+        atualizarControleHorarioVallet();
       } catch (e) {
         if (e?.semRede) {
           // Sem internet, mas este computador já entrou antes: segue com o nome
@@ -4221,7 +4244,7 @@
       if (!coresInicializadas) await salvarMeta('catalogo_cores_inicializado', true);
     }
 
-    const VALLET_BUILD_VERSION = '53';
+    const VALLET_BUILD_VERSION = '54';
 
     async function prepararAtualizacaoPWA() {
       try {
@@ -4254,7 +4277,7 @@
       if (window.__VALLET_DISPOSITIVO_BLOQUEADO__ === true) {
         document.documentElement.classList.add('vallet-mobile-bloqueado');
         if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('vallet_sw.js?v=53', { updateViaCache: 'none' })
+          navigator.serviceWorker.register('vallet_sw.js?v=54', { updateViaCache: 'none' })
             .then((registro) => registro.update())
             .catch(() => {});
         }
@@ -4299,7 +4322,7 @@
           window.location.reload();
         });
 
-        navigator.serviceWorker.register('vallet_sw.js?v=53', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('vallet_sw.js?v=54', { updateViaCache: 'none' })
           .then((registro) => registro.update())
           .catch(() => {});
       }
