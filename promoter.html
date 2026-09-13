@@ -70,6 +70,9 @@
       overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .pm-festa .txt span{display:block;margin-top:3px;font-size:10px;font-weight:800;color:#9ca3af;
       text-transform:uppercase;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pm-festa .txt b .pm-hoje{display:inline-block;vertical-align:2px;margin-left:6px;font-style:normal;
+      font-size:8px;font-weight:900;letter-spacing:.12em;padding:3px 6px;border-radius:99px;
+      background:#22c55e;color:#04210f}
     .pm-festa .seta{flex:0 0 auto;font-size:8px;font-weight:900;letter-spacing:.12em;color:#9ca3af;
       border:1px solid rgba(255,255,255,.16);border-radius:99px;padding:6px 9px;white-space:nowrap}
     /* O seletor de verdade fica invisivel por cima da barra inteira: no celular
@@ -181,6 +184,13 @@
             <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-14 mx-auto mb-8" alt="E-Club">
             <p class="text-[9px] font-black uppercase tracking-[0.3em] text-yellow-500 mb-2">Acesso Restrito</p>
             <h1 class="text-2xl font-black uppercase italic tracking-tighter text-white mb-8">Promoter Access</h1>
+            <!-- Aviso de sessao derrubada. Fica parado na tela ate a proxima
+                 tentativa de entrar: um toast que some em tres segundos deixa o
+                 promoter sem entender por que caiu. -->
+            <div id="pmAvisoSessao" class="hidden mb-6 p-4 rounded-2xl border border-red-500/40 bg-red-500/10 text-left">
+                <p class="text-[9px] font-black uppercase tracking-[0.2em] text-red-400 mb-1">Sessão encerrada</p>
+                <p class="text-[10px] font-bold text-red-200 leading-relaxed" id="pmAvisoSessaoTxt"></p>
+            </div>
             <input type="email" id="email" name="email" autocomplete="username" autofocus placeholder="E-MAIL" class="w-full p-5 rounded-2xl bg-[#0c0c0e] border border-zinc-800 text-center font-black text-xs tracking-wider text-white outline-none focus:border-yellow-500 transition-all mb-3" required>
             <input type="password" id="senha" name="password" autocomplete="current-password" placeholder="SENHA" class="w-full p-5 rounded-2xl bg-[#0c0c0e] border border-zinc-800 text-center font-black text-xs tracking-widest text-white outline-none focus:border-yellow-500 transition-all mb-4" required>
             <button type="submit" id="btnAcao" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-5 rounded-2xl uppercase text-xs shadow-xl active:scale-95 transition-all">ENTRAR COM SEGURANÇA</button>
@@ -277,7 +287,7 @@
         <div class="mt-12 text-center opacity-40 hover:opacity-100 transition-all">
             <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
                 <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-sky-400 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
-                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-600">v12set-5</span>
+                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-600">v13set-1</span>
             </a>
         </div>
         <footer id="navAcoes" class="fixed bottom-0 left-0 w-full p-4 bg-black/60 backdrop-blur-md border-t border-white/5 z-40">
@@ -348,6 +358,23 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const PROMOTER_API_URL = "https://us-central1-teste-de-reserva.cloudfunctions.net/promoterApi";
+
+        // ===== UM LOGIN, UM APARELHO =====
+        // Este codigo identifica ESTE aparelho e fica guardado nele. Ao entrar,
+        // ele e carimbado na conta la no servidor; se o mesmo login entrar em
+        // outro aparelho, o carimbo muda e este aqui cai na chamada seguinte.
+        // Quem entra por ultimo ganha, igual ao WhatsApp Web.
+        const MAQUINA_CHAVE = 'eclub_promoter_maquina';
+        const MAQUINA_ID = (() => {
+            let id = '';
+            try { id = localStorage.getItem(MAQUINA_CHAVE) || ''; } catch (_) {}
+            if (!/^[A-Za-z0-9_-]{6,64}$/.test(id)) {
+                const aleatorio = (crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+                id = ('pm-' + aleatorio).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+                try { localStorage.setItem(MAQUINA_CHAVE, id); } catch (_) {}
+            }
+            return id;
+        })();
         let timerAtualizacaoSegura = null;
 
         let logado = ""; let eventos = []; let dadosPromoter = null; let linksAniv = [];
@@ -538,12 +565,38 @@
                     'Authorization': `Bearer ${token}`
                 },
                 cache: 'no-store',
-                body: JSON.stringify({ action, ...payload })
+                body: JSON.stringify({ action, maquinaId: MAQUINA_ID, ...payload })
             });
             let dados = {};
             try { dados = await resp.json(); } catch (_) {}
-            if (!resp.ok || dados.ok === false) throw new Error(dados.error || `Erro ${resp.status}`);
+            if (!resp.ok || dados.ok === false) {
+                // O login entrou em outro aparelho: esta tela sai de cena na hora,
+                // em vez de continuar tentando e errando.
+                if (dados.codigo === 'SESSAO_EM_OUTRA_MAQUINA') {
+                    encerrarSessaoPromoter(dados.error);
+                    const err = new Error(dados.error || 'Sessão aberta em outro aparelho.');
+                    err.codigo = dados.codigo;
+                    throw err;
+                }
+                const err = new Error(dados.error || `Erro ${resp.status}`);
+                err.codigo = dados.codigo || '';
+                throw err;
+            }
             return dados;
+        };
+
+        let sessaoJaEncerrada = false;
+        const encerrarSessaoPromoter = (mensagem) => {
+            if (sessaoJaEncerrada) return;
+            sessaoJaEncerrada = true;
+            if (timerAtualizacaoSegura) { clearInterval(timerAtualizacaoSegura); timerAtualizacaoSegura = null; }
+            sistemaIniciado = false;
+            const caixa = document.getElementById('pmAvisoSessao');
+            const txtAviso = document.getElementById('pmAvisoSessaoTxt');
+            if (txtAviso) txtAviso.innerText = mensagem || 'Este login foi aberto em outro aparelho.';
+            if (caixa) caixa.classList.remove('hidden');
+            signOut(auth).catch(() => {});
+            mostrarTelaLogin();
         };
         const aplicarDadosSeguros = (dados) => {
             dadosPromoter = dados.perfil || null;
@@ -581,6 +634,10 @@
                     return mostrarAviso('USUÁRIO AUTENTICADO, MAS SEM PERMISSÃO DE PROMOTER.');
                 }
                 // A autorização REAL e os dados são validados pelo backend promoterApi.
+                // Carimba a conta para ESTE aparelho antes de qualquer outra coisa:
+                // é isto que derruba a sessão aberta em outro celular.
+                sessaoJaEncerrada = false;
+                await chamarPromoterApi('abrir_sessao');
                 const dados = await chamarPromoterApi('bootstrap');
                 aplicarDadosSeguros(dados);
                 document.getElementById('telaLogin').style.display = 'none';
@@ -611,6 +668,7 @@
             if (!email || !senha) return mostrarAviso('Digite e-mail e senha.');
             btn.disabled = true;
             btn.innerText = 'VERIFICANDO...';
+            document.getElementById('pmAvisoSessao')?.classList.add('hidden');
             try {
                 await setPersistence(auth, browserSessionPersistence);
                 await signInWithEmailAndPassword(auth, email, senha);
@@ -706,16 +764,22 @@
         // sozinha a cada 15 segundos, na virada do dia a caixa de adicionar
         // some sem ninguem precisar atualizar a pagina.
         //
+        // As festas que ainda vao acontecer continuam na lista: o promoter
+        // monta a lista da semana com antecedencia, e travar isso obrigava ele
+        // a esperar o dia da festa para trabalhar.
+        //
         // Isto vale APENAS aqui em cima, onde o promoter escolhe a festa. A
         // lista de performance la embaixo continua mostrando todos os eventos.
         const pmISO = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
             + '-' + String(d.getDate()).padStart(2, '0');
 
-        function pmEventosDeHoje() {
+        const pmEhHoje = (e) => String(e?.data || '').slice(0, 10) === pmISO(new Date());
+
+        function pmEventosAbertos() {
             const hoje = pmISO(new Date());
             return (Array.isArray(eventos) ? eventos : [])
-                .filter(e => String(e.data || '').slice(0, 10) === hoje)
-                .sort((a, b) => String(a.hora || '').localeCompare(String(b.hora || '')));
+                .filter(e => String(e.data || '').slice(0, 10) >= hoje)
+                .sort((a, b) => (String(a.data) + String(a.hora || '')).localeCompare(String(b.data) + String(b.hora || '')));
         }
 
         function pmIniciaisDe(nome) {
@@ -773,9 +837,15 @@
             const ini = document.getElementById('pmIniciais');
             if (ini) ini.textContent = pmIniciaisDe(dadosPromoter?.nome || logado);
 
-            const lista = pmEventosDeHoje();
+            const lista = pmEventosAbertos();
             const nomes = lista.map(e => String(e.nome || ''));
-            if (!pmFestaAtual || !nomes.includes(pmFestaAtual)) pmFestaAtual = nomes[0] || '';
+            if (!pmFestaAtual || !nomes.includes(pmFestaAtual)) {
+                // A festa de hoje ja vem escolhida. So quando nao ha festa hoje
+                // e que a proxima assume — nunca uma festa de semana que vem
+                // aparece escolhida sozinha na noite em que a casa esta aberta.
+                const deHoje = lista.find(pmEhHoje);
+                pmFestaAtual = String((deHoje || lista[0] || {}).nome || '');
+            }
 
             const htmlNovo = lista.map(e => {
                 const nome = String(e.nome || '');
@@ -794,7 +864,7 @@
             if (caixa) caixa.style.display = (pmPerfil() === 'visualizar' || !pmFestaAtual) ? 'none' : '';
             if (!lista.length) {
                 const vazio = document.getElementById('pmLista');
-                if (vazio) vazio.innerHTML = '<div class="pm-vazio">Hoje não tem festa aberta.<br>No dia da festa a lista abre aqui, e fecha à meia-noite.</div>';
+                if (vazio) vazio.innerHTML = '<div class="pm-vazio">Nenhuma festa aberta no momento.<br>Assim que o evento for criado na dashboard ele aparece aqui.</div>';
                 const cont = document.getElementById('pmContagem');
                 if (cont) cont.textContent = '';
                 ['pmTotal', 'pmEntraram', 'pmPagos'].forEach(id => {
@@ -813,13 +883,13 @@
             const elNome = document.getElementById('pmFestaNome');
             const elSeta = document.getElementById('pmFestaSeta');
             const btn = document.getElementById('pmBtnAdd');
-            const lista = pmEventosDeHoje();
+            const lista = pmEventosAbertos();
             const ev = lista.find(e => String(e.nome || '') === pmFestaAtual);
             if (elSeta) elSeta.style.display = lista.length > 1 ? '' : 'none';
 
             if (!ev) {
-                if (elDia) elDia.textContent = 'NENHUMA FESTA HOJE';
-                if (elNome) elNome.textContent = 'A lista abre no dia da próxima festa';
+                if (elDia) elDia.textContent = 'NENHUMA FESTA ABERTA';
+                if (elNome) elNome.textContent = 'Crie o evento na dashboard para ele aparecer aqui';
                 if (btn) btn.textContent = 'ADICIONAR À LISTA';
                 if (raiz) {
                     raiz.style.removeProperty('--pmCor');
@@ -836,7 +906,11 @@
                 raiz.style.setProperty('--pmCorFraca', 'rgba(' + dia.rgb + ',.13)');
                 raiz.style.setProperty('--pmCorMedia', 'rgba(' + dia.rgb + ',.55)');
             }
-            if (elDia) elDia.textContent = nomeDoDia;
+            // Com a semana inteira na lista, a etiqueta HOJE e o que separa
+            // "estou trabalhando a noite de agora" de "estou adiantando a
+            // semana que vem".
+            if (elDia) elDia.innerHTML = escapeHtml(nomeDoDia)
+                + (pmEhHoje(ev) ? ' <i class="pm-hoje">HOJE</i>' : '');
             if (elNome) elNome.textContent = String(ev.nome || '').toUpperCase() + (ev.hora ? ' · ' + ev.hora : '');
             if (btn) btn.textContent = 'ADICIONAR ' + dia.artigo + ' ' + nomeDoDia;
         }
@@ -1014,7 +1088,7 @@
             if (!filtrados.length) {
                 // Sem festa hoje o recado tem que ser outro: nao e que a lista
                 // esteja vazia, e que ela nem abriu.
-                const semFesta = '<div class="pm-vazio">Hoje não tem festa aberta.<br>No dia da festa a lista abre aqui, e fecha à meia-noite.</div>';
+                const semFesta = '<div class="pm-vazio">Nenhuma festa aberta no momento.<br>Assim que o evento for criado na dashboard ele aparece aqui.</div>';
                 cont.innerHTML = !pmFestaAtual
                     ? semFesta
                     : (busca
