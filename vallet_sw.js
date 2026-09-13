@@ -1,53 +1,23 @@
-const CACHE_NAME = 'eclub-vallet-v51';
-const APP_SHELL = [
-  './vallet_eclub.html',
-  './vallet_manifest.json'
-];
+// ===== APOSENTADORIA DO OFFLINE ANTIGO DO VALLET =====
+// Ate a mudanca, este arquivo ficava registrado na RAIZ do site, e por isso
+// mandava em TODAS as telas — num celular que ja tinha aberto o vallet, ele
+// interceptava tambem a portaria e as listas e guardava essas paginas dentro
+// da memoria do vallet. O vallet agora tem o seu proprio, dentro da pasta
+// /estacionamento, cuidando so dela.
+//
+// Este aqui nao guarda mais nada: ele apaga as copias antigas, se desregistra
+// e manda cada aba aberta recarregar. Depois disso, some da vida do aparelho.
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
-  );
-});
+self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys()
-      .then((keys) => Promise.all(keys.map((key) => key !== CACHE_NAME ? caches.delete(key) : null)))
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const nomes = await caches.keys();
+    await Promise.all(nomes.filter((n) => n.startsWith('eclub-vallet-')).map((n) => caches.delete(n)));
+    await self.registration.unregister();
+    const abas = await self.clients.matchAll({ type: 'window' });
+    abas.forEach((aba) => aba.navigate(aba.url));
+  })());
 });
 
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
-
-  const isHtml = req.mode === 'navigate' || req.destination === 'document' || req.url.includes('vallet_eclub.html');
-
-  if (isHtml) {
-    event.respondWith(
-      fetch(req, { cache: 'no-store' })
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put('./vallet_eclub.html', copy));
-          return response;
-        })
-        .catch(() => caches.match('./vallet_eclub.html'))
-    );
-    return;
-  }
-
-  event.respondWith(
-    caches.match(req).then((cached) => {
-      return fetch(req)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            if (req.url.startsWith(self.location.origin)) cache.put(req, copy);
-          });
-          return response;
-        })
-        .catch(() => cached);
-    })
-  );
-});
+// Enquanto nao se desliga, nao intercepta nada: tudo vai direto para a internet.
