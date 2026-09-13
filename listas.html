@@ -64,15 +64,15 @@
 
         <footer class="mt-12 mb-8 flex flex-col items-center gap-8">
             <div class="flex gap-3 w-full">
-                <a href="https://api.whatsapp.com/send?phone=5541995040506" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-green-500/10 border border-transparent transition-all group">
+                <a id="link-whatsapp-casa" href="https://api.whatsapp.com/send?phone=5541995040506" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-green-500/10 border border-transparent transition-all group">
                     <span class="text-2xl">💬</span>
                     <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-green-400">WhatsApp</span>
                 </a>
-                <a href="https://www.instagram.com/eclubswingdance/" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-fuchsia-500/10 border border-transparent transition-all group">
+                <a id="link-instagram-casa" href="https://www.instagram.com/eclubswingdance/" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-fuchsia-500/10 border border-transparent transition-all group">
                     <span class="text-2xl">📸</span>
                     <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-fuchsia-400">Instagram</span>
                 </a>
-                <a href="https://www.google.com/maps/search/?api=1&query=R.+Aníbal+Goularte+Maia+Filho,+81+-+Bairro+Alto,+Curitiba+-+PR,+82820-480" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-blue-500/10 border border-transparent transition-all group">
+                <a id="link-endereco-casa" href="https://www.google.com/maps/search/?api=1&query=R.+Aníbal+Goularte+Maia+Filho,+81+-+Bairro+Alto,+Curitiba+-+PR,+82820-480" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-blue-500/10 border border-transparent transition-all group">
                     <span class="text-2xl">📍</span>
                     <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-blue-400">Chegar</span>
                 </a>
@@ -208,6 +208,24 @@
                 throw new Error(data.error || `Erro ${resp.status}`);
             }
             return data;
+        }
+
+        // Os tres botoes do rodape (WhatsApp, Instagram e Chegar) sao trocados pelo
+        // que estiver salvo na aba Configuracoes do Dashboard. Se nao houver nada
+        // salvo, ou se a resposta falhar, ficam valendo os enderecos que ja estao
+        // escritos no HTML — a pagina nunca fica com botao quebrado.
+        function aplicarContatosDaCasa(contatos) {
+            if (!contatos) return;
+            const zap = String(contatos.whatsapp || '').replace(/\D/g, '');
+            const insta = String(contatos.instagram || '').trim().replace(/^@/, '');
+            const endereco = String(contatos.endereco || '').trim();
+            const aplicar = (id, url) => {
+                const el = document.getElementById(id);
+                if (el && url) el.href = url;
+            };
+            if (zap) aplicar('link-whatsapp-casa', 'https://api.whatsapp.com/send?phone=' + zap);
+            if (insta) aplicar('link-instagram-casa', 'https://www.instagram.com/' + encodeURIComponent(insta) + '/');
+            if (endereco) aplicar('link-endereco-casa', 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(endereco));
         }
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -466,6 +484,7 @@
 
             taxaPixTipo = boot.configuracao?.taxa_tipo || 'desativado';
             taxaPixValor = Number(boot.configuracao?.taxa_valor || 0);
+            aplicarContatosDaCasa(boot.contatos);
 
             globalPromoter = boot.contexto?.promoter || 'site_direto';
             globalAniversariante = boot.contexto?.aniversariante || '';
