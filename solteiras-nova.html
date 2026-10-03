@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solteiras (novo)</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="eclub-v2.css">
+<style>
+  /* só o que é específico desta tela — o resto vem do eclub-v2.css */
+  .campo-label { font-size: 10px; color: #a1a1aa; text-transform: uppercase; margin: 0 0 4px 2px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="login">
+    <h1>Solteiras &mdash; entrar</h1>
+    <div id="erroLogin"></div>
+    <input id="email" type="email" placeholder="e-mail" autocomplete="username">
+    <input id="senha" type="password" placeholder="senha" autocomplete="current-password">
+    <button id="btnEntrar">Entrar</button>
+  </div>
+
+  <div id="painel" style="display:none">
+    <div class="topo">
+      <h1>Solteiras</h1>
+      <button class="sair" id="btnSair">Sair</button>
+    </div>
+
+    <div id="placar"></div>
+    <div id="avisoTrava" class="aviso-trava" style="display:none">🔒 Casa fechada — fora do horário (21h às 8h). Cadastro novo e check-in ficam bloqueados; editar, bloquear e consultar continuam liberados.</div>
+
+    <div id="formSolteira">
+      <input type="hidden" id="editId">
+      <div class="campo-label">Nome com sobrenome</div>
+      <input id="nome" placeholder="Nome completo">
+      <div class="campo-label">WhatsApp</div>
+      <input id="tel" placeholder="(00) 00000-0000" oninput="maskTel(this)" onblur="avisarDuplicidade()">
+      <div class="campo-label">CPF</div>
+      <input id="cpf" placeholder="000.000.000-00" oninput="maskCPF(this)" onblur="avisarDuplicidade()">
+      <div class="campo-label">Data de nascimento</div>
+      <input id="nascimento" type="date">
+      <div class="campo-label">Idade calculada: <span id="idadeDisplay">--</span></div>
+      <textarea id="obs" placeholder="Observações (opcional)"></textarea>
+      <div id="erroForm" class="erro"></div>
+      <div id="sucessoForm" class="sucesso"></div>
+      <button id="btnSalvar">Confirmar e liberar</button>
+      <button id="btnCancelarEdicao" class="sair" style="display:none;width:100%;margin-top:4px;">Cancelar edição</button>
+    </div>
+
+    <input id="busca" placeholder="Buscar por nome, CPF ou telefone...">
+    <div id="lista"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+  const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { storageKey: 'sb-solteiras-auth' }
+  });
+
+  let clientesCache = [];
+  let buscaTimer = null;
+
+  // ===== LOGIN =====
+  document.getElementById('btnEntrar').onclick = async () => {
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value;
+    const erro = document.getElementById('erroLogin');
+    erro.textContent = '';
+    const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (error) { erro.textContent = 'E-mail ou senha inválidos.'; return; }
+    iniciar();
+  };
+
+  document.getElementById('btnSair').onclick = async () => {
+    await sb.auth.signOut();
+    location.reload();
+  };
+
+  async function iniciar() {
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('painel').style.display = 'block';
+    await carregarClientes();
+    ligarTempoReal();
+    atualizarStatusCasa();
+    setInterval(atualizarStatusCasa, 60000); // só recalcula o relógio, sem bater no servidor
+  }
+
+  // ===== HORÁRIO DA CASA (21h às 8h, horário de Brasília) =====
+  function horaBrasilAgora() {
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false });
+    return parseInt(fmt.format(new Date()), 10);
+  }
+  function casaAbertaAgora() {
+    const h = horaBrasilAgora();
+    return h >= 21 || h < 8;
+  }
+  function atualizarStatusCasa() {
+    const aberta = casaAbertaAgora();
+    document.getElementById('avisoTrava').style.display = aberta ? 'none' : 'block';
+    document.getElementById('btnSalvar').disabled = !aberta && !document.getElementById('editId').value;
+    renderLista();
+  }
+
+  // ===== CARREGAR E MANTER A BASE ATUALIZADA =====
+  async function carregarClientes() {
+    const { data, error } = await sb.from('clientes_solteiras').select('*').order('nome');
+    clientesCache = error ? [] : data;
+    renderLista();
+  }
+
+  function ligarTempoReal() {
+    sb.channel('clientes-solteiras-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes_solteiras' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          if (!clientesCache.find(c => c.id === payload.new.id)) clientesCache.push(payload.new);
+        } else if (payload.eventType === 'UPDATE') {
+          const idx = clientesCache.findIndex(c => c.id === payload.new.id);
+          if (idx > -1) clientesCache[idx] = payload.new;
+        }
+        renderLista();
+      })
+      .subscribe();
+  }
+
+  document.getElementById('busca').oninput = () => {
+    if (buscaTimer) clearTimeout(buscaTimer);
+    buscaTimer = setTimeout(renderLista, 200);
+  };
+
+  // ===== CÁLCULOS (data de nascimento, aniversário da semana, corte do turno) =====
+  function corteTurno() {
+    const agora = new Date(), corte = new Date();
+    corte.setHours(5, 0, 0, 0);
+    if (agora < corte) corte.setDate(corte.getDate() - 1);
+    return corte;
+  }
+  function dataVisita(c) {
+    if (!c.ultima_visita) return null;
+    const d = new Date(c.ultima_visita);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function aniversarianteSemana(dataISO) {
+    if (!dataISO) return false;
+    const partes = dataISO.split('-');
+    if (partes.length < 3) return false;
+    const hoje = new Date();
+    const inicio = new Date(hoje); inicio.setDate(hoje.getDate() - hoje.getDay()); inicio.setHours(0, 0, 0, 0);
+    const fim = new Date(inicio); fim.setDate(inicio.getDate() + 6); fim.setHours(23, 59, 59, 999);
+    const mes = parseInt(partes[1], 10), dia = parseInt(partes[2], 10);
+    return [hoje.getFullYear() - 1, hoje.getFullYear(), hoje.getFullYear() + 1].some(ano => {
+      const niver = new Date(ano, mes - 1, dia, 12, 0, 0);
+      return niver >= inicio && niver <= fim;
+    });
+  }
+  window.updateIdade = () => {
+    const v = document.getElementById('nascimento').value;
+    if (!v) { document.getElementById('idadeDisplay').textContent = '--'; return; }
+    const hoje = new Date(), nasc = new Date(v + 'T12:00:00');
+    let i = hoje.getFullYear() - nasc.getFullYear();
+    if (hoje.getMonth() < nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())) i--;
+    document.getElementById('idadeDisplay').textContent = isNaN(i) ? '--' : i;
+  };
+  document.getElementById('nascimento').onchange = window.updateIdade;
+
+  window.maskCPF = i => {
+    let v = i.value.replace(/\D/g, '').substring(0, 11);
+    v = v.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    i.value = v;
+  };
+  window.maskTel = i => {
+    let v = i.value.replace(/\D/g, '').substring(0, 11);
+    v = v.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d)(\d{4})$/, '$1-$2');
+    i.value = v;
+  };
+
+  function soDigitos(v) { return String(v || '').replace(/\D/g, ''); }
+
+  window.avisarDuplicidade = () => {
+    const cpf = document.getElementById('cpf').value, tel = document.getElementById('tel').value;
+    const c = soDigitos(cpf), t = soDigitos(tel);
+    if (c.length < 11 && t.length < 10) return;
+    const editId = document.getElementById('editId').value;
+    const achou = clientesCache.find(x => x.id !== editId && ((c && soDigitos(x.cpf) === c) || (t && soDigitos(x.tel) === t)));
+    if (!achou) return;
+    if (achou.bloqueada) {
+      mostrarToast(`Proibida a entrada! Motivo: ${achou.motivo_bloqueio || 'sem motivo registrado'}`, false);
+      limparFormulario();
+      return;
+    }
+    if (confirm(`Cliente encontrada: ${achou.nome}\n\nOK: fazer check-in dela (já é cadastrada).\nCancelar: editar os dados dela.`)) {
+      fazerCheckin(achou.id);
+      limparFormulario();
+    } else {
+      prepararEdicao(achou.id);
+    }
+  };
+
+  // ===== RENDER =====
+  function renderLista() {
+    const termo = document.getElementById('busca').value.trim().toLowerCase();
+    const corte = corteTurno();
+    let lista;
+    if (termo) {
+      lista = clientesCache.filter(c => `${c.nome} ${c.cpf || ''} ${c.tel || ''}`.toLowerCase().includes(termo)).slice(0, 100);
+    } else {
+      lista = clientesCache.filter(c => { const d = dataVisita(c); return d && d >= corte; });
+    }
+    const contagem = clientesCache.filter(c => { const d = dataVisita(c); return d && d >= corte; }).length;
+    document.getElementById('placar').textContent = `${contagem} check-in(s) nesta virada`;
+
+    lista.sort((a, b) => (dataVisita(b)?.getTime() || 0) - (dataVisita(a)?.getTime() || 0));
+
+    const cont = document.getElementById('lista');
+    if (!lista.length) { cont.innerHTML = '<p class="vazio">Nenhum resultado.</p>'; return; }
+
+    cont.innerHTML = lista.map(c => {
+      const visita = dataVisita(c);
+      const naCasa = visita ? visita >= corte : false;
+      const isNiver = aniversarianteSemana(c.data_nascimento);
+      const classeCard = c.bloqueada ? 'bloqueada' : (isNiver ? 'aniversariante' : (naCasa ? 'na-casa' : ''));
+
+      let acoes;
+      if (c.bloqueada) {
+        acoes = `
+          <div class="acoes">
+            <button onclick="desbloquear('${c.id}')">Desbloquear</button>
+            <div class="acoes-linha"><button class="btn-mini" onclick="prepararEdicao('${c.id}')">Editar</button></div>
+          </div>`;
+      } else if (naCasa) {
+        acoes = `
+          <div class="acoes">
+            <span class="ok-badge">&check; Na casa</span>
+            <div class="acoes-linha">
+              <button class="btn-mini" onclick="prepararEdicao('${c.id}')">Editar</button>
+              <button class="btn-mini" onclick="bloquear('${c.id}')">Bloquear</button>
+            </div>
+          </div>`;
+      } else {
+        const aberta = casaAbertaAgora();
+        acoes = `
+          <div class="acoes">
+            <button onclick="fazerCheckin('${c.id}')" ${aberta ? '' : 'disabled title="Casa fechada"'}>${aberta ? 'Liberar' : '🔒 Travado'}</button>
+            <div class="acoes-linha">
+              <button class="btn-mini" onclick="prepararEdicao('${c.id}')">Editar</button>
+              <button class="btn-mini" onclick="bloquear('${c.id}')">Bloquear</button>
+            </div>
+          </div>`;
+      }
+
+      return `
+        <div class="card ${classeCard}">
+          <div class="info">
+            <span class="nome">${escapeHtml(c.nome)} ${isNiver && !c.bloqueada ? '<span class="badge-niver">🎂 aniversário da semana</span>' : ''}</span>
+            <span class="sub">📱 ${escapeHtml(c.tel) || '---'} &nbsp;|&nbsp; 🆔 ${escapeHtml(c.cpf) || '---'}</span>
+            <span class="sub">Última visita: ${visita ? visita.toLocaleDateString('pt-BR') : '---'}</span>
+            ${c.obs && !c.bloqueada ? `<span class="obs">📌 ${escapeHtml(c.obs)}</span>` : ''}
+            ${c.bloqueada ? `<span class="badge-bloqueio">🚨 Proibida — ${escapeHtml(c.motivo_bloqueio) || 'sem motivo'}</span>` : ''}
+          </div>
+          ${acoes}
+        </div>`;
+    }).join('');
+  }
+
+  // ===== AÇÕES =====
+  window.fazerCheckin = async (id) => {
+    const { data, error } = await sb.rpc('checkin_solteira', { p_id: id });
+    if (error) { mostrarToast(error.message, false); return; }
+    const idx = clientesCache.findIndex(c => c.id === id);
+    if (idx > -1) clientesCache[idx] = data;
+    renderLista();
+    mostrarToast('Liberada com sucesso!', true);
+  };
+
+  window.bloquear = async (id) => {
+    const motivo = prompt('Qual o motivo do bloqueio?');
+    if (!motivo) return;
+    const { data, error } = await sb.rpc('bloquear_cliente_solteira', { p_id: id, p_motivo: motivo });
+    if (error) { mostrarToast(error.message, false); return; }
+    const idx = clientesCache.findIndex(c => c.id === id);
+    if (idx > -1) clientesCache[idx] = data;
+    renderLista();
+    mostrarToast('Cliente bloqueada.', true);
+  };
+
+  window.desbloquear = async (id) => {
+    if (!confirm('Tem certeza que deseja desbloquear a entrada dessa cliente?')) return;
+    const { data, error } = await sb.rpc('desbloquear_cliente_solteira', { p_id: id });
+    if (error) { mostrarToast(error.message, false); return; }
+    const idx = clientesCache.findIndex(c => c.id === id);
+    if (idx > -1) clientesCache[idx] = data;
+    renderLista();
+    mostrarToast('Cliente desbloqueada.', true);
+  };
+
+  window.prepararEdicao = (id) => {
+    const c = clientesCache.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('editId').value = c.id;
+    document.getElementById('nome').value = c.nome || '';
+    document.getElementById('tel').value = c.tel || '';
+    document.getElementById('cpf').value = c.cpf || '';
+    document.getElementById('nascimento').value = c.data_nascimento || '';
+    document.getElementById('obs').value = c.obs || '';
+    window.updateIdade();
+    document.getElementById('btnSalvar').textContent = 'Atualizar dados';
+    document.getElementById('btnSalvar').disabled = false;
+    document.getElementById('btnCancelarEdicao').style.display = 'block';
+    document.getElementById('formSolteira').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  function limparFormulario() {
+    document.getElementById('editId').value = '';
+    document.getElementById('nome').value = '';
+    document.getElementById('tel').value = '';
+    document.getElementById('cpf').value = '';
+    document.getElementById('nascimento').value = '';
+    document.getElementById('obs').value = '';
+    document.getElementById('idadeDisplay').textContent = '--';
+    document.getElementById('btnSalvar').textContent = 'Confirmar e liberar';
+    document.getElementById('btnSalvar').disabled = !casaAbertaAgora();
+    document.getElementById('btnCancelarEdicao').style.display = 'none';
+    document.getElementById('erroForm').textContent = '';
+    document.getElementById('sucessoForm').textContent = '';
+  }
+  document.getElementById('btnCancelarEdicao').onclick = limparFormulario;
+
+  document.getElementById('btnSalvar').onclick = async () => {
+    const editId = document.getElementById('editId').value || null;
+    const nome = document.getElementById('nome').value.trim();
+    const tel = document.getElementById('tel').value.trim();
+    const cpf = document.getElementById('cpf').value.trim();
+    const nascimento = document.getElementById('nascimento').value || null;
+    const obs = document.getElementById('obs').value.trim();
+    const erro = document.getElementById('erroForm');
+    const sucesso = document.getElementById('sucessoForm');
+    erro.textContent = ''; sucesso.textContent = '';
+
+    if (!nome) { erro.textContent = 'Digite o nome completo.'; return; }
+
+    const { data, error } = await sb.rpc('salvar_cliente_solteira', {
+      p_id: editId,
+      p_nome: nome,
+      p_tel: tel || null,
+      p_cpf: cpf || null,
+      p_data_nascimento: nascimento,
+      p_obs: obs || null
+    });
+
+    if (error) { erro.textContent = error.message; return; }
+
+    const idx = clientesCache.findIndex(c => c.id === data.id);
+    if (idx > -1) clientesCache[idx] = data; else clientesCache.push(data);
+    renderLista();
+    sucesso.textContent = editId ? 'Dados atualizados.' : 'Cadastro salvo e liberado!';
+    limparFormulario();
+  };
+
+  // ===== UTIL =====
+  function mostrarToast(msg, ok) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + (ok ? 'ok' : 'erro');
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3500);
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+</script>
+</body>
+</html>
