@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Promoter (novo)</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="eclub-v2.css">
+</head>
+<body>
+<div class="wrap">
+  <div id="login">
+    <h1>Promoter &mdash; entrar</h1>
+    <div id="erroLogin"></div>
+    <input id="email" type="email" placeholder="e-mail" autocomplete="username">
+    <input id="senha" type="password" placeholder="senha" autocomplete="current-password">
+    <button id="btnEntrar">Entrar</button>
+  </div>
+
+  <div id="painel" style="display:none">
+    <div class="topo">
+      <h1>Promoter</h1>
+      <button class="sair" id="btnSair">Sair</button>
+    </div>
+
+    <select id="eventoSelect"></select>
+
+    <div id="formAdicionar">
+      <input id="novoNome" placeholder="Nome do convidado">
+      <input id="novoTipo" placeholder="Tipo de entrada (ex: Pista, Camarote 01)">
+      <div id="erroAdicionar" class="erro"></div>
+      <div id="sucessoAdicionar" class="sucesso"></div>
+      <button id="btnAdicionar">Adicionar à lista</button>
+    </div>
+
+    <input id="busca" placeholder="Buscar nome...">
+    <div id="placar"></div>
+    <div id="lista"></div>
+  </div>
+</div>
+
+<script>
+  // OBS: a biblioteca do CDN já cria uma variável global chamada "supabase",
+  // por isso o cliente aqui se chama "sb" (nunca "supabase") — evita o erro
+  // "Identifier 'supabase' has already been declared".
+  const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let reservasCache = [];
+
+  document.getElementById('btnEntrar').onclick = async () => {
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value;
+    const erro = document.getElementById('erroLogin');
+    erro.textContent = '';
+    const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (error) { erro.textContent = 'E-mail ou senha inválidos.'; return; }
+    iniciar();
+  };
+
+  document.getElementById('btnSair').onclick = async () => {
+    await sb.auth.signOut();
+    location.reload();
+  };
+
+  async function iniciar() {
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('painel').style.display = 'block';
+    await carregarEventos();
+    ligarTempoReal();
+  }
+
+  async function carregarEventos() {
+    const { data, error } = await sb.from('eventos').select('*').eq('status', 'online').order('data');
+    const sel = document.getElementById('eventoSelect');
+    if (error || !data || data.length === 0) {
+      sel.innerHTML = '<option>Nenhum evento no ar</option>';
+      reservasCache = [];
+      renderLista();
+      return;
+    }
+    sel.innerHTML = data.map(e => `<option value="${e.id}">${e.nome}</option>`).join('');
+    await carregarReservas();
+  }
+
+  document.getElementById('eventoSelect').onchange = carregarReservas;
+  document.getElementById('busca').oninput = renderLista;
+
+  async function carregarReservas() {
+    const eventoId = document.getElementById('eventoSelect').value;
+    if (!eventoId) { reservasCache = []; renderLista(); return; }
+    // O RLS do banco já garante que só voltam as reservas deste promoter
+    // (ou todas, se for master) — não precisa filtrar nada aqui no app.
+    const { data, error } = await sb.from('reservas').select('*').eq('evento_id', eventoId).order('nome');
+    reservasCache = error ? [] : data;
+    renderLista();
+  }
+
+  function renderLista() {
+    const termo = document.getElementById('busca').value.toLowerCase();
+    const filtradas = reservasCache.filter(r => r.nome.toLowerCase().includes(termo));
+    const entraram = reservasCache.filter(r => r.entrou).length;
+    document.getElementById('placar').textContent = `${entraram} / ${reservasCache.length} entraram`;
+    document.getElementById('lista').innerHTML = filtradas.map(r => `
+      <div class="card ${r.entrou ? 'entrou' : ''}">
+        <div class="info">
+          <span class="nome">${escapeHtml(r.nome)}</span>
+          <span class="tipo">${escapeHtml(r.tipo_entrada || '')}</span>
+        </div>
+        ${r.entrou ? '<span class="ok-badge">&check; Entrou</span>' : ''}
+      </div>
+    `).join('') || '<p class="vazio">Nenhuma reserva encontrada.</p>';
+  }
+
+  document.getElementById('btnAdicionar').onclick = async () => {
+    const eventoId = document.getElementById('eventoSelect').value;
+    const nome = document.getElementById('novoNome').value.trim();
+    const tipo = document.getElementById('novoTipo').value.trim();
+    const erro = document.getElementById('erroAdicionar');
+    const sucesso = document.getElementById('sucessoAdicionar');
+    erro.textContent = '';
+    sucesso.textContent = '';
+
+    if (!eventoId) { erro.textContent = 'Nenhum evento no ar.'; return; }
+    if (!nome) { erro.textContent = 'Digite o nome do convidado.'; return; }
+
+    const { data, error } = await sb.rpc('adicionar_reserva', {
+      p_evento_id: eventoId,
+      p_nome: nome,
+      p_tipo_entrada: tipo || null
+    });
+
+    if (error) { erro.textContent = error.message; return; }
+
+    reservasCache.push(data);
+    renderLista();
+    sucesso.textContent = `"${nome}" adicionado(a) à lista.`;
+    document.getElementById('novoNome').value = '';
+    document.getElementById('novoTipo').value = '';
+  };
+
+  // Tempo real: se a portaria fizer check-in em alguém da sua lista,
+  // o placar aqui atualiza sozinho, sem precisar ficar perguntando
+  // pro servidor de tempos em tempos.
+  function ligarTempoReal() {
+    sb.channel('reservas-realtime-promoter')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          if (!reservasCache.find(r => r.id === payload.new.id)) {
+            reservasCache.push(payload.new);
+          }
+        } else {
+          const idx = reservasCache.findIndex(r => r.id === payload.new.id);
+          if (idx > -1) reservasCache[idx] = payload.new;
+        }
+        renderLista();
+      })
+      .subscribe();
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+</script>
+</body>
+</html>
