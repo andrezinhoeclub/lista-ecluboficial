@@ -107,13 +107,23 @@
     renderLista();
   };
 
-  // Tempo real: a tela se atualiza sozinha quando QUALQUER dispositivo faz um
-  // check-in, sem precisar ficar perguntando pro servidor de tempos em tempos.
+  // Tempo real: a tela se atualiza sozinha tanto quando alguém faz um
+  // check-in (UPDATE) quanto quando um promoter adiciona um nome novo na
+  // lista (INSERT) — sem precisar ficar perguntando pro servidor de tempos
+  // em tempos, nem dar F5 pra ver reserva nova.
   function ligarTempoReal() {
     sb.channel('reservas-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, payload => {
-        const idx = reservasCache.findIndex(r => r.id === payload.new.id);
-        if (idx > -1) { reservasCache[idx] = payload.new; renderLista(); }
+        const eventoAtual = document.getElementById('eventoSelect').value;
+        if (payload.eventType === 'INSERT') {
+          if (payload.new.evento_id === eventoAtual && !reservasCache.find(r => r.id === payload.new.id)) {
+            reservasCache.push(payload.new);
+          }
+        } else {
+          const idx = reservasCache.findIndex(r => r.id === payload.new.id);
+          if (idx > -1) reservasCache[idx] = payload.new;
+        }
+        renderLista();
       })
       .subscribe();
   }
