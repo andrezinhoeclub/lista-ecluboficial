@@ -102,9 +102,12 @@
 
 <script>
   // --- Configuração da conexão com o Supabase ---
+  // OBS: a biblioteca do CDN já cria uma variável global chamada "supabase",
+  // por isso o cliente aqui se chama "sb" (nunca "supabase") — evita o erro
+  // "Identifier 'supabase' has already been declared".
   const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let reservasCache = [];
 
@@ -113,7 +116,7 @@
     const senha = document.getElementById('senha').value;
     const erro = document.getElementById('erroLogin');
     erro.textContent = '';
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    const { error } = await sb.auth.signInWithPassword({ email, password: senha });
     if (error) { erro.textContent = 'E-mail ou senha inválidos.'; return; }
     iniciar();
   };
@@ -126,7 +129,7 @@
   }
 
   async function carregarEventos() {
-    const { data, error } = await supabase.from('eventos').select('*').eq('status', 'online').order('data');
+    const { data, error } = await sb.from('eventos').select('*').eq('status', 'online').order('data');
     const sel = document.getElementById('eventoSelect');
     if (error || !data || data.length === 0) {
       sel.innerHTML = '<option>Nenhum evento no ar</option>';
@@ -142,7 +145,7 @@
   async function carregarReservas() {
     const eventoId = document.getElementById('eventoSelect').value;
     if (!eventoId) { reservasCache = []; renderLista(); return; }
-    const { data, error } = await supabase.from('reservas').select('*').eq('evento_id', eventoId).order('nome');
+    const { data, error } = await sb.from('reservas').select('*').eq('evento_id', eventoId).order('nome');
     reservasCache = error ? [] : data;
     renderLista();
   }
@@ -166,7 +169,7 @@
   }
 
   window.checkin = async (id) => {
-    const { data, error } = await supabase.rpc('fazer_checkin', { p_reserva_id: id });
+    const { data, error } = await sb.rpc('fazer_checkin', { p_reserva_id: id });
     if (error) { alert(error.message); return; }
     const idx = reservasCache.findIndex(r => r.id === id);
     if (idx > -1) reservasCache[idx] = data;
@@ -176,7 +179,7 @@
   // Tempo real: a tela se atualiza sozinha quando QUALQUER dispositivo faz um
   // check-in, sem precisar ficar perguntando pro servidor de tempos em tempos.
   function ligarTempoReal() {
-    supabase.channel('reservas-realtime')
+    sb.channel('reservas-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, payload => {
         const idx = reservasCache.findIndex(r => r.id === payload.new.id);
         if (idx > -1) { reservasCache[idx] = payload.new; renderLista(); }
