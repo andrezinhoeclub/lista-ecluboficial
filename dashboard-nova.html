@@ -273,6 +273,7 @@
             ${a.ativo
               ? `<button class="btn-mini" onclick="desativarAcesso('${a.user_id}')">Desativar</button>`
               : `<button class="btn-mini" onclick="reativarAcesso('${a.user_id}')">Reativar</button>`}
+            <button class="btn-mini" style="color:#f87171" onclick="excluirAcesso('${a.user_id}', '${escapeHtml(a.nome)}')">Excluir</button>
           </div>
         </div>`;
     }).join('');
@@ -365,6 +366,15 @@
     try {
       await chamarGerenciarAcesso({ action: 'reativar', user_id_edicao: userId });
       mostrarToast('Acesso reativado.', true);
+      await carregarAcessos();
+    } catch (e) { mostrarToast(e.message, false); }
+  };
+
+  window.excluirAcesso = async (userId, nome) => {
+    if (!confirm(`EXCLUIR DEFINITIVAMENTE o acesso de "${nome}"?\n\nIsso apaga a conta de login dela também — não dá pra desfazer. Se é só pra tirar o acesso temporariamente, use "Desativar" em vez disso.`)) return;
+    try {
+      await chamarGerenciarAcesso({ action: 'excluir', user_id_edicao: userId });
+      mostrarToast('Acesso excluído.', true);
       await carregarAcessos();
     } catch (e) { mostrarToast(e.message, false); }
   };
