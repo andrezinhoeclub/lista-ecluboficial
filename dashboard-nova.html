@@ -230,10 +230,19 @@
       // supabase-js às vezes só devolve o erro genérico de HTTP; tenta
       // pegar a mensagem real que a function mandou no corpo.
       let msg = error.message || 'Erro ao chamar a função.';
-      try { const corpo = await error.context.json(); if (corpo?.error) msg = corpo.error; } catch (_) {}
+      try {
+        const corpo = await error.context.json();
+        if (corpo?.error) msg = corpo.error;
+        // DIAGNÓSTICO TEMPORÁRIO: mostra o bloco "debug", se a function mandou um.
+        if (corpo?.debug) msg += ' | DEBUG: ' + JSON.stringify(corpo.debug);
+      } catch (_) {}
       throw new Error(msg);
     }
-    if (data?.error) throw new Error(data.error);
+    if (data?.error) {
+      let msg = data.error;
+      if (data.debug) msg += ' | DEBUG: ' + JSON.stringify(data.debug);
+      throw new Error(msg);
+    }
     return data;
   }
 
