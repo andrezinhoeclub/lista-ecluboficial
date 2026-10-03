@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard (novo)</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="eclub-v2.css">
+</head>
+<body>
+<div class="wrap" id="loginWrap">
+  <div id="login">
+    <h1>Dashboard &mdash; entrar</h1>
+    <div id="erroLogin"></div>
+    <input id="email" type="email" placeholder="e-mail" autocomplete="username">
+    <input id="senha" type="password" placeholder="senha" autocomplete="current-password">
+    <button id="btnEntrar">Entrar</button>
+  </div>
+</div>
+
+<div class="wrap-largo" id="painel" style="display:none">
+  <div class="topo">
+    <h1>Command Center (novo)</h1>
+    <button class="sair" id="btnSair">Sair</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab ativa" data-tab="eventos">Eventos</button>
+    <button class="tab" data-tab="acessos">Acessos</button>
+  </div>
+
+  <!-- ===== EVENTOS ===== -->
+  <section class="secao ativa" id="secao-eventos">
+    <h1 style="margin-top:0">Criar evento</h1>
+    <input id="novoEventoNome" placeholder="Nome do evento">
+    <input id="novoEventoData" type="date">
+    <div class="checkbox-row">
+      <input type="checkbox" id="novoEventoOnline">
+      <label for="novoEventoOnline">Já deixar no ar</label>
+    </div>
+    <div id="erroEvento" class="erro"></div>
+    <div id="sucessoEvento" class="sucesso"></div>
+    <button id="btnCriarEvento">Criar evento</button>
+
+    <h1>Eventos cadastrados</h1>
+    <div id="listaEventos"></div>
+  </section>
+
+  <!-- ===== ACESSOS ===== -->
+  <section class="secao" id="secao-acessos">
+    <h1 style="margin-top:0"><span id="tituloFormAcesso">Criar acesso</span></h1>
+    <input type="hidden" id="acessoUserIdEdicao">
+    <div class="linha-form">
+      <input id="acessoEmail" type="email" placeholder="e-mail do funcionário">
+      <input id="acessoNome" placeholder="nome para identificação">
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" id="acessoMaster">
+      <label for="acessoMaster">Master (acesso total)</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="acessoPortaria">
+      <label for="acessoPortaria">Portaria</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="acessoPromoter">
+      <label for="acessoPromoter">Promoter</label>
+      <select id="acessoPromoterTipo" disabled>
+        <option value="padrao">Lista padrão</option>
+        <option value="aniversario">Lista aniversário</option>
+        <option value="visualizar">Apenas visualizar</option>
+      </select>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="acessoSolteiras">
+      <label for="acessoSolteiras">Solteiras</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="acessoVallet">
+      <label for="acessoVallet">Vallet</label>
+    </div>
+
+    <div id="erroAcesso" class="erro"></div>
+    <div id="sucessoAcesso" class="sucesso"></div>
+    <button id="btnSalvarAcesso">Criar / atualizar acesso</button>
+    <button id="btnCancelarEdicaoAcesso" class="sair" style="display:none;width:100%;margin-top:4px;">Cancelar edição</button>
+
+    <h1>Contas</h1>
+    <div id="listaAcessos"></div>
+  </section>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+  const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { storageKey: 'sb-dashboard-auth' }
+  });
+
+  // ===== LOGIN =====
+  document.getElementById('btnEntrar').onclick = async () => {
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value;
+    const erro = document.getElementById('erroLogin');
+    erro.textContent = '';
+    const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+    if (error) { erro.textContent = 'E-mail ou senha inválidos.'; return; }
+
+    const { data: ehMaster, error: erroMaster } = await sb.rpc('sou_master');
+    if (erroMaster || !ehMaster) {
+      erro.textContent = 'Essa conta não tem acesso ao Dashboard (só o master).';
+      await sb.auth.signOut();
+      return;
+    }
+    iniciar();
+  };
+
+  document.getElementById('btnSair').onclick = async () => {
+    await sb.auth.signOut();
+    location.reload();
+  };
+
+  async function iniciar() {
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('painel').style.display = 'block';
+    await carregarEventos();
+    await carregarAcessos();
+    ligarTempoRealEventos();
+  }
+
+  // ===== ABAS =====
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('ativa'));
+      document.querySelectorAll('.secao').forEach(s => s.classList.remove('ativa'));
+      btn.classList.add('ativa');
+      document.getElementById('secao-' + btn.dataset.tab).classList.add('ativa');
+    };
+  });
+
+  function mostrarToast(msg, ok) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + (ok ? 'ok' : 'erro');
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3500);
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // ===== EVENTOS =====
+  let eventosCache = [];
+
+  async function carregarEventos() {
+    const { data, error } = await sb.from('eventos').select('*').order('data', { ascending: false });
+    eventosCache = error ? [] : data;
+    renderEventos();
+  }
+
+  function ligarTempoRealEventos() {
+    sb.channel('eventos-realtime-dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'eventos' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          if (!eventosCache.find(e => e.id === payload.new.id)) eventosCache.push(payload.new);
+        } else if (payload.eventType === 'UPDATE') {
+          const idx = eventosCache.findIndex(e => e.id === payload.new.id);
+          if (idx > -1) eventosCache[idx] = payload.new;
+        }
+        renderEventos();
+      })
+      .subscribe();
+  }
+
+  function renderEventos() {
+    const cont = document.getElementById('listaEventos');
+    if (!eventosCache.length) { cont.innerHTML = '<p class="vazio">Nenhum evento cadastrado ainda.</p>'; return; }
+    cont.innerHTML = eventosCache.map(e => `
+      <div class="card">
+        <div class="info">
+          <span class="nome">${escapeHtml(e.nome)}</span>
+          <span class="tipo">${new Date(e.data + 'T12:00:00').toLocaleDateString('pt-BR')} — ${e.status === 'online' ? 'NO AR' : 'OFFLINE'}</span>
+        </div>
+        <button onclick="alternarEvento('${e.id}', '${e.status}')">${e.status === 'online' ? 'Tirar do ar' : 'Colocar no ar'}</button>
+      </div>
+    `).join('');
+  }
+
+  window.alternarEvento = async (id, statusAtual) => {
+    const novo = statusAtual === 'online' ? 'offline' : 'online';
+    const { error } = await sb.from('eventos').update({ status: novo }).eq('id', id);
+    if (error) { mostrarToast(error.message, false); return; }
+    mostrarToast(novo === 'online' ? 'Evento no ar!' : 'Evento tirado do ar.', true);
+  };
+
+  document.getElementById('btnCriarEvento').onclick = async () => {
+    const nome = document.getElementById('novoEventoNome').value.trim();
+    const data = document.getElementById('novoEventoData').value;
+    const online = document.getElementById('novoEventoOnline').checked;
+    const erro = document.getElementById('erroEvento');
+    const sucesso = document.getElementById('sucessoEvento');
+    erro.textContent = ''; sucesso.textContent = '';
+
+    if (!nome) { erro.textContent = 'Digite o nome do evento.'; return; }
+    if (!data) { erro.textContent = 'Escolha a data.'; return; }
+
+    const { error } = await sb.from('eventos').insert({
+      nome, data, status: online ? 'online' : 'offline'
+    });
+    if (error) { erro.textContent = error.message; return; }
+
+    sucesso.textContent = 'Evento criado!';
+    document.getElementById('novoEventoNome').value = '';
+    document.getElementById('novoEventoData').value = '';
+    document.getElementById('novoEventoOnline').checked = false;
+    await carregarEventos();
+  };
+
+  // ===== ACESSOS =====
+  document.getElementById('acessoPromoter').onchange = (e) => {
+    document.getElementById('acessoPromoterTipo').disabled = !e.target.checked;
+  };
+
+  async function chamarGerenciarAcesso(body) {
+    const { data, error } = await sb.functions.invoke('gerenciar-acesso', { body });
+    if (error) {
+      // supabase-js às vezes só devolve o erro genérico de HTTP; tenta
+      // pegar a mensagem real que a function mandou no corpo.
+      let msg = error.message || 'Erro ao chamar a função.';
+      try { const corpo = await error.context.json(); if (corpo?.error) msg = corpo.error; } catch (_) {}
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function carregarAcessos() {
+    const cont = document.getElementById('listaAcessos');
+    try {
+      const data = await chamarGerenciarAcesso({ action: 'listar' });
+      renderAcessos(data.acessos || []);
+    } catch (e) {
+      cont.innerHTML = `<p class="erro">${escapeHtml(e.message)}</p>`;
+    }
+  }
+
+  let acessosCache = [];
+
+  function renderAcessos(lista) {
+    acessosCache = lista;
+    const cont = document.getElementById('listaAcessos');
+    if (!lista.length) { cont.innerHTML = '<p class="vazio">Nenhuma conta ainda.</p>'; return; }
+    cont.innerHTML = lista.map(a => {
+      const badges = [
+        a.is_master ? '<span class="badge-papel master">Master</span>' : '',
+        a.pode_portaria ? '<span class="badge-papel">Portaria</span>' : '',
+        a.pode_promoter ? `<span class="badge-papel">Promoter (${escapeHtml(a.promoter_tipo || 'padrao')})</span>` : '',
+        a.pode_solteiras ? '<span class="badge-papel">Solteiras</span>' : '',
+        a.pode_vallet ? '<span class="badge-papel">Vallet</span>' : '',
+        !a.ativo ? '<span class="badge-papel inativo">Inativo</span>' : '',
+      ].join('');
+      return `
+        <div class="card">
+          <div class="info">
+            <span class="nome">${escapeHtml(a.nome)}</span>
+            <span class="tipo">${badges}</span>
+          </div>
+          <div class="acoes">
+            <button class="btn-mini" onclick="prepararEdicaoAcesso('${a.user_id}')">Editar</button>
+            ${a.ativo
+              ? `<button class="btn-mini" onclick="desativarAcesso('${a.user_id}')">Desativar</button>`
+              : `<button class="btn-mini" onclick="reativarAcesso('${a.user_id}')">Reativar</button>`}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  window.prepararEdicaoAcesso = (userId) => {
+    const a = acessosCache.find(x => x.user_id === userId);
+    if (!a) return;
+    document.getElementById('acessoUserIdEdicao').value = a.user_id;
+    document.getElementById('acessoEmail').value = '';
+    document.getElementById('acessoEmail').disabled = true;
+    document.getElementById('acessoEmail').placeholder = 'e-mail não muda numa edição';
+    document.getElementById('acessoNome').value = a.nome || '';
+    document.getElementById('acessoMaster').checked = !!a.is_master;
+    document.getElementById('acessoPortaria').checked = !!a.pode_portaria;
+    document.getElementById('acessoPromoter').checked = !!a.pode_promoter;
+    document.getElementById('acessoPromoterTipo').disabled = !a.pode_promoter;
+    document.getElementById('acessoPromoterTipo').value = a.promoter_tipo || 'padrao';
+    document.getElementById('acessoSolteiras').checked = !!a.pode_solteiras;
+    document.getElementById('acessoVallet').checked = !!a.pode_vallet;
+    document.getElementById('tituloFormAcesso').textContent = 'Editar acesso — ' + a.nome;
+    document.getElementById('btnSalvarAcesso').textContent = 'Salvar alterações';
+    document.getElementById('btnCancelarEdicaoAcesso').style.display = 'block';
+    document.querySelector('[data-tab="acessos"]').click();
+    document.getElementById('tituloFormAcesso').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  function limparFormularioAcesso() {
+    document.getElementById('acessoUserIdEdicao').value = '';
+    document.getElementById('acessoEmail').value = '';
+    document.getElementById('acessoEmail').disabled = false;
+    document.getElementById('acessoEmail').placeholder = 'e-mail do funcionário';
+    document.getElementById('acessoNome').value = '';
+    document.getElementById('acessoMaster').checked = false;
+    document.getElementById('acessoPortaria').checked = false;
+    document.getElementById('acessoPromoter').checked = false;
+    document.getElementById('acessoPromoterTipo').disabled = true;
+    document.getElementById('acessoSolteiras').checked = false;
+    document.getElementById('acessoVallet').checked = false;
+    document.getElementById('tituloFormAcesso').textContent = 'Criar acesso';
+    document.getElementById('btnSalvarAcesso').textContent = 'Criar / atualizar acesso';
+    document.getElementById('btnCancelarEdicaoAcesso').style.display = 'none';
+    document.getElementById('erroAcesso').textContent = '';
+    document.getElementById('sucessoAcesso').textContent = '';
+  }
+  document.getElementById('btnCancelarEdicaoAcesso').onclick = limparFormularioAcesso;
+
+  document.getElementById('btnSalvarAcesso').onclick = async () => {
+    const erro = document.getElementById('erroAcesso');
+    const sucesso = document.getElementById('sucessoAcesso');
+    erro.textContent = ''; sucesso.textContent = '';
+
+    const userIdEdicao = document.getElementById('acessoUserIdEdicao').value || null;
+    const email = document.getElementById('acessoEmail').value.trim();
+    const nome = document.getElementById('acessoNome').value.trim();
+
+    if (!nome) { erro.textContent = 'Digite o nome.'; return; }
+    if (!userIdEdicao && !email) { erro.textContent = 'Digite o e-mail.'; return; }
+
+    try {
+      await chamarGerenciarAcesso({
+        action: 'criar_ou_atualizar',
+        user_id_edicao: userIdEdicao,
+        email, nome,
+        is_master: document.getElementById('acessoMaster').checked,
+        pode_portaria: document.getElementById('acessoPortaria').checked,
+        pode_promoter: document.getElementById('acessoPromoter').checked,
+        promoter_tipo: document.getElementById('acessoPromoterTipo').value,
+        pode_solteiras: document.getElementById('acessoSolteiras').checked,
+        pode_vallet: document.getElementById('acessoVallet').checked,
+      });
+      sucesso.textContent = userIdEdicao ? 'Acesso atualizado!' : 'Acesso criado! A pessoa vai receber um e-mail pra definir a senha.';
+      limparFormularioAcesso();
+      await carregarAcessos();
+    } catch (e) {
+      erro.textContent = e.message;
+    }
+  };
+
+  window.desativarAcesso = async (userId) => {
+    if (!confirm('Desativar esse acesso? A pessoa perde a entrada em todas as telas até ser reativada.')) return;
+    try {
+      await chamarGerenciarAcesso({ action: 'desativar', user_id_edicao: userId });
+      mostrarToast('Acesso desativado.', true);
+      await carregarAcessos();
+    } catch (e) { mostrarToast(e.message, false); }
+  };
+
+  window.reativarAcesso = async (userId) => {
+    try {
+      await chamarGerenciarAcesso({ action: 'reativar', user_id_edicao: userId });
+      mostrarToast('Acesso reativado.', true);
+      await carregarAcessos();
+    } catch (e) { mostrarToast(e.message, false); }
+  };
+</script>
+</body>
+</html>
