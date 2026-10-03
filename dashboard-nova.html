@@ -282,6 +282,7 @@
             ${a.ativo
               ? `<button class="btn-mini" onclick="desativarAcesso('${a.user_id}')">Desativar</button>`
               : `<button class="btn-mini" onclick="reativarAcesso('${a.user_id}')">Reativar</button>`}
+            <button class="btn-mini" onclick="definirSenhaAcesso('${a.user_id}', '${escapeHtml(a.nome)}')">Definir senha</button>
             <button class="btn-mini" style="color:#f87171" onclick="excluirAcesso('${a.user_id}', '${escapeHtml(a.nome)}')">Excluir</button>
           </div>
         </div>`;
@@ -385,6 +386,18 @@
       await chamarGerenciarAcesso({ action: 'excluir', user_id_edicao: userId });
       mostrarToast('Acesso excluído.', true);
       await carregarAcessos();
+    } catch (e) { mostrarToast(e.message, false); }
+  };
+
+  window.definirSenhaAcesso = async (userId, nome) => {
+    // Alternativa ao e-mail de convite (que pode não chegar): o master
+    // define a senha dele mesmo e avisa a pessoa por fora (WhatsApp etc).
+    const senha = prompt(`Definir nova senha para "${nome}" (mínimo 6 caracteres):`);
+    if (senha === null) return; // cancelou
+    if (senha.length < 6) { mostrarToast('A senha precisa ter pelo menos 6 caracteres.', false); return; }
+    try {
+      await chamarGerenciarAcesso({ action: 'definir_senha', user_id_edicao: userId, nova_senha: senha });
+      mostrarToast('Senha definida! Já pode passar pra pessoa entrar com ela.', true);
     } catch (e) { mostrarToast(e.message, false); }
   };
 </script>
