@@ -5,81 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Portaria (novo)</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
-    background: #0a0a0a;
-    color: #e4e4e7;
-    min-height: 100vh;
-  }
-  .wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px; }
-  h1 {
-    font-size: 14px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #fff;
-    font-weight: 900;
-    margin: 0 0 20px;
-  }
-  input, select, button {
-    width: 100%;
-    font-size: 14px;
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid #27272a;
-    background: #18181b;
-    color: #fff;
-    margin-bottom: 10px;
-  }
-  button {
-    background: #fff;
-    color: #000;
-    font-weight: 900;
-    text-transform: uppercase;
-    font-size: 11px;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    border: none;
-  }
-  button:active { opacity: 0.8; }
-  #erroLogin { color: #f87171; font-size: 12px; margin-bottom: 10px; min-height: 16px; }
-  .card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-    padding: 14px;
-    border-radius: 12px;
-    background: #18181b;
-    border: 1px solid #27272a;
-    margin-bottom: 8px;
-  }
-  .card.entrou { opacity: 0.5; }
-  .card .info { display: flex; flex-direction: column; }
-  .card .nome { font-weight: 700; font-size: 13px; text-transform: uppercase; }
-  .card .tipo { font-size: 10px; color: #a1a1aa; text-transform: uppercase; }
-  .card button {
-    width: auto;
-    padding: 10px 14px;
-    margin: 0;
-    font-size: 10px;
-  }
-  .ok-badge {
-    font-size: 10px;
-    font-weight: 900;
-    color: #4ade80;
-    text-transform: uppercase;
-  }
-  #placar {
-    font-size: 11px;
-    color: #a1a1aa;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-    text-align: center;
-  }
-</style>
+<link rel="stylesheet" href="eclub-v2.css">
 </head>
 <body>
 <div class="wrap">
@@ -107,7 +33,12 @@
   // "Identifier 'supabase' has already been declared".
   const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // storageKey separado por tela: evita que o login da portaria e o do
+  // promoter (ou de qualquer outra tela) se sobrescrevam quando testados
+  // no mesmo navegador — cada tela guarda sua própria sessão.
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { storageKey: 'sb-portaria-auth' }
+  });
 
   let reservasCache = [];
 
