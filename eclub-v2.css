@@ -1,255 +1,116 @@
-/* ==========================================================
-   E-Club 2.0 — estilo base compartilhado entre as telas novas
-   (funcional por enquanto; o visual definitivo vem na rodada
-   de design, depois que todas as telas estiverem prontas)
-   ========================================================== */
-* { box-sizing: border-box; }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Definir senha</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="eclub-v2.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>Definir sua senha</h1>
 
-body {
-  margin: 0;
-  font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #0a0a0a;
-  color: #e4e4e7;
-  min-height: 100vh;
-}
+  <div id="carregando">
+    <p class="vazio">Verificando o link...</p>
+  </div>
 
-.wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px; }
+  <div id="erro" style="display:none">
+    <p class="erro">Esse link não é válido ou já expirou. Peça pra quem te deu o acesso gerar um novo.</p>
+  </div>
 
-h1 {
-  font-size: 14px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #fff;
-  font-weight: 900;
-  margin: 0 0 20px;
-}
+  <div id="form" style="display:none">
+    <div id="erroSenha" class="erro"></div>
+    <input id="senha1" type="password" placeholder="Nova senha (mínimo 6 caracteres)" autocomplete="new-password">
+    <input id="senha2" type="password" placeholder="Confirme a senha" autocomplete="new-password">
+    <button id="btnDefinir">Definir senha</button>
+  </div>
 
-input, select, button, textarea {
-  width: 100%;
-  font-size: 14px;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid #27272a;
-  background: #18181b;
-  color: #fff;
-  margin-bottom: 10px;
-  font-family: inherit;
-}
+  <div id="pronto" style="display:none">
+    <p class="sucesso">Senha definida! Entre na tela que te passaram usando seu e-mail e essa senha:</p>
+    <div id="linksTelas"></div>
+  </div>
+</div>
 
-button {
-  background: #fff;
-  color: #000;
-  font-weight: 900;
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  border: none;
-}
+<script>
+  // --- Configuração da conexão com o Supabase ---
+  const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { storageKey: 'sb-definir-senha-auth' }
+  });
 
-button:active { opacity: 0.8; }
-button:disabled { opacity: 0.5; cursor: default; }
+  // O link de convite/recuperação do Supabase chega com um token dentro do
+  // próprio endereço (depois do #). A biblioteca já lê isso sozinha assim que
+  // a página carrega e, se o token for válido, cria uma sessão temporária —
+  // só o suficiente pra deixar a pessoa trocar a própria senha, nada mais.
+  let sessaoOk = false;
 
-#erroLogin, .erro { color: #f87171; font-size: 12px; margin-bottom: 10px; min-height: 16px; }
-.sucesso { color: #4ade80; font-size: 12px; margin-bottom: 10px; min-height: 16px; }
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session) { sessaoOk = true; mostrarForm(); }
+  });
 
-.card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 12px;
-  background: #18181b;
-  border: 1px solid #27272a;
-  margin-bottom: 8px;
-}
+  (async () => {
+    const { data } = await sb.auth.getSession();
+    if (data.session) { sessaoOk = true; mostrarForm(); }
+    // Dá um tempinho pro link ser processado antes de considerar inválido.
+    setTimeout(() => { if (!sessaoOk) mostrarErro(); }, 2500);
+  })();
 
-.card.entrou { opacity: 0.5; }
-.card .info { display: flex; flex-direction: column; }
-.card .nome { font-weight: 700; font-size: 13px; text-transform: uppercase; }
-.card .tipo { font-size: 10px; color: #a1a1aa; text-transform: uppercase; }
+  function mostrarForm() {
+    document.getElementById('carregando').style.display = 'none';
+    document.getElementById('erro').style.display = 'none';
+    document.getElementById('form').style.display = 'block';
+  }
 
-.card button {
-  width: auto;
-  padding: 10px 14px;
-  margin: 0;
-  font-size: 10px;
-}
+  function mostrarErro() {
+    document.getElementById('carregando').style.display = 'none';
+    document.getElementById('form').style.display = 'none';
+    document.getElementById('erro').style.display = 'block';
+  }
 
-.ok-badge {
-  font-size: 10px;
-  font-weight: 900;
-  color: #4ade80;
-  text-transform: uppercase;
-}
+  document.getElementById('btnDefinir').onclick = async () => {
+    const s1 = document.getElementById('senha1').value;
+    const s2 = document.getElementById('senha2').value;
+    const erroEl = document.getElementById('erroSenha');
+    erroEl.textContent = '';
+    if (s1.length < 6) { erroEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.'; return; }
+    if (s1 !== s2) { erroEl.textContent = 'As senhas não são iguais.'; return; }
 
-#placar, .placar {
-  font-size: 11px;
-  color: #a1a1aa;
-  text-transform: uppercase;
-  margin-bottom: 14px;
-  text-align: center;
-}
+    const { error } = await sb.auth.updateUser({ password: s1 });
+    if (error) { erroEl.textContent = error.message; return; }
+    await mostrarTelasDisponiveis();
+  };
 
-.vazio {
-  text-align: center;
-  color: #71717a;
-  font-size: 12px;
-}
+  // Depois de definir a senha, checa (pelas funções que já existem no banco)
+  // quais telas essa conta pode usar, e mostra o link certo — a pessoa não
+  // precisa saber nem adivinhar qual tela é a dela.
+  async function mostrarTelasDisponiveis() {
+    document.getElementById('form').style.display = 'none';
+    const checagens = [
+      ['sou_master', 'Dashboard', 'dashboard-nova.html'],
+      ['posso_portaria', 'Portaria', 'portaria-nova.html'],
+      ['posso_promoter', 'Promoter', 'promoter-nova.html'],
+      ['posso_solteiras', 'Solteiras', 'solteiras-nova.html'],
+    ];
+    const telas = [];
+    for (const [fn, label, arquivo] of checagens) {
+      try {
+        const { data } = await sb.rpc(fn);
+        if (data) telas.push({ label, arquivo });
+      } catch (_) { /* ignora e segue pra próxima checagem */ }
+    }
 
-.topo {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
+    const cont = document.getElementById('linksTelas');
+    cont.innerHTML = telas.length
+      ? telas.map(t => `<p style="text-align:center;"><a href="${t.arquivo}" style="color:#fff;font-weight:900;text-transform:uppercase;font-size:12px;">&rarr; ${t.label}</a></p>`).join('')
+      : '<p class="vazio">Nenhuma tela liberada pra essa conta ainda — fale com quem te deu o acesso.</p>';
+    document.getElementById('pronto').style.display = 'block';
 
-.sair {
-  width: auto;
-  background: transparent;
-  color: #a1a1aa;
-  border: 1px solid #27272a;
-  padding: 8px 12px;
-  font-size: 9px;
-  margin: 0;
-}
-
-/* ---- estados de card usados em telas com mais status (solteiras, etc) ---- */
-.card.bloqueada { background: #2a1414; border-color: #7f1d1d; }
-.card.na-casa { background: #0f2417; border-color: #166534; }
-.card.aniversariante { background: #2a230f; border-color: #a16207; }
-
-.badge-niver {
-  font-size: 9px;
-  font-weight: 900;
-  color: #facc15;
-  text-transform: uppercase;
-  background: #3f2e05;
-  border: 1px solid #a16207;
-  padding: 3px 8px;
-  border-radius: 8px;
-}
-
-.badge-bloqueio {
-  font-size: 9px;
-  font-weight: 900;
-  color: #f87171;
-  text-transform: uppercase;
-}
-
-.card .sub { font-size: 10px; color: #71717a; margin-top: 2px; }
-.card .obs { font-size: 10px; color: #93c5fd; margin-top: 4px; }
-
-.card .acoes { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.card .acoes-linha { display: flex; gap: 8px; }
-
-.btn-mini {
-  width: auto;
-  background: transparent;
-  color: #a1a1aa;
-  border: none;
-  padding: 0;
-  margin: 0;
-  font-size: 9px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.aviso-trava {
-  background: #2a1414;
-  border: 1px solid #7f1d1d;
-  color: #fca5a5;
-  font-size: 11px;
-  text-transform: uppercase;
-  text-align: center;
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 14px;
-}
-
-.toast {
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  font-size: 11px;
-  font-weight: 900;
-  text-transform: uppercase;
-  padding: 12px 18px;
-  border-radius: 12px;
-  color: #fff;
-  max-width: 90%;
-  text-align: center;
-}
-.toast.ok { background: #166534; }
-.toast.erro { background: #7f1d1d; }
-
-/* ---- dashboard: telas mais largas, com abas, tabelas e formulários
-   maiores — o resto das telas (portaria/promoter/solteiras) continua
-   usando .wrap de 480px normalmente. ---- */
-.wrap-largo { max-width: 920px; margin: 0 auto; padding: 24px 16px; }
-
-.tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  margin-bottom: 20px;
-  padding-bottom: 4px;
-}
-.tab {
-  width: auto;
-  background: #18181b;
-  color: #a1a1aa;
-  border: 1px solid #27272a;
-  padding: 10px 16px;
-  font-size: 10px;
-  white-space: nowrap;
-  margin: 0;
-}
-.tab.ativa { background: #fff; color: #000; }
-
-.secao { display: none; }
-.secao.ativa { display: block; }
-
-.linha-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-@media (max-width: 560px) {
-  .linha-form { grid-template-columns: 1fr; }
-}
-
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #18181b;
-  border: 1px solid #27272a;
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-bottom: 10px;
-}
-.checkbox-row input[type="checkbox"] {
-  width: auto;
-  margin: 0;
-  accent-color: #fff;
-}
-.checkbox-row label { font-size: 11px; text-transform: uppercase; font-weight: 700; flex-grow: 1; }
-.checkbox-row select { margin: 0; width: auto; min-width: 150px; }
-
-.badge-papel {
-  font-size: 9px;
-  font-weight: 900;
-  text-transform: uppercase;
-  background: #27272a;
-  color: #d4d4d8;
-  padding: 3px 8px;
-  border-radius: 8px;
-  margin-right: 4px;
-  display: inline-block;
-}
-.badge-papel.master { background: #a16207; color: #fff; }
-.badge-papel.inativo { background: #450a0a; color: #fca5a5; }
+    // Essa sessão aqui era só pra trocar a senha — desloga pra pessoa entrar
+    // de novo do zero, já na tela certa, com a senha que acabou de criar.
+    await sb.auth.signOut();
+  }
+</script>
+</body>
+</html>
