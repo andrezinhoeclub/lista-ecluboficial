@@ -1,406 +1,1009 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<!-- E-CLUB SOLTEIRAS — SUPABASE (login moderno + painel réplica literal) -->
+<html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Solteiras (novo)</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:ital,wght@1,900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="eclub-v2.css">
-<style>
-  /* só o que é específico desta tela — o resto vem do eclub-v2.css */
-  .campo-label { font-size: 10px; color: #a1a1aa; text-transform: uppercase; margin: 0 0 4px 2px; }
-</style>
-</head>
-<body>
-<div class="tela-login" id="login">
-  <div class="login-card">
-    <div class="login-logo-wrap">
-      <img src="logo-eclub.png" alt="E-Club" class="login-logo-img"
-        onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
-      <div id="logoFallback" class="login-logo-fallback" style="display:none">e</div>
-    </div>
-    <div class="login-selo">Acesso Restrito</div>
-    <h1 class="login-titulo">Solteiras</h1>
-    <div id="erroLogin" class="erro"></div>
-    <input id="email" type="email" placeholder="E-mail" autocomplete="username">
-    <input id="senha" type="password" placeholder="Senha" autocomplete="current-password">
-    <button id="btnEntrar">Entrar com segurança</button>
-  </div>
-</div>
-
-<div class="wrap" id="painel" style="display:none">
-    <div class="topo">
-      <h1>Solteiras</h1>
-      <button class="sair" id="btnSair">Sair</button>
-    </div>
-
-    <div id="placar"></div>
-    <div id="avisoTrava" class="aviso-trava" style="display:none">🔒 Casa fechada — fora do horário (21h às 8h). Cadastro novo e check-in ficam bloqueados; editar, bloquear e consultar continuam liberados.</div>
-
-    <div id="formSolteira">
-      <input type="hidden" id="editId">
-      <div class="campo-label">Nome com sobrenome</div>
-      <input id="nome" placeholder="Nome completo">
-      <div class="campo-label">WhatsApp</div>
-      <input id="tel" placeholder="(00) 00000-0000" oninput="maskTel(this)" onblur="avisarDuplicidade()">
-      <div class="campo-label">CPF</div>
-      <input id="cpf" placeholder="000.000.000-00" oninput="maskCPF(this)" onblur="avisarDuplicidade()">
-      <div class="campo-label">Data de nascimento</div>
-      <input id="nascimento" type="date">
-      <div class="campo-label">Idade calculada: <span id="idadeDisplay">--</span></div>
-      <textarea id="obs" placeholder="Observações (opcional)"></textarea>
-      <div id="erroForm" class="erro"></div>
-      <div id="sucessoForm" class="sucesso"></div>
-      <button id="btnSalvar">Confirmar e liberar</button>
-      <button id="btnCancelarEdicao" class="sair" style="display:none;width:100%;margin-top:4px;">Cancelar edição</button>
-    </div>
-
-    <input id="busca" placeholder="Buscar por nome, CPF ou telefone...">
-    <div id="lista"></div>
-</div>
-
-<div id="toast" class="toast" style="display:none"></div>
-
-<script>
-  const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
-  // "storage: sessionStorage" (em vez do localStorage padrão): o login não
-  // fica guardado depois que o navegador fecha ou o aparelho reinicia —
-  // precisa entrar de novo a cada vez que abrir a tela.
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { storageKey: 'sb-solteiras-auth', storage: window.sessionStorage }
-  });
-
-  let clientesCache = [];
-  let buscaTimer = null;
-
-  // ===== LOGIN =====
-  // Enter no e-mail ou na senha já tenta entrar, sem precisar clicar no botão.
-  ['email', 'senha'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') document.getElementById('btnEntrar').click();
-    });
-  });
-
-  document.getElementById('btnEntrar').onclick = async () => {
-    const email = document.getElementById('email').value.trim();
-    const senha = document.getElementById('senha').value;
-    const erro = document.getElementById('erroLogin');
-    erro.textContent = '';
-    const { error } = await sb.auth.signInWithPassword({ email, password: senha });
-    if (error) { erro.textContent = 'E-mail ou senha inválidos.'; return; }
-
-    // Confere se essa conta ainda tem a permissão de solteiras ligada —
-    // sem isso, o login passava mas o acesso de verdade ficava de fora
-    // (bloqueado só no banco), deixando a tela abrir sem motivo.
-    const { data: podeAcessar, error: erroPermissao } = await sb.rpc('posso_solteiras');
-    if (erroPermissao || !podeAcessar) {
-      erro.textContent = 'Essa conta não tem (ou perdeu) o acesso à tela de Solteiras.';
-      await sb.auth.signOut();
-      return;
-    }
-
-    iniciar();
-  };
-
-  document.getElementById('btnSair').onclick = async () => {
-    await sb.auth.signOut();
-    location.reload();
-  };
-
-  async function iniciar() {
-    document.getElementById('login').style.display = 'none';
-    document.getElementById('painel').style.display = 'block';
-    await carregarClientes();
-    ligarTempoReal();
-    atualizarStatusCasa();
-    setInterval(atualizarStatusCasa, 60000); // só recalcula o relógio, sem bater no servidor
-  }
-
-  // ===== HORÁRIO DA CASA (21h às 8h, horário de Brasília) =====
-  function horaBrasilAgora() {
-    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false });
-    return parseInt(fmt.format(new Date()), 10);
-  }
-  function casaAbertaAgora() {
-    const h = horaBrasilAgora();
-    return h >= 21 || h < 8;
-  }
-  function atualizarStatusCasa() {
-    const aberta = casaAbertaAgora();
-    document.getElementById('avisoTrava').style.display = aberta ? 'none' : 'block';
-    document.getElementById('btnSalvar').disabled = !aberta && !document.getElementById('editId').value;
-    renderLista();
-  }
-
-  // ===== CARREGAR E MANTER A BASE ATUALIZADA =====
-  async function carregarClientes() {
-    const { data, error } = await sb.from('clientes_solteiras').select('*').order('nome');
-    clientesCache = error ? [] : data;
-    renderLista();
-  }
-
-  function ligarTempoReal() {
-    sb.channel('clientes-solteiras-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes_solteiras' }, payload => {
-        if (payload.eventType === 'INSERT') {
-          if (!clientesCache.find(c => c.id === payload.new.id)) clientesCache.push(payload.new);
-        } else if (payload.eventType === 'UPDATE') {
-          const idx = clientesCache.findIndex(c => c.id === payload.new.id);
-          if (idx > -1) clientesCache[idx] = payload.new;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-CLUB | Portaria Solteiras</title>
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:ital,wght@1,900&display=swap" rel="stylesheet">
+    <style>
+        /* Só os estilos da TELA DE LOGIN vêm daqui (escopados sob
+           .tela-login/.login-card) — o resto deste bloco é o visual do
+           PAINEL antigo, copiado como estava. */
+        :root { --gold: #e3b94e; --gold-glow: rgba(227, 185, 78, 0.25); }
+        .tela-login {
+            position: fixed; inset: 0; z-index: 100;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+            background:
+                radial-gradient(ellipse 700px 560px at 50% 28%, rgba(227, 185, 78, 0.10) 0%, rgba(10, 8, 2, 0) 60%),
+                radial-gradient(ellipse 900px 900px at 50% 10%, #141008 0%, #050505 55%, #000 100%);
         }
-        renderLista();
-      })
-      .subscribe();
-  }
+        .login-card {
+            width: 100%; max-width: 400px; background: linear-gradient(180deg, #181818, #101010);
+            border: 1px solid rgba(227, 185, 78, 0.35); border-radius: 32px; padding: 44px 32px 36px;
+            text-align: center; box-shadow: 0 0 60px var(--gold-glow), 0 24px 60px rgba(0, 0, 0, 0.65);
+        }
+        .login-logo-wrap { margin-bottom: 26px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .login-logo-img { width: 64px; height: 64px; object-fit: contain; }
+        .login-logo-fallback {
+            width: 64px; height: 64px; border-radius: 50%;
+            background: conic-gradient(from 200deg, #4f8ef7, #8b5cf6 35%, #ec4899 65%, #4f8ef7);
+            display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 26px;
+        }
+        .login-selo { color: var(--gold); font-size: 11px; font-weight: 800; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 10px; }
+        .login-titulo { font-family: 'Big Shoulders Display', -apple-system, sans-serif; font-style: italic; font-weight: 900; font-size: 34px; line-height: 1; color: #fff; text-transform: uppercase; margin: 0 0 30px; }
+        .login-card input {
+            width: 100%; text-align: center; border-radius: 999px; background: #1b1b1b !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important; text-transform: uppercase; letter-spacing: 0.04em;
+            font-weight: 700; font-size: 12px; padding: 16px; margin-bottom: 12px; color: #fff !important;
+        }
+        .login-card input:focus { outline: none; border-color: var(--gold) !important; box-shadow: 0 0 0 3px var(--gold-glow); }
+        .login-card input::placeholder { color: #767676; }
+        .login-card button:not(.login-link-sec) {
+            width: 100%; border-radius: 999px; background: var(--gold); color: #141414; font-weight: 900;
+            box-shadow: 0 10px 26px var(--gold-glow); margin-top: 4px; padding: 16px; font-size: 12px;
+            text-transform: uppercase; letter-spacing: 0.05em; border: none; cursor: pointer;
+        }
+        .login-link-sec {
+            display: inline-block; width: auto; margin-top: 18px; padding: 0; font-size: 10.5px; font-weight: 700;
+            color: #8a8a8a; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: underline;
+            text-underline-offset: 4px; background: none; border: none; cursor: pointer;
+        }
+        .login-card .erro { color: #f87171; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 14px; }
 
-  document.getElementById('busca').oninput = () => {
-    if (buscaTimer) clearTimeout(buscaTimer);
-    buscaTimer = setTimeout(renderLista, 200);
-  };
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f4f4f5; color: #18181b; overflow-x: hidden; }
+        /* NOVO VISUAL DE ALTO CONTRASTE */
+        .glass-card { background: #ffffff; border: 1px solid #d4d4d8; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        .input-field { background: #ffffff !important; border: 2px solid #a1a1aa !important; color: #000 !important; font-weight: 900; }
+        .input-field:focus { border-color: #eab308 !important; outline: none; box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.3); }
+        .input-field::placeholder { color: #71717a; font-weight: bold; }
+        .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; border: 2px solid #ca8a04; }
+        .btn-gold:hover { background: #facc15; }
+        .card-aniversariante {
+            background: linear-gradient(90deg, #fff1a8 0%, #fff8d6 50%, #f3e8ff 100%) !important;
+            border-left: 12px solid #eab308 !important;
+            box-shadow: inset 0 0 0 2px rgba(234, 179, 8, 0.45), 0 8px 24px rgba(234, 179, 8, 0.25) !important;
+        }
+        .item-cliente { border-bottom: 1px solid #e4e4e7; transition: 0.3s; background: #ffffff; }
+        .item-cliente:hover { background: #f4f4f5; }
+        .cliente-bloqueada { background: #fef2f2 !important; border-left: 6px solid #ef4444 !important; }
+        .cliente-checkin-ok { background: #f0fdf4 !important; }
+        .login-bg { background: radial-gradient(circle at center, #27272a 0%, #09090b 100%); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #a1a1aa; border-radius: 10px; }
+        .theme-toggle {
+            position: relative; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 14px;
+            padding: 7px 10px; border-radius: 999px; border: 1px solid #ca8a04;
+            background: #fff; color: #854d0e; font-size: 9px; font-weight: 900; text-transform: uppercase;
+            letter-spacing: .06em; box-shadow: 0 4px 14px rgba(0,0,0,.08); cursor: pointer;
+        }
+        /* Tema escuro — só afeta a tela DEPOIS de logado (#conteudo-sistema); a tela
+           de login continua sempre escura como já era, e sem esse botão. Aqui a
+           direção é invertida em relação às outras telas: o sistema já é claro por
+           padrão, então o botão liga um tema escuro por cima. */
+        body.tema-escuro { background-color: #09090b; color: #f4f4f5; }
+        body.tema-escuro #conteudo-sistema .theme-toggle { background: rgba(0,0,0,.72); color: #facc15; border-color: rgba(234,179,8,.45); }
+        body.tema-escuro #conteudo-sistema header { background: #18181b !important; border-color: #3f3f46 !important; }
+        body.tema-escuro #conteudo-sistema h1,
+        body.tema-escuro #conteudo-sistema h2,
+        body.tema-escuro #conteudo-sistema h3,
+        body.tema-escuro #conteudo-sistema .text-zinc-900 { color: #f4f4f5 !important; }
+        body.tema-escuro #conteudo-sistema .text-zinc-700,
+        body.tema-escuro #conteudo-sistema .text-zinc-600,
+        body.tema-escuro #conteudo-sistema .text-zinc-500 { color: #a1a1aa !important; }
+        body.tema-escuro #conteudo-sistema .bg-zinc-100 { background: #27272a !important; border-color: #3f3f46 !important; }
+        body.tema-escuro #conteudo-sistema .bg-zinc-200 { background: #3f3f46 !important; border-color: #52525b !important; }
+        body.tema-escuro #conteudo-sistema .glass-card { background: #18181b !important; border-color: #3f3f46 !important; color: #f4f4f5 !important; }
+        body.tema-escuro #conteudo-sistema .input-field { background: #09090b !important; border-color: #52525b !important; color: #fff !important; }
+        body.tema-escuro #conteudo-sistema .input-field::placeholder { color: #71717a !important; }
+        /* :not(.card-aniversariante) é essencial aqui: sem isso, esta regra (mais
+           específica por causa do #conteudo-sistema) vencia o fundo dourado original
+           do cartão de aniversariante e deixava o texto (forçado escuro logo abaixo,
+           pra manter legibilidade no fundo claro) invisível — texto escuro em cima
+           de fundo escuro. */
+        body.tema-escuro #conteudo-sistema .item-cliente:not(.card-aniversariante) { background: #18181b !important; border-color: #3f3f46 !important; }
+        body.tema-escuro #conteudo-sistema .item-cliente:hover:not(.card-aniversariante) { background: #27272a !important; }
+        body.tema-escuro #conteudo-sistema .cliente-checkin-ok { background: #052e16 !important; }
+        body.tema-escuro #conteudo-sistema .cliente-bloqueada { background: #450a0a !important; }
+        body.tema-escuro #conteudo-sistema .bg-red-100 { background: #450a0a !important; border-color: #7f1d1d !important; }
+        body.tema-escuro #conteudo-sistema .bg-blue-50 { background: #172554 !important; border-color: #1e3a8a !important; }
+        /* Cartão de aniversariante mantém o visual claro original (dourado sobre
+           fundo claro) mesmo no tema escuro, pra não perder o destaque. */
+        body.tema-escuro #conteudo-sistema .card-aniversariante,
+        body.tema-escuro #conteudo-sistema .card-aniversariante * { color: #18181b !important; }
+    </style>
+</head>
+<body class="p-4 md:p-8 flex flex-col min-h-screen relative">
+    <div id="status-conexao" class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.5)] hidden z-[9999] animate-pulse">
+        🔴 Sem Internet — Operação Pausada
+    </div>
+    <div class="fixed inset-0 z-[99999] bg-[#050505] flex-col items-center justify-center p-8 text-center flex md:hidden">
+        <div class="login-card p-8 rounded-[2.5rem] border border-red-500/30 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.15)]">
+            <span class="text-6xl mb-6">🖥️</span>
+            <h1 class="text-xl font-black uppercase italic text-red-500 mb-3 tracking-tighter">Acesso Restrito</h1>
+            <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">O sistema de Portaria deve ser acessado <br><span class="text-white">exclusivamente por um computador</span>.</p>
+        </div>
+    </div>
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20">
+        <span id="toast-icon" class="text-lg">⚠️</span>
+        <span id="toast-msg">Mensagem de erro</span>
+    </div>
 
-  // ===== CÁLCULOS (data de nascimento, aniversário da semana, corte do turno) =====
-  function corteTurno() {
-    const agora = new Date(), corte = new Date();
-    corte.setHours(5, 0, 0, 0);
-    if (agora < corte) corte.setDate(corte.getDate() - 1);
-    return corte;
-  }
-  function dataVisita(c) {
-    if (!c.ultima_visita) return null;
-    const d = new Date(c.ultima_visita);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  function aniversarianteSemana(dataISO) {
-    if (!dataISO) return false;
-    const partes = dataISO.split('-');
-    if (partes.length < 3) return false;
-    const hoje = new Date();
-    const inicio = new Date(hoje); inicio.setDate(hoje.getDate() - hoje.getDay()); inicio.setHours(0, 0, 0, 0);
-    const fim = new Date(inicio); fim.setDate(inicio.getDate() + 6); fim.setHours(23, 59, 59, 999);
-    const mes = parseInt(partes[1], 10), dia = parseInt(partes[2], 10);
-    return [hoje.getFullYear() - 1, hoje.getFullYear(), hoje.getFullYear() + 1].some(ano => {
-      const niver = new Date(ano, mes - 1, dia, 12, 0, 0);
-      return niver >= inicio && niver <= fim;
-    });
-  }
-  window.updateIdade = () => {
-    const v = document.getElementById('nascimento').value;
-    if (!v) { document.getElementById('idadeDisplay').textContent = '--'; return; }
-    const hoje = new Date(), nasc = new Date(v + 'T12:00:00');
-    let i = hoje.getFullYear() - nasc.getFullYear();
-    if (hoje.getMonth() < nasc.getMonth() || (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate())) i--;
-    document.getElementById('idadeDisplay').textContent = isNaN(i) ? '--' : i;
-  };
-  document.getElementById('nascimento').onchange = window.updateIdade;
-
-  window.maskCPF = i => {
-    let v = i.value.replace(/\D/g, '').substring(0, 11);
-    v = v.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-    i.value = v;
-  };
-  window.maskTel = i => {
-    let v = i.value.replace(/\D/g, '').substring(0, 11);
-    v = v.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d)(\d{4})$/, '$1-$2');
-    i.value = v;
-  };
-
-  function soDigitos(v) { return String(v || '').replace(/\D/g, ''); }
-
-  window.avisarDuplicidade = () => {
-    const cpf = document.getElementById('cpf').value, tel = document.getElementById('tel').value;
-    const c = soDigitos(cpf), t = soDigitos(tel);
-    if (c.length < 11 && t.length < 10) return;
-    const editId = document.getElementById('editId').value;
-    const achou = clientesCache.find(x => x.id !== editId && ((c && soDigitos(x.cpf) === c) || (t && soDigitos(x.tel) === t)));
-    if (!achou) return;
-    if (achou.bloqueada) {
-      mostrarToast(`Proibida a entrada! Motivo: ${achou.motivo_bloqueio || 'sem motivo registrado'}`, false);
-      limparFormulario();
-      return;
-    }
-    if (confirm(`Cliente encontrada: ${achou.nome}\n\nOK: fazer check-in dela (já é cadastrada).\nCancelar: editar os dados dela.`)) {
-      fazerCheckin(achou.id);
-      limparFormulario();
-    } else {
-      prepararEdicao(achou.id);
-    }
-  };
-
-  // ===== RENDER =====
-  function renderLista() {
-    const termo = document.getElementById('busca').value.trim().toLowerCase();
-    const corte = corteTurno();
-    let lista;
-    if (termo) {
-      lista = clientesCache.filter(c => `${c.nome} ${c.cpf || ''} ${c.tel || ''}`.toLowerCase().includes(termo)).slice(0, 100);
-    } else {
-      lista = clientesCache.filter(c => { const d = dataVisita(c); return d && d >= corte; });
-    }
-    const contagem = clientesCache.filter(c => { const d = dataVisita(c); return d && d >= corte; }).length;
-    document.getElementById('placar').textContent = `${contagem} check-in(s) nesta virada`;
-
-    lista.sort((a, b) => (dataVisita(b)?.getTime() || 0) - (dataVisita(a)?.getTime() || 0));
-
-    const cont = document.getElementById('lista');
-    if (!lista.length) { cont.innerHTML = '<p class="vazio">Nenhum resultado.</p>'; return; }
-
-    cont.innerHTML = lista.map(c => {
-      const visita = dataVisita(c);
-      const naCasa = visita ? visita >= corte : false;
-      const isNiver = aniversarianteSemana(c.data_nascimento);
-      const classeCard = c.bloqueada ? 'bloqueada' : (isNiver ? 'aniversariante' : (naCasa ? 'na-casa' : ''));
-
-      let acoes;
-      if (c.bloqueada) {
-        acoes = `
-          <div class="acoes">
-            <button onclick="desbloquear('${c.id}')">Desbloquear</button>
-            <div class="acoes-linha"><button class="btn-mini" onclick="prepararEdicao('${c.id}')">Editar</button></div>
-          </div>`;
-      } else if (naCasa) {
-        acoes = `
-          <div class="acoes">
-            <span class="ok-badge">&check; Na casa</span>
-            <div class="acoes-linha">
-              <button class="btn-mini" onclick="prepararEdicao('${c.id}')">Editar</button>
-              <button class="btn-mini" onclick="bloquear('${c.id}')">Bloquear</button>
+    <div id="solteiras-login" class="tela-login">
+        <form id="form-login-solteiras" class="login-card">
+            <div class="login-logo-wrap">
+                <img src="logo-eclub.png" alt="E-Club" class="login-logo-img"
+                    onerror="this.style.display='none'; document.getElementById('logoFallbackLoginSolteiras').style.display='flex';">
+                <div id="logoFallbackLoginSolteiras" class="login-logo-fallback" style="display:none">e</div>
             </div>
-          </div>`;
-      } else {
-        const aberta = casaAbertaAgora();
-        acoes = `
-          <div class="acoes">
-            <button onclick="fazerCheckin('${c.id}')" ${aberta ? '' : 'disabled title="Casa fechada"'}>${aberta ? 'Liberar' : '🔒 Travado'}</button>
-            <div class="acoes-linha">
-              <button class="btn-mini" onclick="prepararEdicao('${c.id}')">Editar</button>
-              <button class="btn-mini" onclick="bloquear('${c.id}')">Bloquear</button>
+            <div class="login-selo">Acesso Restrito</div>
+            <h1 class="login-titulo">Solteiras</h1>
+            <!-- Aviso de sessão derrubada (login aberto em outro aparelho). -->
+            <div id="aviso-sessao-solteiras" class="hidden" style="margin-bottom:18px;padding:14px;border-radius:16px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);text-align:left;">
+                <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#f87171;margin:0 0 4px;">Sessão encerrada</p>
+                <p id="aviso-sessao-solteiras-txt" style="font-size:10px;font-weight:700;color:#fca5a5;line-height:1.5;margin:0;"></p>
             </div>
-          </div>`;
-      }
+            <p id="erro-login-solteiras" class="erro hidden" role="alert">Acesso não autorizado.</p>
+            <input type="email" id="email-solteiras" name="email" autocomplete="username" autofocus placeholder="E-mail do operador" required>
+            <input type="password" id="senha-solteiras" name="password" autocomplete="current-password" placeholder="Senha" required>
+            <button type="submit" id="btn-login-solteiras">Acessar sistema</button>
+            <button type="button" onclick="mostrarRecuperarSenhaSolteiras()" class="login-link-sec">Esqueci minha senha</button>
+        </form>
+        <div id="form-recuperar-senha-solteiras" class="login-card hidden">
+            <div class="login-logo-wrap">
+                <img src="logo-eclub.png" alt="E-Club" class="login-logo-img"
+                    onerror="this.style.display='none'; document.getElementById('logoFallbackRecuperarSolteiras').style.display='flex';">
+                <div id="logoFallbackRecuperarSolteiras" class="login-logo-fallback" style="display:none">e</div>
+            </div>
+            <div class="login-selo">Recuperar acesso</div>
+            <h1 class="login-titulo" style="font-size:24px">Redefinir senha</h1>
+            <p style="font-size:10px;color:#8a8a8a;font-weight:700;text-transform:uppercase;margin-bottom:22px;line-height:1.5;">Informe o e-mail cadastrado. Se ele já tiver acesso liberado, um link para criar uma nova senha é enviado para essa caixa de entrada.</p>
+            <input type="email" id="email-recuperar-solteiras" autocomplete="username" placeholder="Seu e-mail" required>
+            <button type="button" onclick="enviarRecuperarSenhaSolteiras()" id="btn-recuperar-solteiras">Enviar link</button>
+            <button type="button" onclick="mostrarLoginNormalSolteiras()" class="login-link-sec">Voltar para o login</button>
+            <p id="status-recuperar-solteiras" class="hidden" style="margin-top:16px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;"></p>
+        </div>
+    </div>
 
-      return `
-        <div class="card ${classeCard}">
-          <div class="info">
-            <span class="nome">${escapeHtml(c.nome)} ${isNiver && !c.bloqueada ? '<span class="badge-niver">🎂 aniversário da semana</span>' : ''}</span>
-            <span class="sub">📱 ${escapeHtml(c.tel) || '---'} &nbsp;|&nbsp; 🆔 ${escapeHtml(c.cpf) || '---'}</span>
-            <span class="sub">Última visita: ${visita ? visita.toLocaleDateString('pt-BR') : '---'}</span>
-            ${c.obs && !c.bloqueada ? `<span class="obs">📌 ${escapeHtml(c.obs)}</span>` : ''}
-            ${c.bloqueada ? `<span class="badge-bloqueio">🚨 Proibida — ${escapeHtml(c.motivo_bloqueio) || 'sem motivo'}</span>` : ''}
-          </div>
-          ${acoes}
-        </div>`;
-    }).join('');
-  }
+    <div id="telaBloqueio" class="hidden fixed inset-0 z-[99999] bg-black/95 backdrop-blur-xl flex-col items-center justify-center p-8 text-center flex">
+        <div class="login-card p-8 rounded-[2.5rem] border border-red-500/50 flex flex-col items-center shadow-[0_0_50px_rgba(239,68,68,0.3)]">
+            <span class="text-6xl mb-6 animate-pulse">🚨</span>
+            <h1 class="text-2xl font-black uppercase italic text-red-500 mb-3 tracking-tighter">CONEXÃO ENCERRADA</h1>
+            <p class="text-xs text-zinc-300 font-bold uppercase tracking-widest leading-relaxed">Sua conta foi acessada de outro dispositivo.</p>
+            <button onclick="sairSistema(false)" class="mt-8 px-8 py-4 bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase rounded-2xl transition-colors">Voltar ao Login</button>
+        </div>
+    </div>
 
-  // ===== AÇÕES =====
-  window.fazerCheckin = async (id) => {
-    const { data, error } = await sb.rpc('checkin_solteira', { p_id: id });
-    if (error) { mostrarToast(error.message, false); return; }
-    const idx = clientesCache.findIndex(c => c.id === id);
-    if (idx > -1) clientesCache[idx] = data;
-    renderLista();
-    mostrarToast('Liberada com sucesso!', true);
-  };
+    <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto flex-grow w-full">
+        <button id="btnTemaSolteiras" type="button" class="theme-toggle">🌙 <span>ESCURO</span></button>
+        <header class="flex justify-between items-center mb-8 gap-6 bg-white p-4 rounded-3xl border border-zinc-300 shadow-sm">
+            <div class="flex items-center gap-4">
+                <div class="bg-black rounded-xl p-2"><img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-10"></div>
+                <div>
+                    <h1 class="text-2xl font-black uppercase italic text-zinc-900 leading-none">VIP Single Ladies</h1>
+                    <p id="labelOperador" class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1">---</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="caixaTurno" class="bg-zinc-100 border border-zinc-300 p-3 rounded-2xl text-center min-w-[190px]">
+                    <p class="text-[9px] font-black text-zinc-600 uppercase">Situação da Casa</p>
+                    <p id="statusTurno" class="text-sm font-black uppercase leading-tight mt-1 text-zinc-500">VERIFICANDO...</p>
+                </div>
+                <div class="bg-zinc-100 border border-zinc-300 p-3 rounded-2xl text-center min-w-[120px]">
+                    <p class="text-[9px] font-black text-zinc-600 uppercase">Check-ins Turno</p>
+                    <p id="contagemEvento" class="text-2xl font-black text-green-600 leading-none mt-1">0</p>
+                </div>
+                <button onclick="sairSistema()" class="bg-red-100 border border-red-300 text-red-600 px-4 py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-red-200 transition-colors">Sair</button>
+            </div>
+        </header>
+        <div id="faixaTravaTurno" class="hidden mb-8 rounded-3xl border-2 border-red-500 bg-red-50 p-5 text-center">
+            <p class="text-red-700 font-black uppercase italic text-lg leading-tight">🔒 <span id="faixaTravaMotivo">CASA FECHADA</span></p>
+            <p class="text-red-600 font-bold uppercase text-[10px] tracking-widest mt-2">Liberar entrada e cadastro novo estão bloqueados. Consultar e editar continuam liberados.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <aside class="lg:col-span-1">
+                <div class="glass-card p-6 rounded-[2rem] sticky top-8">
+                    <h2 id="tituloForm" class="text-zinc-900 font-black uppercase italic text-sm mb-6 border-b border-zinc-200 pb-2">📋 Cadastro / Entrada</h2>
+                    <form id="formSolteira" class="space-y-4">
+                        <input type="hidden" id="editId">
+                        <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field text-sm" required>
+                        <input type="tel" id="tel" placeholder="WHATSAPP" class="w-full p-4 rounded-xl input-field text-sm" oninput="maskTel(this)" onblur="validarDuplicidade('tel')" required>
+                        <input type="text" id="cpf" placeholder="CPF COMPLETO" class="w-full p-4 rounded-xl input-field text-sm" oninput="maskCPF(this)" onblur="validarDuplicidade('cpf')" required>
+                        <div>
+                            <label class="text-[10px] font-black text-zinc-500 uppercase ml-2">Data de Nascimento</label>
+                            <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field text-sm uppercase mt-1" onchange="updateIdade(this.value)" required>
+                        </div>
+                        <div class="bg-zinc-100 p-4 rounded-xl border border-zinc-300 flex justify-between items-center text-zinc-900">
+                            <p class="text-[10px] font-black text-zinc-600 uppercase">Idade Calculada</p>
+                            <p id="idadeDisplay" class="text-xl font-black text-zinc-900">--</p>
+                        </div>
+                        <textarea id="obs" placeholder="OBSERVAÇÕES (OPCIONAL)..." class="w-full p-4 rounded-xl input-field text-xs uppercase h-20 resize-none"></textarea>
+                        <button type="submit" id="btnSalvar" class="w-full btn-gold py-5 rounded-xl uppercase text-sm shadow-md mt-2 active:scale-95 transition-all">Confirmar e Liberar</button>
+                        <button type="button" id="btnCancelarEdicao" onclick="limparFormulario()" class="hidden w-full bg-zinc-200 text-zinc-700 hover:bg-zinc-300 py-3 rounded-xl uppercase text-[10px] font-black mt-2 transition-colors border border-zinc-300">Cancelar Edição</button>
+                    </form>
+                </div>
+            </aside>
+            <main class="lg:col-span-2 space-y-6">
+                <div class="relative w-full">
+                    <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." class="w-full p-5 rounded-2xl input-field text-base font-black uppercase pl-14 shadow-md" oninput="filtrarClientes()">
+                    <span class="absolute left-5 top-5 text-xl text-zinc-500">🔍</span>
+                </div>
+                <div class="glass-card rounded-[2rem] overflow-hidden min-h-[400px]">
+                    <div id="listaSolteiras" class="flex flex-col"></div>
+                </div>
+            </main>
+        </div>
+    </div>
 
-  window.bloquear = async (id) => {
-    const motivo = prompt('Qual o motivo do bloqueio?');
-    if (!motivo) return;
-    const { data, error } = await sb.rpc('bloquear_cliente_solteira', { p_id: id, p_motivo: motivo });
-    if (error) { mostrarToast(error.message, false); return; }
-    const idx = clientesCache.findIndex(c => c.id === id);
-    if (idx > -1) clientesCache[idx] = data;
-    renderLista();
-    mostrarToast('Cliente bloqueada.', true);
-  };
-
-  window.desbloquear = async (id) => {
-    if (!confirm('Tem certeza que deseja desbloquear a entrada dessa cliente?')) return;
-    const { data, error } = await sb.rpc('desbloquear_cliente_solteira', { p_id: id });
-    if (error) { mostrarToast(error.message, false); return; }
-    const idx = clientesCache.findIndex(c => c.id === id);
-    if (idx > -1) clientesCache[idx] = data;
-    renderLista();
-    mostrarToast('Cliente desbloqueada.', true);
-  };
-
-  window.prepararEdicao = (id) => {
-    const c = clientesCache.find(x => x.id === id);
-    if (!c) return;
-    document.getElementById('editId').value = c.id;
-    document.getElementById('nome').value = c.nome || '';
-    document.getElementById('tel').value = c.tel || '';
-    document.getElementById('cpf').value = c.cpf || '';
-    document.getElementById('nascimento').value = c.data_nascimento || '';
-    document.getElementById('obs').value = c.obs || '';
-    window.updateIdade();
-    document.getElementById('btnSalvar').textContent = 'Atualizar dados';
-    document.getElementById('btnSalvar').disabled = false;
-    document.getElementById('btnCancelarEdicao').style.display = 'block';
-    document.getElementById('formSolteira').scrollIntoView({ behavior: 'smooth' });
-  };
-
-  function limparFormulario() {
-    document.getElementById('editId').value = '';
-    document.getElementById('nome').value = '';
-    document.getElementById('tel').value = '';
-    document.getElementById('cpf').value = '';
-    document.getElementById('nascimento').value = '';
-    document.getElementById('obs').value = '';
-    document.getElementById('idadeDisplay').textContent = '--';
-    document.getElementById('btnSalvar').textContent = 'Confirmar e liberar';
-    document.getElementById('btnSalvar').disabled = !casaAbertaAgora();
-    document.getElementById('btnCancelarEdicao').style.display = 'none';
-    document.getElementById('erroForm').textContent = '';
-    document.getElementById('sucessoForm').textContent = '';
-  }
-  document.getElementById('btnCancelarEdicao').onclick = limparFormulario;
-
-  document.getElementById('btnSalvar').onclick = async () => {
-    const editId = document.getElementById('editId').value || null;
-    const nome = document.getElementById('nome').value.trim();
-    const tel = document.getElementById('tel').value.trim();
-    const cpf = document.getElementById('cpf').value.trim();
-    const nascimento = document.getElementById('nascimento').value || null;
-    const obs = document.getElementById('obs').value.trim();
-    const erro = document.getElementById('erroForm');
-    const sucesso = document.getElementById('sucessoForm');
-    erro.textContent = ''; sucesso.textContent = '';
-
-    if (!nome) { erro.textContent = 'Digite o nome completo.'; return; }
-
-    const { data, error } = await sb.rpc('salvar_cliente_solteira', {
-      p_id: editId,
-      p_nome: nome,
-      p_tel: tel || null,
-      p_cpf: cpf || null,
-      p_data_nascimento: nascimento,
-      p_obs: obs || null
+<script type="module">
+    // --- Configuração da conexão com o Supabase ---
+    // OBS: a biblioteca do CDN já cria uma variável global chamada "supabase",
+    // por isso o cliente aqui se chama "sb" (nunca "supabase").
+    const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
+    // storageKey separado por tela + "storage: sessionStorage": o login de
+    // Solteiras não se mistura com o de outra tela no mesmo navegador, e não
+    // fica guardado depois que o navegador fecha ou o aparelho reinicia.
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { storageKey: 'sb-solteiras-auth', storage: window.sessionStorage }
     });
 
-    if (error) { erro.textContent = error.message; return; }
+    // Se um aviso de "sessão encerrada" foi deixado antes do reload, mostra
+    // ele agora na tela de login.
+    (() => {
+        let aviso = '';
+        try {
+            aviso = sessionStorage.getItem('eclub_solteiras_aviso_sessao') || '';
+            sessionStorage.removeItem('eclub_solteiras_aviso_sessao');
+        } catch (_) {}
+        if (aviso) {
+            document.getElementById('aviso-sessao-solteiras-txt').textContent = aviso;
+            document.getElementById('aviso-sessao-solteiras').classList.remove('hidden');
+        }
+    })();
 
-    const idx = clientesCache.findIndex(c => c.id === data.id);
-    if (idx > -1) clientesCache[idx] = data; else clientesCache.push(data);
-    renderLista();
-    sucesso.textContent = editId ? 'Dados atualizados.' : 'Cadastro salvo e liberado!';
-    limparFormulario();
-  };
+    let clientesCache = [];
+    let operadorLogado = "";
+    let eventoHojeCache = null;
+    let intervaloAtualizacao = null;
+    let buscaTimer = null;
+    let restaurandoSessao = false;
+    // Cache local da lista completa de cadastros, usada só pela busca (ver
+    // garantirListaCompleta() mais abaixo) — evita reler até milhares de
+    // cadastros do banco a cada letra digitada.
+    let listaCompletaCache = null;
+    let carregandoListaCompleta = null;
+    // ===== MODO OFFLINE =====
+    // A lista fica guardada na própria máquina pra sobreviver a um reinício no
+    // meio da queda, e a fila guarda liberações e cadastros feitos sem internet
+    // até conseguir mandar pro servidor.
+    const CHAVE_LISTA_LOCAL = 'eclub_solteiras_lista_offline_v1';
+    const CHAVE_FILA_OFFLINE = 'eclub_solteiras_fila_offline_v1';
+    // Lista guardada há mais de 20h é descartada: evita liberar na noite
+    // seguinte usando dados da festa anterior.
+    const VALIDADE_LISTA_MS = 20 * 60 * 60 * 1000;
+    let sincronizando = false;
+    // ===== UMA CONTA, UM COMPUTADOR =====
+    // Mesmo mecanismo já usado no Promoter e na Portaria: um código fixo
+    // gravado neste aparelho, carimbado em acessos.sessao_maquina_id a cada
+    // login. Se o mesmo login entrar em outro aparelho, o carimbo muda e
+    // este aqui cai na chamada seguinte.
+    const CHAVE_MAQUINA = "eclub_solteiras_maquina_v1";
+    function idDestaMaquina() {
+        try {
+            let id = localStorage.getItem(CHAVE_MAQUINA);
+            if (!id || !/^[A-Za-z0-9_-]{6,64}$/.test(id)) {
+                id = "m" + Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+                localStorage.setItem(CHAVE_MAQUINA, id);
+            }
+            return id;
+        } catch {
+            if (!window.__maquinaTemporaria) window.__maquinaTemporaria = "m" + Math.random().toString(36).slice(2, 14);
+            return window.__maquinaTemporaria;
+        }
+    }
+    const MAQUINA_ID = idDestaMaquina();
+    // Limpa dado digitado por qualquer pessoa (nome, telefone, CPF, observação, motivo de
+    // bloqueio etc.) antes de colocar na tela — evita que um valor com código HTML/script
+    // rode dentro da sessão autenticada de quem usa o painel de Solteiras.
+    const escapeHtml = (v) => String(v ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    // ===== TEMA CLARO/ESCURO =====
+    // Só existe (e só aparece) depois de logado, dentro do #conteudo-sistema — a
+    // tela de login continua sempre no visual escuro padrão, sem esse botão. Aqui
+    // a direção é invertida em relação ao Promoter/Portaria: o sistema já é claro
+    // por padrão, então o botão liga um tema escuro por cima.
+    function aplicarTemaSolteiras(tema) {
+        const escuro = tema === 'escuro';
+        document.body.classList.toggle('tema-escuro', escuro);
+        const btn = document.getElementById('btnTemaSolteiras');
+        if (btn) btn.innerHTML = escuro ? '☀️ <span>CLARO</span>' : '🌙 <span>ESCURO</span>';
+    }
+    document.getElementById('btnTemaSolteiras')?.addEventListener('click', () => {
+        const atual = document.body.classList.contains('tema-escuro') ? 'escuro' : 'claro';
+        const novo = atual === 'escuro' ? 'claro' : 'escuro';
+        localStorage.setItem('eclub_solteiras_tema_visual_v1', novo);
+        aplicarTemaSolteiras(novo);
+    });
+    aplicarTemaSolteiras(localStorage.getItem('eclub_solteiras_tema_visual_v1') || 'claro');
+    window.addEventListener('offline', () => atualizarAvisoOffline());
+    window.addEventListener('online', async () => {
+        atualizarAvisoOffline();
+        const { data: sessaoAtual } = await sb.auth.getSession();
+        if (sessaoAtual.session) sincronizarFilaOffline().catch(() => {});
+    });
+    function normalizarDataNascimento(d) {
+        if (!d) return null;
+        if (!isNaN(d) && Number(d) > 10000) {
+            const excelDate = Number(d);
+            const dateObj = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
+            const dia = String(dateObj.getUTCDate()).padStart(2, '0');
+            const mes = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+            const ano = dateObj.getUTCFullYear();
+            return { raw:`${ano}-${mes}-${dia}`, display:`${dia}/${mes}` };
+        }
+        const s = String(d).trim();
+        if (s.includes('/')) {
+            const p=s.split('/');
+            if (p.length === 3) return { raw:`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`, display:`${p[0].padStart(2,'0')}/${p[1].padStart(2,'0')}` };
+        }
+        if (s.includes('-')) {
+            const p=s.split('-');
+            if (p.length >= 3) return { raw:s.substring(0,10), display:`${p[2].padStart(2,'0')}/${p[1].padStart(2,'0')}` };
+        }
+        return null;
+    }
+    function checkAniversarioSemana(dataNorm) {
+        if (!dataNorm?.raw) return false;
+        const partes=dataNorm.raw.split('-'); if (partes.length < 3) return false;
+        const hoje=new Date();
+        const inicio=new Date(hoje); inicio.setDate(hoje.getDate()-hoje.getDay()); inicio.setHours(0,0,0,0);
+        const fim=new Date(inicio); fim.setDate(inicio.getDate()+6); fim.setHours(23,59,59,999);
+        const mes=parseInt(partes[1],10), dia=parseInt(partes[2],10);
+        return [hoje.getFullYear()-1,hoje.getFullYear(),hoje.getFullYear()+1].some(ano => {
+            const niver=new Date(ano,mes-1,dia,12,0,0); return niver >= inicio && niver <= fim;
+        });
+    }
+    function dataVisita(c) {
+        if (!c?.ultima_visita) return null;
+        const d=new Date(c.ultima_visita); return isNaN(d.getTime()) ? null : d;
+    }
+    function corteTurno() {
+        const agora=new Date(), corte=new Date(); corte.setHours(5,0,0,0); if (agora < corte) corte.setDate(corte.getDate()-1); return corte;
+    }
+    // Mesma normalização usada no backend (remove acento, maiúsculas, espaços
+    // duplicados) — precisa ser idêntica pra busca local dar o mesmo resultado
+    // de antes, quando cada letra digitada ia direto pro servidor.
+    function normalizeBusca(v) {
+        return String(v ?? '').trim()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .toUpperCase().replace(/\s+/g, ' ').trim();
+    }
+    // ---- lista guardada na máquina ----
+    function salvarListaLocal(lista) {
+        try { localStorage.setItem(CHAVE_LISTA_LOCAL, JSON.stringify({em:Date.now(), lista})); } catch(_) {}
+    }
+    function lerListaLocal() {
+        try {
+            const bruto = localStorage.getItem(CHAVE_LISTA_LOCAL);
+            if (!bruto) return null;
+            const o = JSON.parse(bruto);
+            if (!o || !Array.isArray(o.lista)) return null;
+            if (Date.now() - Number(o.em || 0) > VALIDADE_LISTA_MS) return null;
+            return o.lista;
+        } catch(_) { return null; }
+    }
+    // ---- fila de operações feitas sem internet ----
+    function lerFila() {
+        try { const f = JSON.parse(localStorage.getItem(CHAVE_FILA_OFFLINE)); return Array.isArray(f) ? f : []; }
+        catch(_) { return []; }
+    }
+    function salvarFila(f) {
+        try { localStorage.setItem(CHAVE_FILA_OFFLINE, JSON.stringify(f)); } catch(_) {}
+        atualizarAvisoOffline();
+    }
+    function enfileirar(item) {
+        const f = lerFila();
+        f.push({...item, criadoEm:new Date().toISOString()});
+        salvarFila(f);
+    }
+    // Falha de rede (internet caiu) x erro do servidor (respondeu recusando).
+    // Rede a gente guarda pra depois; recusa do servidor não adianta repetir.
+    function ehFalhaDeRede(e) {
+        if (!navigator.onLine) return true;
+        if (e?.status) return false;
+        return e instanceof TypeError || /fetch|network|failed|load/i.test(String(e?.message || ''));
+    }
+    function atualizarAvisoOffline() {
+        const pendentes = lerFila().length;
+        const semNet = !navigator.onLine;
+        const el = document.getElementById('status-conexao');
+        if (!el) return;
+        if (!semNet && !pendentes) { el.classList.add('hidden'); return; }
+        el.classList.remove('hidden');
+        el.classList.toggle('bg-red-600', semNet);
+        el.classList.toggle('bg-yellow-600', !semNet);
+        el.textContent = semNet
+            ? `🔴 SEM INTERNET — OPERAÇÃO CONTINUA NORMAL${pendentes ? ` · ${pendentes} PENDENTE(S)` : ''}`
+            : `🟡 ENVIANDO ${pendentes} REGISTRO(S) FEITO(S) SEM INTERNET...`;
+    }
+    function garantirListaCompleta() {
+        // Travado = nenhum dado de cliente na tela, nem do servidor nem do
+        // que estava guardado na máquina.
+        if (travadoAgora()) { limparCacheClientes(); return Promise.resolve([]); }
+        if (listaCompletaCache) return Promise.resolve(listaCompletaCache);
+        if (!carregandoListaCompleta) {
+            carregandoListaCompleta = apiSolteiras('listar_tudo')
+                .then(data => {
+                    listaCompletaCache = Array.isArray(data.clientes) ? data.clientes : [];
+                    salvarListaLocal(listaCompletaCache);
+                    return listaCompletaCache;
+                })
+                .catch(e => {
+                    // Recusa por horário (423) não é queda de internet: aí não
+                    // vale cair pra lista guardada, senão a trava não serviria
+                    // pra nada.
+                    if (Number(e?.status) === 423) { limparCacheClientes(); throw e; }
+                    // Sem internet: usa a lista guardada na máquina. É isso que
+                    // permite continuar liberando durante a queda, inclusive se o
+                    // computador tiver sido reiniciado no meio.
+                    const local = lerListaLocal();
+                    if (local) { listaCompletaCache = local; return listaCompletaCache; }
+                    throw e;
+                })
+                .finally(() => { carregandoListaCompleta = null; });
+        }
+        return carregandoListaCompleta;
+    }
+    function atualizarListaCompletaEmSegundoPlano() {
+        if (travadoAgora()) { limparCacheClientes(); return; }
+        if (!listaCompletaCache) return;
+        apiSolteiras('listar_tudo').then(data => {
+            const novos = Array.isArray(data.clientes) ? data.clientes : [];
+            // Não deixa a lista do servidor apagar o que ainda está na fila:
+            // clientes cadastradas offline sumiriam da busca até subirem.
+            const fila = lerFila();
+            const idsPendentes = new Set(fila.filter(i => i.tipo === 'checkin').map(i => i.clienteId));
+            if (idsPendentes.size) {
+                novos.forEach(c => { if (idsPendentes.has(c.id)) c.ultima_visita = new Date().toISOString(); });
+            }
+            fila.filter(i => i.tipo === 'cadastro').forEach(i => {
+                if (!novos.some(c => c.id === i.cliente.id)) novos.push(i.cliente);
+            });
+            listaCompletaCache = novos;
+            salvarListaLocal(listaCompletaCache);
+        }).catch(() => {});
+    }
+    // ---- operações offline ----
+    function registrarCheckinOffline(id) {
+        enfileirar({tipo:'checkin', clienteId:id, dataEntrada:new Date().toISOString()});
+        if (Array.isArray(listaCompletaCache)) {
+            const c = listaCompletaCache.find(x => x.id === id);
+            if (c) c.ultima_visita = new Date().toISOString();
+            salvarListaLocal(listaCompletaCache);
+        }
+        const idx = clientesCache.findIndex(x => x.id === id);
+        if (idx >= 0) clientesCache[idx].ultima_visita = new Date().toISOString();
+        mostrarAviso('SEM INTERNET — LIBERADA E GUARDADA', true);
+    }
+    // Cliente nova cadastrada durante a queda ganha um código temporário só
+    // pra aparecer na busca da própria máquina. Quando a internet volta, o
+    // servidor cria o cadastro de verdade e o temporário é descartado.
+    function registrarCadastroOffline(dados) {
+        const idTemp = 'local_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        const cliente = {
+            id: idTemp,
+            nome: String(dados.nome || '').toUpperCase(),
+            tel: dados.tel || '',
+            cpf: dados.cpf || '',
+            data_nascimento: dados.data_nascimento || '',
+            obs: dados.obs || '',
+            bloqueada: false,
+            motivo_bloqueio: '',
+            ultima_visita: new Date().toISOString(),
+            pendente_envio: true
+        };
+        enfileirar({tipo:'cadastro', cliente, dados, dataEntrada:new Date().toISOString()});
+        if (Array.isArray(listaCompletaCache)) {
+            listaCompletaCache.push(cliente);
+            salvarListaLocal(listaCompletaCache);
+        }
+        clientesCache.push(cliente);
+        mostrarAviso('SEM INTERNET — CADASTRADA E LIBERADA', true);
+    }
+    // Confere duplicidade de CPF/telefone na lista guardada, quando não dá pra
+    // perguntar ao servidor.
+    function duplicidadeLocal(cpf, tel) {
+        const lista = listaCompletaCache || [];
+        const soDigitos = v => String(v || '').replace(/\D/g, '');
+        const c = soDigitos(cpf), t = soDigitos(tel);
+        return lista.find(x =>
+            (c && soDigitos(x.cpf) === c) || (t && soDigitos(x.tel) === t)
+        ) || null;
+    }
+    // Manda pro servidor tudo que ficou pendente.
+    async function sincronizarFilaOffline() {
+        const { data: sessaoAtual } = await sb.auth.getSession();
+        if (sincronizando || !navigator.onLine || !sessaoAtual.session) return;
+        const fila = lerFila();
+        if (!fila.length) return;
 
-  // ===== UTIL =====
-  function mostrarToast(msg, ok) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast ' + (ok ? 'ok' : 'erro');
-    t.style.display = 'block';
-    setTimeout(() => { t.style.display = 'none'; }, 3500);
-  }
-  function escapeHtml(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  }
+        sincronizando = true;
+        atualizarAvisoOffline();
+        const restantes = [];
+        let enviados = 0, jaConstavam = 0, recusados = 0;
+
+        for (const item of fila) {
+            try {
+                if (item.tipo === 'checkin') {
+                    await apiSolteiras('checkin', {id:item.clienteId, dataEntradaOffline:item.dataEntrada});
+                } else if (item.tipo === 'cadastro') {
+                    await apiSolteiras('salvar_cliente', {...item.dados, id:'', dataEntradaOffline:item.dataEntrada});
+                }
+                enviados++;
+            } catch (e) {
+                if (ehFalhaDeRede(e)) { restantes.push(item); continue; }
+                // Sessão tomada por outra máquina: NÃO descarta nada. Sobe quando
+                // esta máquina entrar de novo.
+                if (e?.codigo === 'SESSAO_EM_OUTRA_MAQUINA') {
+                    restantes.push(item);
+                    fila.slice(fila.indexOf(item) + 1).forEach(resto => restantes.push(resto));
+                    break;
+                }
+                // Servidor recusou: repetir não resolve. Cadastro duplicado
+                // acontece quando outra máquina já cadastrou a mesma cliente.
+                if (/já cadastrado|ja cadastrado/i.test(String(e?.message || ''))) jaConstavam++;
+                else { recusados++; console.warn('sincronizacao recusada:', item, e?.message); }
+            }
+        }
+
+        salvarFila(restantes);
+        sincronizando = false;
+        atualizarAvisoOffline();
+
+        if (enviados || recusados || jaConstavam) {
+            const partes = [];
+            if (enviados) partes.push(`${enviados} ENVIADO(S)`);
+            if (jaConstavam) partes.push(`${jaConstavam} JÁ CONSTAVA(M)`);
+            if (recusados) partes.push(`${recusados} RECUSADO(S)`);
+            mostrarAviso(`SINCRONIZADO: ${partes.join(' · ')}`, recusados === 0);
+        }
+        if (!restantes.length) {
+            // Descarta os códigos temporários e recarrega tudo do servidor.
+            listaCompletaCache = null;
+            await garantirListaCompleta().catch(() => {});
+            await atualizarPainelSeguro();
+        }
+    }
+    window.mostrarAviso = (msg,isSucesso=false) => {
+        const toast=document.getElementById('toast-aviso');
+        const bg=isSucesso?'bg-green-600':'bg-red-600';
+        const sh=isSucesso?'shadow-[0_0_20px_rgba(22,163,74,0.3)]':'shadow-[0_0_20px_rgba(220,38,38,0.3)]';
+        const icon=isSucesso?'✅':(msg.includes('ACESSO')?'👋':((msg.includes('PROIBIDA')||msg.includes('ENCERRADA'))?'🚨':'⚠️'));
+        toast.className=`fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20 ${bg} ${sh}`;
+        document.getElementById('toast-icon').innerText=icon; document.getElementById('toast-msg').innerText=msg;
+        setTimeout(()=>{toast.classList.remove('-translate-y-32','opacity-0');toast.classList.add('translate-y-0','opacity-100');},10);
+        setTimeout(()=>{toast.classList.remove('translate-y-0','opacity-100');toast.classList.add('-translate-y-32','opacity-0');},4000);
+    };
+    // ===== RECUPERAÇÃO DE SENHA (self-service) =====
+    window.mostrarRecuperarSenhaSolteiras = () => {
+        mensagemRecuperarSolteiras('');
+        document.getElementById('form-login-solteiras')?.classList.add('hidden');
+        document.getElementById('form-recuperar-senha-solteiras')?.classList.remove('hidden');
+        const emailAtual = document.getElementById('email-solteiras')?.value.trim();
+        const campo = document.getElementById('email-recuperar-solteiras');
+        if (campo) campo.value = emailAtual || '';
+    };
+    window.mostrarLoginNormalSolteiras = () => {
+        document.getElementById('form-recuperar-senha-solteiras')?.classList.add('hidden');
+        document.getElementById('form-login-solteiras')?.classList.remove('hidden');
+        setTimeout(() => document.getElementById('email-solteiras')?.focus(), 50);
+    };
+    function mensagemRecuperarSolteiras(msg, ok = false) {
+        const el = document.getElementById('status-recuperar-solteiras');
+        if (!el) return;
+        el.textContent = msg || '';
+        el.style.color = ok ? '#34d399' : '#f87171';
+        el.classList.remove('hidden');
+    }
+    window.enviarRecuperarSenhaSolteiras = async () => {
+        const campo = document.getElementById('email-recuperar-solteiras');
+        const email = campo?.value.trim() || '';
+        if (!email) return mensagemRecuperarSolteiras('Digite seu e-mail.');
+        const btn = document.getElementById('btn-recuperar-solteiras');
+        if (btn) { btn.disabled = true; btn.innerText = 'ENVIANDO...'; }
+        try {
+            const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://abreaporta.com.br/definir-senha-nova.html' });
+            if (error) throw error;
+            mensagemRecuperarSolteiras('Se esse e-mail tiver acesso liberado, o link para criar a nova senha já foi enviado. Confira também o spam.', true);
+        } catch (e) {
+            mensagemRecuperarSolteiras('Não foi possível enviar agora. Tente de novo.');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerText = 'ENVIAR LINK'; }
+        }
+    };
+    function mensagemAuth(msg) {
+        const el = document.getElementById('erro-login-solteiras');
+        if (!msg) { el.classList.add('hidden'); el.textContent = ''; return; }
+        el.textContent = msg;
+        el.classList.remove('hidden');
+    }
+    async function bloquearTelaSessao(msg) {
+        if (intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao=null;
+        document.getElementById('conteudo-sistema').classList.add('hidden');
+        document.getElementById('telaBloqueio').classList.remove('hidden'); document.getElementById('telaBloqueio').classList.add('flex');
+        mostrarAviso(msg || '🚨 CONEXÃO ENCERRADA.');
+    }
+    // ===== CHAMADA SEGURA PARA A EDGE FUNCTION =====
+    // Toda a tela de Solteiras passa por aqui — igual ao sistema antigo, que já
+    // concentrava tudo numa única Cloud Function (solteirasApi): zero leitura
+    // direta da tabela "clientes_solteiras" pelo navegador.
+    async function apiSolteiras(action, payload = {}) {
+        const { data: sessaoAtual } = await sb.auth.getSession();
+        if (!sessaoAtual.session) throw Object.assign(new Error('Sessão ausente.'), { status: 401 });
+        const { data, error } = await sb.functions.invoke('solteiras-api', {
+            body: { action, maquinaId: MAQUINA_ID, ...payload }
+        });
+        if (error) {
+            let payloadErro = {};
+            try { payloadErro = await error.context.json(); } catch (_) {}
+            const err = new Error(payloadErro?.error || error.message || 'Erro ao chamar a função.');
+            err.status = error.context?.status || 500;
+            err.codigo = payloadErro?.codigo || '';
+            if (err.codigo === 'SESSAO_EM_OUTRA_MAQUINA') {
+                try { sessionStorage.setItem('eclub_solteiras_aviso_sessao', err.message); } catch (_) {}
+                bloquearTelaSessao(err.message);
+            }
+            throw err;
+        }
+        if (data?.error) {
+            const err = new Error(data.error);
+            err.codigo = data.codigo || '';
+            throw err;
+        }
+        return data;
+    }
+    async function iniciarSessaoModulo() {
+        // O rpc posso_solteiras() aqui é só um "portão rápido" do lado do
+        // navegador — a Edge Function confere tudo de novo, por trás.
+        const { data: podeAcessar, error: erroPermissao } = await sb.rpc('posso_solteiras');
+        if (erroPermissao || !podeAcessar) {
+            throw Object.assign(new Error('Essa conta não tem (ou perdeu) o acesso à tela de Solteiras.'), { status: 403 });
+        }
+        // Carimba a conta para ESTE aparelho antes de qualquer outra coisa —
+        // é isto que derruba a sessão aberta em outro computador.
+        await apiSolteiras('abrir_sessao');
+        document.getElementById('solteiras-login').classList.add('hidden');
+        document.getElementById('conteudo-sistema').classList.remove('hidden');
+        await atualizarPainelSeguro(); iniciarAtualizacaoPeriodica(); revisarTrava();
+        garantirListaCompleta().catch(()=>{}); // pré-carrega a lista da busca em segundo plano, sem travar o login
+        atualizarAvisoOffline();
+        sincronizarFilaOffline().catch(()=>{}); // sobe o que ficou de uma queda anterior
+    }
+    // ===== SITUAÇÃO DA CASA (aberto / travado) =====
+    // Quem manda de verdade é o servidor: ele recusa liberar e cadastrar fora
+    // do horário ou em dia sem evento. O que está aqui é só o aviso na tela,
+    // pra operadora ver o cadeado antes de clicar em vez de tomar um erro.
+    let turnoAtual = null;
+    function pintarTurno(t) {
+        const antes = turnoAtual ? String(turnoAtual.aberto) : 'nulo';
+        turnoAtual = t || null;
+        const mudou = antes !== (turnoAtual ? String(turnoAtual.aberto) : 'nulo');
+        const el = document.getElementById('statusTurno');
+        const caixa = document.getElementById('caixaTurno');
+        if (!el || !caixa) return;
+        if (!t) { el.innerText='VERIFICANDO...'; el.className='text-sm font-black uppercase leading-tight mt-1 text-zinc-500'; return; }
+        if (t.aberto) {
+            el.innerText = t.motivo ? `● ABERTO (${t.motivo})` : '● ABERTO';
+            el.className = 'text-sm font-black uppercase leading-tight mt-1 text-green-600';
+            caixa.className = 'bg-green-50 border border-green-300 p-3 rounded-2xl text-center min-w-[190px]';
+        } else {
+            el.innerText = `🔒 ${t.motivo || 'TRAVADO'}`;
+            el.className = 'text-[11px] font-black uppercase leading-tight mt-1 text-red-600';
+            caixa.className = 'bg-red-50 border border-red-300 p-3 rounded-2xl text-center min-w-[190px]';
+        }
+        const faixa = document.getElementById('faixaTravaTurno');
+        if (faixa) {
+            if (travadoAgora()) {
+                document.getElementById('faixaTravaMotivo').innerText =
+                    t.motivo === 'SEM EVENTO ATIVO PARA HOJE' ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE' : 'CASA FECHADA — FORA DO HORÁRIO (21H ÀS 8H)';
+                faixa.classList.remove('hidden');
+            } else faixa.classList.add('hidden');
+        }
+        aplicarTravaNoFormulario();
+        aplicarTravaNaBusca();
+        if (travadoAgora()) limparCacheClientes();
+        // Os botões "Liberar" da lista são desenhados pelo render(): se o
+        // estado virou, redesenha pra eles trocarem de cara na hora.
+        if (mudou) {
+            try { render(clientesCache || [], !!document.getElementById('buscaCliente')?.value.trim()); } catch (_) {}
+        }
+    }
+    // Fora do horário pelo relógio da máquina. Serve só pro caso SEM internet,
+    // em que a tela não tem como perguntar ao servidor.
+    function foraDoHorarioLocal() {
+        const h = new Date().getHours();
+        return !(h >= 21 || h < 8);
+    }
+    function travadoAgora() {
+        // Com internet, quem manda é a resposta do servidor.
+        if (navigator.onLine) return !!(turnoAtual && !turnoAtual.aberto);
+        // Sem internet, decide pelo relógio da máquina. Dentro do horário a
+        // tela continua funcionando normalmente (é o modo offline do evento);
+        // fora do horário, esconde e apaga os dados guardados.
+        return foraDoHorarioLocal();
+    }
+    // Apaga da máquina tudo que é dado de cliente. A FILA de operações
+    // pendentes NUNCA é apagada aqui — ela guarda entradas já feitas que
+    // ainda não subiram, e perder isso seria perder presença de verdade.
+    function limparCacheClientes() {
+        clientesCache = [];
+        listaCompletaCache = null;
+        try { localStorage.removeItem(CHAVE_LISTA_LOCAL); } catch (_) {}
+    }
+    function revisarTrava() {
+        aplicarTravaNaBusca();
+        aplicarTravaNoFormulario();
+        const faixa = document.getElementById('faixaTravaTurno');
+        if (travadoAgora()) {
+            limparCacheClientes();
+            if (faixa) {
+                document.getElementById('faixaTravaMotivo').innerText =
+                    (turnoAtual && turnoAtual.motivo === 'SEM EVENTO ATIVO PARA HOJE')
+                        ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE'
+                        : 'CASA FECHADA — FORA DO HORÁRIO (21H ÀS 8H)';
+                faixa.classList.remove('hidden');
+            }
+            try { render([], false); } catch (_) {}
+        } else if (faixa && turnoAtual && turnoAtual.aberto) faixa.classList.add('hidden');
+    }
+    function aplicarTravaNaBusca() {
+        const busca = document.getElementById('buscaCliente');
+        if (!busca) return;
+        if (travadoAgora()) {
+            busca.value = '';
+            busca.disabled = true;
+            busca.placeholder = '🔒 CONSULTA BLOQUEADA FORA DO HORÁRIO';
+            busca.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            busca.disabled = false;
+            busca.placeholder = 'BUSCAR POR NOME, CPF OU TELEFONE...';
+            busca.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+    function aplicarTravaNoFormulario() {
+        const btn = document.getElementById('btnSalvar');
+        if (!btn) return;
+        const editando = !!document.getElementById('editId')?.value;
+        if (travadoAgora() && !editando) {
+            btn.disabled = true;
+            btn.innerText = '🔒 TRAVADO';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.innerText = editando ? 'ATUALIZAR DADOS' : 'Confirmar e Liberar';
+        }
+    }
+    // Só bloqueia na tela quando TEM internet e o servidor disse que está
+    // travado. Sem internet a tela não tem como saber, então deixa passar e
+    // o registro entra pela fila offline com o horário real.
+    function turnoBloqueadoNaTela() {
+        if (!navigator.onLine) return false;
+        if (!turnoAtual || turnoAtual.aberto) return false;
+        mostrarAviso(turnoAtual.motivo === 'SEM EVENTO ATIVO PARA HOJE'
+            ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE — PEÇA LIBERAÇÃO AO ADMINISTRADOR'
+            : 'CASA FECHADA (21H ÀS 8H) — PEÇA LIBERAÇÃO AO ADMINISTRADOR');
+        return true;
+    }
+    async function atualizarPainelSeguro() {
+        const { data: sessaoAtual } = await sb.auth.getSession();
+        if (!sessaoAtual.session) return;
+        try {
+            const data=await apiSolteiras('bootstrap');
+            pintarTurno(data.turno);
+            operadorLogado=data.operator || operadorLogado; eventoHojeCache=data.eventoHoje || null; clientesCache=Array.isArray(data.clientes)?data.clientes:[];
+            document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();
+            document.getElementById('contagemEvento').innerText=Number(data.contagemTurno || clientesCache.length);
+            if (!document.getElementById('buscaCliente').value.trim()) render(clientesCache,false);
+            atualizarListaCompletaEmSegundoPlano();
+        } catch(e) {
+            if (e.status===409 || /CONEXÃO ENCERRADA/i.test(e.message||'')) await bloquearTelaSessao(e.message);
+            else if (e.status===401 || e.status===403) { mostrarAviso(e.message||'Acesso não autorizado.'); await sairSistema(false); }
+            else console.error(e);
+        }
+    }
+    function iniciarAtualizacaoPeriodica(){
+        if(intervaloAtualizacao) clearInterval(intervaloAtualizacao);
+        intervaloAtualizacao=setInterval(()=>{
+            // Revisa a trava a cada volta, mesmo se a chamada ao servidor
+            // falhar: às 8h em ponto a tela tem que se fechar sozinha, com
+            // internet ou sem.
+            revisarTrava();
+            // Se sobrou coisa na fila, prioriza mandar ela antes de atualizar.
+            if (lerFila().length) sincronizarFilaOffline().catch(()=>{});
+            else atualizarPainelSeguro();
+        },20000);
+        revisarTrava();
+    }
+
+    // ===== LOGIN =====
+    ['email-solteiras', 'senha-solteiras'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); document.getElementById('form-login-solteiras').requestSubmit(); }
+        });
+    });
+
+    document.getElementById('form-login-solteiras').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const email = document.getElementById('email-solteiras').value.trim();
+        const senha = document.getElementById('senha-solteiras').value;
+        const btn = document.getElementById('btn-login-solteiras');
+        if (!email || !senha) return mensagemAuth('Preencha e-mail e senha.');
+        btn.disabled = true; btn.innerText = 'ENTRANDO...';
+        mensagemAuth('');
+        try {
+            const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+            if (error) throw Object.assign(new Error('E-mail ou senha inválidos.'), { status: 401 });
+            await iniciarSessaoModulo();
+        } catch (e) {
+            console.error(e);
+            try { await sb.auth.signOut(); } catch (_) {}
+            mensagemAuth(/Sem permissão|Acesso suspenso|Acesso não cadastrado/i.test(e.message||'') ? e.message : 'E-mail, senha ou permissão inválidos.');
+        } finally {
+            document.getElementById('senha-solteiras').value = '';
+            btn.disabled = false; btn.innerText = 'ACESSAR SISTEMA';
+        }
+    });
+
+    window.sairSistema = async () => {
+        if (intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao = null;
+        clientesCache = []; eventoHojeCache = null;
+        try { await sb.auth.signOut(); } catch (_) {}
+        document.getElementById('conteudo-sistema').classList.add('hidden');
+        document.getElementById('telaBloqueio').classList.add('hidden');
+        document.getElementById('solteiras-login').classList.remove('hidden');
+        window.mostrarLoginNormalSolteiras?.();
+    };
+
+    // Sessão já aberta antes (recarregou a página) continua logada.
+    sb.auth.getSession().then(async ({ data }) => {
+        if (!data.session) return;
+        if (restaurandoSessao) return;
+        restaurandoSessao = true;
+        try {
+            await iniciarSessaoModulo();
+        } catch (e) {
+            console.warn('Sessão de Solteiras recusada:', e?.message || e);
+            try { await sb.auth.signOut(); } catch (_) {}
+        } finally {
+            restaurandoSessao = false;
+        }
+    });
+
+    function limparFocarBusca(){const c=document.getElementById('buscaCliente');c.value='';render(clientesCache,false);c.focus();}
+    window.dispararCheckin = async id => {
+        // Cliente cadastrada offline ainda não existe no servidor: a liberação
+        // dela já foi registrada junto com o cadastro, não precisa de outra.
+        if (String(id).startsWith('local_')) { mostrarAviso('JÁ LIBERADA — SOBE QUANDO A INTERNET VOLTAR', true); limparFocarBusca(); return; }
+        if (turnoBloqueadoNaTela()) return;
+        try {
+            await apiSolteiras('checkin',{id});
+            mostrarAviso('Liberada com sucesso!',true);
+            limparFocarBusca();
+            await atualizarPainelSeguro();
+        } catch(e) {
+            // Internet caiu: libera na hora e guarda pra enviar depois.
+            if (ehFalhaDeRede(e)) { registrarCheckinOffline(id); limparFocarBusca(); return; }
+            mostrarAviso(e.message||'Erro ao liberar a cliente!');
+        }
+    };
+    window.bloquearDesbloquear = async (id,acaoBloquear) => {
+        try{
+            if(acaoBloquear){const motivo=prompt('Qual o motivo do bloqueio?');if(!motivo)return;await apiSolteiras('bloquear',{id,motivo});mostrarAviso('Cliente bloqueada!',true);}
+            else{if(!confirm('Tem certeza que deseja DESBLOQUEAR a entrada dessa cliente?'))return;await apiSolteiras('desbloquear',{id});mostrarAviso('Cliente desbloqueada!',true);}
+            await atualizarPainelSeguro();
+        }catch(e){mostrarAviso(e.message||'Erro ao executar ação!');}
+    };
+    window.prepararEdicao = id => {
+        const c=clientesCache.find(x=>x.id===id); if(!c)return;
+        const norm=normalizarDataNascimento(c.data_nascimento||c.nascimento);
+        document.getElementById('editId').value=c.id; document.getElementById('nome').value=c.nome||''; document.getElementById('tel').value=c.tel||''; document.getElementById('cpf').value=c.cpf||''; document.getElementById('nascimento').value=norm?norm.raw:''; document.getElementById('obs').value=c.obs||'';
+        window.updateIdade(norm?norm.raw:null); document.getElementById('btnSalvar').innerText='ATUALIZAR DADOS'; aplicarTravaNoFormulario(); document.getElementById('btnCancelarEdicao').classList.remove('hidden'); document.getElementById('tituloForm').scrollIntoView({behavior:'smooth'});
+    };
+    function render(dados,isBusca=false){
+        const container=document.getElementById('listaSolteiras'), corte=corteTurno();
+        if (travadoAgora()) {
+            container.innerHTML='<div class="p-20 text-center"><p class="text-red-600 font-black text-2xl uppercase italic">🔒 Tela bloqueada</p><p class="text-zinc-500 font-bold text-[11px] uppercase tracking-widest mt-3">Nenhum dado de cliente fica disponível fora do horário de funcionamento</p></div>';
+            return;
+        }
+        let paraExibir=isBusca?dados:dados.filter(c=>{const d=dataVisita(c);return d&&d>=corte;});
+        if(!paraExibir.length){container.innerHTML='<div class="p-20 text-center text-zinc-500 font-black text-sm uppercase italic">NENHUM RESULTADO NA TELA</div>';return;}
+        container.innerHTML='';
+        paraExibir.sort((a,b)=>(dataVisita(b)?.getTime()||0)-(dataVisita(a)?.getTime()||0)).forEach(c=>{
+            const norm=normalizarDataNascimento(c.data_nascimento||c.nascimento), isNiver=checkAniversarioSemana(norm), niverData=norm?norm.display:'--/--';
+            const visita=dataVisita(c), naCasa=visita?visita>=corte:false, textoVisita=visita?visita.toLocaleDateString('pt-BR'):'---';
+            const div=document.createElement('div'); div.className=`item-cliente p-6 flex justify-between items-center ${c.bloqueada?'cliente-bloqueada':(isNiver?'card-aniversariante':(naCasa?'cliente-checkin-ok':''))}`;
+            let painel='',info='';
+            if(c.bloqueada){info=`<div class="mt-3 bg-red-100 p-3 rounded-xl border border-red-300"><span class="text-[9px] font-black uppercase text-red-600 block mb-1">🚨 PROIBIDA A ENTRADA. MOTIVO:</span><span class="text-xs font-bold text-zinc-900">${escapeHtml(c.motivo_bloqueio)||'Sem motivo detalhado.'}</span></div>`;painel=`<div class="flex flex-col items-end gap-2"><button onclick="bloquearDesbloquear('${c.id}', false)" class="bg-red-600 text-white hover:bg-red-700 px-6 py-4 rounded-xl text-[10px] font-black uppercase transition-all mb-1 shadow-md">Desbloquear 🔓</button><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button></div>`;}
+            else if(naCasa){painel=`<div class="flex flex-col items-end gap-2"><span class="text-green-600 text-3xl font-black">✓</span><div class="flex gap-4 mt-2"><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-[10px] font-black uppercase text-red-500 opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button></div></div>`;}
+            else{const btnLiberar = travadoAgora()
+                    ? `<button type="button" disabled title="Casa fechada" class="bg-zinc-400 text-white px-8 py-4 rounded-xl text-[11px] font-black uppercase w-[130px] opacity-60 cursor-not-allowed">🔒 Travado</button>`
+                    : `<button onclick="dispararCheckin('${c.id}')" class="bg-green-600 text-white px-8 py-4 rounded-xl text-[11px] font-black uppercase hover:bg-green-500 transition-all shadow-[0_4px_10px_rgba(22,163,74,0.3)] w-[130px]">Liberar</button>`;
+                painel=`<div class="flex flex-col items-end gap-2">${btnLiberar}<div class="flex gap-4 mt-2 w-[130px] justify-center"><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-red-500 text-[10px] font-black uppercase opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button></div></div>`;}
+            div.innerHTML=`<div class="flex-grow pr-4 w-full"><div class="flex flex-wrap items-center gap-2 mb-2"><h3 class="text-xl font-black uppercase ${c.bloqueada?'text-red-600':'text-zinc-900'}">${escapeHtml(c.nome)}</h3><span class="text-zinc-600 font-bold text-sm bg-zinc-200 px-2 py-0.5 rounded-lg border border-zinc-300">📱 ${escapeHtml(c.tel)||'---'}</span>${isNiver&&!c.bloqueada?'<span class="bg-yellow-400 text-black px-4 py-1.5 rounded-xl text-[10px] font-black border-2 border-yellow-600 shadow-[0_3px_10px_rgba(234,179,8,0.35)] uppercase tracking-widest animate-pulse">🎂 ANIVERSARIANTE DA SEMANA</span>':''}</div><p class="text-[11px] text-zinc-500 font-bold uppercase mt-1">🆔 <span class="text-zinc-700">${escapeHtml(c.cpf)||'---'}</span> | 📅 VISITA: <span class="${naCasa?'text-green-600 font-black':'text-zinc-700'}">${textoVisita}</span> | 🎂 NIVER: <span class="${isNiver&&!c.bloqueada?'text-yellow-800 bg-yellow-200 px-2 py-0.5 rounded-lg border border-yellow-500 font-black':'text-zinc-700'}">${niverData}</span></p>${c.obs&&!c.bloqueada?`<p class="mt-3 text-[10px] font-bold text-blue-700 uppercase bg-blue-50 inline-block px-3 py-1 rounded border border-blue-200">📌 ${escapeHtml(c.obs)}</p>`:''}${info}</div><div class="flex-none text-right">${painel}</div>`;
+            container.appendChild(div);
+        });
+    }
+    window.maskCPF=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');i.value=v;};
+    window.maskTel=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d)(\d{4})$/,'$1-$2');i.value=v;};
+    window.updateIdade=v=>{if(!v){document.getElementById('idadeDisplay').innerText='--';return;}const norm=normalizarDataNascimento(v);if(!norm){document.getElementById('idadeDisplay').innerText='--';return;}const h=new Date(),n=new Date(norm.raw+'T12:00:00');let i=h.getFullYear()-n.getFullYear();if(h.getMonth()<n.getMonth()||(h.getMonth()===n.getMonth()&&h.getDate()<n.getDate()))i--;document.getElementById('idadeDisplay').innerText=isNaN(i)?'--':i;};
+    window.limparFormulario=()=>{document.getElementById('formSolteira').reset();document.getElementById('editId').value='';document.getElementById('btnSalvar').innerText='Confirmar e liberar';document.getElementById('btnCancelarEdicao').classList.add('hidden');document.getElementById('idadeDisplay').innerText='--';aplicarTravaNoFormulario();};
+    window.validarDuplicidade=async()=>{
+        const cpf=document.getElementById('cpf').value,tel=document.getElementById('tel').value;
+        if(cpf.replace(/\D/g,'').length<11&&tel.replace(/\D/g,'').length<10)return;
+        try{
+            let data;
+            try { data=await apiSolteiras('duplicidade',{cpf,tel,excludeId:document.getElementById('editId').value}); }
+            catch(erro){
+                // Sem internet: confere na lista guardada na máquina em vez de
+                // simplesmente deixar passar (o que criaria cadastro duplicado).
+                if (!ehFalhaDeRede(erro)) throw erro;
+                const achou = duplicidadeLocal(cpf, tel);
+                data = achou ? {duplicado:true, cliente:achou} : {duplicado:false};
+            }
+            if(!data.duplicado||!data.cliente)return;const c=data.cliente;if(c.bloqueada){mostrarAviso(`🚨 PROIBIDA! Motivo: ${c.motivo_bloqueio||'Sem motivo.'}`);window.limparFormulario();return;}if(!clientesCache.some(x=>x.id===c.id))clientesCache.push(c);if(confirm(`CLIENTE ENCONTRADA: ${c.nome}\n\nOK: Fazer Check-in (Ela já pagou).\nCANCELAR: Editar dados dela.`)){await window.dispararCheckin(c.id);window.limparFormulario();}else window.prepararEdicao(c.id);}catch(e){mostrarAviso(e.message||'Erro ao verificar cadastro.');}
+    };
+    document.getElementById('formSolteira').addEventListener('submit',async e=>{
+        e.preventDefault();const btn=document.getElementById('btnSalvar'),idEx=document.getElementById('editId').value;
+        // Editar cadastro já existente continua liberado a qualquer hora.
+        // O que trava é CADASTRO NOVO, que vale como entrada na casa.
+        if (!idEx && turnoBloqueadoNaTela()) return;
+        btn.disabled=true;btn.innerText='SALVANDO...';
+        const dados={id:idEx,nome:document.getElementById('nome').value,tel:document.getElementById('tel').value,cpf:document.getElementById('cpf').value,data_nascimento:document.getElementById('nascimento').value,obs:document.getElementById('obs').value};
+        try{await apiSolteiras('salvar_cliente',dados);mostrarAviso(idEx?'Dados atualizados e entrada registrada!':'Cadastro salvo e liberado!',true);window.limparFormulario();limparFocarBusca();await atualizarPainelSeguro();}
+        catch(e){
+            // Internet caiu no meio do cadastro.
+            if (ehFalhaDeRede(e)) {
+                // Edição de cadastro existente NÃO é enfileirada: sem o servidor
+                // não dá pra garantir em cima de qual versão a alteração entra, e
+                // sobrescrever depois poderia apagar mudança feita em outra máquina.
+                if (idEx) { mostrarAviso('SEM INTERNET — EDIÇÃO SÓ QUANDO A CONEXÃO VOLTAR'); }
+                else {
+                    const jaExiste = duplicidadeLocal(dados.cpf, dados.tel);
+                    if (jaExiste) { mostrarAviso(`JÁ CADASTRADA: ${jaExiste.nome}`); }
+                    else { registrarCadastroOffline(dados); window.limparFormulario(); limparFocarBusca(); }
+                }
+            } else mostrarAviso(e.message||'Erro ao salvar os dados!');
+        }
+        finally{btn.disabled=false;btn.innerText=idEx?'ATUALIZAR DADOS':'Confirmar e Liberar';}
+    });
+    // Busca agora filtra em cima do cache local (garantirListaCompleta), carregado
+    // uma vez só, em vez de mandar cada letra digitada pro servidor reler milhares
+    // de cadastros — mesmo resultado de antes (mesma normalização, mesmo corte
+    // de 100 itens), só que instantâneo depois da primeira carga.
+    window.filtrarClientes=()=>{if(buscaTimer)clearTimeout(buscaTimer);buscaTimer=setTimeout(async()=>{
+        const termo=document.getElementById('buscaCliente').value.trim();
+        if(travadoAgora()){aplicarTravaNaBusca();render([],false);return;}
+        if(!termo){render(clientesCache,false);return;}
+        try{
+            const lista=await garantirListaCompleta();
+            const q=normalizeBusca(termo), pieces=q.split(/\s+/).filter(Boolean);
+            const rows=lista.filter(c=>{const hay=normalizeBusca(`${c.nome} ${c.cpf} ${c.tel}`);return pieces.every(p=>hay.includes(p));}).slice(0,100);
+            rows.forEach(c=>{const idx=clientesCache.findIndex(x=>x.id===c.id);if(idx>=0)clientesCache[idx]=c;else clientesCache.push(c);});
+            render(rows,true);
+        }catch(e){mostrarAviso(e.message||'Erro ao buscar cliente.');}
+    },250);};
 </script>
 </body>
 </html>
