@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<!-- E-CLUB RESERVAS V43 SUPABASE — LISTAS API / PIX MERCADO PAGO -->
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <link rel="icon" type="image/png" href="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png">
+    <title>E-CLUB | Reservas VIP ⚡</title>
+
+    <!-- VELOCIDADE: o navegador ja vai abrindo a conexao com o Supabase e
+         com o servidor das fontes ENQUANTO desenha a pagina, em vez de so
+         comecar depois. Economiza a espera do "aperto de mao" (DNS +
+         seguranca) na primeira chamada, que e justo a mais demorada. -->
+    <link rel="preconnect" href="https://srzhcthufewpzeuuqbqy.supabase.co" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #050508; color: #fff; min-height: 100vh; background-image: radial-gradient(circle at top right, #1a1025 0%, #050508 100%); }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn-lista { background: #eab308; color: #000; font-weight: 900; }
+        .btn-pix-main { background: linear-gradient(135deg, #00bfa5 0%, #00d1b2 100%); color: #fff; font-weight: 900; }
+        .btn-camarote { background: linear-gradient(135deg, #a855f7 0%, #c084fc 100%); color: #fff; font-weight: 900; }
+        .site-input { background: #0f0f15 !important; border: 1px solid #27273a !important; color: #fff !important; outline: none; transition: 0.3s; }
+        .banner-img { width: 100%; height: auto; display: block; opacity: 1; border-radius: 2.5rem 2.5rem 0 0; }
+        .btn-sel { background: rgba(255,255,255,0.03); border: 2px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .btn-sel.active { border-color: #eab308; background: rgba(234, 179, 8, 0.05); box-shadow: 0 0 20px rgba(234, 179, 8, 0.1); }
+        .btn-sel-pix.active { border-color: #00f5d4; background: rgba(0, 245, 212, 0.05); }
+        .cam-livre { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); cursor: pointer; }
+        .cam-vendido { border-color: #ef4444; background: rgba(239, 68, 68, 0.1); opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        .cam-aguardando { border-color: #eab308; background: rgba(234, 179, 8, 0.1); opacity: 0.7; cursor: not-allowed; }
+        .cam-selecionado { border-color: #a855f7 !important; background: rgba(168, 85, 247, 0.2) !important; box-shadow: 0 0 20px rgba(168,85,247,0.4); }
+        @keyframes scaleUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .success-anim { animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* ===== CARD DE ANIVERSARIO ===== */
+        /* Mais curto (o botao aparece sem precisar rolar no celular) e mais
+           festivo. So o link de aniversario usa estas classes. */
+        .card-aniv { background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); box-shadow: 0 0 40px rgba(217,70,239,0.18); }
+        .topo-aniv { background: linear-gradient(160deg, rgba(217,70,239,0.22) 0%, rgba(88,28,135,0.18) 100%); }
+        .nome-aniv { color: #fff; text-shadow: 0 0 18px rgba(240,171,252,0.55); }
+        .brilho-aniv { filter: drop-shadow(0 0 14px rgba(217,70,239,0.65)); animation: pulsaAniv 2.4s ease-in-out infinite; }
+        @keyframes pulsaAniv { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+        @media (prefers-reduced-motion: reduce) { .brilho-aniv { animation: none; } }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center">
+
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none">
+        <span id="toast-icon" class="text-lg">⚠️</span>
+        <span id="toast-msg">Mensagem de erro</span>
+    </div>
+
+    <div class="max-w-md w-full">
+        <header class="flex flex-col items-center justify-center py-6">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-16">
+            <h2 id="header-aniv" class="text-fuchsia-400 font-black uppercase italic mt-4 text-xl tracking-widest hidden text-center leading-tight"></h2>
+        </header>
+
+        <div id="listaEventos" class="space-y-10"></div>
+
+        <footer class="mt-12 mb-8 flex flex-col items-center gap-8">
+            <div class="flex gap-3 w-full">
+                <a id="link-whatsapp-casa" href="https://api.whatsapp.com/send?phone=5541995040506" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-green-500/10 border border-transparent transition-all group">
+                    <span class="text-2xl">💬</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-green-400">WhatsApp</span>
+                </a>
+                <a id="link-instagram-casa" href="https://www.instagram.com/eclubswingdance/" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-fuchsia-500/10 border border-transparent transition-all group">
+                    <span class="text-2xl">📸</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-fuchsia-400">Instagram</span>
+                </a>
+                <a id="link-endereco-casa" href="https://www.google.com/maps/search/?api=1&query=R.+Aníbal+Goularte+Maia+Filho,+81+-+Bairro+Alto,+Curitiba+-+PR,+82820-480" target="_blank" class="flex-1 glass p-3 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-blue-500/10 border border-transparent transition-all group">
+                    <span class="text-2xl">📍</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-blue-400">Chegar</span>
+                </a>
+            </div>
+            <div class="text-center opacity-40 hover:opacity-100 transition-all">
+                <a href="https://www.instagram.com/andrezinhoeclub/" target="_blank" class="inline-flex flex-col items-center justify-center gap-1 group">
+                    <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-sky-400 transition-colors">⚡ DESENVOLVIDO POR ANDREZINHO E-CLUB</span>
+                </a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL LISTA / PIX -->
+    <div id="modalForm" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-white overflow-y-auto">
+        <div class="w-full max-w-sm bg-[#0d0d14] border border-white/10 p-6 md:p-8 rounded-[2.5rem] text-center shadow-2xl relative my-auto mt-10 mb-10">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" decoding="async" class="h-12 mx-auto mb-6">
+            <h2 id="modal-titulo" class="font-black uppercase italic mb-2 tracking-tighter text-xl">🔥 NOME NA LISTA</h2>
+
+            <div id="aviso-consumacao" class="bg-yellow-500/5 border border-yellow-500/40 p-3 rounded-2xl mb-6 shadow-[0_0_15px_rgba(234,179,8,0.12)]">
+                <p class="text-[10px] font-black uppercase tracking-widest text-yellow-400">✨ NOME NA LISTA E-CLUB</p>
+                <p class="text-[8px] font-bold text-zinc-400 mt-1 leading-relaxed">Preencha seus dados para garantir seu nome na lista. Aqui o limite é você quem faz.</p>
+            </div>
+
+            <div id="grid-botoes-tipo" class="grid grid-cols-2 gap-2 mb-2">
+                <button onclick="selecionarTipo('CASAL')" id="btn-casal" class="btn-sel p-3 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span id="titulo-btn-casal" class="text-[9px] font-black uppercase opacity-80 leading-tight">👫 Casal</span>
+                    <span id="v-modal-casal" class="text-xs font-black mt-1 leading-snug text-center">---</span>
+                </button>
+                <button onclick="selecionarTipo('CASAL CONSUMAÇÃO')" id="btn-casal-cons" class="hidden btn-sel p-3 rounded-2xl flex-col items-center justify-center text-center">
+                    <span id="titulo-btn-casal-cons" class="text-[9px] font-black uppercase text-fuchsia-400 leading-tight">🍹 Casal</span>
+                    <span id="v-modal-casal-cons" class="text-xs font-black mt-1 leading-snug text-center">---</span>
+                </button>
+                <button onclick="selecionarTipo('SOLTEIRO')" id="btn-solteiro" class="btn-sel p-3 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span id="titulo-btn-solteiro" class="text-[9px] font-black uppercase opacity-80 leading-tight">👤 Solteiro</span>
+                    <span id="v-modal-solteiro" class="text-xs font-black mt-1 leading-snug text-center">---</span>
+                </button>
+            </div>
+
+            <p id="aviso-taxa-pista" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-6 hidden">* Valores já incluem taxa de conveniência</p>
+
+            <div class="space-y-3 text-left">
+                <input type="text" id="nome-cliente" placeholder="NOME COMPLETO" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
+                <input type="tel" id="tel-cliente" oninput="maskTel(this); checarTelefoneFidelidade(this.value);" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+
+                <div id="campos-pix" class="hidden space-y-3">
+                    <input type="email" id="email-cliente" placeholder="SEU E-MAIL" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white lowercase">
+                    <input type="tel" id="cpf-cliente" oninput="maskCPF(this)" placeholder="SEU CPF" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                </div>
+
+                <div id="alerta-fidelidade" class="hidden bg-fuchsia-900/20 border border-fuchsia-500/40 p-5 rounded-2xl mb-4 text-center mt-4 shadow-[0_0_20px_rgba(192,38,211,0.2)]">
+                    <p class="text-[11px] font-black uppercase text-fuchsia-400 mb-1">🎉 Cliente VIP Detectado!</p>
+                    <p class="text-[9px] font-bold text-zinc-300 mb-4 uppercase">Este cliente veio na SEXTA-FEIRA.<br>Liberar desconto no valor de porta?</p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="aplicarDescontoFidelidade(true)" class="flex-1 bg-fuchsia-600 text-white text-[10px] font-black py-3 rounded-xl uppercase hover:bg-fuchsia-500 transition-colors shadow-md">SIM, DESCONTO</button>
+                        <button type="button" onclick="aplicarDescontoFidelidade(false)" class="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] font-black py-3 rounded-xl uppercase hover:bg-zinc-700 transition-colors">NÃO, NORMAL</button>
+                    </div>
+                </div>
+
+                <button onclick="processarFinalizacao()" id="btn-final-acao" class="w-full py-5 rounded-2xl uppercase text-xs font-black mt-2 shadow-xl transition-all">Confirmar Presença</button>
+            </div>
+            <button onclick="fecharModal()" class="w-full text-zinc-600 uppercase text-[9px] font-black mt-6 tracking-widest italic">Voltar</button>
+        </div>
+    </div>
+
+    <!-- MODAL CAMAROTES / VIPs -->
+    <div id="modalCamarote" class="hidden fixed inset-0 z-[999] bg-black/95 backdrop-blur-xl overflow-y-auto">
+        <div class="min-h-screen px-4 py-10 flex items-start justify-center">
+            <div class="w-full max-w-4xl bg-[#0d0d14] border border-purple-500/30 p-6 md:p-10 rounded-[2.5rem] shadow-2xl relative text-white">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" class="h-12 mx-auto mb-8">
+
+                <div class="w-full bg-white/5 border border-white/10 rounded-2xl p-2 mb-8 flex justify-center shadow-lg">
+                    <img id="mapa-camarotes" data-src="https://andrezinhoeclub.github.io/lista-ecluboficial/camarotes.png" decoding="async" class="w-full h-auto max-h-[60vh] object-contain rounded-xl" alt="Mapa de Camarotes">
+                </div>
+
+                <div id="grid-camarotes-venda" class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4"></div>
+                <p id="aviso-taxa-camarote" class="text-[8px] text-zinc-500 font-bold uppercase text-center mb-8 hidden">* Valores já incluem taxa de conveniência</p>
+
+                <div id="form-camarote" class="space-y-3 hidden max-w-sm mx-auto">
+                    <div class="bg-purple-900/20 p-4 rounded-2xl border border-purple-500/30 text-center mb-4">
+                        <p class="text-[10px] text-purple-300 font-black uppercase" id="cam-selecionado-nome">CAMAROTE X</p>
+                        <p class="text-xl font-black text-white leading-tight mt-1" id="cam-selecionado-valor">R$ 0,00</p>
+                    </div>
+                    <input type="text" id="nome-camarote" placeholder="NOME DO TITULAR" class="w-full site-input p-4 rounded-2xl font-bold text-xs uppercase text-white">
+                    <input type="tel" id="tel-camarote" oninput="maskTel(this)" placeholder="(41) 99999-9999" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                    <input type="email" id="email-camarote" placeholder="SEU E-MAIL" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white lowercase">
+                    <input type="tel" id="cpf-camarote" oninput="maskCPF(this)" placeholder="SEU CPF" class="w-full site-input p-4 rounded-2xl font-bold text-xs text-white">
+                    <button onclick="processarPixCamarote()" id="btn-final-camarote" class="w-full btn-camarote py-5 rounded-2xl uppercase text-xs font-black shadow-xl">Garantir Ingresso ⚡</button>
+                </div>
+
+                <button onclick="fecharModalCamarote()" class="w-full text-zinc-600 uppercase text-[10px] font-black mt-8 tracking-widest italic text-center">Voltar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL QR CODE E SUCESSO -->
+    <div id="modalQrCode" class="hidden fixed inset-0 z-[1000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4">
+        <div id="box-qrcode" class="w-full max-w-sm bg-[#0d0d14] border border-[#00f5d4]/30 p-8 rounded-[2.5rem] text-center">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" decoding="async" class="h-12 mx-auto mb-6">
+            <h2 class="text-[#00f5d4] font-black uppercase italic mb-6 text-2xl">PIX GERADO</h2>
+            <div class="bg-white p-4 rounded-3xl mx-auto inline-block mb-6 shadow-xl"><img id="img-qrcode" src="" class="w-48 h-48 object-contain"></div>
+            <div class="flex gap-2 mb-6">
+                <input type="text" id="chave-copia-cola" readonly class="w-full bg-zinc-900 border border-zinc-800 p-3 rounded-xl text-zinc-400 text-[9px] font-mono outline-none">
+                <button onclick="copiarChavePix()" class="bg-[#00f5d4] text-black px-4 rounded-xl font-black text-[10px]">Copiar</button>
+            </div>
+            <p class="text-[9px] text-yellow-500 font-black uppercase italic mb-6 animate-pulse">⏳ Aguardando pagamento...</p>
+            <button onclick="fecharModalQrCode()" class="w-full border border-zinc-800 text-zinc-400 py-4 rounded-2xl uppercase text-[10px] font-black">Voltar</button>
+        </div>
+        <div id="box-sucesso" class="hidden w-full max-w-sm bg-[#0d0d14] border border-green-500/50 p-10 rounded-[2.5rem] text-center success-anim">
+            <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" decoding="async" class="h-12 mx-auto mb-6">
+            <div class="text-5xl mb-6">✅</div>
+            <h2 class="text-green-500 font-black uppercase italic mb-2 text-3xl">PAGO!</h2>
+            <p class="text-white text-[10px] font-bold uppercase mb-8">Sua entrada foi confirmada com sucesso.</p>
+            <button onclick="location.reload()" class="w-full bg-green-600 text-white py-5 rounded-2xl uppercase text-xs font-black shadow-xl">Concluir</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Configuração da conexão com o Supabase ---
+        // OBS: a biblioteca do CDN já cria uma variável global chamada "supabase",
+        // por isso o cliente aqui se chama "sb" (nunca "supabase"). Esta tela
+        // é 100% pública — ninguém loga aqui, então o cliente não precisa de
+        // nenhuma configuração especial de sessão.
+        const SUPABASE_URL = 'https://srzhcthufewpzeuuqbqy.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_QObRVvgS4fqeJXNDtluNjw_3pQuKsnE';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function apiListas(action, payload = {}) {
+            const { data, error } = await sb.functions.invoke('listas-api', {
+                body: { action, ...payload }
+            });
+            if (error) {
+                let payloadErro = {};
+                try { payloadErro = await error.context.json(); } catch (_) {}
+                throw new Error(payloadErro?.error || error.message || `Erro ao chamar a função.`);
+            }
+            if (data?.error) throw new Error(data.error);
+            return data;
+        }
+
+        // Os tres botoes do rodape (WhatsApp, Instagram e Chegar) sao trocados pelo
+        // que estiver salvo na aba Configuracoes do Dashboard. Se nao houver nada
+        // salvo, ou se a resposta falhar, ficam valendo os enderecos que ja estao
+        // escritos no HTML — a pagina nunca fica com botao quebrado.
+        function aplicarContatosDaCasa(contatos) {
+            if (!contatos) return;
+            const zap = String(contatos.whatsapp || '').replace(/\D/g, '');
+            const insta = String(contatos.instagram || '').trim().replace(/^@/, '');
+            const endereco = String(contatos.endereco || '').trim();
+            const aplicar = (id, url) => {
+                const el = document.getElementById(id);
+                if (el && url) el.href = url;
+            };
+            if (zap) aplicar('link-whatsapp-casa', 'https://api.whatsapp.com/send?phone=' + zap);
+            if (insta) aplicar('link-instagram-casa', 'https://www.instagram.com/' + encodeURIComponent(insta) + '/');
+            if (endereco) aplicar('link-endereco-casa', 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(endereco));
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let globalPromoter = urlParams.get('ref') || "site_direto";
+        let globalAniversariante = ""; let eventoFixo = null; let eventosCache = []; let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
+
+        // ===== TEXTOS DA CAIXINHA ACIMA DOS VALORES =====
+        // Para mudar a frase depois, é só editar aqui — em um lugar só.
+        const AVISO_PADRAO = '<p class="text-[10px] font-black uppercase tracking-widest text-yellow-400">✨ NOME NA LISTA E-CLUB</p><p class="text-[8px] font-bold text-zinc-400 mt-1 leading-relaxed">Preencha seus dados para garantir seu nome na lista. Aqui o limite é você quem faz.</p>';
+        const AVISO_ANIVERSARIO = '<p class="text-[10px] font-black uppercase tracking-widest text-yellow-400">🎁 CONSUMAÇÃO INCLUSA</p><p class="text-[8px] font-bold text-zinc-400 mt-1 leading-relaxed">O valor cobrado na portaria é revertido em consumação dentro da casa.</p>';
+        let numCamaroteSelecionado = null; let intervalPagamento = null;
+        let promoterTipo = "padrao";
+        let aplicouDescontoFidelidade = false;
+        let intervalCamarotes = null;
+
+        let taxaPixTipo = 'desativado';
+        let taxaPixValor = 0;
+
+
+        // REGRA ÚNICA DE CONTAGEM E-CLUB
+        // A mesma regra é usada na Dashboard, Portaria e Promoter.
+        const normalizarChaveReservaEclub = (valor) => String(valor ?? '')
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        const normalizarCodigoReservaEclub = (valor) => normalizarChaveReservaEclub(valor)
+            .replace(/[\s-]+/g, '_');
+
+        const valorBooleanoReservaEclub = (valor) =>
+            valor === true ||
+            valor === 1 ||
+            String(valor ?? '').trim().toLowerCase() === 'true' ||
+            String(valor ?? '').trim() === '1';
+
+        const isMetodoPixReservaEclub = (reserva) => {
+            const metodo = normalizarCodigoReservaEclub(reserva?.metodo);
+            return metodo === 'PIX' || metodo === 'PIX_ANTECIPADO' || metodo.startsWith('PIX_');
+        };
+
+        const isReservaValidaEclub = (reserva) => {
+            if (!reserva) return false;
+
+            const tipo = normalizarCodigoReservaEclub(reserva.tipo_entrada);
+            if (tipo === 'SOLTEIRA_VIP') return false;
+
+            const status = normalizarCodigoReservaEclub(reserva.status_reserva || reserva.status);
+            if (['CANCELADO', 'CANCELADA', 'EXCLUIDO', 'EXCLUIDA', 'INATIVO', 'INATIVA'].includes(status)) return false;
+
+            if (valorBooleanoReservaEclub(reserva.cortesia)) return true;
+            if (isMetodoPixReservaEclub(reserva)) return valorBooleanoReservaEclub(reserva.pago);
+
+            return true;
+        };
+
+        const isReservaPixPendenteRecenteEclub = (reserva, minutos = 5) => {
+            if (!reserva || !isMetodoPixReservaEclub(reserva) || isReservaValidaEclub(reserva) || !reserva.data_reserva) return false;
+            const dataReserva = new Date(reserva.data_reserva);
+            if (isNaN(dataReserva)) return false;
+            const diferenca = (Date.now() - dataReserva.getTime()) / 60000;
+            return diferenca >= 0 && diferenca < minutos;
+        };
+
+        const mesmaChaveReservaEclub = (a, b) =>
+            normalizarChaveReservaEclub(a) === normalizarChaveReservaEclub(b);
+
+        const extrairValorNumerico = (v) => {
+            if (!v) return 0;
+            let limpo = String(v).replace('R$', '').replace(/\s/g, '').replace(',', '.');
+            return parseFloat(limpo) || 0;
+        };
+
+        const calcularTaxaApenas = (valorRaw) => {
+            let v = extrairValorNumerico(valorRaw);
+            if (v <= 0) return 0;
+            if (taxaPixTipo === 'fixo') return taxaPixValor;
+            if (taxaPixTipo === 'porcentagem') return v * (taxaPixValor / 100);
+            return 0;
+        };
+
+        const calcularComTaxa = (valorRaw) => {
+            let v = extrairValorNumerico(valorRaw);
+            let t = calcularTaxaApenas(valorRaw);
+            return Math.round((v + t) * 100) / 100;
+        };
+
+        const formatarNumeroMoeda = (num) => {
+            return "R$ " + Number(num).toFixed(2).replace('.', ',');
+        };
+
+        const formatarDataLocalISO = (data) => {
+            if (!(data instanceof Date) || isNaN(data.getTime())) return '';
+            const ano = data.getFullYear();
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const dia = String(data.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        };
+
+        const obterHojeISO = () => formatarDataLocalISO(new Date());
+
+        const normalizarDataEvento = (valor) => {
+            if (!valor) return '';
+
+            if (valor instanceof Date) return formatarDataLocalISO(valor);
+
+            if (typeof valor === 'object') {
+                try {
+                    if (typeof valor.toDate === 'function') return formatarDataLocalISO(valor.toDate());
+                    if (typeof valor.seconds === 'number') return formatarDataLocalISO(new Date(valor.seconds * 1000));
+                } catch (_) {
+                    return '';
+                }
+            }
+
+            const texto = String(valor).trim();
+            let m = texto.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+
+            m = texto.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+            if (m) return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+
+            m = texto.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+            if (m) return `${m[3]}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+
+            const dataTentativa = new Date(texto);
+            return formatarDataLocalISO(dataTentativa);
+        };
+
+        const eventoJaPassou = (evento) => {
+            const dataEvento = normalizarDataEvento(evento && evento.data);
+            if (!dataEvento) return true;
+            return dataEvento < obterHojeISO();
+        };
+
+        const vendasOnlineEncerradas = (evento) => {
+            const dataEvento = normalizarDataEvento(evento && evento.data);
+            if (!dataEvento) return true;
+            return new Date() >= new Date(`${dataEvento}T22:00:00`);
+        };
+
+        const bloquearEventoPassadoSeNecessario = (evento) => {
+            if (!eventoJaPassou(evento)) return false;
+            mostrarAviso('Evento encerrado. Atualizando lista...');
+            setTimeout(() => location.reload(), 1200);
+            return true;
+        };
+
+        window.mostrarAviso = (msg, isSucesso = false) => {
+            const toast = document.getElementById('toast-aviso');
+            const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
+            const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
+            const icon = isSucesso ? '✅' : '⚠️';
+
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            document.getElementById('toast-icon').innerText = icon;
+            document.getElementById('toast-msg').innerText = msg;
+
+            setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
+            setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
+        };
+
+        async function validarDuplicidade(telefone, nomeEvento) {
+            const data = await apiListas('duplicidade', { telefone, nomeEvento });
+            return data.duplicado === true;
+        }
+
+        async function verificarFidelidade(telefone) {
+            const data = await apiListas('fidelidade', {
+                telefone,
+                ref: globalPromoter,
+                id: urlParams.get('id') || ''
+            });
+            return data.elegivel === true;
+        }
+
+        window.checarTelefoneFidelidade = async (val) => {
+            const telLimpo = val.trim();
+
+            if (telLimpo === "(00) 00000-0000" && globalPromoter !== "site_direto") {
+                document.getElementById('alerta-fidelidade').classList.remove('hidden');
+                document.getElementById('btn-final-acao').classList.add('hidden');
+                return;
+            }
+
+            if (telLimpo.length < 15) {
+                document.getElementById('alerta-fidelidade').classList.add('hidden');
+                document.getElementById('btn-final-acao').classList.remove('hidden');
+                aplicouDescontoFidelidade = false;
+
+                if(eventoAtivo && !eFluxoPix && !globalAniversariante) {
+                    const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
+                    const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
+                    document.getElementById('v-modal-casal').innerText = String(pCasal || "PORTARIA").toUpperCase();
+                    document.getElementById('v-modal-solteiro').innerText = String(pSolt || "PORTARIA").toUpperCase();
+                }
+                return;
+            }
+
+            if (globalAniversariante) return;
+            if (eFluxoPix) return;
+            if (!globalPromoter || globalPromoter === "site_direto") return;
+
+            const btnFinal = document.getElementById('btn-final-acao');
+            btnFinal.innerText = "VERIFICANDO...";
+            btnFinal.disabled = true;
+
+            try {
+                // promoterTipo já vem validado pelo listasApi/bootstrap.
+                if (promoterTipo !== 'aniversario') {
+                    btnFinal.innerText = "Confirmar Presença";
+                    btnFinal.disabled = false;
+                    return;
+                }
+
+                const veioNaSexta = await verificarFidelidade(telLimpo);
+
+                if (veioNaSexta) {
+                    document.getElementById('alerta-fidelidade').classList.remove('hidden');
+                    btnFinal.classList.add('hidden');
+                }
+            } catch(e) {}
+
+            btnFinal.innerText = "Confirmar Presença";
+            btnFinal.disabled = false;
+        };
+
+        window.aplicarDescontoFidelidade = (aplicar) => {
+            aplicouDescontoFidelidade = aplicar;
+
+            document.getElementById('alerta-fidelidade').classList.add('hidden');
+
+            if (aplicar) {
+                let valCasalFid = eventoAtivo.valor_recorrente_casal || "FREE";
+                let valSoltFid = eventoAtivo.valor_recorrente_solteiro || "FREE";
+                document.getElementById('v-modal-casal').innerText = String(valCasalFid).toUpperCase();
+                document.getElementById('v-modal-solteiro').innerText = String(valSoltFid).toUpperCase();
+
+                mostrarAviso("Desconto Fidelidade Aplicado! Finalizando...", true);
+                setTimeout(() => { processarFinalizacao(); }, 800);
+            } else {
+                document.getElementById('btn-final-acao').classList.remove('hidden');
+                const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
+                const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
+                document.getElementById('v-modal-casal').innerText = String(pCasal || "PORTARIA").toUpperCase();
+                document.getElementById('v-modal-solteiro').innerText = String(pSolt || "PORTARIA").toUpperCase();
+            }
+        };
+
+        async function carregarPagina() {
+            const boot = await apiListas('bootstrap', {
+                ref: globalPromoter,
+                id: urlParams.get('id') || ''
+            });
+
+            taxaPixTipo = boot.configuracao?.taxa_tipo || 'desativado';
+            taxaPixValor = Number(boot.configuracao?.taxa_valor || 0);
+            aplicarContatosDaCasa(boot.contatos);
+
+            globalPromoter = boot.contexto?.promoter || 'site_direto';
+            globalAniversariante = boot.contexto?.aniversariante || '';
+            eventoFixo = boot.contexto?.festa || null;
+            promoterTipo = boot.contexto?.promoterTipo || 'padrao';
+            eventosCache = Array.isArray(boot.eventos) ? boot.eventos : [];
+
+            if (globalAniversariante) {
+                const h = document.getElementById('header-aniv');
+                if (h) {
+                    h.innerText = globalAniversariante;
+                    h.classList.remove('hidden');
+                }
+            }
+
+            const container = document.getElementById('listaEventos');
+            container.innerHTML = eventosCache.map(ev => {
+                const valPixCasal = extrairValorNumerico(ev.ant_casal);
+                const valPixCasalCons = extrairValorNumerico(ev.ant_casal_cons);
+                const valPixSolt = extrairValorNumerico(ev.ant_solteiro);
+                const temPixAtivo = (valPixCasal > 0 || valPixCasalCons > 0 || valPixSolt > 0);
+
+                let temCamaroteAtivo = false;
+                for(let i=1; i<=8; i++) {
+                    if(ev[`cam${i}_ativo`] && extrairValorNumerico(ev[`v_cam${i}`]) > 0) temCamaroteAtivo = true;
+                }
+
+                const vendasEncerradas = vendasOnlineEncerradas(ev);
+
+                let renderHtml = '';
+
+                if (globalAniversariante) {
+                    renderHtml = `
+                    <div class="card-aniv overflow-hidden rounded-[2.5rem] border-fuchsia-500/30 border">
+                        <div class="topo-aniv px-6 pt-6 pb-5 flex flex-col items-center justify-center text-center border-b border-fuchsia-500/20">
+                            <span class="text-4xl mb-1 block brilho-aniv">🎉</span>
+                            <h3 class="text-[9px] font-black text-fuchsia-400 uppercase tracking-[0.2em]">CONVITE VIP ESPECIAL</h3>
+                            <p class="text-2xl font-black uppercase italic tracking-tighter nome-aniv mt-1">${globalAniversariante}</p>
+                        </div>
+                        <div class="px-6 pt-5 pb-6">
+                            <h3 class="text-[9px] font-black uppercase text-zinc-500 tracking-[0.2em] text-center">EVENTO</h3>
+                            <p class="text-white text-lg font-black uppercase italic tracking-tighter text-center leading-tight mt-1 mb-5">${ev.nome}</p>
+                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-4 rounded-2xl text-xs font-black italic transition-all active:scale-95">🎁 COLOCAR NOME NA LISTA</button>
+                        </div>
+                    </div>`;
+                } else {
+                    const topoCardHTML = ev.imagem ? `<img src="${ev.imagem}" class="banner-img">` : `<div class="h-40 bg-zinc-900 flex items-center justify-center text-zinc-700 font-black uppercase tracking-tighter italic text-xl">E-CLUB</div>`;
+
+                    let botoesVendaHTML = '';
+                    if (vendasEncerradas && (temPixAtivo || temCamaroteAtivo)) {
+                        botoesVendaHTML = `<div class="col-span-2 bg-red-900/20 border border-red-500/30 py-4 rounded-2xl text-center"><span class="text-[10px] font-black uppercase text-red-500 tracking-widest">🚫 Vendas Online Encerradas</span></div>`;
+                    } else {
+                        botoesVendaHTML = `
+                            ${temPixAtivo ? `<button onclick="iniciarFluxo('${ev.id}', true)" class="w-full btn-pix-main py-4 rounded-2xl text-[10px] font-black italic transition-all active:scale-95">⚡ PIX ANTECIPADO</button>` : `<div class="bg-zinc-900/50 rounded-2xl py-4 flex items-center justify-center opacity-30 border border-white/5"><span class="text-[9px] font-black italic uppercase">S/ PIX</span></div>`}
+                            ${temCamaroteAtivo ? `<button onclick="iniciarFluxoCamarote('${ev.id}')" class="w-full btn-camarote py-4 rounded-2xl text-[10px] font-black italic transition-all active:scale-95">💎 CAMAROTE / VIP</button>` : `<div class="bg-zinc-900/50 rounded-2xl py-4 flex items-center justify-center opacity-30 border border-white/5"><span class="text-[9px] font-black italic uppercase">S/ CAM</span></div>`}
+                        `;
+                    }
+
+                    renderHtml = `
+                    <div class="glass overflow-hidden rounded-[2.5rem] border-white/5 shadow-2xl">
+                        ${topoCardHTML}
+                        <div class="p-8">
+                            <h3 class="text-2xl font-black uppercase italic mb-6 text-center text-white tracking-tighter">${ev.nome}</h3>
+                            <button onclick="iniciarFluxo('${ev.id}', false)" class="w-full btn-lista py-5 rounded-2xl text-xs font-black mb-3 italic transition-all active:scale-95">📝 NOME NA LISTA</button>
+                            <div class="grid grid-cols-2 gap-3">
+                                ${botoesVendaHTML}
+                            </div>
+                        </div>
+                    </div>`;
+                }
+                return renderHtml;
+            }).join('');
+        }
+
+        window.iniciarFluxo = (id, isPix) => {
+            eventoAtivo = eventosCache.find(e => e.id === id);
+            if (bloquearEventoPassadoSeNecessario(eventoAtivo)) return;
+            eFluxoPix = isPix;
+            tipoAtivo = null;
+            aplicouDescontoFidelidade = false;
+
+            const btnCasal = document.getElementById('btn-casal');
+            const btnCasalCons = document.getElementById('btn-casal-cons');
+            const btnSolteiro = document.getElementById('btn-solteiro');
+
+            btnCasal.classList.remove('active');
+            btnCasalCons.classList.remove('active');
+            btnSolteiro.classList.remove('active');
+            document.getElementById('alerta-fidelidade').classList.add('hidden');
+            document.getElementById('btn-final-acao').classList.remove('hidden');
+
+            document.getElementById('modal-titulo').innerText = isPix ? "⚡ PIX ANTECIPADO" : (globalAniversariante ? "🎉 LISTA VIP" : "🔥 NOME NA LISTA");
+
+            const avisoConsumacao = document.getElementById('aviso-consumacao');
+            if(!isPix) {
+                avisoConsumacao.classList.remove('hidden');
+                // Aviso de consumação: SÓ no link de aniversário. Em link de
+                // promoter, link do site ou qualquer outro, continua o texto
+                // normal. Quem manda aqui é o globalAniversariante, que só vem
+                // preenchido quando o link foi gerado como aniversário.
+                avisoConsumacao.innerHTML = globalAniversariante ? AVISO_ANIVERSARIO : AVISO_PADRAO;
+            } else {
+                avisoConsumacao.classList.add('hidden');
+            }
+
+            document.getElementById('tel-cliente').value = '';
+
+            const gridBotoes = document.getElementById('grid-botoes-tipo');
+            const tCasal = document.getElementById('titulo-btn-casal');
+            const tCasalCons = document.getElementById('titulo-btn-casal-cons');
+            const tSolteiro = document.getElementById('titulo-btn-solteiro');
+
+            const avisoTaxa = document.getElementById('aviso-taxa-pista');
+
+            if (isPix) {
+                const valCasalBase = eventoAtivo.ant_casal || "0";
+                const valCasalConsBase = eventoAtivo.ant_casal_cons || "0";
+                const valSoltBase = eventoAtivo.ant_solteiro || "0";
+
+                let countVisible = 0;
+
+                const renderBotaoPix = (btnEl, tEl, valorRaw, titulo) => {
+                    let base = extrairValorNumerico(valorRaw);
+                    if (base > 0) {
+                        btnEl.classList.remove('hidden'); btnEl.classList.add('flex');
+                        let taxa = calcularTaxaApenas(valorRaw);
+                        let txt = formatarNumeroMoeda(base);
+                        if (taxa > 0) txt += `<br><span class="text-[8px] text-yellow-500 tracking-widest mt-1">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
+                        document.getElementById(`v-modal-${btnEl.id.replace('btn-', '')}`).innerHTML = txt;
+                        tEl.innerHTML = titulo;
+                        return 1;
+                    } else {
+                        btnEl.classList.add('hidden'); btnEl.classList.remove('flex');
+                        return 0;
+                    }
+                };
+
+                countVisible += renderBotaoPix(btnCasal, tCasal, valCasalBase, '👫 CASAL<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>');
+                countVisible += renderBotaoPix(btnCasalCons, tCasalCons, valCasalConsBase, '🍹 CASAL<br><span class="text-[6.5px] font-bold tracking-widest mt-0.5 block text-fuchsia-300">100% Consumo</span>');
+                countVisible += renderBotaoPix(btnSolteiro, tSolteiro, valSoltBase, '👤 SOLTEIRO<br><span class="text-[6.5px] font-bold opacity-60 tracking-widest mt-0.5 block">Sem Consumo</span>');
+
+                gridBotoes.className = `grid gap-2 mb-2 ${countVisible === 1 ? 'grid-cols-1' : countVisible === 2 ? 'grid-cols-2' : 'grid-cols-3'}`;
+
+                if (taxaPixTipo !== 'desativado' && taxaPixValor > 0) {
+                    avisoTaxa.classList.remove('hidden');
+                } else { avisoTaxa.classList.add('hidden'); }
+
+            } else {
+                avisoTaxa.classList.add('hidden');
+
+                const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
+                const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
+
+                document.getElementById('v-modal-casal').innerText = String(pCasal || "PORTARIA").toUpperCase();
+                document.getElementById('v-modal-solteiro').innerText = String(pSolt || "PORTARIA").toUpperCase();
+
+                tCasal.innerHTML = '👫 CASAL';
+                tSolteiro.innerHTML = '👤 SOLTEIRO';
+
+                btnCasal.classList.remove('hidden'); btnCasal.classList.add('flex');
+                btnSolteiro.classList.remove('hidden'); btnSolteiro.classList.add('flex');
+                btnCasalCons.classList.add('hidden'); btnCasalCons.classList.remove('flex');
+
+                gridBotoes.className = 'grid grid-cols-2 gap-2 mb-6';
+            }
+
+            document.getElementById('campos-pix').className = isPix ? "space-y-3" : "hidden";
+            document.getElementById('modalForm').classList.remove('hidden');
+        };
+
+        window.selecionarTipo = (tipo) => {
+            tipoAtivo = tipo;
+            document.getElementById('btn-casal').classList.remove('active');
+            document.getElementById('btn-casal-cons').classList.remove('active');
+            document.getElementById('btn-solteiro').classList.remove('active');
+
+            if(tipo === 'CASAL') document.getElementById('btn-casal').classList.add('active');
+            if(tipo === 'CASAL CONSUMAÇÃO') document.getElementById('btn-casal-cons').classList.add('active');
+            if(tipo === 'SOLTEIRO') document.getElementById('btn-solteiro').classList.add('active');
+        };
+
+        window.processarFinalizacao = async () => {
+            const n = document.getElementById('nome-cliente').value.trim().toUpperCase();
+            const t = document.getElementById('tel-cliente').value.trim();
+            const em = document.getElementById('email-cliente').value.trim();
+            const cpf = document.getElementById('cpf-cliente').value.trim();
+
+            if (!tipoAtivo) return mostrarAviso("Selecione o tipo de ingresso (Casal ou Solteiro)!");
+            if (!n) return mostrarAviso("Faltou preencher o Nome Completo!");
+            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto!");
+
+            if (eFluxoPix) {
+                if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
+                if (cpf.length < 14) return mostrarAviso("CPF incompleto!");
+            }
+
+            const btn = document.getElementById('btn-final-acao');
+            btn.disabled = true; btn.innerText = "PROCESSANDO...";
+
+            try {
+                if (bloquearEventoPassadoSeNecessario(eventoAtivo)) {
+                    btn.disabled = false;
+                    btn.innerText = "Confirmar Presença";
+                    return;
+                }
+
+                const nova = await apiListas('criar_reserva', {
+                    eventId: eventoAtivo.id,
+                    nome: n,
+                    telefone: t,
+                    cpf: eFluxoPix ? cpf : '',
+                    tipo: tipoAtivo,
+                    pix: eFluxoPix,
+                    fidelidade: aplicouDescontoFidelidade,
+                    ref: globalPromoter,
+                    id: urlParams.get('id') || ''
+                });
+
+                if (eFluxoPix) {
+                    const data = await apiListas('gerar_pix', {
+                        reservaId: nova.reservaId,
+                        nome: n,
+                        email: em,
+                        cpf
+                    });
+
+                    if (data.sucesso) {
+                        abrirTelaQR(
+                            data.qr_code_base64,
+                            data.qr_code_copia_cola,
+                            nova.reservaId,
+                            nova.statusToken
+                        );
+                    } else {
+                        mostrarAviso(data.mensagem || "Erro na geração do PIX. Tente novamente.");
+                        btn.disabled = false;
+                        btn.innerText = "Confirmar Presença";
+                    }
+                } else {
+                    mostrarAviso(
+                        aplicouDescontoFidelidade
+                            ? "🏆 Reserva Fidelidade Finalizada com Sucesso!"
+                            : "✨ Confirmado na lista com sucesso!",
+                        true
+                    );
+                    setTimeout(() => { location.reload(); }, 2000);
+                }
+            } catch (e) {
+                mostrarAviso(e.message);
+                btn.disabled = false;
+                btn.innerText = "Confirmar Presença";
+            }
+        };
+
+        window.iniciarFluxoCamarote = async (id) => {
+            eventoAtivo = eventosCache.find(e => e.id === id);
+            if (bloquearEventoPassadoSeNecessario(eventoAtivo)) return;
+
+            const renderGrid = (statuses) => {
+                const grid = document.getElementById('grid-camarotes-venda');
+                grid.innerHTML = '';
+
+                const temTaxa = taxaPixTipo !== 'desativado' && taxaPixValor > 0;
+                document.getElementById('aviso-taxa-camarote').classList.toggle('hidden', !temTaxa);
+
+                for (let i=1; i<=8; i++) {
+                    const valCamCru = String(eventoAtivo[`v_cam${i}`] || '0');
+                    const valBase = extrairValorNumerico(valCamCru);
+
+                    if (eventoAtivo[`cam${i}_ativo`] && valBase > 0) {
+                        const status = statuses?.[i] || statuses?.[String(i)] || 'livre';
+                        let classCor = 'cam-livre', icone = '✅';
+                        if (status === 'vendido') { classCor = 'cam-vendido'; icone = '🔒'; }
+                        else if (status === 'aguardando') { classCor = 'cam-aguardando'; icone = '⏳'; }
+
+                        const observacao = eventoAtivo[`obs_cam${i}`]
+                            ? `<span class="text-[7px] text-center mt-2 pt-2 border-t border-white/10 w-full opacity-80">${eventoAtivo[`obs_cam${i}`]}</span>`
+                            : '';
+
+                        const nomeVisor = i === 7
+                            ? `<span class="text-[#eab308] text-[13px] font-black">VIP 1</span>`
+                            : i === 8
+                                ? `<span class="text-[#eab308] text-[13px] font-black">VIP 2</span>`
+                                : `CAMAROTE <span class="text-[#eab308] text-sm">0${i}</span>`;
+
+                        const taxa = calcularTaxaApenas(valCamCru);
+                        let txtDisplay = formatarNumeroMoeda(valBase);
+                        if (taxa > 0) {
+                            txtDisplay += `<br><span class="text-[7.5px] text-yellow-500 tracking-widest mt-1">+ ${formatarNumeroMoeda(taxa)} TAXA</span>`;
+                        }
+
+                        grid.innerHTML += `<button id="btn-cam-${i}" onclick="selecionarCamarote(${i}, '${status}', '${valCamCru}')" class="${classCor} border p-4 rounded-2xl flex flex-col items-center transition-all text-center"><span class="text-[9px] font-black uppercase text-zinc-300">${nomeVisor}</span><span class="text-xs font-bold mt-1 leading-tight">${txtDisplay}</span><span class="text-[8px] font-black uppercase mt-1">${icone} ${status}</span>${observacao}</button>`;
+                    }
+                }
+
+                if (numCamaroteSelecionado !== null) {
+                    const btnAtivo = document.getElementById(`btn-cam-${numCamaroteSelecionado}`);
+                    if (btnAtivo) btnAtivo.classList.add('cam-selecionado');
+                }
+            };
+
+            const refresh = async () => {
+                try {
+                    const data = await apiListas('camarotes_status', { eventId: eventoAtivo.id });
+                    renderGrid(data.statuses || {});
+                } catch (e) {
+                    mostrarAviso(e.message || 'Erro ao atualizar camarotes.');
+                }
+            };
+
+            await refresh();
+
+            if (intervalCamarotes) clearInterval(intervalCamarotes);
+            intervalCamarotes = setInterval(() => {
+                if (!document.getElementById('modalCamarote').classList.contains('hidden')) {
+                    refresh();
+                } else {
+                    clearInterval(intervalCamarotes);
+                }
+            }, 20000);
+
+            // O mapa de camarotes tem 480 KB e so faz sentido aqui. Ele nasce
+            // sem endereco no HTML e so vai buscar a imagem neste instante, ao
+            // abrir o modal. Assim quem so poe o nome na lista (a maioria) nunca
+            // baixa esses 480 KB.
+            // ATENCAO: nao troque isto por loading="lazy". Foi testado no
+            // navegador de verdade: dentro de um bloco escondido a imagem nao
+            // era baixada NEM depois de abrir o modal, e o mapa ficava em branco.
+            const mapaCam = document.getElementById('mapa-camarotes');
+            if (mapaCam && !mapaCam.getAttribute('src')) mapaCam.src = mapaCam.dataset.src;
+
+            document.getElementById('modalCamarote').classList.remove('hidden');
+        };
+
+        window.selecionarCamarote = (num, status, valorRaw) => {
+            if(status !== 'livre') return;
+            numCamaroteSelecionado = num;
+
+            for(let i=1; i<=8; i++) {
+                let btn = document.getElementById(`btn-cam-${i}`);
+                if(btn) btn.classList.remove('cam-selecionado');
+            }
+            let btnClicado = document.getElementById(`btn-cam-${num}`);
+            if(btnClicado) btnClicado.classList.add('cam-selecionado');
+
+            let nomeCam = (num === 7) ? "VIP 1" : (num === 8) ? "VIP 2" : `CAMAROTE 0${num}`;
+            document.getElementById('cam-selecionado-nome').innerText = nomeCam;
+
+            let valBase = extrairValorNumerico(valorRaw);
+            let taxa = calcularTaxaApenas(valorRaw);
+            let txtDetalhe = formatarNumeroMoeda(valBase);
+            if (taxa > 0) txtDetalhe += ` <span class="text-xs text-yellow-500 ml-1 font-black">+ ${formatarNumeroMoeda(taxa)} taxa</span>`;
+
+            const obs = eventoAtivo[`obs_cam${num}`] ? `<br><span class="text-[8px] font-normal text-purple-300 normal-case opacity-90">${eventoAtivo[`obs_cam${num}`]}</span>` : '';
+            document.getElementById('cam-selecionado-valor').innerHTML = `${txtDetalhe}${obs}`;
+
+            document.getElementById('form-camarote').classList.remove('hidden');
+        };
+
+        window.processarPixCamarote = async () => {
+            const n = document.getElementById('nome-camarote').value.trim().toUpperCase();
+            const t = document.getElementById('tel-camarote').value.trim();
+            const em = document.getElementById('email-camarote').value.trim();
+            const cpf = document.getElementById('cpf-camarote').value.trim();
+
+            if (!n) return mostrarAviso("Faltou preencher o Nome do titular!");
+            if (t.replace(/\D/g, '').length < 11) return mostrarAviso("O número do celular está incompleto (faltam dígitos)!");
+            if (!em) return mostrarAviso("Faltou preencher o seu E-mail!");
+            if (cpf.length < 14) return mostrarAviso("CPF incompleto (são 11 dígitos)!");
+
+            const btn = document.getElementById('btn-final-camarote');
+            btn.disabled = true;
+            btn.innerText = "VALIDANDO...";
+
+            try {
+                if (bloquearEventoPassadoSeNecessario(eventoAtivo)) {
+                    btn.disabled = false;
+                    btn.innerText = "Garantir Ingresso ⚡";
+                    return;
+                }
+
+                const nova = await apiListas('criar_camarote', {
+                    eventId: eventoAtivo.id,
+                    num: numCamaroteSelecionado,
+                    nome: n,
+                    telefone: t,
+                    cpf,
+                    ref: globalPromoter,
+                    id: urlParams.get('id') || ''
+                });
+
+                const data = await apiListas('gerar_pix', {
+                    reservaId: nova.reservaId,
+                    nome: n,
+                    email: em,
+                    cpf
+                });
+
+                if (data.sucesso) {
+                    abrirTelaQR(
+                        data.qr_code_base64,
+                        data.qr_code_copia_cola,
+                        nova.reservaId,
+                        nova.statusToken
+                    );
+                } else {
+                    mostrarAviso(data.mensagem || "Erro na geração do PIX. Tente novamente.");
+                    btn.disabled = false;
+                    btn.innerText = "Garantir Ingresso ⚡";
+                }
+            } catch (e) {
+                mostrarAviso(e.message);
+                btn.disabled = false;
+                btn.innerText = "Garantir Ingresso ⚡";
+            }
+        };
+
+        window.abrirTelaQR = (base64, copiaCola, reservaId, statusToken) => {
+            document.getElementById('img-qrcode').src = `data:image/jpeg;base64,${base64}`;
+            document.getElementById('chave-copia-cola').value = copiaCola;
+            document.getElementById('modalForm').classList.add('hidden');
+            document.getElementById('modalCamarote').classList.add('hidden');
+            document.getElementById('modalQrCode').classList.remove('hidden');
+
+            if (intervalPagamento) clearInterval(intervalPagamento);
+
+            const verificar = async () => {
+                try {
+                    const data = await apiListas('status_pagamento', { reservaId, statusToken });
+                    if (data.pago === true) {
+                        if (intervalPagamento) clearInterval(intervalPagamento);
+                        intervalPagamento = null;
+                        document.getElementById('box-qrcode').classList.add('hidden');
+                        document.getElementById('box-sucesso').classList.remove('hidden');
+                    }
+                } catch (e) {
+                    console.warn('Status PIX:', e.message);
+                }
+            };
+
+            verificar();
+            intervalPagamento = setInterval(verificar, 5000);
+        };
+
+        window.fecharModal = () => document.getElementById('modalForm').classList.add('hidden');
+        window.fecharModalCamarote = () => {
+            numCamaroteSelecionado = null;
+            if (intervalCamarotes) clearInterval(intervalCamarotes);
+            intervalCamarotes = null;
+            document.getElementById('modalCamarote').classList.add('hidden');
+        };
+        window.fecharModalQrCode = () => {
+            if (intervalPagamento) clearInterval(intervalPagamento);
+            intervalPagamento = null;
+            location.reload();
+        };
+        window.copiarChavePix = () => { const c = document.getElementById('chave-copia-cola'); c.select(); document.execCommand('copy'); mostrarAviso("Copiado com sucesso!", true); };
+        window.maskTel = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
+        window.maskCPF = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 3) v = v.substring(0, 3) + "." + v.substring(3); if (v.length > 7) v = v.substring(0, 7) + "." + v.substring(7); if (v.length > 11) v = v.substring(0, 11) + "-" + v.substring(11); i.value = v; };
+
+        carregarPagina();
+    </script>
+</body>
+</html>
