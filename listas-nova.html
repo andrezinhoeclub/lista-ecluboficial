@@ -108,7 +108,7 @@
     .festa.hoje .quando{background:var(--ouro);border-color:var(--ouro);color:#1c1300}
     .festa .nome{font-size:21px;font-weight:900;font-style:italic;letter-spacing:-.7px;line-height:1.06;
       text-transform:uppercase;text-shadow:0 2px 18px rgba(0,0,0,.75)}
-    .festa .rodape{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+    .festa .rodape{display:flex;align-items:flex-end;justify-content:flex-end;gap:12px}
     .festa .desde{font-size:8.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
       color:var(--apagado);display:block;margin-bottom:2px}
     .festa .preco{font-size:20px;font-weight:900;font-style:italic;letter-spacing:-.6px;color:var(--ouro-claro)}
@@ -735,23 +735,15 @@
 
         alvo.innerHTML = eventosCache.map(ev => {
             const hoje = ehHoje(ev);
-            const minimo = precoMinimo(ev);
-            const encerrada = vendasOnlineEncerradas(ev);
             const esgotado = camarotesEsgotados(ev);
 
             const capa = ev.imagem
                 ? `<img class="capa" src="${escapar(ev.imagem)}" alt="" decoding="async">`
                 : '';
 
-            let direita;
-            if (encerrada) {
-                direita = '<div><span class="desde">Vendas online</span><span class="preco" style="font-size:13px;color:#fca5a5">ENCERRADAS</span></div>';
-            } else if (minimo > 0) {
-                direita = `<div><span class="desde">A partir de</span><span class="preco">${escapar(formatarNumeroMoeda(minimo))}</span></div>`;
-            } else {
-                direita = '<div><span class="desde">Nome na lista</span><span class="preco" style="font-size:15px">Grátis</span></div>';
-            }
-
+            // Tela "cardápio": só nome do evento e a arte — sem valores aqui.
+            // O preço de cada forma de entrar só aparece depois, na tela
+            // "como você quer entrar".
             const chips = [];
             if (esgotado) chips.push('<span class="chip">💎 Camarotes esgotados</span>');
 
@@ -764,7 +756,6 @@
                 <div class="nome">${escapar(ev.nome)}</div>
                 ${chips.join('')}
                 <div class="rodape">
-                  ${direita}
                   <span class="seta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
                 </div>
               </div>
