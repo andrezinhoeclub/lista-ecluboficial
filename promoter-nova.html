@@ -423,8 +423,15 @@
         // storageKey separado por tela: evita que o login da portaria, do
         // dashboard e do promoter se sobrescrevam quando testados no mesmo
         // navegador — cada tela guarda sua própria sessão.
+        // "storage: sessionStorage" (em vez do localStorage padrão) replica a
+        // mesma escolha do sistema antigo (setPersistence(auth,
+        // browserSessionPersistence) no Firebase): o login NÃO fica guardado
+        // depois que o navegador fecha ou o aparelho reinicia — tem que
+        // entrar de novo a cada vez que abrir a tela. Isso é de propósito,
+        // junto com o "um login, um aparelho": evita sessão esquecida aberta
+        // num celular/computador da casa.
         const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-            auth: { storageKey: 'sb-promoter-auth' }
+            auth: { storageKey: 'sb-promoter-auth', storage: window.sessionStorage }
         });
 
         // Se um aviso de "sessão encerrada" foi deixado por encerrarSessaoPromoter()
