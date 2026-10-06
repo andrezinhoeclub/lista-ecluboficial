@@ -42,16 +42,35 @@
 
   <!-- ===== EVENTOS ===== -->
   <section class="secao ativa" id="secao-eventos">
-    <h1 style="margin-top:0">Criar evento</h1>
-    <input id="novoEventoNome" placeholder="Nome do evento">
-    <input id="novoEventoData" type="date">
-    <div class="checkbox-row">
-      <input type="checkbox" id="novoEventoOnline">
-      <label for="novoEventoOnline">Já deixar no ar</label>
+    <div class="painel-card">
+      <h1 style="margin-top:0">Criar novo evento</h1>
+      <p class="secao-sub">Configure o evento e, quando quiser, já deixe no ar — só eventos "no ar" aparecem pra portaria, promoter e solteiras usarem.</p>
+
+      <div class="campo-grupo">
+        <label class="campo-label-grande" for="novoEventoNome">Nome do evento</label>
+        <input id="novoEventoNome" placeholder="Ex: Sábado do Eclub, Festa Black...">
+      </div>
+
+      <div class="campo-grupo">
+        <label class="campo-label-grande" for="novoEventoData">Data do evento</label>
+        <input id="novoEventoData" type="date">
+      </div>
+
+      <label class="switch-row" for="novoEventoOnline">
+        <span class="switch-texto">
+          <span class="switch-titulo">Já deixar no ar</span>
+          <span class="switch-sub">Libera o evento pras telas assim que for criado</span>
+        </span>
+        <span class="switch">
+          <input type="checkbox" id="novoEventoOnline">
+          <span class="slider"></span>
+        </span>
+      </label>
+
+      <div id="erroEvento" class="erro"></div>
+      <div id="sucessoEvento" class="sucesso"></div>
+      <button id="btnCriarEvento" class="btn-gold">+ Criar evento</button>
     </div>
-    <div id="erroEvento" class="erro"></div>
-    <div id="sucessoEvento" class="sucesso"></div>
-    <button id="btnCriarEvento">Criar evento</button>
 
     <h1>Eventos cadastrados</h1>
     <div id="listaEventos"></div>
@@ -193,16 +212,29 @@
       .subscribe();
   }
 
+  function formatarDataEvento(dataStr) {
+    const d = new Date(dataStr + 'T12:00:00');
+    const dias = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dias[d.getDay()]} • ${dia}/${mes}/${d.getFullYear()}`;
+  }
+
   function renderEventos() {
     const cont = document.getElementById('listaEventos');
     if (!eventosCache.length) { cont.innerHTML = '<p class="vazio">Nenhum evento cadastrado ainda.</p>'; return; }
     cont.innerHTML = eventosCache.map(e => `
-      <div class="card">
-        <div class="info">
-          <span class="nome">${escapeHtml(e.nome)}</span>
-          <span class="tipo">${new Date(e.data + 'T12:00:00').toLocaleDateString('pt-BR')} — ${e.status === 'online' ? 'NO AR' : 'OFFLINE'}</span>
+      <div class="evento-card">
+        <div class="evento-info">
+          <span class="evento-nome">${escapeHtml(e.nome)}</span>
+          <span class="evento-data">${formatarDataEvento(e.data)}</span>
+          <span class="badge-status ${e.status === 'online' ? 'online' : 'offline'}">
+            <span class="dot"></span>${e.status === 'online' ? 'No ar' : 'Offline'}
+          </span>
         </div>
-        <button onclick="alternarEvento('${e.id}', '${e.status}')">${e.status === 'online' ? 'Tirar do ar' : 'Colocar no ar'}</button>
+        <button class="btn-toggle-evento ${e.status === 'online' ? 'desligar' : 'ligar'}" onclick="alternarEvento('${e.id}', '${e.status}')">
+          ${e.status === 'online' ? 'Tirar do ar' : 'Colocar no ar'}
+        </button>
       </div>
     `).join('');
   }
