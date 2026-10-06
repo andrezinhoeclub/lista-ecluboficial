@@ -42,34 +42,107 @@
 
   <!-- ===== EVENTOS ===== -->
   <section class="secao ativa" id="secao-eventos">
-    <div class="painel-card">
-      <h1 style="margin-top:0">Criar novo evento</h1>
-      <p class="secao-sub">Configure o evento e, quando quiser, já deixe no ar — só eventos "no ar" aparecem pra portaria, promoter e solteiras usarem.</p>
+
+    <!-- MEUS MODELOS DE FESTA -->
+    <div class="card-secao" style="--accent:#d946ef">
+      <h1 class="card-secao-titulo">Meus Modelos de Festa</h1>
+      <p class="card-secao-sub">Salve um evento já configurado como modelo. O modelo copia valores, camarotes e benefícios, mas não copia nome do evento, data, horário nem a capa.</p>
+      <div id="listaModelos"></div>
+    </div>
+
+    <!-- CONFIGURAR EVENTO & CAMAROTES -->
+    <div class="card-secao" style="--accent:#3b82f6">
+      <h1 class="card-secao-titulo"><span id="tituloFormEvento">Configurar Evento &amp; Camarotes</span></h1>
+      <input type="hidden" id="eventoIdEdicao">
+      <input type="hidden" id="eventoCapaUrlAtual">
 
       <div class="campo-grupo">
-        <label class="campo-label-grande" for="novoEventoNome">Nome do evento</label>
-        <input id="novoEventoNome" placeholder="Ex: Sábado do Eclub, Festa Black...">
+        <label class="campo-label-grande" for="eventoNome">Nome do evento</label>
+        <input id="eventoNome" placeholder="Ex: Sábado do Eclub, Festa Black...">
       </div>
 
-      <div class="campo-grupo">
-        <label class="campo-label-grande" for="novoEventoData">Data do evento</label>
-        <input id="novoEventoData" type="date">
+      <div class="linha-form">
+        <div class="campo-grupo">
+          <label class="campo-label-grande" for="eventoData">Data da festa</label>
+          <input id="eventoData" type="date">
+        </div>
+        <div class="campo-grupo">
+          <label class="campo-label-grande" for="eventoHorario">Horário</label>
+          <input id="eventoHorario" type="time">
+        </div>
       </div>
 
-      <label class="switch-row" for="novoEventoOnline">
-        <span class="switch-texto">
-          <span class="switch-titulo">Já deixar no ar</span>
-          <span class="switch-sub">Libera o evento pras telas assim que for criado</span>
-        </span>
-        <span class="switch">
-          <input type="checkbox" id="novoEventoOnline">
-          <span class="slider"></span>
-        </span>
-      </label>
+      <div class="linha-form">
+        <div class="campo-grupo">
+          <label class="campo-label-grande" for="precoCasalPortaria">Casal portaria R$</label>
+          <input id="precoCasalPortaria" type="number" step="0.01" min="0" placeholder="0,00">
+        </div>
+        <div class="campo-grupo">
+          <label class="campo-label-grande" for="precoSolteiroPortaria">Solteiro portaria R$</label>
+          <input id="precoSolteiroPortaria" type="number" step="0.01" min="0" placeholder="0,00">
+        </div>
+      </div>
+
+      <div class="linha-form">
+        <div class="campo-grupo">
+          <label class="campo-label-grande" for="precoCasalAniv">Casal aniv. R$</label>
+          <input id="precoCasalAniv" type="number" step="0.01" min="0" placeholder="0,00">
+        </div>
+        <div class="campo-grupo">
+          <label class="campo-label-grande" for="precoSolteiroAniv">Solteiro aniv. R$</label>
+          <input id="precoSolteiroAniv" type="number" step="0.01" min="0" placeholder="0,00">
+        </div>
+      </div>
+
+      <div class="subcard subcard--pix">
+        <span class="subcard-titulo" style="color:#4ade80">Valores pix antecipado (pista)</span>
+        <div class="grid-3">
+          <div class="campo-grupo">
+            <label class="campo-label-grande" for="precoCasalSecoPix">Casal seco pix R$</label>
+            <input id="precoCasalSecoPix" type="number" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="campo-grupo">
+            <label class="campo-label-grande" for="precoCasalConsumaPix">Casal consuma pix R$</label>
+            <input id="precoCasalConsumaPix" type="number" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="campo-grupo">
+            <label class="campo-label-grande" for="precoSolteiroPix">Solteiro pix R$</label>
+            <input id="precoSolteiroPix" type="number" step="0.01" min="0" placeholder="0,00">
+          </div>
+        </div>
+      </div>
+
+      <div class="subcard subcard--fidelidade">
+        <span class="subcard-titulo" style="color:var(--gold)">Valores fidelidade (desconto sábado)</span>
+        <div class="grid-2">
+          <div class="campo-grupo">
+            <label class="campo-label-grande" for="precoCasalFidelidade">Casal fidelidade R$</label>
+            <input id="precoCasalFidelidade" type="number" step="0.01" min="0" placeholder="0,00">
+          </div>
+          <div class="campo-grupo">
+            <label class="campo-label-grande" for="precoSolteiroFidelidade">Solteiro fidelidade R$</label>
+            <input id="precoSolteiroFidelidade" type="number" step="0.01" min="0" placeholder="0,00">
+          </div>
+        </div>
+      </div>
+
+      <div class="subcard">
+        <span class="subcard-titulo">Capa do evento (imagem)</span>
+        <input id="eventoCapaArquivo" type="file" accept="image/*">
+        <div id="eventoCapaPreviewWrap" style="display:none;margin-top:10px;">
+          <img id="eventoCapaPreview" style="width:100%;border-radius:12px;max-height:160px;object-fit:cover;" alt="Prévia da capa">
+        </div>
+      </div>
+
+      <div class="subcard subcard--camarotes">
+        <span class="subcard-titulo" style="color:#22d3ee">Configuração de camarotes (selecione pra ativar)</span>
+        <div class="grid-camarotes" id="gridCamarotes"></div>
+      </div>
 
       <div id="erroEvento" class="erro"></div>
       <div id="sucessoEvento" class="sucesso"></div>
-      <button id="btnCriarEvento" class="btn-gold">+ Criar evento</button>
+      <button id="btnSalvarEventoCompleto" class="btn-azul">Salvar evento completo</button>
+      <button id="btnCancelarEdicaoEvento" class="sair" style="display:none;width:100%;margin-top:4px;">Cancelar edição</button>
     </div>
 
     <h1>Eventos cadastrados</h1>
@@ -163,7 +236,9 @@
   async function iniciar() {
     document.getElementById('loginWrap').style.display = 'none';
     document.getElementById('painel').style.display = 'block';
+    montarGridCamarotes();
     await carregarEventos();
+    await carregarModelos();
     await carregarAcessos();
     ligarTempoRealEventos();
   }
@@ -191,11 +266,113 @@
 
   // ===== EVENTOS =====
   let eventosCache = [];
+  let modelosCache = [];
+
+  // As 8 vagas de camarote são sempre as mesmas — cada evento ganha
+  // uma linha pra cada uma na tabela camarotes_evento.
+  const CAMAROTES_FIXOS = [
+    { codigo: 'cam01', nome: 'CAM 01' }, { codigo: 'cam02', nome: 'CAM 02' },
+    { codigo: 'cam03', nome: 'CAM 03' }, { codigo: 'cam04', nome: 'CAM 04' },
+    { codigo: 'cam05', nome: 'CAM 05' }, { codigo: 'cam06', nome: 'CAM 06' },
+    { codigo: 'vip1', nome: 'VIP 1' }, { codigo: 'vip2', nome: 'VIP 2' },
+  ];
+
+  const CAMPOS_PRECO = [
+    'precoCasalPortaria', 'precoSolteiroPortaria', 'precoCasalAniv', 'precoSolteiroAniv',
+    'precoCasalSecoPix', 'precoCasalConsumaPix', 'precoSolteiroPix',
+    'precoCasalFidelidade', 'precoSolteiroFidelidade',
+  ];
+  // Mapeia o id do campo no formulário pro nome da coluna no banco.
+  const COLUNA_POR_CAMPO_PRECO = {
+    precoCasalPortaria: 'casal_portaria', precoSolteiroPortaria: 'solteiro_portaria',
+    precoCasalAniv: 'casal_aniv', precoSolteiroAniv: 'solteiro_aniv',
+    precoCasalSecoPix: 'casal_seco_pix', precoCasalConsumaPix: 'casal_consuma_pix', precoSolteiroPix: 'solteiro_pix',
+    precoCasalFidelidade: 'casal_fidelidade', precoSolteiroFidelidade: 'solteiro_fidelidade',
+  };
+
+  function montarGridCamarotes() {
+    document.getElementById('gridCamarotes').innerHTML = CAMAROTES_FIXOS.map(c => `
+      <div class="camarote-box">
+        <div class="cam-header">
+          <input type="checkbox" id="camAtivo_${c.codigo}">
+          <label class="cam-nome" for="camAtivo_${c.codigo}">${c.nome}</label>
+        </div>
+        <input type="number" id="camValor_${c.codigo}" placeholder="Valor (R$)" step="0.01" min="0">
+        <input type="text" id="camBenef_${c.codigo}" placeholder="Benefícios">
+      </div>
+    `).join('');
+  }
+
+  function lerPrecosDoForm() {
+    const precos = {};
+    CAMPOS_PRECO.forEach(campo => {
+      const valor = document.getElementById(campo).value;
+      precos[COLUNA_POR_CAMPO_PRECO[campo]] = valor === '' ? null : Number(valor);
+    });
+    return precos;
+  }
+
+  function preencherPrecosNoForm(linha) {
+    CAMPOS_PRECO.forEach(campo => {
+      const coluna = COLUNA_POR_CAMPO_PRECO[campo];
+      document.getElementById(campo).value = linha?.[coluna] ?? '';
+    });
+  }
+
+  function lerCamarotesDoForm() {
+    return CAMAROTES_FIXOS.map(c => ({
+      codigo: c.codigo,
+      nome: c.nome,
+      ativo: document.getElementById('camAtivo_' + c.codigo).checked,
+      valor: document.getElementById('camValor_' + c.codigo).value === '' ? null : Number(document.getElementById('camValor_' + c.codigo).value),
+      beneficios: document.getElementById('camBenef_' + c.codigo).value.trim() || null,
+    }));
+  }
+
+  function preencherCamarotesNoForm(lista) {
+    CAMAROTES_FIXOS.forEach(c => {
+      const item = (lista || []).find(x => x.codigo === c.codigo);
+      document.getElementById('camAtivo_' + c.codigo).checked = !!item?.ativo;
+      document.getElementById('camValor_' + c.codigo).value = item?.valor ?? '';
+      document.getElementById('camBenef_' + c.codigo).value = item?.beneficios ?? '';
+    });
+  }
+
+  function limparFormularioEvento() {
+    document.getElementById('eventoIdEdicao').value = '';
+    document.getElementById('eventoCapaUrlAtual').value = '';
+    document.getElementById('eventoNome').value = '';
+    document.getElementById('eventoData').value = '';
+    document.getElementById('eventoHorario').value = '';
+    document.getElementById('eventoCapaArquivo').value = '';
+    document.getElementById('eventoCapaPreviewWrap').style.display = 'none';
+    preencherPrecosNoForm(null);
+    preencherCamarotesNoForm([]);
+    document.getElementById('tituloFormEvento').textContent = 'Configurar Evento & Camarotes';
+    document.getElementById('btnSalvarEventoCompleto').textContent = 'Salvar evento completo';
+    document.getElementById('btnCancelarEdicaoEvento').style.display = 'none';
+    document.getElementById('erroEvento').textContent = '';
+    document.getElementById('sucessoEvento').textContent = '';
+  }
+  document.getElementById('btnCancelarEdicaoEvento').onclick = limparFormularioEvento;
+
+  document.getElementById('eventoCapaArquivo').onchange = (e) => {
+    const arquivo = e.target.files[0];
+    if (!arquivo) return;
+    document.getElementById('eventoCapaPreview').src = URL.createObjectURL(arquivo);
+    document.getElementById('eventoCapaPreviewWrap').style.display = 'block';
+  };
 
   async function carregarEventos() {
     const { data, error } = await sb.from('eventos').select('*').order('data', { ascending: false });
     eventosCache = error ? [] : data;
     renderEventos();
+  }
+
+  async function carregarModelos() {
+    const { data, error } = await sb.from('modelos_festa').select('*').order('criado_em', { ascending: false });
+    modelosCache = error ? [] : data;
+    renderModelos();
   }
 
   function ligarTempoRealEventos() {
@@ -206,6 +383,8 @@
         } else if (payload.eventType === 'UPDATE') {
           const idx = eventosCache.findIndex(e => e.id === payload.new.id);
           if (idx > -1) eventosCache[idx] = payload.new;
+        } else if (payload.eventType === 'DELETE') {
+          eventosCache = eventosCache.filter(e => e.id !== payload.old.id);
         }
         renderEventos();
       })
@@ -223,20 +402,44 @@
   function renderEventos() {
     const cont = document.getElementById('listaEventos');
     if (!eventosCache.length) { cont.innerHTML = '<p class="vazio">Nenhum evento cadastrado ainda.</p>'; return; }
-    cont.innerHTML = eventosCache.map(e => `
-      <div class="evento-card">
-        <div class="evento-info">
-          <span class="evento-nome">${escapeHtml(e.nome)}</span>
-          <span class="evento-data">${formatarDataEvento(e.data)}</span>
-          <span class="badge-status ${e.status === 'online' ? 'online' : 'offline'}">
-            <span class="dot"></span>${e.status === 'online' ? 'No ar' : 'Offline'}
-          </span>
+    cont.innerHTML = '<div class="grid-eventos">' + eventosCache.map(e => `
+      <div class="evento-card-rico">
+        ${e.capa_url
+          ? `<img class="evento-capa" src="${e.capa_url}" alt="${escapeHtml(e.nome)}">`
+          : `<div class="evento-capa-vazia">Sem capa</div>`}
+        <div class="evento-corpo">
+          <div class="evento-meta">
+            <span class="data-hora">${formatarDataEvento(e.data)}${e.horario ? ' • ' + String(e.horario).slice(0, 5) : ''}</span>
+            <span class="${e.status === 'online' ? 'status-ativo' : 'status-offline'}">${e.status === 'online' ? 'Ativo' : 'Offline'}</span>
+          </div>
+          <div class="evento-titulo-rico">${escapeHtml(e.nome)}</div>
+          <div class="evento-acoes-rico">
+            <button class="btn-editar" onclick="editarEvento('${e.id}')">Editar</button>
+            <button class="btn-salvar-modelo" onclick="salvarComoModelo('${e.id}')">Salvar modelo</button>
+            <button class="btn-excluir" onclick="excluirEvento('${e.id}')">Excluir</button>
+          </div>
+          <button class="btn-toggle-evento ${e.status === 'online' ? 'desligar' : 'ligar'}" style="width:100%;margin-top:8px;" onclick="alternarEvento('${e.id}', '${e.status}')">
+            ${e.status === 'online' ? 'Tirar do ar' : 'Colocar no ar'}
+          </button>
         </div>
-        <button class="btn-toggle-evento ${e.status === 'online' ? 'desligar' : 'ligar'}" onclick="alternarEvento('${e.id}', '${e.status}')">
-          ${e.status === 'online' ? 'Tirar do ar' : 'Colocar no ar'}
-        </button>
       </div>
-    `).join('');
+    `).join('') + '</div>';
+  }
+
+  function renderModelos() {
+    const cont = document.getElementById('listaModelos');
+    if (!modelosCache.length) { cont.innerHTML = '<p class="vazio">Nenhum modelo salvo ainda — salve um evento já configurado como modelo pra reaproveitar depois.</p>'; return; }
+    cont.innerHTML = '<div class="grid-modelos">' + modelosCache.map(m => `
+      <div class="modelo-card">
+        <span class="modelo-label">Modelo salvo</span>
+        <span class="modelo-nome">${escapeHtml(m.nome)}</span>
+        <span class="modelo-desc">Não contém nome, data, horário nem arte do evento.</span>
+        <div class="modelo-acoes">
+          <button class="btn-usar-modelo" onclick="usarModelo('${m.id}')">Usar modelo</button>
+          <button class="btn-excluir-modelo" onclick="excluirModelo('${m.id}')" title="Excluir modelo">&times;</button>
+        </div>
+      </div>
+    `).join('') + '</div>';
   }
 
   window.alternarEvento = async (id, statusAtual) => {
@@ -246,10 +449,86 @@
     mostrarToast(novo === 'online' ? 'Evento no ar!' : 'Evento tirado do ar.', true);
   };
 
-  document.getElementById('btnCriarEvento').onclick = async () => {
-    const nome = document.getElementById('novoEventoNome').value.trim();
-    const data = document.getElementById('novoEventoData').value;
-    const online = document.getElementById('novoEventoOnline').checked;
+  window.editarEvento = async (id) => {
+    const evento = eventosCache.find(e => e.id === id);
+    if (!evento) return;
+    const { data: camarotes } = await sb.from('camarotes_evento').select('*').eq('evento_id', id);
+
+    document.getElementById('eventoIdEdicao').value = evento.id;
+    document.getElementById('eventoCapaUrlAtual').value = evento.capa_url || '';
+    document.getElementById('eventoNome').value = evento.nome || '';
+    document.getElementById('eventoData').value = evento.data || '';
+    document.getElementById('eventoHorario').value = evento.horario ? String(evento.horario).slice(0, 5) : '';
+    preencherPrecosNoForm(evento);
+    preencherCamarotesNoForm(camarotes || []);
+
+    if (evento.capa_url) {
+      document.getElementById('eventoCapaPreview').src = evento.capa_url;
+      document.getElementById('eventoCapaPreviewWrap').style.display = 'block';
+    } else {
+      document.getElementById('eventoCapaPreviewWrap').style.display = 'none';
+    }
+
+    document.getElementById('tituloFormEvento').textContent = 'Editando: ' + evento.nome;
+    document.getElementById('btnSalvarEventoCompleto').textContent = 'Salvar alterações';
+    document.getElementById('btnCancelarEdicaoEvento').style.display = 'block';
+    document.querySelector('[data-tab="eventos"]').click();
+    document.getElementById('tituloFormEvento').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  window.excluirEvento = async (id) => {
+    const evento = eventosCache.find(e => e.id === id);
+    if (!confirm(`Excluir definitivamente o evento "${evento?.nome || ''}"? Isso também apaga os camarotes dele — não dá pra desfazer.`)) return;
+    const { error } = await sb.from('eventos').delete().eq('id', id);
+    if (error) { mostrarToast(error.message, false); return; }
+    mostrarToast('Evento excluído.', true);
+    await carregarEventos();
+  };
+
+  window.salvarComoModelo = async (id) => {
+    const evento = eventosCache.find(e => e.id === id);
+    if (!evento) return;
+    const nomeModelo = prompt('Nome pra identificar esse modelo (ex: "Sábado", "Quinta Black"):');
+    if (!nomeModelo || !nomeModelo.trim()) return;
+
+    const { data: camarotes } = await sb.from('camarotes_evento').select('codigo, nome, ativo, valor, beneficios').eq('evento_id', id);
+
+    const payload = {
+      nome: nomeModelo.trim(),
+      camarotes: camarotes || [],
+    };
+    Object.values(COLUNA_POR_CAMPO_PRECO).forEach(coluna => { payload[coluna] = evento[coluna] ?? null; });
+
+    const { error } = await sb.from('modelos_festa').insert(payload);
+    if (error) { mostrarToast(error.message, false); return; }
+    mostrarToast('Modelo salvo!', true);
+    await carregarModelos();
+  };
+
+  window.usarModelo = (id) => {
+    const modelo = modelosCache.find(m => m.id === id);
+    if (!modelo) return;
+    preencherPrecosNoForm(modelo);
+    preencherCamarotesNoForm(modelo.camarotes || []);
+    document.querySelector('[data-tab="eventos"]').click();
+    document.getElementById('tituloFormEvento').scrollIntoView({ behavior: 'smooth' });
+    mostrarToast('Modelo aplicado — agora só falta nome, data, horário (e a capa, se quiser).', true);
+  };
+
+  window.excluirModelo = async (id) => {
+    const modelo = modelosCache.find(m => m.id === id);
+    if (!confirm(`Excluir o modelo "${modelo?.nome || ''}"?`)) return;
+    const { error } = await sb.from('modelos_festa').delete().eq('id', id);
+    if (error) { mostrarToast(error.message, false); return; }
+    mostrarToast('Modelo excluído.', true);
+    await carregarModelos();
+  };
+
+  document.getElementById('btnSalvarEventoCompleto').onclick = async () => {
+    const nome = document.getElementById('eventoNome').value.trim();
+    const data = document.getElementById('eventoData').value;
+    const horario = document.getElementById('eventoHorario').value || null;
+    const idEdicao = document.getElementById('eventoIdEdicao').value || null;
     const erro = document.getElementById('erroEvento');
     const sucesso = document.getElementById('sucessoEvento');
     erro.textContent = ''; sucesso.textContent = '';
@@ -257,16 +536,51 @@
     if (!nome) { erro.textContent = 'Digite o nome do evento.'; return; }
     if (!data) { erro.textContent = 'Escolha a data.'; return; }
 
-    const { error } = await sb.from('eventos').insert({
-      nome, data, status: online ? 'online' : 'offline'
-    });
-    if (error) { erro.textContent = error.message; return; }
+    const botao = document.getElementById('btnSalvarEventoCompleto');
+    botao.disabled = true;
 
-    sucesso.textContent = 'Evento criado!';
-    document.getElementById('novoEventoNome').value = '';
-    document.getElementById('novoEventoData').value = '';
-    document.getElementById('novoEventoOnline').checked = false;
-    await carregarEventos();
+    try {
+      // Se uma capa nova foi escolhida, envia ela pro Storage antes de
+      // salvar o evento — senão mantém a capa que já existia (se houver).
+      let capaUrl = document.getElementById('eventoCapaUrlAtual').value || null;
+      const arquivoCapa = document.getElementById('eventoCapaArquivo').files[0];
+      if (arquivoCapa) {
+        const caminho = `${Date.now()}-${arquivoCapa.name}`.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const { error: erroUpload } = await sb.storage.from('capas-eventos').upload(caminho, arquivoCapa, { upsert: true });
+        if (erroUpload) { erro.textContent = 'Erro ao enviar a capa: ' + erroUpload.message; return; }
+        const { data: urlData } = sb.storage.from('capas-eventos').getPublicUrl(caminho);
+        capaUrl = urlData.publicUrl;
+      }
+
+      const payload = { nome, data, horario, capa_url: capaUrl, ...lerPrecosDoForm() };
+
+      let eventoId = idEdicao;
+      if (idEdicao) {
+        const { error: erroUpdate } = await sb.from('eventos').update(payload).eq('id', idEdicao);
+        if (erroUpdate) { erro.textContent = erroUpdate.message; return; }
+      } else {
+        payload.status = 'offline';
+        const { data: inserido, error: erroInsert } = await sb.from('eventos').insert(payload).select().single();
+        if (erroInsert) { erro.textContent = erroInsert.message; return; }
+        eventoId = inserido.id;
+      }
+
+      // Camarotes: upsert um por um nas 8 vagas fixas.
+      const camarotes = lerCamarotesDoForm();
+      for (const c of camarotes) {
+        const { error: erroCam } = await sb.from('camarotes_evento').upsert({
+          evento_id: eventoId, codigo: c.codigo, nome: c.nome,
+          ativo: c.ativo, valor: c.valor, beneficios: c.beneficios,
+        }, { onConflict: 'evento_id,codigo' });
+        if (erroCam) { erro.textContent = 'Evento salvo, mas deu erro num camarote: ' + erroCam.message; }
+      }
+
+      sucesso.textContent = idEdicao ? 'Evento atualizado!' : 'Evento criado! Lembre de colocar "no ar" quando quiser liberar pras telas.';
+      limparFormularioEvento();
+      await carregarEventos();
+    } finally {
+      botao.disabled = false;
+    }
   };
 
   // ===== ACESSOS =====
