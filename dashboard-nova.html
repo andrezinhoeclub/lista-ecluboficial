@@ -794,6 +794,11 @@
                     aplicarConfiguracoes(payload.new);
                 })
                 .subscribe();
+            sb.channel('dashboard-configuracoes-financeiro')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'configuracoes_financeiro' }, payload => {
+                    aplicarConfiguracoes(payload.new);
+                })
+                .subscribe();
             sb.channel('dashboard-solteiras')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes_solteiras' }, () => {
                     carregarSolteirasBadge();
@@ -1675,16 +1680,20 @@
             if (error) return mostrarAviso('Erro ao salvar contatos.');
             mostrarAviso('Contatos salvos. As páginas já estão usando os novos.', true);
         };
+        // Taxa do PIX e custo do sistema moram numa tabela separada
+        // (configuracoes_financeiro), só de leitura/escrita do master —
+        // nenhuma outra função ativa (vallet, solteiras, portaria, promoter)
+        // consegue mais ler esses dois campos.
         window.salvarTaxaPix = async () => {
             const tipo = document.getElementById('tipo_taxa').value;
             const valor = parseFloat(document.getElementById('valor_taxa').value) || 0;
-            const { error } = await sb.from('configuracoes').update({ taxa_tipo: tipo, taxa_valor: valor }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes_financeiro').update({ taxa_tipo: tipo, taxa_valor: valor }).eq('id', 'sistema');
             if (error) return mostrarAviso('Erro ao salvar taxa.');
             mostrarAviso('Taxa atualizada com sucesso!', true);
         };
         window.salvarCustoSistema = async () => {
             const valor = parseFloat(document.getElementById('custo_sistema').value) || 0;
-            const { error } = await sb.from('configuracoes').update({ custo_sistema: valor }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes_financeiro').update({ custo_sistema: valor }).eq('id', 'sistema');
             if (error) return mostrarAviso('Erro ao salvar custo.');
             mostrarAviso('Custo do sistema salvo com sucesso!', true);
         };
@@ -1700,9 +1709,16 @@
             mostrarAviso(!modoTesteValletAtivo ? 'Modo teste do Vallet liberado.' : 'Modo teste do Vallet finalizado.', true);
         };
 
-        function aplicarConfiguracoes(data) {
-            if (!data) return;
-            configuracoesAtuais = data;
+        function aplicarConfiguracoes(dataParcial) {
+            if (!dataParcial) return;
+            // Mescla em vez de substituir: "configuracoes" e
+            // "configuracoes_financeiro" chegam em momentos separados (dois
+            // selects no carregamento, dois canais de tempo real diferentes)
+            // — sem mesclar, uma mudança só do lado operacional (ex: modo
+            // teste) apagaria da tela o que já tinha carregado do lado
+            // financeiro (taxa/custo), e vice-versa.
+            configuracoesAtuais = { ...configuracoesAtuais, ...dataParcial };
+            const data = configuracoesAtuais;
             modoTesteAtivo = data.modo_teste === true;
             modoTesteValletAtivo = data.modo_teste_vallet === true;
             const btn = document.getElementById('btnModoTeste');
@@ -1720,8 +1736,11 @@
             atualizarPreviaContatos();
         }
         async function carregarConfiguracoes() {
-            const { data } = await sb.from('configuracoes').select('*').eq('id', 'sistema').single();
-            aplicarConfiguracoes(data);
+            const [{ data }, { data: dataFinanceiro }] = await Promise.all([
+                sb.from('configuracoes').select('*').eq('id', 'sistema').single(),
+                sb.from('configuracoes_financeiro').select('*').eq('id', 'sistema').single(),
+            ]);
+            aplicarConfiguracoes({ ...(data || {}), ...(dataFinanceiro || {}) });
         }
         document.getElementById('data_corte_limpeza').valueAsDate = new Date();
 
