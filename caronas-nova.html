@@ -428,6 +428,20 @@
             return data;
         }
 
+        // Limpa dado digitado por qualquer pessoa (nome de evento etc.) antes de
+        // colocar na tela — evita que um nome com código HTML/script rode na
+        // sessão de quem abrir essa tela pública (sem login nenhum).
+        const escapeHtml = (v) => String(v ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+        // A imagem de capa do evento é mostrada como atributo "src" — além de
+        // escapar, só aceita URL http(s) de verdade, nunca algo tipo
+        // "javascript:" que alguém tenha colocado no campo por engano.
+        const urlImagemSegura = (v) => (/^https?:\/\//i.test(String(v || '').trim()) ? String(v).trim() : '');
+
         let eventosCache = [];
         let eventoAtivo = null;
 
@@ -561,12 +575,12 @@
                     return `
                         <div class="glass overflow-hidden rounded-[2.5rem] transition-all hover:border-pink-500/50">
                             ${
-                                ev.imagem
-                                    ? `<img src="${ev.imagem}" class="banner-img">`
+                                urlImagemSegura(ev.imagem)
+                                    ? `<img src="${escapeHtml(urlImagemSegura(ev.imagem))}" class="banner-img">`
                                     : `<div class="h-64 bg-pink-900/10 flex items-center justify-center text-pink-500/30 font-black italic text-2xl border-b border-pink-500/10">E-CLUB</div>`
                             }
                             <div class="p-6 md:p-8 text-center">
-                                <h3 class="text-2xl font-black uppercase italic mb-1 tracking-tighter text-white">${ev.nome}</h3>
+                                <h3 class="text-2xl font-black uppercase italic mb-1 tracking-tighter text-white">${escapeHtml(ev.nome)}</h3>
                                 <p class="text-[10px] font-bold text-pink-300 uppercase tracking-widest mb-6">${dataFormatada}</p>
                                 <button onclick="abrirReserva('${ev.id}', ${passouLimite})"
                                     class="w-full btn-rosa py-5 rounded-2xl text-[11px] uppercase tracking-widest shadow-lg ${btnClasse}">
