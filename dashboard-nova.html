@@ -161,7 +161,6 @@
         </section>
 
         <section id="aba-auditoria" class="hidden space-y-8">
-            <div class="em-construcao">🚧 A auditoria mostra reservas reais assim que a tela de Listas estiver rodando no Supabase.</div>
             <div class="glass-card p-8 border-l-4 border-l-emerald-500">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-emerald-500 font-black uppercase italic text-xl tracking-tighter">Conferência &amp; Auditoria Live</h2>
@@ -208,6 +207,19 @@
                 <div class="bg-[#0a0a0f] border border-pink-500/30 px-10 py-5 rounded-3xl text-center shadow-[0_0_30px_rgba(219,39,119,0.15)] min-w-[200px]">
                     <p class="text-[10px] font-black text-pink-500 uppercase tracking-widest mb-1">Cadastradas no Sistema</p>
                     <p id="total-solteiras-badge" class="text-4xl font-black text-white leading-none">0</p>
+                </div>
+            </div>
+            <div class="glass-card p-8 border-l-4 border-l-fuchsia-500">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-fuchsia-500 font-black uppercase italic text-xl tracking-tighter">Check-ins Recentes</h2>
+                    <span class="bg-fuchsia-500/10 border border-fuchsia-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-fuchsia-500 uppercase animate-pulse">● Tempo Real</span>
+                </div>
+                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Cada check-in (ou cadastro novo) grava uma entrada própria desta noite — registro independente de "última visita", que não é mais usado pra contar presença.</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Quando</th><th class="pb-4">Cliente</th><th class="pb-4">Evento</th></tr></thead>
+                        <tbody id="tabela-entradas-solteiras-body"><tr><td colspan="3" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhum check-in registrado ainda</td></tr></tbody>
+                    </table>
                 </div>
             </div>
             <div class="glass-card p-8 border-l-4 border-l-amber-500 flex flex-col md:flex-row justify-between items-center gap-6">
@@ -558,6 +570,7 @@
         let dadosLinksAniversario = [];
         let dadosNomesAcessos = new Map();
         let configuracoesAtuais = {};
+        let dadosEntradasSolteiras = [];
 
         const escapeHtml = (v) => String(v ?? '')
             .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -665,7 +678,7 @@
             document.getElementById('dashboard-login').classList.add('hidden');
             document.getElementById('painel-dashboard').classList.remove('hidden');
             montarGridCamarotes();
-            await Promise.all([carregarEventos(), carregarModelos(), carregarConfiguracoes(), carregarSolteirasBadge(), carregarReservas(), carregarLinksAniversario(), carregarNomesAcessos()]);
+            await Promise.all([carregarEventos(), carregarModelos(), carregarConfiguracoes(), carregarSolteirasBadge(), carregarReservas(), carregarLinksAniversario(), carregarNomesAcessos(), carregarEntradasSolteiras()]);
             ligarTempoReal();
             pintarStatusTravaSolteiras();
             setInterval(pintarStatusTravaSolteiras, 60000);
@@ -695,6 +708,7 @@
             dadosEventos = data || [];
             renderGridConfig();
             renderRelatorios();
+            renderAuditoria();
         }
         async function carregarModelos() {
             const { data } = await sb.from('modelos_eventos').select('*').order('modelo_nome');
@@ -710,7 +724,7 @@
             const { data, error } = await sb.from('reservas').select('*');
             if (error) { mostrarAviso('Erro ao carregar reservas: ' + error.message); return; }
             dadosReservas = data || [];
-            renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderRelatorios();
+            renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes(); renderRelatorios(); renderAuditoria();
         }
         async function carregarLinksAniversario() {
             const { data, error } = await sb.from('links_aniversario').select('*');
@@ -723,6 +737,34 @@
             dadosNomesAcessos = new Map((data || []).map(a => [a.user_id, a.nome]));
             renderAniversarios();
         }
+        // Não filtra por data pelo mesmo motivo de dadosReservas: as bolhas de
+        // Relatórios usam isso pra contar solteiras por evento, inclusive de
+        // festas passadas.
+        async function carregarEntradasSolteiras() {
+            const { data, error } = await sb.from('entradas_solteiras').select('id, cliente_id, criado_em, evento_id, clientes_solteiras(nome, tel)').order('criado_em', { ascending: false });
+            if (error) { console.error('Erro ao carregar entradas_solteiras:', error.message); return; }
+            dadosEntradasSolteiras = data || [];
+            renderEntradasSolteiras();
+            renderRelatorios();
+        }
+        window.renderEntradasSolteiras = () => {
+            const tb = document.getElementById('tabela-entradas-solteiras-body');
+            if (!tb) return;
+            if (!dadosEntradasSolteiras.length) {
+                tb.innerHTML = `<tr><td colspan="3" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhum check-in registrado ainda</td></tr>`;
+                return;
+            }
+            tb.innerHTML = dadosEntradasSolteiras.slice(0, 40).map(e => {
+                const ev = dadosEventos.find(x => x.id === e.evento_id);
+                const quando = e.criado_em && !isNaN(new Date(e.criado_em)) ? new Date(e.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + new Date(e.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
+                const cliente = e.clientes_solteiras;
+                return `<tr class="border-b border-white/5 text-[11px]">
+                    <td class="py-4 pl-4 font-mono text-[10px] text-zinc-400">${quando}</td>
+                    <td class="py-4"><p class="text-xs font-black text-white uppercase">${escapeHtml(cliente?.nome || '---')}</p><p class="text-[9px] text-zinc-500 font-bold">${escapeHtml(cliente?.tel || '---')}</p></td>
+                    <td class="py-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${escapeHtml(ev?.nome || '---')}</span></td>
+                </tr>`;
+            }).join('');
+        };
 
         function ligarTempoReal() {
             sb.channel('dashboard-eventos')
@@ -734,6 +776,7 @@
                     }
                     renderGridConfig();
                     renderRelatorios();
+                    renderAuditoria();
                 })
                 .subscribe();
             sb.channel('dashboard-modelos')
@@ -769,6 +812,11 @@
             sb.channel('dashboard-links-aniversario')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'links_aniversario' }, () => {
                     carregarLinksAniversario();
+                })
+                .subscribe();
+            sb.channel('dashboard-entradas-solteiras')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'entradas_solteiras' }, () => {
+                    carregarEntradasSolteiras();
                 })
                 .subscribe();
         }
@@ -964,8 +1012,109 @@
         // check-in) ser reconstruída no Supabase. Os botões avisam em vez de
         // falhar silenciosamente.
         const avisoPendente = () => mostrarAviso('Essa função ainda depende da tela de Listas no Supabase — chega numa próxima etapa.');
-        window.exportarAuditoriaExcel = avisoPendente;
-        window.renderAuditoria = () => {};
+        // ===== AUDITORIA (Conferência & Auditoria Live) =====
+        function tipoAuditoriaHtml(r) {
+            if (r.camarote_numero != null) {
+                const rotulo = nomeCamarote(r.camarote_numero);
+                const badge = r.cortesia
+                    ? `<span class="text-[8px] font-black uppercase text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-lg">Cortesia</span>`
+                    : (r.pago === true
+                        ? `<span class="text-[8px] font-black uppercase text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-lg">💎 PIX Pago</span>`
+                        : `<span class="text-[8px] font-black uppercase text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-lg">💎 PIX Pendente</span>`);
+                return `<div class="flex flex-col gap-1 items-start"><span class="text-[9px] font-black uppercase text-cyan-400">${escapeHtml(rotulo)}</span>${badge}</div>`;
+            }
+            const tipo = r.tipo_entrada || '---';
+            if (String(r.metodo || '').toUpperCase() !== 'PIX') {
+                return `<span class="text-[9px] font-black uppercase text-cyan-400">${escapeHtml(tipo)}</span>`;
+            }
+            const label = r.pago === true ? 'PIX Pago' : 'PIX Pendente';
+            const cls = r.pago === true ? 'text-green-400 bg-green-500/10 border-green-500/20' : 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+            return `<div class="flex flex-col gap-1 items-start"><span class="text-[9px] font-black uppercase text-cyan-400">${escapeHtml(tipo)}</span><span class="text-[8px] font-black uppercase ${cls} border px-2 py-1 rounded-lg">💸 ${label}</span></div>`;
+        }
+        function statusAuditoriaHtml(r) {
+            if (r.cancelada) return `<span class="text-[9px] font-black uppercase text-red-500 flex items-center justify-end gap-1">✕ Cancelada</span>`;
+            if (r.entrou) {
+                const dEnt = r.entrada_em && !isNaN(new Date(r.entrada_em)) ? new Date(r.entrada_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' ' + new Date(r.entrada_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
+                return `<div class="flex flex-col items-end gap-1"><span class="text-[10px] font-black uppercase text-green-500">✓ Entrou</span><span class="text-[8px] text-zinc-500 font-mono">🕒 ${dEnt}</span></div>`;
+            }
+            if (String(r.metodo || '').toUpperCase() === 'PIX' && r.pago !== true) {
+                return `<div class="flex flex-col items-end gap-1"><span class="text-[9px] font-black uppercase text-red-500">🚫 PIX Pendente</span></div>`;
+            }
+            return `<span class="text-[9px] font-black uppercase text-zinc-500 flex items-center justify-end gap-1">○ Aguardando</span>`;
+        }
+        function linhaReservaCorresponde(r, ev, terms) {
+            const dF = r.criado_em && !isNaN(new Date(r.criado_em)) ? new Date(r.criado_em).toLocaleDateString('pt-BR') : '';
+            const str = `${r.nome || ''} ${r.telefone || ''} ${promoterDaReserva(r)} ${ev?.nome || ''} ${r.cpf || ''} ${dF}`.toUpperCase();
+            return terms.every(t => str.includes(t));
+        }
+        window.renderAuditoria = () => {
+            const tbody = document.getElementById('tabela-auditoria-body');
+            if (!tbody) return;
+            const termo = (document.getElementById('busca-auditoria')?.value || '').trim().toUpperCase();
+            const fStat = document.getElementById('filtro-status-auditoria')?.value || 'todos';
+
+            let res = [...dadosReservas].sort((a, b) => (a.criado_em < b.criado_em ? 1 : -1));
+            if (fStat === 'entrou') res = res.filter(r => r.entrou === true);
+            else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true && !r.cancelada);
+
+            if (termo.length > 1) {
+                const terms = termo.split(/\s+/);
+                res = res.filter(r => linhaReservaCorresponde(r, dadosEventos.find(e => e.id === r.evento_id), terms));
+            } else {
+                res = res.slice(0, 100);
+            }
+
+            if (!res.length) { tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr>`; return; }
+            tbody.innerHTML = res.map(r => {
+                const ev = dadosEventos.find(e => e.id === r.evento_id);
+                const df = r.criado_em && !isNaN(new Date(r.criado_em)) ? new Date(r.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' - ' + new Date(r.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
+                return `<tr class="hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-l-emerald-500">
+                    <td class="p-4 font-mono text-[10px] text-zinc-400">${df}</td>
+                    <td class="p-4"><p class="text-xs font-black text-white uppercase">${escapeHtml(r.nome)}</p><p class="text-[9px] text-zinc-500 font-bold">${escapeHtml(r.telefone || '---')}</p></td>
+                    <td class="p-4"><span class="text-[9px] font-bold text-zinc-300 uppercase bg-zinc-800 px-3 py-1.5 rounded-lg">${escapeHtml(ev?.nome || '---')}</span></td>
+                    <td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${escapeHtml(promoterDaReserva(r))}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${escapeHtml(r.aniversariante)}</span>` : ''}</div></td>
+                    <td class="p-4">${tipoAuditoriaHtml(r)}</td>
+                    <td class="p-4 text-right">${statusAuditoriaHtml(r)}</td>
+                </tr>`;
+            }).join('');
+        };
+
+        window.exportarAuditoriaExcel = () => {
+            const termo = (document.getElementById('busca-auditoria')?.value || '').trim().toUpperCase();
+            const fStat = document.getElementById('filtro-status-auditoria')?.value || 'todos';
+            let res = [...dadosReservas].sort((a, b) => (a.criado_em < b.criado_em ? 1 : -1));
+            if (fStat === 'entrou') res = res.filter(r => r.entrou === true);
+            else if (fStat === 'aguardando') res = res.filter(r => r.entrou !== true && !r.cancelada);
+            if (termo.length > 1) {
+                const terms = termo.split(/\s+/);
+                res = res.filter(r => linhaReservaCorresponde(r, dadosEventos.find(e => e.id === r.evento_id), terms));
+            }
+            if (!res.length) { mostrarAviso('Nenhum dado na tela para exportar.'); return; }
+            let csv = 'DATA RESERVA;CLIENTE;TELEFONE;EVENTO;PROMOTER;TIPO;STATUS;HORA CHECK-IN\n';
+            res.forEach(r => {
+                const ev = dadosEventos.find(e => e.id === r.evento_id);
+                const dtRes = r.criado_em && !isNaN(new Date(r.criado_em)) ? new Date(r.criado_em).toLocaleDateString('pt-BR') + ' ' + new Date(r.criado_em).toLocaleTimeString('pt-BR') : '---';
+                const cliente = (r.nome || '---').replace(/;/g, '');
+                const tel = (r.telefone || '---').replace(/;/g, '');
+                const evento = (ev?.nome || '---').replace(/;/g, '');
+                const promoter = promoterDaReserva(r).replace(/;/g, '');
+                const tipo = (r.camarote_numero != null ? nomeCamarote(r.camarote_numero) : (r.tipo_entrada || '---')).replace(/;/g, '');
+                const status = r.cancelada ? 'CANCELADA' : (r.entrou ? 'ENTROU' : 'AGUARDANDO');
+                const dtEntrada = r.entrou && r.entrada_em && !isNaN(new Date(r.entrada_em)) ? new Date(r.entrada_em).toLocaleDateString('pt-BR') + ' ' + new Date(r.entrada_em).toLocaleTimeString('pt-BR') : '---';
+                csv += `${dtRes};${cliente};${tel};${evento};${promoter};${tipo};${status};${dtEntrada}\n`;
+            });
+            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Auditoria_E-Club_${fStat}_${Date.now()}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            mostrarAviso('Excel baixado com sucesso!', true);
+        };
         window.gerarRelatorioCaronas = avisoPendente;
         window.copiarRotasCarona = avisoPendente;
         window.faxinaPorData = avisoPendente;
@@ -1046,6 +1195,7 @@
                     <div class="flex justify-between border-t border-white/5 pt-4">
                         <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Lista VIP/Pagante</p><p class="text-lg font-black text-white">${val.length}</p></div>
                         <div class="text-center"><p class="text-[7px] text-zinc-500 uppercase font-black">Check-ins Pagantes</p><p class="text-lg font-black text-green-500">${val.filter(r => r.entrou).length}</p></div>
+                        <div class="text-center border-l border-white/5 pl-4"><p class="text-[7px] text-pink-500 uppercase font-black">Solteiras</p><p class="text-lg font-black text-pink-400">${dadosEntradasSolteiras.filter(e => e.evento_id === ev.id).length}</p></div>
                     </div>
                 </div>`;
             }).join('');
@@ -1141,19 +1291,23 @@
             tA.value = 'NOME\tTELEFONE\n' + res.map(r => `${r.nome}\t${r.telefone || '---'}`).join('\n');
         };
 
-        // A base de Solteiras não é por evento no sistema novo (é um cadastro
-        // único da casa) — aqui conta como "presente" quem teve a última
-        // visita registrada hoje, que é o equivalente mais próximo de "quem
-        // passou na festa de hoje" com os dados que essa tabela guarda.
-        window.gerarApenasSolteiras = async () => {
+        // Usa entradas_solteiras (registro próprio por noite) em vez de
+        // ultima_visita — que é sobrescrita a cada nova visita e não serve
+        // pra isolar "só hoje" com confiança (ver migracao-entradas-solteiras.sql).
+        window.gerarApenasSolteiras = () => {
             const tA = document.getElementById('output-excel');
-            tA.value = 'Carregando...';
             const hojeISO = new Date().toISOString().slice(0, 10);
-            const { data, error } = await sb.from('clientes_solteiras').select('nome, tel, ultima_visita');
-            if (error) { tA.value = 'Erro ao buscar solteiras.'; return; }
-            const presentes = (data || []).filter(s => s.ultima_visita && String(s.ultima_visita).slice(0, 10) === hojeISO);
-            if (!presentes.length) { tA.value = 'Nenhuma solteira com visita registrada hoje.'; return; }
-            tA.value = 'NOME\tTELEFONE\n' + presentes.map(r => `${r.nome}\t${r.tel || '---'}`).join('\n');
+            const eventoHoje = dadosEventos.find(e => e.data === hojeISO);
+            if (!eventoHoje) { tA.value = 'Nenhum evento ativo hoje.'; return; }
+            const vistos = new Set();
+            const presentes = dadosEntradasSolteiras.filter(e => {
+                if (e.evento_id !== eventoHoje.id) return false;
+                if (vistos.has(e.cliente_id)) return false;
+                vistos.add(e.cliente_id);
+                return true;
+            });
+            if (!presentes.length) { tA.value = 'Nenhum check-in de solteira registrado hoje.'; return; }
+            tA.value = 'NOME\tTELEFONE\n' + presentes.map(e => `${e.clientes_solteiras?.nome || '---'}\t${e.clientes_solteiras?.tel || '---'}`).join('\n');
         };
 
         window.copiarOutput = () => {
