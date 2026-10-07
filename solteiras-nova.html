@@ -390,8 +390,20 @@
             .toUpperCase().replace(/\s+/g, ' ').trim();
     }
     // ---- lista guardada na máquina ----
+    // Só os últimos 3 dígitos do CPF vão pra cópia salva no navegador —
+    // suficiente pra continuar conferindo duplicado mesmo sem internet, sem
+    // deixar o CPF completo de todo mundo gravado em texto puro na máquina
+    // (o CPF completo continua normal no banco; aqui é só a cópia local de
+    // emergência).
+    function ultimosDigitosCpf(v) {
+        const d = String(v || '').replace(/\D/g, '');
+        return d ? d.slice(-3) : '';
+    }
     function salvarListaLocal(lista) {
-        try { localStorage.setItem(CHAVE_LISTA_LOCAL, JSON.stringify({em:Date.now(), lista})); } catch(_) {}
+        try {
+            const listaReduzida = (lista || []).map(c => ({ ...c, cpf: ultimosDigitosCpf(c.cpf) }));
+            localStorage.setItem(CHAVE_LISTA_LOCAL, JSON.stringify({em:Date.now(), lista:listaReduzida}));
+        } catch(_) {}
     }
     function lerListaLocal() {
         try {
@@ -527,9 +539,14 @@
         const lista = listaCompletaCache || [];
         const soDigitos = v => String(v || '').replace(/\D/g, '');
         const c = soDigitos(cpf), t = soDigitos(tel);
-        return lista.find(x =>
-            (c && soDigitos(x.cpf) === c) || (t && soDigitos(x.tel) === t)
-        ) || null;
+        return lista.find(x => {
+            const xc = soDigitos(x.cpf);
+            // x.cpf pode vir truncado (só os últimos dígitos), quando a lista
+            // usada foi a cópia salva no navegador em vez da do servidor —
+            // compara pelo final em vez de igual exato, senão nunca bateria.
+            const bateCpf = c && xc && xc.length >= 3 && c.endsWith(xc);
+            return bateCpf || (t && soDigitos(x.tel) === t);
+        }) || null;
     }
     // Manda pro servidor tudo que ficou pendente.
     async function sincronizarFilaOffline() {
