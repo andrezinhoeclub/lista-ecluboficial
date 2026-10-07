@@ -322,7 +322,6 @@
         </section>
 
         <section id="aba-aniversarios" class="hidden space-y-8">
-            <div class="em-construcao">🚧 Aniversariantes, Migrar Camarote e a lista de ocupação dependem da tela de Listas com os campos de pagamento — ainda não disponíveis nesta fase.</div>
             <div class="glass-card p-8 border-l-4 border-l-cyan-500">
                 <h2 class="text-cyan-500 font-black uppercase italic text-xl mb-10 tracking-tighter">Listas de Aniversariantes</h2>
                 <div class="overflow-x-auto">
@@ -330,6 +329,39 @@
                         <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Data</th><th class="pb-4">Promoter</th><th class="pb-4">Aniversariante</th><th class="pb-4 text-center">Reservas</th><th class="pb-4 text-right pr-4">Ações</th></tr></thead>
                         <tbody id="tabela-aniversarios-body"><tr><td colspan="5" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhum registro ainda</td></tr></tbody>
                     </table>
+                </div>
+            </div>
+            <div id="box-migracao-camarote" class="glass-card p-8 border-l-4 border-l-purple-500">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                    <div>
+                        <h2 class="text-purple-500 font-black uppercase italic text-xl tracking-tighter">Migrar Camarote</h2>
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase mt-1 tracking-widest">Transfere cliente, pagamento e status para outro evento/camarote sem cancelar a compra.</p>
+                    </div>
+                    <span class="bg-purple-500/10 border border-purple-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-purple-400 uppercase">Administração</span>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                    <div class="lg:col-span-2">
+                        <label class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Buscar cliente / evento / camarote</label>
+                        <input type="text" id="busca-migracao-camarote" oninput="renderMigracaoCamarotes()" placeholder="NOME, TELEFONE, EVENTO OU CAMAROTE" class="w-full p-4 rounded-2xl font-bold text-[10px] uppercase bg-[#0c0c0e] border border-zinc-800 text-white outline-none">
+                    </div>
+                    <div class="lg:col-span-3">
+                        <label class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Camarote vendido/cortesia de origem</label>
+                        <select id="select-migracao-origem" onchange="renderCamarotesDestinoMigracao(); atualizarPreviewMigracaoCamarote();" class="w-full p-4 rounded-2xl font-bold text-[10px] uppercase bg-[#0c0c0e] border border-zinc-800 text-white outline-none"></select>
+                    </div>
+                    <div class="lg:col-span-3">
+                        <label class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Evento de destino</label>
+                        <select id="select-migracao-evento" onchange="renderCamarotesDestinoMigracao(); atualizarPreviewMigracaoCamarote();" class="w-full p-4 rounded-2xl font-bold text-[10px] uppercase bg-[#0c0c0e] border border-zinc-800 text-white outline-none"></select>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <label class="text-[8px] font-black text-zinc-500 uppercase tracking-widest ml-2 mb-2 block">Camarote de destino</label>
+                        <select id="select-migracao-camarote" onchange="atualizarPreviewMigracaoCamarote()" class="w-full p-4 rounded-2xl font-bold text-[10px] uppercase bg-[#0c0c0e] border border-zinc-800 text-white outline-none"></select>
+                    </div>
+                    <div class="lg:col-span-4 bg-black/30 border border-white/5 rounded-2xl p-4 min-h-[86px]" id="preview-migracao-camarote">
+                        <p class="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Selecione o camarote de origem e o destino para conferir a migração.</p>
+                    </div>
+                    <div class="lg:col-span-1 flex items-stretch">
+                        <button onclick="confirmarMigracaoCamarote()" class="w-full bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-black py-4 rounded-2xl uppercase transition-all shadow-lg">Migrar Camarote</button>
+                    </div>
                 </div>
             </div>
             <div class="glass-card p-8 border-l-4 border-l-blue-500">
@@ -523,6 +555,9 @@
         let dadosEventos = [];
         let dadosModelosEventos = [];
         let dadosSolteiras = [];
+        let dadosReservas = [];
+        let dadosLinksAniversario = [];
+        let dadosNomesAcessos = new Map();
 
         const escapeHtml = (v) => String(v ?? '')
             .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -630,7 +665,7 @@
             document.getElementById('dashboard-login').classList.add('hidden');
             document.getElementById('painel-dashboard').classList.remove('hidden');
             montarGridCamarotes();
-            await Promise.all([carregarEventos(), carregarModelos(), carregarConfiguracoes(), carregarSolteirasBadge()]);
+            await Promise.all([carregarEventos(), carregarModelos(), carregarConfiguracoes(), carregarSolteirasBadge(), carregarReservas(), carregarLinksAniversario(), carregarNomesAcessos()]);
             ligarTempoReal();
             pintarStatusTravaSolteiras();
             setInterval(pintarStatusTravaSolteiras, 60000);
@@ -666,6 +701,28 @@
             renderGridConfig();
         }
 
+        // ATENÇÃO — igual ao sistema antigo: não filtrar esta consulta por data
+        // nem por evento. Camarotes migrados para outro evento e reservas de
+        // eventos passados que ainda importam para a Auditoria/Migração
+        // precisam continuar aparecendo aqui.
+        async function carregarReservas() {
+            const { data, error } = await sb.from('reservas').select('*');
+            if (error) { mostrarAviso('Erro ao carregar reservas: ' + error.message); return; }
+            dadosReservas = data || [];
+            renderAniversarios(); renderCamarotesVendidos(); renderMigracaoCamarotes();
+        }
+        async function carregarLinksAniversario() {
+            const { data, error } = await sb.from('links_aniversario').select('*');
+            if (error) { mostrarAviso('Erro ao carregar listas de aniversário: ' + error.message); return; }
+            dadosLinksAniversario = data || [];
+            renderAniversarios();
+        }
+        async function carregarNomesAcessos() {
+            const { data } = await sb.from('acessos').select('user_id, nome');
+            dadosNomesAcessos = new Map((data || []).map(a => [a.user_id, a.nome]));
+            renderAniversarios();
+        }
+
         function ligarTempoReal() {
             sb.channel('dashboard-eventos')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'eventos' }, payload => {
@@ -695,6 +752,21 @@
             sb.channel('dashboard-solteiras')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes_solteiras' }, () => {
                     carregarSolteirasBadge();
+                })
+                .subscribe();
+            // Reservas e listas de aniversário mudam o tempo todo (nova reserva,
+            // PIX caindo, migração, liberação) — em vez de tentar mesclar
+            // payload por payload, basta recarregar a lista inteira e
+            // redesenhar as 3 telas que dependem dela (igual já é feito para
+            // configuracoes/modelos acima).
+            sb.channel('dashboard-reservas')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas' }, () => {
+                    carregarReservas();
+                })
+                .subscribe();
+            sb.channel('dashboard-links-aniversario')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'links_aniversario' }, () => {
+                    carregarLinksAniversario();
                 })
                 .subscribe();
         }
@@ -898,12 +970,266 @@
         window.renderAuditoria = () => {};
         window.gerarRelatorioCaronas = avisoPendente;
         window.copiarRotasCarona = avisoPendente;
-        window.confirmarMigracaoCamarote = avisoPendente;
-        window.renderMigracaoCamarotes = () => {};
-        window.renderCamarotesDestinoMigracao = () => {};
-        window.atualizarPreviewMigracaoCamarote = () => {};
         window.faxinaPorData = avisoPendente;
         window.zerarSistemaCompleto = avisoPendente;
+
+        // ===== ANIVERSARIANTES / GESTÃO DE CAMAROTES / MIGRAR CAMAROTE =====
+        // Mesma "regra única" de contagem usada em promoter-api e listas-api:
+        // cortesia sempre vale; PIX só vale se já caiu (pago=true); qualquer
+        // outro método vale desde já. Mantém os 3 painéis sempre coerentes
+        // com o que Portaria/Promoter estão vendo.
+        const normalizarTextoDash = (v) => String(v || '')
+            .normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase().replace(/\s+/g, ' ');
+
+        function reservaValidaDash(r) {
+            if (r.cancelada) return false;
+            if (r.cortesia) return true;
+            const metodo = normalizarTextoDash(r.metodo).replace(/\s+/g, '_');
+            if (metodo === 'PIX' || metodo.startsWith('PIX_')) return !!r.pago;
+            return true;
+        }
+        // Só entra como "camarote ocupado de verdade" (e, portanto, migrável)
+        // quem já pagou ou tem cortesia — reserva com PIX ainda não pago some
+        // sozinha em até 5 min pela regra de expiração, então nem precisa
+        // aparecer aqui. Check-in já feito trava a migração: não dá pra mudar
+        // de camarote um cliente que já está dentro da festa.
+        function isReservaCamaroteMigravel(r) {
+            return r.camarote_numero != null && !r.cancelada && (r.pago === true || r.cortesia === true) && !r.entrou;
+        }
+        function nomeCamarote(n) {
+            if (n === 7) return 'VIP 1';
+            if (n === 8) return 'VIP 2';
+            return `CAMAROTE ${String(n).padStart(2, '0')}`;
+        }
+        // Mesma lógica de calcularCamarotes() da Edge Function promoter-api:
+        // pega, de cada vaga ativa do evento, a reserva mais recente não
+        // cancelada que ocupa aquele número.
+        function ocupacaoCamarotes(eventoId, ignorarReservaId = null) {
+            const ev = dadosEventos.find(e => e.id === eventoId);
+            if (!ev) return [];
+            const doEvento = dadosReservas.filter(r => r.evento_id === eventoId && !r.cancelada && r.id !== ignorarReservaId);
+            const lista = [];
+            for (let n = 1; n <= 8; n++) {
+                if (!ev[`cam${n}_ativo`]) continue;
+                const ocupante = doEvento
+                    .filter(r => r.camarote_numero === n)
+                    .sort((a, b) => (a.criado_em < b.criado_em ? 1 : -1))[0];
+                if (!ocupante) lista.push({ numero: n, status: 'livre', nome: null });
+                else if (ocupante.cortesia) lista.push({ numero: n, status: 'cortesia', nome: ocupante.aniversariante || ocupante.nome });
+                else if (ocupante.pago) lista.push({ numero: n, status: 'vendido', nome: ocupante.nome });
+                else lista.push({ numero: n, status: 'aguardando', nome: ocupante.nome });
+            }
+            return lista;
+        }
+
+        window.renderAniversarios = () => {
+            const tb = document.getElementById('tabela-aniversarios-body');
+            if (!tb) return;
+            if (!dadosLinksAniversario.length) {
+                tb.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhum registro ainda</td></tr>`;
+                return;
+            }
+            const linhas = [...dadosLinksAniversario].sort((a, b) => (a.criado_em < b.criado_em ? 1 : -1));
+            tb.innerHTML = linhas.map(l => {
+                const ev = dadosEventos.find(e => e.id === l.evento_id);
+                const dt = ev?.data ? ev.data.split('-').reverse().join('/') : 'S/D';
+                const promoterNome = dadosNomesAcessos.get(l.promoter_user_id) || '---';
+                const q = dadosReservas.filter(r => r.link_aniversario_id === l.id).length;
+                return `<tr class="border-b border-white/5 text-[11px]">
+                    <td class="py-4 pl-4">${dt}</td>
+                    <td class="py-4 uppercase">${escapeHtml(promoterNome)}</td>
+                    <td class="py-4 font-black text-cyan-400 uppercase">${escapeHtml(l.aniversariante)}${ev ? `<br><span class="text-[9px] text-zinc-500 font-bold normal-case">${escapeHtml(ev.nome)}</span>` : ''}</td>
+                    <td class="py-4 text-center font-black text-white">${q}</td>
+                    <td class="py-4 text-right pr-4"><button onclick="removerAniversariante('${l.id}')" class="text-red-500 text-[9px] font-black uppercase hover:text-red-400">Remover</button></td>
+                </tr>`;
+            }).join('');
+        };
+
+        window.removerAniversariante = async (id) => {
+            if (!confirm('Remover esta lista de aniversário?\n\nAs reservas já feitas por esse link continuam valendo normalmente — elas só deixam de aparecer agrupadas aqui.')) return;
+            const { error } = await sb.from('links_aniversario').delete().eq('id', id);
+            if (error) return mostrarAviso('Erro ao remover: ' + error.message);
+            mostrarAviso('Lista de aniversário removida!', true);
+            await carregarLinksAniversario();
+        };
+
+        window.renderCamarotesVendidos = () => {
+            const tb = document.getElementById('tabela-camarotes-body');
+            if (!tb) return;
+            const res = dadosReservas
+                .filter(isReservaCamaroteMigravel)
+                .map(r => ({ r, ev: dadosEventos.find(e => e.id === r.evento_id) }))
+                .filter(x => x.ev)
+                .sort((a, b) => String(a.ev.nome).localeCompare(String(b.ev.nome)) || a.r.camarote_numero - b.r.camarote_numero);
+            if (!res.length) {
+                tb.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhum camarote/VIP ocupado no momento</td></tr>`;
+                return;
+            }
+            tb.innerHTML = res.map(({ r, ev }) => {
+                const valor = r.valor_pago ? `<br><span class="text-[8px] text-yellow-500 font-black uppercase">R$ ${Number(r.valor_pago).toFixed(2).replace('.', ',')}</span>` : '';
+                const migrado = r.migrado_camarote ? `<span class="inline-block mt-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-1 rounded-md text-[7px] font-black uppercase tracking-widest">Migrado</span>` : '';
+                const statusBadge = r.cortesia
+                    ? `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Cortesia</span>`
+                    : `<span class="bg-green-500/20 text-green-400 border border-green-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Vendido</span>`;
+                return `<tr class="border-b border-white/5 text-[11px]">
+                    <td class="py-4 pl-4 uppercase font-bold text-zinc-300">${escapeHtml(ev.nome)}${migrado}</td>
+                    <td class="py-4 font-black text-cyan-400 uppercase">${nomeCamarote(r.camarote_numero)}</td>
+                    <td class="py-4 uppercase font-bold text-white">${escapeHtml(r.nome)}<br><span class="text-[9px] text-zinc-500 font-mono">${escapeHtml(r.telefone || '---')}</span>${valor}</td>
+                    <td class="py-4 text-center">${statusBadge}</td>
+                    <td class="py-4 text-right pr-4"><div class="flex justify-end gap-2 flex-wrap">
+                        <button onclick="prepararMigracaoCamarote('${r.id}')" class="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-4 py-2 rounded-lg text-[8px] font-black uppercase hover:bg-purple-600 hover:text-white transition-all">Migrar</button>
+                        <button onclick="liberarCamarote('${r.id}')" class="bg-red-500/10 text-red-500 border border-red-500/30 px-4 py-2 rounded-lg text-[8px] font-black uppercase hover:bg-red-600 hover:text-white transition-all">Liberar</button>
+                    </div></td>
+                </tr>`;
+            }).join('');
+        };
+
+        // "Liberar" cancela a reserva (cancelada=true) em vez de apagar: o
+        // camarote volta a aparecer livre pros próximos clientes, mas o
+        // histórico continua existindo pra Auditoria — igual à regra de
+        // expiração automática dos 5 minutos.
+        window.liberarCamarote = async (id) => {
+            if (!confirm('Liberar este camarote? O cliente perde a reserva e a vaga volta a ficar livre.')) return;
+            const { error } = await sb.from('reservas').update({ cancelada: true }).eq('id', id);
+            if (error) return mostrarAviso('Erro ao liberar: ' + error.message);
+            mostrarAviso('Camarote liberado!', true);
+            await carregarReservas();
+        };
+
+        window.prepararMigracaoCamarote = (reservaId) => {
+            document.getElementById('busca-migracao-camarote').value = '';
+            renderMigracaoCamarotes();
+            const sel = document.getElementById('select-migracao-origem');
+            sel.value = reservaId;
+            document.getElementById('box-migracao-camarote').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            renderCamarotesDestinoMigracao();
+            atualizarPreviewMigracaoCamarote();
+        };
+
+        window.renderMigracaoCamarotes = () => {
+            const sel = document.getElementById('select-migracao-origem');
+            const termo = normalizarTextoDash(document.getElementById('busca-migracao-camarote').value);
+            const valorAtual = sel.value;
+            const origens = dadosReservas
+                .filter(isReservaCamaroteMigravel)
+                .map(r => ({ r, ev: dadosEventos.find(e => e.id === r.evento_id) }))
+                .filter(x => x.ev)
+                .sort((a, b) => String(a.ev.nome).localeCompare(String(b.ev.nome)) || a.r.camarote_numero - b.r.camarote_numero);
+            const filtradas = termo
+                ? origens.filter(({ r, ev }) => normalizarTextoDash(`${r.nome} ${r.telefone || ''} ${ev.nome} ${nomeCamarote(r.camarote_numero)}`).includes(termo))
+                : origens;
+            if (!filtradas.length) {
+                sel.innerHTML = '<option value="">Nenhum camarote vendido/cortesia encontrado</option>';
+            } else {
+                sel.innerHTML = '<option value="">Selecione...</option>' + filtradas.map(({ r, ev }) =>
+                    `<option value="${r.id}">${escapeHtml(ev.nome)} — ${nomeCamarote(r.camarote_numero)} — ${escapeHtml(r.nome)} (${r.cortesia ? 'Cortesia' : 'Vendido'})</option>`
+                ).join('');
+                if (filtradas.some(({ r }) => r.id === valorAtual)) sel.value = valorAtual;
+            }
+            renderCamarotesDestinoMigracao();
+        };
+
+        window.renderCamarotesDestinoMigracao = () => {
+            const origemId = document.getElementById('select-migracao-origem').value;
+            const origem = dadosReservas.find(r => r.id === origemId);
+            const selEvento = document.getElementById('select-migracao-evento');
+            const selCamarote = document.getElementById('select-migracao-camarote');
+            const eventoAtual = selEvento.value;
+
+            if (!origem) {
+                selEvento.innerHTML = '<option value="">Selecione o camarote de origem primeiro...</option>';
+                selCamarote.innerHTML = '<option value=""></option>';
+                return;
+            }
+            const eventosAtivos = [...dadosEventos].filter(e => e.ativo !== false).sort((a, b) => new Date(a.data) - new Date(b.data));
+            selEvento.innerHTML = '<option value="">Selecione o evento de destino...</option>' + eventosAtivos.map(ev =>
+                `<option value="${ev.id}">${escapeHtml(ev.nome)} (${ev.data ? ev.data.split('-').reverse().join('/') : 'S/D'})</option>`
+            ).join('');
+            if (eventosAtivos.some(ev => ev.id === eventoAtual)) selEvento.value = eventoAtual;
+
+            const destinoEventoId = selEvento.value;
+            if (!destinoEventoId) {
+                selCamarote.innerHTML = '<option value="">Selecione o evento de destino primeiro...</option>';
+                return;
+            }
+            const camaroteAtual = selCamarote.value;
+            // Ignora a própria reserva de origem na contagem de ocupação —
+            // assim, migrar dentro do MESMO evento (só trocar de vaga) também
+            // mostra a vaga atual do cliente como "livre" para ele mesmo.
+            const ocupacao = ocupacaoCamarotes(destinoEventoId, origem.id);
+            const livres = ocupacao.filter(c => c.status === 'livre');
+            if (!livres.length) {
+                selCamarote.innerHTML = '<option value="">Nenhuma vaga livre nesse evento</option>';
+                return;
+            }
+            selCamarote.innerHTML = '<option value="">Selecione o camarote de destino...</option>' + livres.map(c =>
+                `<option value="${c.numero}">${nomeCamarote(c.numero)} — Livre</option>`
+            ).join('');
+            if (livres.some(c => String(c.numero) === camaroteAtual)) selCamarote.value = camaroteAtual;
+        };
+
+        window.atualizarPreviewMigracaoCamarote = () => {
+            const box = document.getElementById('preview-migracao-camarote');
+            const origem = dadosReservas.find(r => r.id === document.getElementById('select-migracao-origem').value);
+            const destEventoId = document.getElementById('select-migracao-evento').value;
+            const destCamarote = Number(document.getElementById('select-migracao-camarote').value) || null;
+            if (!origem || !destEventoId || !destCamarote) {
+                box.innerHTML = `<p class="text-[10px] text-zinc-500 font-black uppercase tracking-widest">Selecione o camarote de origem e o destino para conferir a migração.</p>`;
+                return;
+            }
+            const evOrigem = dadosEventos.find(e => e.id === origem.evento_id);
+            const evDestino = dadosEventos.find(e => e.id === destEventoId);
+            if (origem.evento_id === destEventoId && destCamarote === origem.camarote_numero) {
+                box.innerHTML = `<p class="text-[10px] text-red-400 font-black uppercase tracking-widest">Esse já é o camarote atual do cliente — escolha outro destino.</p>`;
+                return;
+            }
+            box.innerHTML = `<p class="text-[10px] text-zinc-300 font-black uppercase tracking-widest leading-relaxed">
+                <span class="text-white">${escapeHtml(origem.nome)}</span> vai de
+                <span class="text-cyan-400">${escapeHtml(evOrigem?.nome || '?')} — ${nomeCamarote(origem.camarote_numero)}</span> para
+                <span class="text-purple-400">${escapeHtml(evDestino?.nome || '?')} — ${nomeCamarote(destCamarote)}</span>,
+                mantendo ${origem.cortesia ? 'a cortesia' : `o pagamento${origem.valor_pago ? ' de R$ ' + Number(origem.valor_pago).toFixed(2).replace('.', ',') : ''}`} e os dados do cliente.
+            </p>`;
+        };
+
+        window.confirmarMigracaoCamarote = async () => {
+            const origem = dadosReservas.find(r => r.id === document.getElementById('select-migracao-origem').value);
+            const destEventoId = document.getElementById('select-migracao-evento').value;
+            const destCamarote = Number(document.getElementById('select-migracao-camarote').value) || null;
+            if (!origem) return mostrarAviso('Selecione o camarote de origem.');
+            if (!destEventoId || !destCamarote) return mostrarAviso('Selecione o evento e o camarote de destino.');
+            if (origem.entrou) return mostrarAviso('Esse cliente já fez check-in — não é possível migrar.');
+            if (origem.evento_id === destEventoId && destCamarote === origem.camarote_numero) {
+                return mostrarAviso('Esse já é o camarote atual do cliente.');
+            }
+            // Reconfere a ocupação no instante do clique (não só a do dropdown),
+            // pra não migrar em cima de uma vaga que acabou de ser ocupada.
+            const ocupadoAgora = ocupacaoCamarotes(destEventoId, origem.id).find(c => c.numero === destCamarote);
+            if (!ocupadoAgora || ocupadoAgora.status !== 'livre') {
+                mostrarAviso('Essa vaga não está mais livre — atualize e escolha outra.');
+                return renderCamarotesDestinoMigracao();
+            }
+            const evOrigem = dadosEventos.find(e => e.id === origem.evento_id);
+            const evDestino = dadosEventos.find(e => e.id === destEventoId);
+            if (!confirm(`Migrar ${origem.nome} de ${evOrigem?.nome || '?'} — ${nomeCamarote(origem.camarote_numero)} para ${evDestino?.nome || '?'} — ${nomeCamarote(destCamarote)}?`)) return;
+
+            const historico = Array.isArray(origem.historico_migracoes) ? origem.historico_migracoes : [];
+            historico.push({
+                de_evento: evOrigem?.nome || null, de_camarote: origem.camarote_numero,
+                para_evento: evDestino?.nome || null, para_camarote: destCamarote,
+                em: new Date().toISOString(),
+            });
+            const { error } = await sb.from('reservas').update({
+                evento_id: destEventoId,
+                camarote_numero: destCamarote,
+                migrado_camarote: true,
+                historico_migracoes: historico,
+            }).eq('id', origem.id);
+            if (error) return mostrarAviso('Erro ao migrar: ' + error.message);
+            mostrarAviso('Camarote migrado com sucesso!', true);
+            document.getElementById('busca-migracao-camarote').value = '';
+            await carregarReservas();
+            renderMigracaoCamarotes();
+        };
 
         // ===== CARONA / SOLTEIRAS (parte que já está disponível) =====
         async function carregarSolteirasBadge() {
