@@ -715,6 +715,19 @@
             { tipo:'SOLTEIRO',           raw: ev.ant_solteiro,    rotulo:'Solteiro',           icone:'👤', cons: ev.consumo_solteiro }
         ].filter(o => extrairValorNumerico(o.raw) > 0);
     }
+    // "Nome na lista" (porta): o valor aqui é texto livre cadastrado pela
+    // casa (ex: "a partir de R$ 120,00"), não um número pra somar taxa — por
+    // isso não passa pelo extrairValorNumerico como o PIX. Casal e solteiro
+    // são ofertas separadas, cada um com seu próprio texto de valor; só
+    // aparece o tipo que a casa realmente cadastrou pra aquela festa.
+    function precosLista(ev) {
+        const casalRaw = globalAniversariante ? (ev.desc_casal || ev.valor_casal) : ev.valor_casal;
+        const soltRaw  = globalAniversariante ? (ev.desc_solteiro || ev.valor_solteiro) : ev.valor_solteiro;
+        return [
+            { tipo:'CASAL',    raw: casalRaw, rotulo:'Casal',    icone:'📝' },
+            { tipo:'SOLTEIRO', raw: soltRaw,  rotulo:'Solteiro', icone:'📝' }
+        ].filter(o => String(o.raw || '').trim());
+    }
     function temCamarote(ev) {
         for (let i = 1; i <= 8; i++) {
             if (ev[`cam${i}_ativo`] && extrairValorNumerico(ev[`v_cam${i}`]) > 0) return true;
@@ -848,6 +861,13 @@
             const detalhe = consumo > 0
                 ? `Entrada garantida · ${formatarNumeroMoeda(consumo)} viram consumação`
                 : 'Entrada garantida · pague agora e chegue direto';
+            // Com taxa de conveniência ativa, mostra o valor da entrada e a
+            // taxa separados aqui no card — sem isso o cliente só via o total
+            // junto e achava que tudo aquilo era o valor da entrada, gerando
+            // confusão (e reclamação) já na portaria.
+            const legendaValor = taxa > 0
+                ? `${formatarNumeroMoeda(base)} + ${formatarNumeroMoeda(taxa)} taxa`
+                : 'no PIX';
             linhas.push(`
               <button class="opcao pix" onclick="escolherPix('${escapar(o.tipo)}')">
                 <span class="icone">${o.icone}</span>
@@ -856,23 +876,40 @@
                   <b>${escapar(o.rotulo)} — PIX antecipado</b>
                   <span>${escapar(detalhe)}</span>
                 </span>
-                <span class="valor"><b>${escapar(formatarNumeroMoeda(total))}</b><span>no PIX</span></span>
+                <span class="valor"><b>${escapar(formatarNumeroMoeda(total))}</b><span>${escapar(legendaValor)}</span></span>
               </button>`);
         });
 
         // Nome na lista: sempre disponivel, mesmo depois de as vendas online
-        // fecharem — e o caminho de quem paga na portaria.
-        const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
-        const rotuloPorta = String(pCasal || '').trim() ? `a partir de ${String(pCasal).toUpperCase()}` : 'Grátis';
-        linhas.push(`
-          <button class="opcao porta" onclick="escolherLista()">
-            <span class="icone">📝</span>
-            <span class="txt">
-              <b>${globalAniversariante ? 'Lista do aniversário' : 'Só o nome na lista'}</b>
-              <span>${globalAniversariante ? 'Consumação inclusa · paga na portaria' : 'Paga na portaria · sem garantia de vaga'}</span>
-            </span>
-            <span class="valor"><b style="font-size:12px;font-style:normal;line-height:1.35">${escapar(rotuloPorta)}</b><span>na porta</span></span>
-          </button>`);
+        // fecharem — e o caminho de quem paga na portaria. Casal e solteiro
+        // viram botões separados, pra o cliente escolher qual é a dele antes
+        // de ir pra tela de dados — antes isso não existia e toda reserva
+        // de lista virava "CASAL" no sistema, mesmo sendo alguém sozinho.
+        const listaOpcoes = precosLista(eventoAtivo);
+        if (listaOpcoes.length) {
+            listaOpcoes.forEach(o => {
+                const rotuloValor = `a partir de ${String(o.raw).toUpperCase()}`;
+                linhas.push(`
+                  <button class="opcao porta" onclick="escolherLista('${escapar(o.tipo)}')">
+                    <span class="icone">${o.icone}</span>
+                    <span class="txt">
+                      <b>${globalAniversariante ? `Lista do aniversário — ${escapar(o.rotulo)}` : `${escapar(o.rotulo)} — nome na lista`}</b>
+                      <span>${globalAniversariante ? 'Consumação inclusa · paga na portaria' : 'Paga na portaria · sem garantia de vaga'}</span>
+                    </span>
+                    <span class="valor"><b style="font-size:11px;font-style:normal;line-height:1.35">${escapar(rotuloValor)}</b><span>na porta</span></span>
+                  </button>`);
+            });
+        } else {
+            linhas.push(`
+              <button class="opcao porta" onclick="escolherLista('CASAL')">
+                <span class="icone">📝</span>
+                <span class="txt">
+                  <b>${globalAniversariante ? 'Lista do aniversário' : 'Só o nome na lista'}</b>
+                  <span>${globalAniversariante ? 'Consumação inclusa · paga na portaria' : 'Paga na portaria · sem garantia de vaga'}</span>
+                </span>
+                <span class="valor"><b style="font-size:12px;font-style:normal;line-height:1.35">Grátis</b><span>na porta</span></span>
+              </button>`);
+        }
 
         if (temCam) {
             linhas.push(`
@@ -918,14 +955,17 @@
         const nomeFesta = String(eventoAtivo?.nome || '').toUpperCase();
 
         if (!eFluxoPix) {
-            const pCasal = globalAniversariante ? (eventoAtivo.desc_casal || eventoAtivo.valor_casal) : eventoAtivo.valor_casal;
-            const pSolt = globalAniversariante ? (eventoAtivo.desc_solteiro || eventoAtivo.valor_solteiro) : eventoAtivo.valor_solteiro;
-            const casal = aplicouDescontoFidelidade ? (eventoAtivo.valor_recorrente_casal || 'FREE') : (pCasal || 'PORTARIA');
-            const solt  = aplicouDescontoFidelidade ? (eventoAtivo.valor_recorrente_solteiro || 'FREE') : (pSolt || 'PORTARIA');
+            // Só mostra a linha do tipo que o cliente escolheu na tela
+            // anterior (Casal ou Solteiro) — mostrar os dois juntos era
+            // justamente o que confundia quem tava preenchendo.
+            const opcoesLista = precosLista(eventoAtivo);
+            const o = opcoesLista.find(x => x.tipo === tipoAtivo)
+                || { tipo: tipoAtivo, rotulo: tipoAtivo === 'SOLTEIRO' ? 'Solteiro' : 'Casal', raw: '' };
+            const valorRecorrente = o.tipo === 'SOLTEIRO' ? eventoAtivo.valor_recorrente_solteiro : eventoAtivo.valor_recorrente_casal;
+            const valor = aplicouDescontoFidelidade ? (valorRecorrente || 'FREE') : (String(o.raw || '').trim() || 'PORTARIA');
             alvo.innerHTML = `
               <div class="linha"><span>${escapar(nomeFesta)}</span><b>${escapar(etiquetaData(eventoAtivo, false))}</b></div>
-              <div class="linha"><span>Casal na portaria</span><b>${escapar(String(casal).toUpperCase())}</b></div>
-              <div class="linha"><span>Solteiro na portaria</span><b>${escapar(String(solt).toUpperCase())}</b></div>
+              <div class="linha"><span>${escapar(o.rotulo)} na portaria</span><b>${escapar(String(valor).toUpperCase())}</b></div>
               <div class="linha total"><span>Agora você paga</span><b>Nada</b></div>`;
             return;
         }
@@ -948,10 +988,10 @@
         tipoAtivo = tipo;
         prepararDados();
     };
-    window.escolherLista = () => {
+    window.escolherLista = (tipo) => {
         if (bloquearEventoPassadoSeNecessario(eventoAtivo)) return;
         eFluxoPix = false;
-        tipoAtivo = null;
+        tipoAtivo = tipo || 'CASAL';
         prepararDados();
     };
 
@@ -1051,7 +1091,7 @@
                 nome: n, evento: eventoAtivo, tipo: tipoEnviado, pix: eFluxoPix,
                 total: eFluxoPix ? extrairValorNumerico(o?.raw) + calcularTaxaApenas(o?.raw) : 0,
                 consumo: eFluxoPix ? extrairValorNumerico(o?.cons) : 0,
-                rotulo: o?.rotulo || tipoEnviado
+                rotulo: eFluxoPix ? (o?.rotulo || tipoEnviado) : (tipoEnviado === 'SOLTEIRO' ? 'Solteiro' : 'Casal')
             };
 
             if (!eFluxoPix) { mostrarConfirmado(); return; }
