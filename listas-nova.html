@@ -340,7 +340,7 @@
   <!-- ================= 2. COMO ENTRAR ================= -->
   <section id="telaEntrada" class="tela" hidden>
     <div class="topo">
-      <button class="voltar" onclick="irPara('telaFestas')" aria-label="Voltar">
+      <button class="voltar" onclick="history.back()" aria-label="Voltar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
       <div class="meio"><img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" class="marca"></div>
@@ -364,7 +364,7 @@
   <!-- ================= 3. SEUS DADOS ================= -->
   <section id="telaDados" class="tela" hidden>
     <div class="topo">
-      <button class="voltar" onclick="irPara('telaEntrada')" aria-label="Voltar">
+      <button class="voltar" onclick="history.back()" aria-label="Voltar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
       </button>
       <div class="meio"><img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" class="marca"></div>
@@ -661,11 +661,48 @@
     };
 
     // ===== NAVEGAÇÃO ENTRE AS TELAS =====
+    // Cada passo (abrir uma festa, preencher dados, abrir os camarotes...)
+    // agora gera uma entrada de verdade no histórico do navegador. Assim o
+    // botão/gesto de voltar DO CELULAR funciona igual ao botão de voltar de
+    // dentro do site — volta um passo da lista (e deixa ver outras festas),
+    // em vez de sair do site direto pra página que trouxe a visita até aqui.
     const TELAS = ['telaFestas','telaEntrada','telaDados','telaCamarote','telaPix','telaOk'];
-    window.irPara = (id) => {
+    let telaAtual = 'telaFestas';
+
+    // O que precisa parar de rodar quando a pessoa SAI de cada tela — não
+    // importa se saiu clicando na setinha ou apertando voltar no celular.
+    function pararPollingDaTela(id) {
+        if (id === 'telaCamarote' && intervalCamarotes) { clearInterval(intervalCamarotes); intervalCamarotes = null; }
+        if (id === 'telaPix') {
+            if (intervalPagamento) { clearInterval(intervalPagamento); intervalPagamento = null; }
+            pararRelogio();
+        }
+    }
+
+    window.irPara = (id, empurrarHistorico = true) => {
+        if (id === telaAtual) return;
+        pararPollingDaTela(telaAtual);
         TELAS.forEach(t => { const el = document.getElementById(t); if (el) el.hidden = (t !== id); });
         window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+        telaAtual = id;
+        // Ao clicar num botão/link da própria tela, empurra um passo novo no
+        // histórico. Quando é o PRÓPRIO navegador voltando (popstate, abaixo),
+        // não empurra de novo — só desenha a tela que já estava no histórico.
+        if (empurrarHistorico) history.pushState({ tela: id }, '', location.href);
     };
+
+    // O botão/gesto de voltar do celular dispara isso. Em vez de deixar o
+    // navegador sair da página, a gente intercepta e só troca de tela aqui
+    // dentro — exatamente como se tivesse clicado na setinha de voltar.
+    window.addEventListener('popstate', (ev) => {
+        const tela = (ev.state && ev.state.tela) || 'telaFestas';
+        irPara(tela, false);
+    });
+
+    // Marca a tela inicial como o "chão" do histórico — assim, voltar a
+    // partir dela (sem ter navegado por nenhum passo ainda) continua saindo
+    // do site normalmente, como já era esperado.
+    history.replaceState({ tela: 'telaFestas' }, '', location.href);
 
     window.maskTel = (i) => { let v = i.value.replace(/\D/g,"").substring(0,11); if (v.length>0) v="("+v; if (v.length>3) v=v.substring(0,3)+") "+v.substring(3); if (v.length>10) v=v.substring(0,10)+"-"+v.substring(10); i.value=v; };
     window.maskCPF = (i) => { let v = i.value.replace(/\D/g,"").substring(0,11); if (v.length>3) v=v.substring(0,3)+"."+v.substring(3); if (v.length>7) v=v.substring(0,7)+"."+v.substring(7); if (v.length>11) v=v.substring(0,11)+"-"+v.substring(11); i.value=v; };
@@ -1127,9 +1164,8 @@
     };
 
     window.voltarDosCamarotes = () => {
-        if (intervalCamarotes) { clearInterval(intervalCamarotes); intervalCamarotes = null; }
         numCamaroteSelecionado = null;
-        irPara('telaEntrada');
+        history.back();
     };
 
     window.processarPixCamarote = async () => {
