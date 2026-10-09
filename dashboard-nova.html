@@ -212,9 +212,10 @@
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Promoter</th>
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400">Tipo</th>
                                 <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Status</th>
+                                <th class="p-4 text-[9px] font-black uppercase text-zinc-400 text-right">Ação</th>
                             </tr>
                         </thead>
-                        <tbody id="tabela-auditoria-body"><tr><td colspan="6" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr></tbody>
+                        <tbody id="tabela-auditoria-body"><tr><td colspan="7" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -1132,7 +1133,7 @@
                 res = res.slice(0, 100);
             }
 
-            if (!res.length) { tbody.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr>`; return; }
+            if (!res.length) { tbody.innerHTML = `<tr><td colspan="7" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhuma reserva encontrada</td></tr>`; return; }
             tbody.innerHTML = res.map(r => {
                 const ev = dadosEventos.find(e => e.id === r.evento_id);
                 const df = r.criado_em && !isNaN(new Date(r.criado_em)) ? new Date(r.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) + ' - ' + new Date(r.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
@@ -1143,8 +1144,35 @@
                     <td class="p-4"><div class="flex flex-col gap-1 items-start"><span class="px-2 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[9px] font-black uppercase">👤 ${escapeHtml(promoterDaReserva(r))}</span>${r.aniversariante ? `<span class="text-[8px] text-fuchsia-400 font-bold uppercase italic mt-1">🎂 Convite: ${escapeHtml(r.aniversariante)}</span>` : ''}</div></td>
                     <td class="p-4">${tipoAuditoriaHtml(r)}</td>
                     <td class="p-4 text-right">${statusAuditoriaHtml(r)}</td>
+                    <td class="p-4 text-right"><button onclick="excluirClienteAuditoria('${r.id}')" class="bg-red-600/15 hover:bg-red-600 border border-red-500/40 text-red-400 hover:text-white px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all" title="Excluir cliente da lista, relatórios e portaria">Excluir</button></td>
                 </tr>`;
             }).join('');
+        };
+
+        // Igual ao "Excluir" que já existia na base original (Firebase) —
+        // lá apagava o(s) doc(s) da coleção lista_eventos; aqui, como cada
+        // reserva já é uma linha própria com id estável, basta apagar essa
+        // linha direto da tabela reservas. Some de vez da lista do evento,
+        // dos relatórios e da portaria.
+        window.excluirClienteAuditoria = async (id) => {
+            const reserva = dadosReservas.find(r => r.id === id);
+            if (!reserva) { mostrarAviso('Cliente não encontrado na auditoria.'); return; }
+            const ev = dadosEventos.find(e => e.id === reserva.evento_id);
+            const tipo = reserva.camarote_numero != null ? nomeCamarote(reserva.camarote_numero) : (reserva.tipo_entrada || 'Tipo não informado');
+            const pixInfo = String(reserva.metodo || '').toUpperCase() === 'PIX'
+                ? `\n\nPIX: ${reserva.pago === true ? 'PAGO — será removido dos antecipados/financeiro.' : 'PENDENTE/CANCELADO — será removido da auditoria.'}`
+                : '';
+            const ok = confirm(
+                `EXCLUIR CLIENTE DA AUDITORIA?\n\n` +
+                `Cliente: ${reserva.nome || 'Cliente sem nome'}\n` +
+                `Evento: ${ev?.nome || 'Evento não informado'}\n` +
+                `Tipo: ${tipo}${pixInfo}\n\n` +
+                `Esta ação remove a reserva da lista do evento, dos relatórios e da portaria. Não é possível desfazer.`
+            );
+            if (!ok) return;
+            const { error } = await sb.from('reservas').delete().eq('id', id);
+            if (error) { mostrarAviso('Erro ao excluir cliente: ' + error.message); return; }
+            mostrarAviso('Cliente removido da auditoria. Relatórios e portaria atualizados.', true);
         };
 
         window.exportarAuditoriaExcel = () => {
