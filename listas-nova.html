@@ -889,12 +889,23 @@
         if (listaOpcoes.length) {
             listaOpcoes.forEach(o => {
                 const rotuloValor = `a partir de ${String(o.raw).toUpperCase()}`;
+                // O valor da portaria é texto livre, escrito pela casa, e às vezes
+                // já inclui consumação (ex: "R$ 120 de entrada com direito a R$ 50
+                // de consumação"). Pra quem tá comprando não ficar sem entender o
+                // que é "seco" e o que é "com consumação", a gente detecta pela
+                // própria frase e deixa isso explicado numa linha, em vez de deixar
+                // só o texto cru.
+                const temConsumacao = /consuma/i.test(String(o.raw));
+                const legendaTipo = temConsumacao
+                    ? 'Com consumação: parte do valor vira crédito pra gastar lá dentro'
+                    : 'Seco: é só o valor de entrada, sem volta em consumação';
                 linhas.push(`
                   <button class="opcao porta" onclick="escolherLista('${escapar(o.tipo)}')">
                     <span class="icone">${o.icone}</span>
                     <span class="txt">
                       <b>${globalAniversariante ? `Lista do aniversário — ${escapar(o.rotulo)}` : `${escapar(o.rotulo)} — nome na lista`}</b>
                       <span>${globalAniversariante ? 'Consumação inclusa · paga na portaria' : 'Paga na portaria · sem garantia de vaga'}</span>
+                      <span>${escapar(legendaTipo)}</span>
                     </span>
                     <span class="valor"><b style="font-size:11px;font-style:normal;line-height:1.35">${escapar(rotuloValor)}</b><span>na porta</span></span>
                   </button>`);
