@@ -709,10 +709,16 @@
 
     // ===== O QUE CADA FESTA OFERECE =====
     function precosPix(ev) {
+        // "cons" é quanto do valor pago volta como consumação. No sistema de
+        // hoje (dashboard-nova.html) só existe um tipo com consumação — o
+        // "Casal com consumo" (ant_casal_cons) — e nele 100% do valor pago
+        // reverte em consumação, não uma fração separada. Por isso usa o
+        // próprio valor do ingresso como "cons", em vez de um campo à parte
+        // (que não existe no cadastro do evento). Casal e Solteiro são secos.
         return [
-            { tipo:'CASAL',              raw: ev.ant_casal,       rotulo:'Casal',              icone:'👫', cons: ev.consumo_casal },
-            { tipo:'CASAL CONSUMAÇÃO',   raw: ev.ant_casal_cons,  rotulo:'Casal com consumo',  icone:'🍹', cons: ev.consumo_casal_cons },
-            { tipo:'SOLTEIRO',           raw: ev.ant_solteiro,    rotulo:'Solteiro',           icone:'👤', cons: ev.consumo_solteiro }
+            { tipo:'CASAL',              raw: ev.ant_casal,       rotulo:'Casal',              icone:'👫', cons: 0 },
+            { tipo:'CASAL CONSUMAÇÃO',   raw: ev.ant_casal_cons,  rotulo:'Casal com consumo',  icone:'🍹', cons: ev.ant_casal_cons },
+            { tipo:'SOLTEIRO',           raw: ev.ant_solteiro,    rotulo:'Solteiro',           icone:'👤', cons: 0 }
         ].filter(o => extrairValorNumerico(o.raw) > 0);
     }
     // "Nome na lista" (porta): o valor aqui é texto livre cadastrado pela
@@ -863,7 +869,7 @@
             // numérico de verdade pra consumação (ao contrário do texto livre
             // da portaria), então mostra quanto volta em crédito.
             const detalhe = consumo > 0
-                ? `Com consumação: ${formatarNumeroMoeda(consumo)} viram crédito pra gastar lá dentro`
+                ? `100% vira consumação: ${formatarNumeroMoeda(consumo)} pra gastar lá dentro`
                 : 'Seco: é só a entrada garantida, sem volta em consumação';
             // Com taxa de conveniência ativa, mostra o valor da entrada e a
             // taxa separados aqui no card — sem isso o cliente só via o total
@@ -989,11 +995,17 @@
         const base = extrairValorNumerico(o?.raw);
         const taxa = calcularTaxaApenas(o?.raw);
         const consumo = extrairValorNumerico(o?.cons);
+        // Quando o ingresso é 100% consumação (cons === raw), chamar a linha
+        // de "Entrada" ficaria errado — pareceria que o valor do ingresso E
+        // a consumação são duas coisas somadas, dobrando o total aos olhos de
+        // quem tá lendo. Por isso o rótulo muda pra "Valor do ingresso" nesse
+        // caso, e a linha de consumação deixa claro que é 100% do mesmo valor.
+        const rotuloBase = consumo > 0 ? 'Valor do ingresso' : 'Entrada';
         alvo.innerHTML = `
           <div class="linha"><span>${escapar(nomeFesta)}</span><b>${escapar(o?.rotulo || tipoAtivo)}</b></div>
-          ${taxa > 0 ? `<div class="linha"><span>Entrada</span><b>${escapar(formatarNumeroMoeda(base))}</b></div>
+          ${taxa > 0 ? `<div class="linha"><span>${escapar(rotuloBase)}</span><b>${escapar(formatarNumeroMoeda(base))}</b></div>
           <div class="linha"><span>Taxa de conveniência</span><b>${escapar(formatarNumeroMoeda(taxa))}</b></div>` : ''}
-          ${consumo > 0 ? `<div class="linha"><span>Vira consumação lá dentro</span><b>${escapar(formatarNumeroMoeda(consumo))}</b></div>` : ''}
+          ${consumo > 0 ? `<div class="linha"><span>100% vira consumação lá dentro</span><b>${escapar(formatarNumeroMoeda(consumo))}</b></div>` : ''}
           <div class="linha total"><span>Total a pagar agora</span><b>${escapar(formatarNumeroMoeda(base + taxa))}</b></div>`;
     }
 
