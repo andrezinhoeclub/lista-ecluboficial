@@ -256,7 +256,7 @@
             <div class="glass-card p-8 border-l-4 border-l-amber-500 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
                     <h2 class="text-amber-500 font-black uppercase italic text-xl tracking-tighter">🔒 Horário de Funcionamento</h2>
-                    <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Liberar e cadastrar só funcionam das 21h às 8h</p>
+                    <p id="texto-horario-solteiras" class="text-[10px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Liberar e cadastrar só funcionam das 21h às 8h</p>
                     <p id="status-trava-solteiras" class="text-[11px] font-black uppercase mt-3 tracking-widest text-zinc-500">Verificando...</p>
                 </div>
                 <div class="flex flex-col gap-2 min-w-[220px]">
@@ -557,6 +557,24 @@
                             <input type="number" id="custo_sistema" placeholder="VALOR MENSALIDADE" class="flex-1 bg-[#0a0a0f] border border-indigo-500/30 p-3 rounded-xl text-[10px] font-black uppercase text-white outline-none">
                         </div>
                         <button onclick="salvarCustoSistema()" class="w-full bg-indigo-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-indigo-500 transition-all">Salvar Custo</button>
+                    </div>
+
+                    <div class="bg-amber-500/10 border border-amber-500/40 p-6 rounded-3xl text-center flex flex-col justify-between">
+                        <h3 class="text-amber-400 font-black uppercase tracking-widest text-[11px] mb-1">Horário de Funcionamento</h3>
+                        <p class="text-zinc-500 text-[9px] font-bold uppercase tracking-wider mb-4 leading-relaxed">Vale pra Portaria e Solteiras (e pro Vallet novo). Fora desse horário as telas travam a consulta.</p>
+                        <div class="flex gap-2 mb-3">
+                            <label class="flex-1 min-w-0 text-left">
+                                <span class="block text-amber-400/80 text-[9px] font-black uppercase tracking-widest mb-1 ml-1">Abre às</span>
+                                <input type="time" id="hora_abertura" oninput="atualizarPreviaHorario()" class="w-full bg-[#0a0a0f] border border-amber-500/30 p-3 rounded-xl text-[13px] font-black text-white outline-none">
+                            </label>
+                            <label class="flex-1 min-w-0 text-left">
+                                <span class="block text-amber-400/80 text-[9px] font-black uppercase tracking-widest mb-1 ml-1">Fecha às</span>
+                                <input type="time" id="hora_fechamento" oninput="atualizarPreviaHorario()" class="w-full bg-[#0a0a0f] border border-amber-500/30 p-3 rounded-xl text-[13px] font-black text-white outline-none">
+                            </label>
+                        </div>
+                        <p id="horario_previa" class="text-[9px] font-bold uppercase tracking-wider text-amber-200/80 mb-4 leading-relaxed min-h-[2.5em]"></p>
+                        <button onclick="salvarHorarioFuncionamento()" class="w-full bg-amber-500 text-black text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-amber-400 transition-all">Salvar Horário</button>
+                        <button onclick="restaurarHorarioPadrao()" class="w-full mt-2 bg-zinc-900 border border-zinc-700 text-zinc-400 text-[9px] font-black py-3 rounded-xl uppercase hover:text-white transition-all">Voltar ao padrão (21h às 8h)</button>
                     </div>
 
                     <div class="bg-green-500/10 border border-green-500/40 p-6 rounded-3xl md:col-span-3">
@@ -1506,7 +1524,7 @@
         window.gerarApenasSolteiras = () => {
             ultimoNomeExport = 'Solteiras_Presentes';
             const tA = document.getElementById('output-excel');
-            const hojeISO = new Date().toISOString().slice(0, 10);
+            const hojeISO = dataDaNoiteSP();
             const eventoHoje = dadosEventos.find(e => e.data === hojeISO);
             if (!eventoHoje) { tA.value = 'Nenhum evento ativo hoje.'; return; }
             const vistos = new Set();
@@ -1826,8 +1844,7 @@
         async function pintarStatusTravaSolteiras() {
             const el = document.getElementById('status-trava-solteiras');
             if (!el) return;
-            const h = new Date().getHours();
-            const aberto = h >= 21 || h < 8;
+            const aberto = dentroDoHorario();
             if (aberto) {
                 el.className = 'text-[11px] font-black uppercase mt-3 tracking-widest text-emerald-400';
                 el.innerText = '● Aberto agora — dentro do horário';
@@ -1844,6 +1861,81 @@
                 el.innerText = '● Travado — fora do horário de funcionamento';
             }
         }
+
+        // ===== HORÁRIO DE FUNCIONAMENTO (Ajustes) =====
+        // Mesma regra usada nas Edge Functions e em casa_aberta_solteiras():
+        // abertura > fechamento = vira a meia-noite (ex: 21:00 → 08:00);
+        // abertura < fechamento = mesmo dia (ex: 14:00 → 20:00). Sempre no
+        // fuso de São Paulo, não no relógio do computador.
+        const HORARIO_PADRAO = { abertura: '21:00', fechamento: '08:00' };
+        function normalizarHora(v) {
+            const m = /^(\d{1,2}):(\d{2})/.exec(String(v ?? ''));
+            if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+            return `${m[1].padStart(2, '0')}:${m[2]}`;
+        }
+        function horarioAtual() {
+            const ab = normalizarHora(configuracoesAtuais.hora_abertura);
+            const fe = normalizarHora(configuracoesAtuais.hora_fechamento);
+            return (ab && fe && ab !== fe) ? { abertura: ab, fechamento: fe } : HORARIO_PADRAO;
+        }
+        function minutosDe(hhmm) { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; }
+        function agoraEmSP(d = new Date()) {
+            const p = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
+            const g = (t) => p.find(x => x.type === t)?.value || '0';
+            return { dataISO: `${g('year')}-${g('month')}-${g('day')}`, min: (Number(g('hour')) % 24) * 60 + Number(g('minute')) };
+        }
+        function dentroDoHorario(h = horarioAtual(), d = new Date()) {
+            const { min } = agoraEmSP(d), ab = minutosDe(h.abertura), fe = minutosDe(h.fechamento);
+            return ab < fe ? (min >= ab && min < fe) : (min >= ab || min < fe);
+        }
+        // Data da festa que está rolando: depois da meia-noite e antes do
+        // fechamento, ainda é a noite do dia anterior.
+        function dataDaNoiteSP(h = horarioAtual(), d = new Date()) {
+            const { dataISO, min } = agoraEmSP(d), ab = minutosDe(h.abertura), fe = minutosDe(h.fechamento);
+            if (ab > fe && min < fe) {
+                const [y, m, dd] = dataISO.split('-').map(Number);
+                return new Date(Date.UTC(y, m - 1, dd - 1)).toISOString().slice(0, 10);
+            }
+            return dataISO;
+        }
+        function rotuloHora(hhmm) { const h = Number(hhmm.slice(0, 2)), m = hhmm.slice(3); return m === '00' ? `${h}h` : `${h}h${m}`; }
+        function textoHorario(h = horarioAtual()) { return `das ${rotuloHora(h.abertura)} às ${rotuloHora(h.fechamento)}`; }
+        window.atualizarPreviaHorario = () => {
+            const el = document.getElementById('horario_previa');
+            if (!el) return;
+            const ab = normalizarHora(document.getElementById('hora_abertura')?.value);
+            const fe = normalizarHora(document.getElementById('hora_fechamento')?.value);
+            if (!ab || !fe) { el.innerText = 'Preencha os dois horários.'; return; }
+            if (ab === fe) { el.innerText = '⚠️ Abertura e fechamento não podem ser iguais.'; return; }
+            el.innerText = minutosDe(ab) > minutosDe(fe)
+                ? `Abre às ${rotuloHora(ab)} e fecha às ${rotuloHora(fe)} do dia seguinte.`
+                : `Abre às ${rotuloHora(ab)} e fecha às ${rotuloHora(fe)} no mesmo dia.`;
+        };
+        async function gravarHorario(ab, fe) {
+            const { error } = await sb.from('configuracoes').update({ hora_abertura: ab, hora_fechamento: fe }).eq('id', 'sistema');
+            if (error) {
+                console.error(error);
+                return mostrarAviso(/hora_abertura|hora_fechamento|column/i.test(error.message || '')
+                    ? 'Rode antes a migração migracao-horario-funcionamento.sql no Supabase.'
+                    : 'Erro ao salvar o horário.');
+            }
+            mostrarAviso(`Horário salvo: ${textoHorario({ abertura: ab, fechamento: fe })}.`, true);
+        }
+        window.salvarHorarioFuncionamento = async () => {
+            const ab = normalizarHora(document.getElementById('hora_abertura').value);
+            const fe = normalizarHora(document.getElementById('hora_fechamento').value);
+            if (!ab || !fe) return mostrarAviso('Preencha a hora de abrir e a de fechar.');
+            if (ab === fe) return mostrarAviso('Abertura e fechamento não podem ser iguais.');
+            if (!confirm(`Confirmar horário de funcionamento ${textoHorario({ abertura: ab, fechamento: fe })}?\n\nPortaria e Solteiras passam a seguir esse horário na hora.`)) return;
+            await gravarHorario(ab, fe);
+        };
+        window.restaurarHorarioPadrao = async () => {
+            if (!confirm('Voltar ao horário padrão (21h às 8h)?')) return;
+            document.getElementById('hora_abertura').value = HORARIO_PADRAO.abertura;
+            document.getElementById('hora_fechamento').value = HORARIO_PADRAO.fechamento;
+            atualizarPreviaHorario();
+            await gravarHorario(HORARIO_PADRAO.abertura, HORARIO_PADRAO.fechamento);
+        };
 
         window.salvarConfigCaronas = async () => {
             const h = document.getElementById('config_hora_carona').value;
@@ -1958,6 +2050,14 @@
             document.getElementById('contato_whatsapp').value = data.contato_whatsapp || '';
             document.getElementById('contato_endereco').value = data.contato_endereco || '';
             atualizarPreviaContatos();
+            const h = horarioAtual();
+            const inAb = document.getElementById('hora_abertura'), inFe = document.getElementById('hora_fechamento');
+            if (inAb && document.activeElement !== inAb) inAb.value = h.abertura;
+            if (inFe && document.activeElement !== inFe) inFe.value = h.fechamento;
+            atualizarPreviaHorario();
+            const txtSolt = document.getElementById('texto-horario-solteiras');
+            if (txtSolt) txtSolt.innerText = `Liberar e cadastrar só funcionam ${textoHorario(h)}`;
+            pintarStatusTravaSolteiras().catch(() => {});
         }
         async function carregarConfiguracoes() {
             const [{ data }, { data: dataFinanceiro }] = await Promise.all([

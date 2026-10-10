@@ -593,15 +593,45 @@
   }
   // ---- lista guardada na máquina ----
   // ===== HORÁRIO DE TRABALHO (mesma janela usada no servidor) =====
-  // Quem manda é o servidor; isto aqui é só para a tela não mostrar dado antigo
-  // guardado no computador quando estiver fora do horário E sem internet.
-  const HORA_ABERTURA_PORTARIA = 21;
-  const HORA_FECHAMENTO_PORTARIA = 8;
+  // Configurado nos Ajustes da Dashboard (padrão 21h às 8h). Quem manda é o
+  // servidor; isto aqui é só para a tela não mostrar dado antigo guardado no
+  // computador quando estiver fora do horário E sem internet. O horário que o
+  // servidor manda fica guardado na máquina pra valer também sem internet.
+  // Sempre no fuso de São Paulo, não no relógio do computador.
+  const CHAVE_HORARIO_LOCAL = "eclub_horario_funcionamento_v1";
+  const HORARIO_PADRAO = { abertura: "21:00", fechamento: "08:00" };
   let foraDoTurnoPortaria = false;
   let mensagemForaDoTurnoPortaria = "";
+  function normalizarHora(v) {
+    const m = /^(\d{1,2}):(\d{2})/.exec(String(v ?? ""));
+    if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+    return `${m[1].padStart(2, "0")}:${m[2]}`;
+  }
+  function salvarHorarioLocal(h) {
+    const ab = normalizarHora(h && h.abertura), fe = normalizarHora(h && h.fechamento);
+    if (!ab || !fe || ab === fe) return;
+    try { localStorage.setItem(CHAVE_HORARIO_LOCAL, JSON.stringify({ abertura: ab, fechamento: fe })); } catch {}
+  }
+  function horarioLocal() {
+    try {
+      const h = JSON.parse(localStorage.getItem(CHAVE_HORARIO_LOCAL) || "null");
+      const ab = normalizarHora(h && h.abertura), fe = normalizarHora(h && h.fechamento);
+      if (ab && fe && ab !== fe) return { abertura: ab, fechamento: fe };
+    } catch {}
+    return HORARIO_PADRAO;
+  }
+  function minutosDe(hhmm) { const [h, m] = hhmm.split(":").map(Number); return h * 60 + m; }
+  function minutoAgoraSP() {
+    const p = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+    const g = (t) => Number(p.find(x => x.type === t)?.value || 0);
+    return (g("hour") % 24) * 60 + g("minute");
+  }
+  function rotuloHora(hhmm) { const h = Number(hhmm.slice(0, 2)), m = hhmm.slice(3); return m === "00" ? `${h}h` : `${h}h${m}`; }
+  function textoHorarioLocal() { const h = horarioLocal(); return `das ${rotuloHora(h.abertura)} às ${rotuloHora(h.fechamento)}`; }
   function dentroDoTurnoLocalPortaria() {
-    const h = new Date().getHours();
-    return h >= HORA_ABERTURA_PORTARIA || h < HORA_FECHAMENTO_PORTARIA;
+    const h = horarioLocal(), min = minutoAgoraSP();
+    const ab = minutosDe(h.abertura), fe = minutosDe(h.fechamento);
+    return ab < fe ? (min >= ab && min < fe) : (min >= ab || min < fe);
   }
 
   function salvarListaLocal(lista) {
@@ -660,6 +690,7 @@
     if (!carregandoCandidatos) {
       carregandoCandidatos = api("listar_candidatos")
         .then(dados => {
+          if (dados.horario) salvarHorarioLocal(dados.horario);
           if (dados.fora_do_turno) {
             // Fora do horário o servidor não manda ninguém. Aqui NÃO se guarda
             // nada e, principalmente, NÃO se apaga a lista que já está salva na
@@ -690,8 +721,9 @@
   function atualizarCandidatosEmSegundoPlano() {
     if (!candidatosCache) return;
     api("listar_candidatos").then(dados => {
+      if (dados.horario) salvarHorarioLocal(dados.horario);
       if (dados.fora_do_turno) {
-        // Virou 8h com a tela aberta: limpa o que está na memória para a busca
+        // Passou da hora de fechar com a tela aberta: limpa o que está na memória para a busca
         // parar de responder, mas mantém o arquivo guardado no computador.
         foraDoTurnoPortaria = true;
         mensagemForaDoTurnoPortaria = dados.mensagem || "";
@@ -934,6 +966,7 @@
   async function carregarBootstrap() {
     try {
       const dados = await api("bootstrap");
+      if (dados.horario) salvarHorarioLocal(dados.horario);
       isModoTeste = dados.modoTeste === true;
       eventos = Array.isArray(dados.eventos) ? dados.eventos : [];
       $("total-checkins").innerText = String(Number(dados.totalCheckins || 0));
@@ -1121,7 +1154,7 @@
       cont.innerHTML = `
         <div class="pt-vazio">
           <h4 class="alerta">Consulta bloqueada fora do horário</h4>
-          <p>${escapeHtml(mensagemForaDoTurnoPortaria || "A consulta de clientes funciona das 21h às 8h.")}</p>
+          <p>${escapeHtml(mensagemForaDoTurnoPortaria || `A consulta de clientes funciona ${textoHorarioLocal()}.`)}</p>
         </div>`;
       return;
     }
@@ -1264,11 +1297,11 @@
     // regra que impede puxar base de cliente numa terça de manhã. Sem internet
     // para o servidor explicar isso, a tela precisa dizer por conta própria,
     // senão parece defeito quando é a trava funcionando.
-    if (!dentroDoTurnoLocalPortaria()) {
+    if (!isModoTeste && !dentroDoTurnoLocalPortaria()) {
       cont.innerHTML = `
         <div class="pt-vazio">
           <h4 class="alerta">Fora do horário de funcionamento</h4>
-          <p>A consulta de clientes funciona das ${HORA_ABERTURA_PORTARIA}h às ${HORA_FECHAMENTO_PORTARIA}h.
+          <p>A consulta de clientes funciona ${escapeHtml(textoHorarioLocal())}.
              Sem internet, a lista guardada nesta máquina também fica bloqueada nesse período.</p>
         </div>`;
       return;

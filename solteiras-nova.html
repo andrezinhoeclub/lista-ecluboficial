@@ -706,6 +706,7 @@
     // pra operadora ver o cadeado antes de clicar em vez de tomar um erro.
     let turnoAtual = null;
     function pintarTurno(t) {
+        if (t && t.horario) salvarHorarioLocal(t.horario);
         const antes = turnoAtual ? String(turnoAtual.aberto) : 'nulo';
         turnoAtual = t || null;
         const mudou = antes !== (turnoAtual ? String(turnoAtual.aberto) : 'nulo');
@@ -716,17 +717,17 @@
         if (t.aberto) {
             el.innerText = t.motivo ? `● ABERTO (${t.motivo})` : '● ABERTO';
             el.className = 'text-sm font-black uppercase leading-tight mt-1 text-green-600';
-            caixa.className = 'bg-green-50 border border-green-300 p-3 rounded-2xl text-center min-w-[190px]';
+            caixa.className = 'flex-1 md:flex-none bg-green-50 border border-green-300 p-3 rounded-2xl text-center min-w-[140px] md:min-w-[190px]';
         } else {
             el.innerText = `🔒 ${t.motivo || 'TRAVADO'}`;
             el.className = 'text-[11px] font-black uppercase leading-tight mt-1 text-red-600';
-            caixa.className = 'bg-red-50 border border-red-300 p-3 rounded-2xl text-center min-w-[190px]';
+            caixa.className = 'flex-1 md:flex-none bg-red-50 border border-red-300 p-3 rounded-2xl text-center min-w-[140px] md:min-w-[190px]';
         }
         const faixa = document.getElementById('faixaTravaTurno');
         if (faixa) {
             if (travadoAgora()) {
                 document.getElementById('faixaTravaMotivo').innerText =
-                    t.motivo === 'SEM EVENTO ATIVO PARA HOJE' ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE' : 'CASA FECHADA — FORA DO HORÁRIO (21H ÀS 8H)';
+                    t.motivo === 'SEM EVENTO ATIVO PARA HOJE' ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE' : `CASA FECHADA — FORA DO HORÁRIO (${textoHorarioCurto()})`;
                 faixa.classList.remove('hidden');
             } else faixa.classList.add('hidden');
         }
@@ -739,11 +740,45 @@
             try { render(clientesCache || [], !!document.getElementById('buscaCliente')?.value.trim()); } catch (_) {}
         }
     }
-    // Fora do horário pelo relógio da máquina. Serve só pro caso SEM internet,
+    // ===== HORÁRIO DE FUNCIONAMENTO =====
+    // Configurado nos Ajustes da Dashboard (padrão 21h às 8h). O servidor
+    // manda junto com a situação da casa; fica guardado na máquina pra
+    // valer também quando a internet cair. Sempre no fuso de São Paulo.
+    const CHAVE_HORARIO_LOCAL = 'eclub_horario_funcionamento_v1';
+    const HORARIO_PADRAO = { abertura: '21:00', fechamento: '08:00' };
+    function normalizarHora(v) {
+        const m = /^(\d{1,2}):(\d{2})/.exec(String(v ?? ''));
+        if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return null;
+        return `${m[1].padStart(2, '0')}:${m[2]}`;
+    }
+    function salvarHorarioLocal(h) {
+        const ab = normalizarHora(h && h.abertura), fe = normalizarHora(h && h.fechamento);
+        if (!ab || !fe || ab === fe) return;
+        try { localStorage.setItem(CHAVE_HORARIO_LOCAL, JSON.stringify({ abertura: ab, fechamento: fe })); } catch (_) {}
+    }
+    function horarioLocal() {
+        try {
+            const h = JSON.parse(localStorage.getItem(CHAVE_HORARIO_LOCAL) || 'null');
+            const ab = normalizarHora(h && h.abertura), fe = normalizarHora(h && h.fechamento);
+            if (ab && fe && ab !== fe) return { abertura: ab, fechamento: fe };
+        } catch (_) {}
+        return HORARIO_PADRAO;
+    }
+    function minutosDe(hhmm) { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; }
+    function minutoAgoraSP() {
+        const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+        const g = (t) => Number(p.find(x => x.type === t)?.value || 0);
+        return (g('hour') % 24) * 60 + g('minute');
+    }
+    function rotuloHora(hhmm) { const h = Number(hhmm.slice(0, 2)), m = hhmm.slice(3); return m === '00' ? `${h}H` : `${h}H${m}`; }
+    function textoHorarioCurto() { const h = horarioLocal(); return `${rotuloHora(h.abertura)} ÀS ${rotuloHora(h.fechamento)}`; }
+    // Fora do horário pelo relógio. Serve só pro caso SEM internet,
     // em que a tela não tem como perguntar ao servidor.
     function foraDoHorarioLocal() {
-        const h = new Date().getHours();
-        return !(h >= 21 || h < 8);
+        const h = horarioLocal(), min = minutoAgoraSP();
+        const ab = minutosDe(h.abertura), fe = minutosDe(h.fechamento);
+        const dentro = ab < fe ? (min >= ab && min < fe) : (min >= ab || min < fe);
+        return !dentro;
     }
     function travadoAgora() {
         // Com internet, quem manda é a resposta do servidor.
@@ -771,7 +806,7 @@
                 document.getElementById('faixaTravaMotivo').innerText =
                     (turnoAtual && turnoAtual.motivo === 'SEM EVENTO ATIVO PARA HOJE')
                         ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE'
-                        : 'CASA FECHADA — FORA DO HORÁRIO (21H ÀS 8H)';
+                        : `CASA FECHADA — FORA DO HORÁRIO (${textoHorarioCurto()})`;
                 faixa.classList.remove('hidden');
             }
             try { render([], false); } catch (_) {}
@@ -813,7 +848,7 @@
         if (!turnoAtual || turnoAtual.aberto) return false;
         mostrarAviso(turnoAtual.motivo === 'SEM EVENTO ATIVO PARA HOJE'
             ? 'NÃO HÁ EVENTO ATIVO PARA ESTA NOITE — PEÇA LIBERAÇÃO AO ADMINISTRADOR'
-            : 'CASA FECHADA (21H ÀS 8H) — PEÇA LIBERAÇÃO AO ADMINISTRADOR');
+            : `CASA FECHADA (${textoHorarioCurto()}) — PEÇA LIBERAÇÃO AO ADMINISTRADOR`);
         return true;
     }
     async function atualizarPainelSeguro() {
@@ -837,7 +872,7 @@
         if(intervaloAtualizacao) clearInterval(intervaloAtualizacao);
         intervaloAtualizacao=setInterval(()=>{
             // Revisa a trava a cada volta, mesmo se a chamada ao servidor
-            // falhar: às 8h em ponto a tela tem que se fechar sozinha, com
+            // falhar: na hora de fechar a tela tem que se fechar sozinha, com
             // internet ou sem.
             revisarTrava();
             // Se sobrou coisa na fila, prioriza mandar ela antes de atualizar.
