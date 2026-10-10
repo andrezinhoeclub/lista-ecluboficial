@@ -1442,17 +1442,22 @@
         };
 
         // Texto pronto pra mandar no grupo do WhatsApp — mesmo formato do
-        // sistema antigo. O bloco de Vallet foi deixado de fora porque essa
-        // tela ainda não existe no Supabase (entra quando ela for reconstruída).
+        // sistema antigo, incluindo o bloco "> Vallet" (carros por noite,
+        // sem contar o modo teste), que vem da função vallet_carros_por_evento.
         // Nome usado no arquivo baixado por baixarOutputComoArquivo() — cada
         // gerarX() abaixo troca esse valor antes de preencher a textarea.
         let ultimoNomeExport = 'Export';
 
-        window.gerarRelatorioGerencial = () => {
+        window.gerarRelatorioGerencial = async () => {
             ultimoNomeExport = 'Resumo_Gerencial';
             const tA = document.getElementById('output-excel');
             const val = dadosReservas.filter(reservaValidaDash);
             if (!val.length) { tA.value = 'Sem reservas de pagantes.'; return; }
+            let valletPorEvento = null;
+            try {
+                const { data: vData, error: vErro } = await sb.rpc('vallet_carros_por_evento');
+                if (!vErro && Array.isArray(vData)) valletPorEvento = vData;
+            } catch (_) { valletPorEvento = null; }
             const at = [...dadosEventos].sort((a, b) => String(a.data).localeCompare(String(b.data)));
             let cab = '';
             if (at.length > 0) {
@@ -1505,6 +1510,17 @@
                     txt += `\n`;
                 }
             });
+            if (valletPorEvento) {
+                // Liga o atendimento ao evento pelo id; sem id, pela data da noite.
+                const carrosDoEvento = (ev) => valletPorEvento
+                    .filter(v => (v.evento_id && String(v.evento_id) === String(ev.id)) || (!v.evento_id && String(v.evento_data || '') === String(ev.data || '')))
+                    .reduce((t, v) => t + (Number(v.total) || 0), 0);
+                txt += `> Vallet\n\n`;
+                at.forEach(ev => {
+                    const carros = carrosDoEvento(ev);
+                    txt += `${dS[new Date(ev.data + 'T12:00:00Z').getDay()]} - ${carros} ${carros === 1 ? 'carro' : 'carros'}\n`;
+                });
+            }
             tA.value = txt.trim();
         };
 
