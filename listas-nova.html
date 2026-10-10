@@ -330,9 +330,9 @@
     <div class="festas" id="listaFestas"></div>
 
     <div class="contatos">
-      <a href="https://api.whatsapp.com/send?phone=5541995040506" target="_blank" rel="noopener">💬<span>WhatsApp</span></a>
-      <a href="https://www.instagram.com/eclubswingdance/" target="_blank" rel="noopener">📸<span>Instagram</span></a>
-      <a href="https://www.google.com/maps/search/?api=1&query=R.+An%C3%ADbal+Goularte+Maia+Filho,+81+-+Bairro+Alto,+Curitiba+-+PR,+82820-480" target="_blank" rel="noopener">📍<span>Chegar</span></a>
+      <a id="linkZapCasa" href="https://api.whatsapp.com/send?phone=5541995040506" target="_blank" rel="noopener">💬<span>WhatsApp</span></a>
+      <a id="linkInstaCasa" href="https://www.instagram.com/eclubswingdance/" target="_blank" rel="noopener">📸<span>Instagram</span></a>
+      <a id="linkMapaCasa" href="https://www.google.com/maps/search/?api=1&query=R.+An%C3%ADbal+Goularte+Maia+Filho,+81+-+Bairro+Alto,+Curitiba+-+PR,+82820-480" target="_blank" rel="noopener">📍<span>Chegar</span></a>
     </div>
     <p class="creditos">⚡ E-Club Oficial</p>
   </section>
@@ -504,7 +504,7 @@
 
     <div class="extras">
       <a class="extra" id="okAgenda" target="_blank" rel="noopener">📅 Adicionar no meu calendário</a>
-      <a class="extra zap" href="https://api.whatsapp.com/send?phone=5541995040506" target="_blank" rel="noopener">💬 Chamar a casa no WhatsApp</a>
+      <a class="extra zap" id="linkZapCasaOk" href="https://api.whatsapp.com/send?phone=5541995040506" target="_blank" rel="noopener">💬 Chamar a casa no WhatsApp</a>
     </div>
 
     <p class="creditos">⚡ E-Club Oficial</p>
@@ -757,6 +757,31 @@
         return true;
     }
 
+    // ===== CONTATOS DA CASA (Ajustes da Dashboard) =====
+    // Instagram, WhatsApp e endereço vêm do servidor (configuracoes). O que
+    // está escrito no HTML fica só de reserva, pra página nunca ficar sem
+    // link se o campo estiver vazio ou o servidor não responder.
+    function aplicarContatosCasa(c) {
+        if (!c) return;
+        const ig = String(c.instagram || '').trim().replace(/^@/, '').replace(/[^A-Za-z0-9._]/g, '');
+        const zap = String(c.whatsapp || '').replace(/\D/g, '');
+        const end = String(c.endereco || '').trim();
+        if (ig) {
+            const el = document.getElementById('linkInstaCasa');
+            if (el) el.href = `https://www.instagram.com/${ig}/`;
+        }
+        if (zap.length >= 10) {
+            ['linkZapCasa', 'linkZapCasaOk'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.href = `https://api.whatsapp.com/send?phone=${zap}`;
+            });
+        }
+        if (end) {
+            const el = document.getElementById('linkMapaCasa');
+            if (el) el.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(end)}`;
+        }
+    }
+
     // ===== 1. A LISTA DAS FESTAS =====
     async function carregarPagina() {
         const boot = await apiListas('bootstrap', { ref: globalPromoter, id: urlParams.get('id') || '' });
@@ -768,6 +793,7 @@
         eventoFixo = boot.contexto?.festa || null;
         promoterTipo = boot.contexto?.promoterTipo || 'padrao';
         eventosCache = Array.isArray(boot.eventos) ? boot.eventos : [];
+        aplicarContatosCasa(boot.contatos);
 
         if (globalAniversariante) {
             document.getElementById('nomeAniv').textContent = globalAniversariante;
