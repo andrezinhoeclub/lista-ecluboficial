@@ -2229,6 +2229,7 @@
       await atualizarTicketPreview();
       renderTudo();
       atualizarControleHorarioVallet();
+      garantirAoVivoVallet();
     }
     // Pergunta ao servidor quem é este operador. É aqui que a permissão
     // "Permitir Vallet" é conferida de verdade.
@@ -2307,7 +2308,27 @@
         btn.textContent = 'ENTRAR';
       }
     }
+    // Avisos do servidor: modo teste, horário e eventos mudaram no Dashboard?
+    // A tela do Vallet muda na hora, sem apertar F5. A busca de 10 em 10
+    // segundos continua como segurança.
+    let aoVivoVallet = null;
+    function garantirAoVivoVallet() {
+      if (aoVivoVallet || !operadorAtual || !window.ECUI?.aoVivo) return;
+      const sb = initSupabase();
+      if (!sb) return;
+      aoVivoVallet = ECUI.aoVivo({
+        sb, nome: 'vallet',
+        tabelas: ['configuracoes', 'eventos'],
+        atraso: 300, minimo: 1500, seguranca: 60000,
+        atualizar: async () => {
+          if (!operadorAtual || !navigator.onLine) return;
+          await iniciarMonitorConfiguracaoVallet();
+          atualizarControleHorarioVallet({ forcarTela: true });
+        },
+      });
+    }
     async function sairOperador() {
+      try { aoVivoVallet?.parar(); } catch (_) {} aoVivoVallet = null;
       operadorAtual = null;
       localStorage.removeItem(LOGIN_REMEMBER_KEY);
       localStorage.removeItem(OPERADOR_KEY);
@@ -4413,6 +4434,7 @@
           .catch(() => {});
       }
       setInterval(async () => {
+        garantirAoVivoVallet();
         if (navigator.onLine) {
           await processarFila();
           await puxarFirebase();
