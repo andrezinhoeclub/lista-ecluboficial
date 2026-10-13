@@ -116,8 +116,9 @@
         /* Ajustes: cartões de liberação */
         .aj-card { background: #0f0f14; border: 1px solid #2a2a34; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
         .aj-card h3 { margin: 0; font-size: 17px; font-weight: 800; color: #fff; }
-        .aj-sub { margin: 0; font-size: 13px; font-weight: 600; color: #a1a1aa; line-height: 1.45; }
-        .aj-status { margin: 2px 0 4px; font-size: 14px; font-weight: 800; color: #a1a1aa; }
+        .aj-sub { margin: 0; font-size: 13px; font-weight: 600; color: #a1a1aa; line-height: 1.45; min-height: 2.9em; }
+        .aj-status { margin: 2px 0 4px; font-size: 14px; font-weight: 800; color: #a1a1aa; min-height: 1.45em; }
+        .aj-botoes { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
         .aj-status.ok { color: #4ade80; } .aj-status.cob { color: #fdba74; } .aj-status.blq { color: #fca5a5; }
         /* Solteiras e Caronas */
         .sc-tit { margin: 0; font-size: 30px; font-weight: 900; color: #fff; }
@@ -700,20 +701,28 @@
                         <h3>Solteiras fora do horário</h3>
                         <p id="texto-horario-solteiras" class="aj-sub">Liberar e cadastrar só funcionam das 21h às 8h</p>
                         <p id="status-trava-solteiras" class="aj-status">Verificando...</p>
-                        <button type="button" onclick="liberarSolteirasTemporario(1)" class="ec-btn ouro w-full">Liberar por 1 hora</button>
-                        <button type="button" onclick="cancelarLiberacaoSolteiras()" class="ec-btn neutro w-full">Cancelar liberação</button>
+                        <div class="aj-botoes">
+                            <button type="button" onclick="liberarSolteirasTemporario(1)" class="ec-btn ouro w-full">Ligar por 1 hora</button>
+                            <button type="button" onclick="cancelarLiberacaoSolteiras()" class="ec-btn neutro w-full">Desligar</button>
+                        </div>
                     </div>
                     <div class="aj-card">
                         <h3>Modo teste da Portaria</h3>
                         <p class="aj-sub">Libera a busca de todos os eventos, a qualquer hora.</p>
-                        <p id="status-modo-teste" class="aj-status">—</p>
-                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="ec-btn neutro w-full">Ligar teste</button>
+                        <p id="status-modo-teste" class="aj-status">● Desligado</p>
+                        <div class="aj-botoes">
+                            <button type="button" onclick="definirModoTeste('portaria', true)" class="ec-btn ouro w-full">Ligar por 1 hora</button>
+                            <button type="button" onclick="definirModoTeste('portaria', false)" class="ec-btn neutro w-full">Desligar</button>
+                        </div>
                     </div>
                     <div class="aj-card">
                         <h3>Modo teste do Vallet</h3>
-                        <p class="aj-sub">Libera o Vallet sem festa. Os carros de teste não entram nos relatórios.</p>
-                        <p id="status-modo-teste-vallet" class="aj-status">—</p>
-                        <button id="btnModoTesteVallet" onclick="toggleModoTesteVallet()" class="ec-btn neutro w-full">Ligar teste</button>
+                        <p class="aj-sub">Libera o Vallet sem festa. Carros de teste não entram nos relatórios.</p>
+                        <p id="status-modo-teste-vallet" class="aj-status">● Desligado</p>
+                        <div class="aj-botoes">
+                            <button type="button" onclick="definirModoTeste('vallet', true)" class="ec-btn ouro w-full">Ligar por 1 hora</button>
+                            <button type="button" onclick="definirModoTeste('vallet', false)" class="ec-btn neutro w-full">Desligar</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2341,13 +2350,13 @@
         window.liberarSolteirasTemporario = async (horas = 1) => {
             const { error } = await sb.rpc('definir_liberacao_solteiras', { p_horas: horas });
             if (error) return mostrarAviso('Erro ao liberar.');
-            mostrarAviso(`Solteiras liberada por ${horas === 1 ? '1 hora' : horas + 'h'}. Desliga sozinha depois.`, true);
+            mostrarAviso('Solteiras liberada por 1 hora.', true);
             pintarStatusTravaSolteiras();
         };
         window.cancelarLiberacaoSolteiras = async () => {
             const { error } = await sb.rpc('definir_liberacao_solteiras', { p_horas: null });
             if (error) return mostrarAviso('Erro ao cancelar.');
-            mostrarAviso('Liberação cancelada.', true);
+            mostrarAviso('Liberação de Solteiras desligada.', true);
             pintarStatusTravaSolteiras();
         };
         async function pintarStatusTravaSolteiras() {
@@ -2356,7 +2365,7 @@
             const aberto = dentroDoHorario();
             if (aberto) {
                 el.className = 'aj-status ok';
-                el.innerText = '● Aberto agora — dentro do horário';
+                el.innerText = '● Aberta — dentro do horário';
                 return;
             }
             const { data: config } = await sb.from('configuracoes').select('liberacao_solteiras_expira_em').eq('id', 'sistema').single();
@@ -2364,10 +2373,10 @@
             if (expiraEm > Date.now()) {
                 const faltam = Math.max(1, Math.round((expiraEm - Date.now()) / 60000));
                 el.className = 'aj-status cob';
-                el.innerText = `● Liberado por exceção — faltam ${faltam} min`;
+                el.innerText = `● Ligado — desliga sozinho em ${faltam} min`;
             } else {
-                el.className = 'aj-status blq';
-                el.innerText = '● Travado — fora do horário de funcionamento';
+                el.className = 'aj-status';
+                el.innerText = '● Desligado — fora do horário';
             }
         }
 
@@ -2524,6 +2533,17 @@
         };
 
         let modoTesteAtivo = false, modoTesteValletAtivo = false;
+        // Ligar = liga por 1 hora (se já estava ligado, recomeça a contar 1 hora).
+        // Desligar = desliga na hora. Quem marca o prazo é o banco.
+        window.definirModoTeste = async (qual, ligar) => {
+            const campo = qual === 'vallet' ? 'modo_teste_vallet' : 'modo_teste';
+            const nome = qual === 'vallet' ? 'do Vallet' : 'da Portaria';
+            const dados = { [campo]: !!ligar };
+            if (ligar) dados[campo + '_expira_em'] = null;
+            const { error } = await sb.from('configuracoes').update(dados).eq('id', 'sistema');
+            if (error) return mostrarAviso(`Erro ao alterar o modo teste ${nome}.`);
+            mostrarAviso(ligar ? `Modo teste ${nome} ligado por 1 hora.` : `Modo teste ${nome} desligado.`, true);
+        };
         window.toggleModoTeste = async () => {
             const { error } = await sb.from('configuracoes').update({ modo_teste: !modoTesteAtivo }).eq('id', 'sistema');
             if (error) return mostrarAviso('Erro ao alterar o modo teste.');
@@ -2537,11 +2557,11 @@
 
         // "● LIGADO — desliga sozinho em 42 min" (o banco desliga com 1 hora).
         function textoPrazo(ligado, expira) {
-            if (!ligado) return { cls: '', txt: 'Desligado' };
+            if (!ligado) return { cls: '', txt: '● Desligado' };
             const t = expira ? new Date(expira).getTime() : NaN;
-            if (isNaN(t)) return { cls: 'cob', txt: '● LIGADO agora' };
+            if (isNaN(t)) return { cls: 'cob', txt: '● Ligado' };
             const min = Math.max(0, Math.ceil((t - Date.now()) / 60000));
-            return { cls: 'cob', txt: min > 0 ? `● LIGADO — desliga sozinho em ${min} min` : '● LIGADO — desligando...' };
+            return { cls: 'cob', txt: min > 0 ? `● Ligado — desliga sozinho em ${min} min` : '● Ligado — desligando...' };
         }
         function pintarPrazosTeste() {
             const a = textoPrazo(modoTesteAtivo, configuracoesAtuais.modo_teste_expira_em);
@@ -2564,11 +2584,7 @@
             const data = configuracoesAtuais;
             modoTesteAtivo = data.modo_teste === true;
             modoTesteValletAtivo = data.modo_teste_vallet === true;
-            const btn = document.getElementById('btnModoTeste');
-            if (btn) { btn.textContent = modoTesteAtivo ? 'Desligar teste' : 'Ligar teste'; btn.className = 'ec-btn w-full ' + (modoTesteAtivo ? 'perigo' : 'neutro'); }
             pintarPrazosTeste();
-            const btnVallet = document.getElementById('btnModoTesteVallet');
-            if (btnVallet) { btnVallet.textContent = modoTesteValletAtivo ? 'Desligar teste' : 'Ligar teste'; btnVallet.className = 'ec-btn w-full ' + (modoTesteValletAtivo ? 'perigo' : 'neutro'); }
 
             document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado';
             document.getElementById('valor_taxa').value = data.taxa_valor ?? '';
