@@ -895,6 +895,13 @@
         // Sessão tomada por outra máquina: NÃO descarta nada. Estas entradas são
         // de gente que já está lá dentro; elas ficam guardadas e sobem quando
         // esta máquina entrar de novo.
+        // Servidor ocupado ou limite de pedidos por minuto: NÃO descarta.
+        // Guarda esta e as próximas e tenta de novo na próxima volta.
+        if (e?.codigo === "LIMITE" || [429, 502, 503, 504].includes(Number(e?.status))) {
+          restantes.push(item);
+          fila.slice(fila.indexOf(item) + 1).forEach(resto => restantes.push(resto));
+          break;
+        }
         if (e?.codigo === "SESSAO_EM_OUTRA_MAQUINA") {
           restantes.push(item);
           fila.slice(fila.indexOf(item) + 1).forEach(resto => restantes.push(resto));
