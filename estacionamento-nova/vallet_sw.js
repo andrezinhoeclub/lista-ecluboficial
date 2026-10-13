@@ -21,7 +21,10 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(APP_SHELL)
-        .then(() => cache.add(new Request(SUPABASE_JS, { mode: 'cors' })).catch(() => {})))
+        .then(() => cache.add(new Request(SUPABASE_JS, { mode: 'cors' })).catch(() => {}))
+        // Visual comum das telas (fica na raiz do site). Opcional: se faltar,
+        // a tela funciona do mesmo jeito, só com a letra padrão.
+        .then(() => Promise.all(['../eclub-ui.css', '../eclub-ui.js'].map((u) => cache.add(u).catch(() => {})))))
       .then(() => self.skipWaiting())
   );
 });
