@@ -406,8 +406,19 @@
         if (!c?.ultima_visita) return null;
         const d=new Date(c.ultima_visita); return isNaN(d.getTime()) ? null : d;
     }
+    // Virada do turno (padrão 5h). O servidor manda a hora escolhida em
+    // Dashboard > Ajustes; fica guardada aqui pra valer mesmo sem internet.
+    const CHAVE_VIRADA = 'eclub_solteiras_virada';
+    let viradaTurno = '05:00';
+    try { const v = localStorage.getItem(CHAVE_VIRADA); if (/^\d{2}:\d{2}$/.test(v || '')) viradaTurno = v; } catch (_) {}
+    function salvarViradaTurno(v) {
+        if (!/^\d{2}:\d{2}$/.test(String(v || ''))) return;
+        viradaTurno = v;
+        try { localStorage.setItem(CHAVE_VIRADA, v); } catch (_) {}
+    }
     function corteTurno() {
-        const agora=new Date(), corte=new Date(); corte.setHours(5,0,0,0); if (agora < corte) corte.setDate(corte.getDate()-1); return corte;
+        const [hv, mv] = viradaTurno.split(':').map(Number);
+        const agora=new Date(), corte=new Date(); corte.setHours(hv, mv, 0, 0); if (agora < corte) corte.setDate(corte.getDate()-1); return corte;
     }
     // Mesma normalização usada no backend (remove acento, maiúsculas, espaços
     // duplicados) — precisa ser idêntica pra busca local dar o mesmo resultado
@@ -749,6 +760,7 @@
     let turnoAtual = null;
     function pintarTurno(t) {
         if (t && t.horario) salvarHorarioLocal(t.horario);
+        if (t && t.virada) salvarViradaTurno(t.virada);
         const antes = turnoAtual ? String(turnoAtual.aberto) : 'nulo';
         turnoAtual = t || null;
         const mudou = antes !== (turnoAtual ? String(turnoAtual.aberto) : 'nulo');
