@@ -120,6 +120,8 @@
         .aj-status { margin: 2px 0 4px; font-size: 14px; font-weight: 800; color: #a1a1aa; min-height: 1.45em; }
         .aj-botoes { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
         .aj-status.ok { color: #4ade80; } .aj-status.cob { color: #fdba74; } .aj-status.blq { color: #fca5a5; }
+        .aj-card input.aj-hora { width: 100%; min-height: 56px; padding: 0 16px; border-radius: 14px; background: #0a0a0f !important; border: 2px solid #2a2a34 !important; color: #fff !important; font: 800 22px var(--ec-fonte) !important; outline: none; box-sizing: border-box; color-scheme: dark; }
+        .aj-card input.aj-hora:focus { border-color: var(--ec-ouro) !important; box-shadow: 0 0 0 3px rgba(245,183,0,.18); }
         /* Solteiras e Caronas */
         .sc-tit { margin: 0; font-size: 30px; font-weight: 900; color: #fff; }
         .sc-sub { margin: 4px 0 0; font-size: 15px; font-weight: 600; color: #a1a1aa; }
@@ -727,21 +729,53 @@
                 </div>
             </div>
 
-            <!-- REGRAS DAS CARONAS -->
-            <div class="glass-card p-8 border-l-4 border-l-purple-500">
-                <h2 class="text-purple-400 font-black text-xl mb-1">Regras das caronas</h2>
-                <p class="text-zinc-400 text-[11px] font-bold mb-6">Valem para a página de pedido de carona das solteiras.</p>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <label class="block">
-                        <span class="block text-purple-300 text-[11px] font-black mb-2">Pedidos até que horas (no dia do evento)</span>
-                        <input type="time" id="config_hora_carona" class="w-full p-4 rounded-2xl font-bold text-sm" required>
-                    </label>
-                    <label class="block md:col-span-2">
-                        <span class="block text-purple-300 text-[11px] font-black mb-2">Bairros atendidos (separados por vírgula)</span>
-                        <textarea id="config_bairros_carona" placeholder="Ex.: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-sm h-24 resize-none uppercase"></textarea>
-                    </label>
+            <!-- HORÁRIOS DAS REGRAS (venda online, virada das solteiras, caronas) -->
+            <div class="glass-card p-8 border-l-4 border-l-amber-500">
+                <h2 class="text-amber-400 font-black text-xl mb-1">Horários das regras</h2>
+                <p class="text-zinc-400 text-[11px] font-bold mb-6">Mudou aqui, vale na hora em todas as telas. Use numa noite especial e depois volte ao padrão.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="aj-card">
+                        <h3>Venda online fecha às</h3>
+                        <p class="aj-sub">No dia da festa, PIX e camarote param de vender nesse horário. Nome na lista grátis continua.</p>
+                        <input type="time" id="cfg-hora-venda" class="aj-hora" oninput="this.dataset.mexido='1'; pintarHorasRegras()">
+                        <p id="status-hora-venda" class="aj-status">Verificando...</p>
+                        <div class="aj-botoes">
+                            <button type="button" onclick="salvarHoraRegra('venda')" class="ec-btn ouro w-full">Salvar horário</button>
+                            <button type="button" onclick="padraoHoraRegra('venda')" class="ec-btn neutro w-full">Voltar ao padrão (22h)</button>
+                        </div>
+                    </div>
+                    <div class="aj-card">
+                        <h3>Virada do turno das Solteiras</h3>
+                        <p class="aj-sub">A contagem “liberadas no turno” recomeça nesse horário. Antes dele, conta para a noite anterior.</p>
+                        <input type="time" id="cfg-hora-virada" class="aj-hora" oninput="this.dataset.mexido='1'; pintarHorasRegras()">
+                        <p id="status-hora-virada" class="aj-status">Verificando...</p>
+                        <div class="aj-botoes">
+                            <button type="button" onclick="salvarHoraRegra('virada')" class="ec-btn ouro w-full">Salvar horário</button>
+                            <button type="button" onclick="padraoHoraRegra('virada')" class="ec-btn neutro w-full">Voltar ao padrão (5h)</button>
+                        </div>
+                    </div>
+                    <div class="aj-card">
+                        <h3>Pedidos de carona até</h3>
+                        <p class="aj-sub">No dia do evento, a página de carona das solteiras para de aceitar pedidos nesse horário.</p>
+                        <input type="time" id="cfg-hora-carona" class="aj-hora" oninput="this.dataset.mexido='1'; pintarHorasRegras()">
+                        <p id="status-hora-carona" class="aj-status">Verificando...</p>
+                        <div class="aj-botoes">
+                            <button type="button" onclick="salvarHoraRegra('carona')" class="ec-btn ouro w-full">Salvar horário</button>
+                            <button type="button" onclick="padraoHoraRegra('carona')" class="ec-btn neutro w-full">Voltar ao padrão (18h)</button>
+                        </div>
+                    </div>
                 </div>
-                <button onclick="salvarConfigCaronas()" class="ec-btn w-full mt-4" style="background:#7c3aed;color:#fff">Salvar regras das caronas</button>
+            </div>
+
+            <!-- BAIRROS DAS CARONAS -->
+            <div class="glass-card p-8 border-l-4 border-l-purple-500">
+                <h2 class="text-purple-400 font-black text-xl mb-1">Bairros das caronas</h2>
+                <p class="text-zinc-400 text-[11px] font-bold mb-6">Bairros que a carona atende. O horário limite dos pedidos fica em “Horários das regras”, acima.</p>
+                <label class="block">
+                    <span class="block text-purple-300 text-[11px] font-black mb-2">Bairros atendidos (separados por vírgula)</span>
+                    <textarea id="config_bairros_carona" placeholder="Ex.: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-sm h-24 resize-none uppercase"></textarea>
+                </label>
+                <button onclick="salvarConfigCaronas()" class="ec-btn w-full mt-4" style="background:#7c3aed;color:#fff">Salvar bairros</button>
             </div>
 
             <!-- ZONA DE RISCO -->
@@ -2456,11 +2490,77 @@
         };
 
         window.salvarConfigCaronas = async () => {
-            const h = document.getElementById('config_hora_carona').value;
             const b = document.getElementById('config_bairros_carona').value.toUpperCase();
-            const { error } = await sb.from('configuracoes').update({ carona_hora_limite: h, carona_bairros: b }).eq('id', 'sistema');
-            if (error) return mostrarAviso('Erro ao salvar configurações.');
-            mostrarAviso('Regras salvas!', true);
+            const { error } = await sb.from('configuracoes').update({ carona_bairros: b }).eq('id', 'sistema');
+            if (error) return mostrarAviso('Erro ao salvar os bairros.');
+            aplicarConfiguracoes({ carona_bairros: b });
+            mostrarAviso('Bairros salvos!', true);
+        };
+
+        // ===== Horários das regras (Ajustes) =====
+        // Cada um mora numa coluna de "configuracoes" e é lido pelo servidor
+        // na hora: Listas (venda online), Solteiras (virada) e Caronas.
+        const HORAS_REGRAS = {
+            venda:  { campo: 'venda_online_hora_limite', padrao: '22:00', min: '12:00', max: '23:59',
+                      erro: 'A venda online precisa fechar entre 12h e 23h59 (no próprio dia da festa).',
+                      salvo: 'Venda online fecha às' },
+            virada: { campo: 'solteiras_hora_virada', padrao: '05:00', min: '00:00', max: '12:00',
+                      erro: 'A virada do turno precisa ser entre 0h e 12h (de madrugada ou de manhã).',
+                      salvo: 'Turno das Solteiras vira às' },
+            carona: { campo: 'carona_hora_limite', padrao: '18:00', min: '00:00', max: '23:59',
+                      erro: 'Horário inválido.',
+                      salvo: 'Pedidos de carona até' },
+        };
+        function horaRegraAtual(chave) {
+            const r = HORAS_REGRAS[chave];
+            return normalizarHora(configuracoesAtuais[r.campo]) || r.padrao;
+        }
+        function pintarRegrasHora(preencher) {
+            Object.keys(HORAS_REGRAS).forEach(chave => {
+                const r = HORAS_REGRAS[chave];
+                const input = document.getElementById('cfg-hora-' + chave);
+                const st = document.getElementById('status-hora-' + chave);
+                const atual = horaRegraAtual(chave);
+                // Não apaga o que a pessoa está digitando e ainda não salvou.
+                if (input && preencher && document.activeElement !== input && !input.dataset.mexido) input.value = atual;
+                if (!st) return;
+                const digitado = normalizarHora(input?.value);
+                if (digitado && digitado !== atual) {
+                    st.className = 'aj-status cob';
+                    st.textContent = `● Não salvo — valendo ${rotuloHora(atual)}`;
+                } else {
+                    st.className = 'aj-status ok';
+                    st.textContent = `● Valendo: ${rotuloHora(atual)}${atual === r.padrao ? ' (padrão)' : ''}`;
+                }
+            });
+        }
+        window.pintarHorasRegras = () => pintarRegrasHora(false);
+        async function gravarHoraRegra(chave, valor) {
+            const r = HORAS_REGRAS[chave];
+            const { error } = await sb.from('configuracoes').update({ [r.campo]: valor }).eq('id', 'sistema');
+            if (error) {
+                console.error('salvar horário da regra:', error);
+                return mostrarAviso(/column|coluna/i.test(error.message || '')
+                    ? 'Falta rodar o arquivo SQL dos horários no Supabase.'
+                    : 'Erro ao salvar o horário.');
+            }
+            const input = document.getElementById('cfg-hora-' + chave);
+            if (input) delete input.dataset.mexido;
+            aplicarConfiguracoes({ [r.campo]: valor });
+            mostrarAviso(`${r.salvo} ${rotuloHora(valor)}.`, true);
+        }
+        window.salvarHoraRegra = async (chave) => {
+            const r = HORAS_REGRAS[chave];
+            const v = normalizarHora(document.getElementById('cfg-hora-' + chave)?.value);
+            if (!v) return mostrarAviso('Escolha o horário.');
+            if (v < r.min || v > r.max) return mostrarAviso(r.erro);
+            await gravarHoraRegra(chave, v);
+        };
+        window.padraoHoraRegra = async (chave) => {
+            const r = HORAS_REGRAS[chave];
+            const input = document.getElementById('cfg-hora-' + chave);
+            if (input) input.value = r.padrao;
+            await gravarHoraRegra(chave, r.padrao);
         };
 
         window.gerarListaMarketing = async () => {
@@ -2589,7 +2689,7 @@
             document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado';
             document.getElementById('valor_taxa').value = data.taxa_valor ?? '';
             document.getElementById('custo_sistema').value = data.custo_sistema ?? '';
-            document.getElementById('config_hora_carona').value = data.carona_hora_limite || '18:00';
+            pintarRegrasHora(true);
             document.getElementById('config_bairros_carona').value = data.carona_bairros || '';
             document.getElementById('contato_instagram').value = data.contato_instagram || '';
             document.getElementById('contato_whatsapp').value = data.contato_whatsapp || '';
