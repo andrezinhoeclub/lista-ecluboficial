@@ -9,7 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:ital,wght@1,900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="eclub-ui.css">
+    <script src="eclub-ui.js"></script>
     <style>
         /* Só os estilos da TELA DE LOGIN vêm do eclub-v2.css (copiados e
            isolados sob .tela-login/.login-card) — o arquivo inteiro NÃO é
@@ -85,11 +86,73 @@
             .glass-card.p-6 { padding: 1rem; }
             .glass-card { border-radius: 1.75rem; }
         }
+
+        /* ======================= VISUAL 2.0 =======================
+           Letra legível (nada abaixo de 12px), menos itálico, abas com
+           ícone e a aba nova "Esta noite". */
+        body { font-family: var(--ec-fonte); background-color: #09090c; }
+        #painel-dashboard .text-\[7px\], #painel-dashboard .text-\[8px\], #painel-dashboard .text-\[9px\] { font-size: 12px !important; }
+        #painel-dashboard .text-\[10px\] { font-size: 13px !important; }
+        #painel-dashboard .text-\[11px\] { font-size: 14px !important; }
+        #painel-dashboard .text-xs { font-size: 13px !important; }
+        #painel-dashboard .tracking-widest, #painel-dashboard .tracking-\[0\.3em\] { letter-spacing: .05em !important; }
+        #painel-dashboard .italic { font-style: normal !important; }
+        #painel-dashboard .tracking-tighter, #painel-dashboard .tracking-tight { letter-spacing: 0 !important; }
+        #painel-dashboard h2, #painel-dashboard h3 { font-family: var(--ec-fonte-titulo); }
+        .glass-card { background: #14141a; border-color: #26262f; border-radius: 1.5rem; backdrop-filter: none; }
+        .kpi-tile { background: #14141a; border-color: #26262f; }
+        .db-top { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 28px; padding: 14px 18px; background: #0e0e13; border: 1px solid #23232b; border-radius: 22px; }
+        .db-marca { display: flex; align-items: center; gap: 12px; }
+        .db-marca img { width: 44px; height: 44px; object-fit: contain; }
+        .db-marca b { display: block; font-family: var(--ec-fonte-titulo); font-weight: 900; font-size: 22px; line-height: 1.1; color: #fff; }
+        .db-marca span { display: block; font-size: 14px; font-weight: 700; color: #a1a1aa; }
+        .db-nav { display: flex; flex-wrap: wrap; gap: 4px; order: 3; flex: 1 1 100%; justify-content: flex-start; padding-top: 12px; border-top: 1px solid #23232b; }
+        .db-top > .ec-btn.sair { margin-left: auto; }
+        .btn-menu { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 0 15px !important; border-radius: 12px !important; background: transparent; border: 1px solid transparent; color: #d4d4d8 !important; font: 800 15px var(--ec-fonte) !important; text-transform: none !important; letter-spacing: 0 !important; }
+        .btn-menu:hover { background: #1c1c24; }
+        .btn-menu.active, .btn-menu.active-danger, .btn-menu.active-success, .btn-menu.active-pink, .btn-menu.active-blue { background: var(--ec-ouro) !important; color: #1a1300 !important; border-color: var(--ec-ouro) !important; box-shadow: none !important; }
+        .btn-menu .ec-i { width: 19px; height: 19px; }
+        .btn-periodo { font-size: 14px !important; text-transform: none !important; }
+        /* Esta noite */
+        .en-titulo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+        .en-titulo h2 { margin: 0; font-size: 32px; font-weight: 900; color: #fff; line-height: 1.1; }
+        .en-sub { font-size: 15px; font-weight: 700; color: #a1a1aa; }
+        .en-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
+        .en-kpi { background: #14141a; border: 1px solid #26262f; border-radius: 20px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+        .en-kpi span.r { font-size: 13px; font-weight: 800; color: #a1a1aa; letter-spacing: .06em; text-transform: uppercase; }
+        .en-kpi b { font-family: var(--ec-fonte-titulo); font-size: 34px; font-weight: 900; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+        .en-kpi small { font-size: 14px; font-weight: 700; color: #a1a1aa; }
+        .en-barra { height: 8px; border-radius: 99px; background: #23232b; overflow: hidden; }
+        .en-barra i { display: block; height: 100%; background: #22c55e; border-radius: 99px; }
+        .en-grade2 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+        .en-grade3 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+        .en-card { background: #14141a; border: 1px solid #26262f; border-radius: 20px; padding: 22px 24px; min-width: 0; }
+        .en-largo { grid-column: span 2; }
+        .en-card h3 { margin: 0; font-size: 21px; font-weight: 800; color: #fff; }
+        .en-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+        .en-cab > span { font-size: 14px; font-weight: 700; color: #a1a1aa; }
+        .en-graf { display: grid; gap: 10px; align-items: end; height: 220px; padding-top: 26px; border-bottom: 1px solid #33333f; }
+        .en-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; min-width: 0; cursor: default; }
+        .en-col em { font-style: normal; font-size: 13px; font-weight: 800; color: #a1a1aa; }
+        .en-col i { display: block; width: 100%; max-width: 56px; border-radius: 4px 4px 0 0; background: #22c55e; opacity: .55; min-height: 2px; }
+        .en-col.pico i { opacity: 1; }
+        .en-col.pico em { color: #fff; font-size: 15px; }
+        .en-col:hover i { opacity: 1; }
+        .en-horas { display: grid; gap: 10px; margin-top: 8px; text-align: center; font-size: 13px; font-weight: 800; color: #a1a1aa; }
+        .en-linha { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #22222a; font-size: 16px; font-weight: 700; color: #f4f4f5; }
+        .en-linha:last-child { border-bottom: 0; }
+        .en-linha .ec-i { margin-top: 2px; }
+        .en-linha small { display: block; font-size: 14px; color: #a1a1aa; font-weight: 600; }
+        .en-av { width: 36px; height: 36px; border-radius: 50%; background: #2a2a34; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; flex: none; }
+        .en-num { width: 64px; text-align: right; font-variant-numeric: tabular-nums; }
+        .en-vazio { padding: 22px 0; color: #a1a1aa; font-size: 16px; font-weight: 700; }
+        @media (max-width: 1100px) { .en-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .en-grade2 { grid-template-columns: 1fr; } .en-largo { grid-column: auto; } }
+        @media (max-width: 760px) { .en-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .en-grade3 { grid-template-columns: 1fr; } .en-titulo h2 { font-size: 24px; } .en-kpi b { font-size: 28px; } }
         .em-construcao { background: rgba(234,179,8,0.06); border: 1px dashed rgba(234,179,8,0.3); border-radius: 1.25rem; padding: 14px 18px; font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #eab308; margin-bottom: 1.5rem; }
 </style>
 </head>
 <body class="p-4 md:p-8 relative">
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-[92vw] sm:max-w-sm pointer-events-none">
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[15px] tracking-wide px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-[92vw] sm:max-w-md pointer-events-none">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
@@ -124,27 +187,54 @@
         </div>
     </div>
     <div id="painel-dashboard" class="max-w-7xl mx-auto hidden">
-        <header class="flex flex-col xl:flex-row justify-between items-center mb-8 md:mb-10 gap-4 xl:gap-6">
-            <div class="flex items-center gap-4">
-                <img src="logo-eclub.png" class="h-10 w-auto">
-                <div>
-                    <h1 class="text-2xl font-black uppercase italic tracking-tighter text-yellow-500 leading-none">Command Center</h1>
-                    <p class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1 italic">E-CLUB MANAGEMENT</p>
-                </div>
+        <header class="db-top">
+            <div class="db-marca">
+                <img src="logo-eclub.png" alt="E-Club" onerror="this.src='https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png'">
+                <div><b>Command Center</b><span>Dashboard E-Club</span></div>
             </div>
-            <nav class="flex flex-wrap justify-center gap-1 w-full xl:w-auto bg-zinc-900/50 p-1.5 rounded-2xl border border-zinc-800">
-                <button onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu active px-4 md:px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Relatórios</button>
-                <button onclick="trocarAba('aba-auditoria', this, 'success')" class="btn-menu px-4 md:px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-emerald-400">Auditoria</button>
-                <button onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu px-4 md:px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap">Eventos</button>
-                <button onclick="trocarAba('aba-solteiras', this, 'pink')" class="btn-menu px-4 md:px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-pink-500">Carona</button>
-                <button onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu px-4 md:px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-cyan-400">Listas/Cams</button>
-                <button onclick="trocarAba('aba-acessos', this, 'success'); carregarGestaoAcessos()" class="btn-menu px-4 md:px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-emerald-400">Acessos</button>
-                <button onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu px-4 md:px-6 py-2.5 rounded-xl text-[10px] uppercase font-black whitespace-nowrap text-red-500">Ajustes</button>
+            <nav class="db-nav" id="db-nav">
+                <button data-ic="lua" onclick="trocarAba('aba-noite', this, 'normal')" class="btn-menu active">Esta noite</button>
+                <button data-ic="grafico" onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu">Relatórios</button>
+                <button data-ic="lista" onclick="trocarAba('aba-auditoria', this, 'success')" class="btn-menu">Auditoria</button>
+                <button data-ic="calendario" onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu">Eventos</button>
+                <button data-ic="carro" onclick="trocarAba('aba-solteiras', this, 'pink')" class="btn-menu">Caronas</button>
+                <button data-ic="coroa" onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu">Listas e Camarotes</button>
+                <button data-ic="pessoas" onclick="trocarAba('aba-acessos', this, 'success'); carregarGestaoAcessos()" class="btn-menu">Acessos</button>
+                <button data-ic="ajustes" onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu">Ajustes</button>
             </nav>
-            <button onclick="bloquearDashboard()" class="bg-zinc-900 hover:bg-red-600/20 border border-zinc-800 hover:border-red-500/30 text-zinc-400 hover:text-red-400 px-4 py-3 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap" title="Encerrar sessão administrativa">Sair</button>
+            <button id="btnSairDashboard" onclick="bloquearDashboard()" class="ec-btn sair" title="Encerrar sessão administrativa">Sair</button>
         </header>
 
-        <section id="aba-relatorios" class="space-y-8">
+        <section id="aba-noite" class="space-y-6">
+            <div class="en-titulo">
+                <h2 id="en-titulo-txt">Esta noite</h2>
+                <span id="en-vivo" class="ec-pill ok"><span class="ec-ponto"></span>Ao vivo</span>
+                <span id="en-sub" class="en-sub"></span>
+            </div>
+            <div id="en-kpis" class="en-kpis"></div>
+            <div class="en-grade2">
+                <div class="en-card en-largo">
+                    <div class="en-cab"><h3>Entradas por hora</h3><span id="en-pico"></span></div>
+                    <div id="en-grafico"></div>
+                </div>
+                <div class="en-card">
+                    <div class="en-cab"><h3>Precisa de atenção</h3></div>
+                    <div id="en-alertas"></div>
+                </div>
+            </div>
+            <div class="en-grade3">
+                <div class="en-card">
+                    <div class="en-cab"><h3>Promoters da noite</h3><span>Nomes · Entraram · PIX</span></div>
+                    <div id="en-promoters"></div>
+                </div>
+                <div class="en-card">
+                    <div class="en-cab"><h3>Últimas entradas</h3><span>atualiza sozinho</span></div>
+                    <div id="en-ultimas"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-relatorios" class="hidden space-y-8">
             <div class="glass-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h2 class="text-xs font-black uppercase text-zinc-400 italic tracking-widest">Período dos relatórios</h2>
                 <div id="filtro-periodo-relatorios" class="flex gap-2 flex-wrap">
@@ -672,13 +762,17 @@
             const bgClass = isSucesso ? 'bg-green-600' : 'bg-red-600';
             const shadowClass = isSucesso ? 'shadow-[0_0_20px_rgba(22,163,74,0.5)]' : 'shadow-[0_0_20px_rgba(220,38,38,0.5)]';
             const icon = isSucesso ? '✅' : '⚠️';
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-[92vw] sm:max-w-sm pointer-events-none ${bgClass} ${shadowClass}`;
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[15px] tracking-wide px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-max max-w-[92vw] sm:max-w-md pointer-events-none ${bgClass} ${shadowClass}`;
             document.getElementById('toast-icon').innerText = icon;
             document.getElementById('toast-msg').innerText = msg;
             setTimeout(() => { toast.classList.remove('-translate-y-32', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100'); }, 10);
             setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('-translate-y-32', 'opacity-0'); }, 4000);
         };
 
+        if (window.ECUI) {
+            document.querySelectorAll('#db-nav .btn-menu[data-ic]').forEach(b => b.insertAdjacentHTML('afterbegin', ECUI.icone(b.dataset.ic)));
+            document.getElementById('btnSairDashboard').innerHTML = ECUI.icone('sair') + 'Sair';
+        }
         window.trocarAba = (id, btn, type) => {
             document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
             document.querySelectorAll('.btn-menu').forEach(x => x.classList.remove('active', 'active-danger', 'active-success', 'active-pink', 'active-blue'));
@@ -770,6 +864,9 @@
             montarGridCamarotes();
             await Promise.all([carregarEventos(), carregarModelos(), carregarConfiguracoes(), carregarSolteirasBadge(), carregarReservas(), carregarLinksAniversario(), carregarNomesAcessos(), carregarEntradasSolteiras()]);
             ligarTempoReal();
+            atualizarValletNoite();
+            setInterval(() => { try { renderEstaNoite(); } catch (_) {} }, 60000);
+            setInterval(atualizarValletNoite, 120000);
             pintarStatusTravaSolteiras();
             setInterval(pintarStatusTravaSolteiras, 60000);
         }
@@ -1017,7 +1114,7 @@
         window.salvarEventoComoModelo = async (id) => {
             const ev = dadosEventos.find(e => e.id === id);
             if (!ev) return mostrarAviso('Evento não encontrado para virar modelo.');
-            const nomeModelo = prompt('Dê um nome interno para este modelo (ex: Festa Pista + 8 Camarotes):');
+            const nomeModelo = await ECUI.pedirTexto({ titulo: 'Salvar como modelo', texto: 'Dê um nome interno para este modelo (ex.: Festa Pista + 8 Camarotes).', placeholder: 'Nome do modelo', confirmar: 'Salvar modelo', max: 80 });
             if (!nomeModelo || !nomeModelo.trim()) return;
             const payload = { modelo_nome: nomeModelo.trim().toUpperCase(), origem_evento_id: ev.id };
             CAMPOS_EVENTO_FORM.forEach(campo => { payload[campo] = ev[campo] ?? null; });
@@ -1033,7 +1130,7 @@
         };
 
         window.removerModeloEvento = async (id) => {
-            if (!confirm('Excluir este modelo? Os eventos reais não serão afetados.')) return;
+            if (!(await ECUI.confirmar({ titulo: 'Excluir este modelo?', texto: 'Os eventos reais não serão afetados.', confirmar: 'Excluir modelo', perigo: true }))) return;
             const { error } = await sb.from('modelos_eventos').delete().eq('id', id);
             if (error) return mostrarAviso('Erro ao remover modelo.');
             mostrarAviso('Modelo removido com sucesso!', true);
@@ -1041,7 +1138,7 @@
         };
 
         window.removerItem = async (colecao, id) => {
-            if (!confirm('TEM CERTEZA? Isso vai apagar permanentemente o evento e tudo o que já estiver ligado a ele.')) return;
+            if (!(await ECUI.confirmar({ titulo: 'Apagar este evento?', texto: 'Isso apaga permanentemente o evento e tudo o que já estiver ligado a ele. Não dá para desfazer.', confirmar: 'Apagar evento', perigo: true }))) return;
             if (colecao !== 'eventos') return;
             const ev = dadosEventos.find(e => e.id === id);
             try {
@@ -1188,13 +1285,14 @@
             const pixInfo = String(reserva.metodo || '').toUpperCase() === 'PIX'
                 ? `\n\nPIX: ${reserva.pago === true ? 'PAGO — será removido dos antecipados/financeiro.' : 'PENDENTE/CANCELADO — será removido da auditoria.'}`
                 : '';
-            const ok = confirm(
-                `EXCLUIR CLIENTE DA AUDITORIA?\n\n` +
-                `Cliente: ${reserva.nome || 'Cliente sem nome'}\n` +
-                `Evento: ${ev?.nome || 'Evento não informado'}\n` +
-                `Tipo: ${tipo}${pixInfo}\n\n` +
-                `Esta ação remove a reserva da lista do evento, dos relatórios e da portaria. Não é possível desfazer.`
-            );
+            const ok = await ECUI.confirmar({
+                titulo: 'Excluir da auditoria?',
+                texto: `Cliente: ${reserva.nome || 'Cliente sem nome'}\n` +
+                    `Evento: ${ev?.nome || 'Evento não informado'}\n` +
+                    `Tipo: ${tipo}${pixInfo}\n\n` +
+                    `Sai da lista do evento, dos relatórios e da portaria. Não dá para desfazer.`,
+                confirmar: 'Excluir', perigo: true
+            });
             if (!ok) return;
             const { error } = await sb.from('reservas').delete().eq('id', id);
             if (error) { mostrarAviso('Erro ao excluir cliente: ' + error.message); return; }
@@ -1256,6 +1354,164 @@
             zerarSistemaCompleto();
             if (campo) campo.value = '';
         };
+
+
+        // ===== ESTA NOITE (tela inicial, ao vivo) =====
+        // Tudo calculado em cima do que a Dashboard já carrega e mantém
+        // atualizado em tempo real (eventos, reservas, solteiras). Só o
+        // número de carros do Vallet vem de uma consulta à parte.
+        let valletNoite = null;
+        async function atualizarValletNoite() {
+            try {
+                const { data, error } = await sb.rpc('vallet_carros_por_evento');
+                if (error || !Array.isArray(data)) return;
+                const noite = dataDaNoiteSP();
+                const ids = new Set(dadosEventos.filter(e => e.data === noite).map(e => String(e.id)));
+                valletNoite = data.filter(v => ids.has(String(v.evento_id)) || v.evento_data === noite)
+                    .reduce((t, v) => t + (Number(v.total) || 0), 0);
+                renderEstaNoite();
+            } catch (_) {}
+        }
+        const brl = v => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        function brlCurto(v) {
+            v = Number(v) || 0;
+            if (v >= 10000) return 'R$ ' + (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil';
+            return brl(v).replace(',00', '');
+        }
+        function horaSP(iso) {
+            const d = new Date(iso);
+            if (isNaN(d)) return null;
+            const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
+            return { h: Number(p.find(x => x.type === 'hour').value) % 24, txt: `${p.find(x => x.type === 'hour').value}:${p.find(x => x.type === 'minute').value}` };
+        }
+        function iniciais(nome) {
+            return String(nome || '?').trim().split(/\s+/).slice(0, 2).map(x => x[0] || '').join('').toUpperCase() || '?';
+        }
+        function renderEstaNoite() {
+            const elK = document.getElementById('en-kpis');
+            if (!elK) return;
+            const ic = n => (window.ECUI ? ECUI.icone(n) : '');
+            const h = horarioAtual();
+            const noite = dataDaNoiteSP(h);
+            const aberta = dentroDoHorario(h);
+            const agora = horaSP(new Date().toISOString());
+            const evs = dadosEventos.filter(e => e.data === noite);
+            const dia = new Date(noite + 'T12:00:00Z').toLocaleDateString('pt-BR', { weekday: 'long', timeZone: 'UTC' }).replace('-feira', '');
+            const diaTxt = dia.charAt(0).toUpperCase() + dia.slice(1) + ' ' + noite.slice(8, 10) + '/' + noite.slice(5, 7);
+            document.getElementById('en-titulo-txt').textContent = evs.length
+                ? `Esta noite · ${diaTxt} · ${evs.map(e => e.nome).join(' + ')}` : `Esta noite · ${diaTxt}`;
+            const vivo = document.getElementById('en-vivo');
+            vivo.className = aberta ? 'ec-pill ok' : 'ec-pill';
+            vivo.innerHTML = aberta ? '<span class="ec-ponto"></span>Ao vivo' : ic('relogio') + 'Casa fechada';
+            document.getElementById('en-sub').textContent = aberta
+                ? `Aberta até ${h.fechamento} · agora ${agora ? agora.txt : ''}`
+                : `Abre ${rotuloHora(h.abertura)} · ${textoHorario(h)}`;
+            const vazioTudo = (msg) => {
+                ['en-grafico', 'en-promoters', 'en-ultimas'].forEach(id => document.getElementById(id).innerHTML = `<p class="en-vazio">${msg}</p>`);
+                document.getElementById('en-pico').textContent = '';
+            };
+            if (!evs.length) {
+                const prox = dadosEventos.filter(e => e.data && e.data > noite).sort((a, b) => a.data.localeCompare(b.data))[0];
+                elK.innerHTML = `<div class="en-kpi" style="grid-column:1/-1"><span class="r">Nenhum evento hoje</span><b style="font-size:24px;white-space:normal">${prox ? 'Próximo: ' + escapeHtml(prox.nome) + ' · ' + prox.data.split('-').reverse().join('/') : 'Nenhum evento futuro cadastrado'}</b>${prox ? `<small>${dadosReservas.filter(r => r.evento_id === prox.id && reservaValidaDash(r)).length} nomes na lista até agora</small>` : ''}</div>`;
+                document.getElementById('en-alertas').innerHTML = `<p class="en-vazio">Sem evento esta noite.</p>`;
+                vazioTudo('Aparece aqui quando houver evento na noite.');
+                return;
+            }
+            const ids = new Set(evs.map(e => e.id));
+            const res = dadosReservas.filter(r => ids.has(r.evento_id));
+            const val = res.filter(reservaValidaDash);
+            const entraram = val.filter(r => r.entrou);
+            const fat = res.filter(r => r.pago === true && !r.cancelada).reduce((t, r) => t + (Number(r.valor_pago) || 0), 0);
+            let camAtivos = 0, camOcup = 0; const camAguardando = [];
+            evs.forEach(ev => ocupacaoCamarotes(ev.id).forEach(c => {
+                camAtivos++;
+                if (c.status === 'vendido' || c.status === 'cortesia') camOcup++;
+                if (c.status === 'aguardando') {
+                    const r = res.filter(x => x.camarote_numero === c.numero && !x.cancelada && !x.pago).sort((a, b) => (a.criado_em < b.criado_em ? 1 : -1))[0];
+                    camAguardando.push({ numero: c.numero, nome: c.nome, desde: r?.criado_em });
+                }
+            }));
+            const solt = dadosEntradasSolteiras.filter(e => ids.has(e.evento_id));
+            const perc = val.length ? Math.round(entraram.length / val.length * 100) : 0;
+            const kpis = [
+                { r: 'Entraram', v: String(entraram.length), cor: '#4ade80', s: `de ${val.length} na lista · ${perc}%`, barra: perc },
+                { r: 'Faturamento', v: brlCurto(fat), s: 'PIX e camarotes pagos' },
+                { r: 'Faltam chegar', v: String(Math.max(0, val.length - entraram.length)), cor: '#fdba74', s: 'nomes da lista' },
+                { r: 'Camarotes', v: `${camOcup} / ${camAtivos}`, s: camAguardando.length ? `${camAguardando.length} aguardando PIX` : 'ocupados' },
+                { r: 'Solteiras', v: String(solt.length), cor: '#f9a8d4', s: 'liberadas esta noite' },
+                { r: 'Vallet', v: valletNoite == null ? '—' : String(valletNoite), s: 'carros recebidos' },
+            ];
+            elK.innerHTML = kpis.map(k => `<div class="en-kpi"><span class="r">${k.r}</span><b${k.cor ? ` style="color:${k.cor}"` : ''}>${escapeHtml(k.v)}</b><small>${escapeHtml(k.s)}</small>${k.barra != null ? `<div class="en-barra"><i style="width:${k.barra}%"></i></div>` : ''}</div>`).join('');
+
+            // Entradas por hora (lista + solteiras), da abertura até agora
+            const horas = [];
+            const hAb = Number(h.abertura.slice(0, 2)), hFe = Number(h.fechamento.slice(0, 2));
+            const hFim = aberta && agora ? agora.h : (hFe + 23) % 24;
+            for (let x = hAb, n = 0; n < 24; n++, x = (x + 1) % 24) { horas.push(x); if (x === hFim) break; }
+            const cont = new Map(horas.map(x => [x, 0]));
+            entraram.forEach(r => { const t = horaSP(r.entrada_em); if (t && cont.has(t.h)) cont.set(t.h, cont.get(t.h) + 1); });
+            solt.forEach(e => { const t = horaSP(e.criado_em); if (t && cont.has(t.h)) cont.set(t.h, cont.get(t.h) + 1); });
+            const valores = horas.map(x => cont.get(x));
+            const maxV = Math.max(0, ...valores);
+            const total = valores.reduce((a, b) => a + b, 0);
+            const elG = document.getElementById('en-grafico');
+            if (!total) {
+                elG.innerHTML = `<p class="en-vazio">Ninguém entrou ainda nesta noite.</p>`;
+                document.getElementById('en-pico').textContent = '';
+            } else {
+                const iPico = valores.indexOf(maxV);
+                document.getElementById('en-pico').textContent = `pico às ${horas[iPico]}h · ${maxV} ${maxV === 1 ? 'pessoa' : 'pessoas'}`;
+                const cols = `grid-template-columns:repeat(${horas.length},minmax(0,1fr))`;
+                elG.innerHTML = `<div class="en-graf" style="${cols}" role="img" aria-label="Entradas por hora: ${horas.map((x, i) => `${x}h ${valores[i]}`).join(', ')}">`
+                    + horas.map((x, i) => `<div class="en-col ${i === iPico ? 'pico' : ''}" title="${x}h: ${valores[i]} ${valores[i] === 1 ? 'entrada' : 'entradas'}"><em>${valores[i] || ''}</em><i style="height:${maxV ? Math.max(1, valores[i] / maxV * 100) : 0}%"></i></div>`).join('')
+                    + `</div><div class="en-horas" style="${cols}">${horas.map(x => `<span>${x}h</span>`).join('')}</div>`;
+            }
+
+            // Precisa de atenção
+            const alertas = [];
+            camAguardando.forEach(c => {
+                const min = c.desde ? Math.max(0, Math.round((Date.now() - new Date(c.desde)) / 60000)) : null;
+                alertas.push({ ic: 'relogio', cor: '#fdba74', t: `${nomeCamarote(c.numero)} aguardando PIX${min != null ? ` há ${min} min` : ''}`, s: c.nome ? String(c.nome) : '' });
+            });
+            const pixPend = res.filter(r => r.camarote_numero == null && !r.cancelada && !r.pago && /^PIX/.test(normalizarTextoDash(r.metodo))).length;
+            if (pixPend) alertas.push({ ic: 'cobrar', cor: '#fdba74', t: `${pixPend} PIX ${pixPend === 1 ? 'gerado' : 'gerados'} e ainda não ${pixPend === 1 ? 'pago' : 'pagos'}`, s: 'Só entram na lista quando o banco confirmar' });
+            if (modoTesteAtivo) alertas.push({ ic: 'alerta', cor: '#fca5a5', t: 'Modo teste da Portaria está LIGADO', s: 'Desligue em Ajustes antes de abrir a casa' });
+            if (modoTesteValletAtivo) alertas.push({ ic: 'alerta', cor: '#fca5a5', t: 'Modo teste do Vallet está LIGADO', s: 'Desligue em Ajustes antes de abrir a casa' });
+            if (!alertas.length) alertas.push({ ic: 'check', cor: '#4ade80', t: 'Tudo certo por aqui', s: 'Nenhum camarote ou PIX esperando' });
+            document.getElementById('en-alertas').innerHTML = alertas.map(a => `<div class="en-linha" style="align-items:flex-start"><span style="color:${a.cor}">${ic(a.ic)}</span><span>${escapeHtml(a.t)}${a.s ? `<small>${escapeHtml(a.s)}</small>` : ''}</span></div>`).join('');
+
+            // Promoters da noite
+            const st = {};
+            res.forEach(r => {
+                const p = promoterDaReserva(r);
+                if (!st[p]) st[p] = { n: 0, e: 0, pix: 0 };
+                if (reservaValidaDash(r)) { st[p].n++; if (r.entrou) st[p].e++; }
+                if (r.pago === true && !r.cancelada && /^PIX/.test(normalizarTextoDash(r.metodo))) st[p].pix++;
+            });
+            const top = Object.entries(st).filter(([, d]) => d.n > 0).sort((a, b) => b[1].n - a[1].n).slice(0, 6);
+            document.getElementById('en-promoters').innerHTML = top.length ? top.map(([nome, d], i) => `<div class="en-linha">
+                <span class="ec-titulo" style="width:20px;color:${i < 3 ? 'var(--ec-ouro)' : '#71717a'}">${i + 1}</span>
+                <span class="en-av">${escapeHtml(iniciais(nome))}</span>
+                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(nome)}</span>
+                <span class="en-num">${d.n}</span><span class="en-num" style="color:#4ade80">${d.e}</span><span class="en-num">${d.pix}</span>
+            </div>`).join('') : '<p class="en-vazio">Nenhum nome na lista ainda.</p>';
+
+            // Últimas entradas
+            const ult = [
+                ...entraram.filter(r => r.entrada_em).map(r => {
+                    let selo = '<span class="ec-pill cob" style="padding:4px 10px;font-size:13px">Na porta</span>';
+                    if (r.camarote_numero != null) selo = '<span class="ec-pill" style="padding:4px 10px;font-size:13px">Camarote</span>';
+                    else if (r.cortesia) selo = '<span class="ec-pill cort" style="padding:4px 10px;font-size:13px">Cortesia</span>';
+                    else if (r.pago) selo = '<span class="ec-pill ok" style="padding:4px 10px;font-size:13px">PIX pago</span>';
+                    return { em: r.entrada_em, nome: r.nome, selo };
+                }),
+                ...solt.map(e => ({ em: e.criado_em, nome: e.clientes_solteiras?.nome, selo: '<span class="ec-pill" style="padding:4px 10px;font-size:13px;background:rgba(244,114,182,.14);color:#f9a8d4;border-color:rgba(244,114,182,.4)">Solteira</span>' })),
+            ].sort((a, b) => (a.em < b.em ? 1 : -1)).slice(0, 8);
+            document.getElementById('en-ultimas').innerHTML = ult.length ? ult.map(u => `<div class="en-linha">
+                <span style="width:52px;color:#a1a1aa;font-variant-numeric:tabular-nums">${escapeHtml(horaSP(u.em)?.txt || '--:--')}</span>
+                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(u.nome || '---')}</span>${u.selo}
+            </div>`).join('') : '<p class="en-vazio">Ninguém entrou ainda.</p>';
+        }
 
         // ===== RELATÓRIOS (Performance e Financeiro, Pódios, Exportar) =====
         // Mesmas regras de "o que conta" do resto do sistema: reservaValidaDash
@@ -1345,6 +1601,7 @@
         }
 
         window.renderRelatorios = () => {
+            try { renderEstaNoite(); } catch (e) { console.error('Esta noite:', e); }
             const container = document.getElementById('container-bolhas');
             if (!container) return;
             popularFiltroPromoterExcel();
@@ -1653,7 +1910,7 @@
         };
 
         window.removerAniversariante = async (id) => {
-            if (!confirm('Remover esta lista de aniversário?\n\nAs reservas já feitas por esse link continuam valendo normalmente — elas só deixam de aparecer agrupadas aqui.')) return;
+            if (!(await ECUI.confirmar({ titulo: 'Remover esta lista de aniversário?', texto: 'As reservas já feitas por esse link continuam valendo normalmente — elas só deixam de aparecer agrupadas aqui.', confirmar: 'Remover lista', perigo: true }))) return;
             const { error } = await sb.from('links_aniversario').delete().eq('id', id);
             if (error) return mostrarAviso('Erro ao remover: ' + error.message);
             mostrarAviso('Lista de aniversário removida!', true);
@@ -1696,7 +1953,7 @@
         // histórico continua existindo pra Auditoria — igual à regra de
         // expiração automática dos 5 minutos.
         window.liberarCamarote = async (id) => {
-            if (!confirm('Liberar este camarote? O cliente perde a reserva e a vaga volta a ficar livre.')) return;
+            if (!(await ECUI.confirmar({ titulo: 'Liberar este camarote?', texto: 'O cliente perde a reserva e a vaga volta a ficar livre.', confirmar: 'Liberar camarote', perigo: true }))) return;
             const { error } = await sb.from('reservas').update({ cancelada: true }).eq('id', id);
             if (error) return mostrarAviso('Erro ao liberar: ' + error.message);
             mostrarAviso('Camarote liberado!', true);
@@ -1817,7 +2074,7 @@
             }
             const evOrigem = dadosEventos.find(e => e.id === origem.evento_id);
             const evDestino = dadosEventos.find(e => e.id === destEventoId);
-            if (!confirm(`Migrar ${origem.nome} de ${evOrigem?.nome || '?'} — ${nomeCamarote(origem.camarote_numero)} para ${evDestino?.nome || '?'} — ${nomeCamarote(destCamarote)}?`)) return;
+            if (!(await ECUI.confirmar({ titulo: 'Migrar camarote?', texto: `${origem.nome}\nDe: ${evOrigem?.nome || '?'} — ${nomeCamarote(origem.camarote_numero)}\nPara: ${evDestino?.nome || '?'} — ${nomeCamarote(destCamarote)}`, confirmar: 'Migrar' }))) return;
 
             const historico = Array.isArray(origem.historico_migracoes) ? origem.historico_migracoes : [];
             historico.push({
@@ -1942,11 +2199,11 @@
             const fe = normalizarHora(document.getElementById('hora_fechamento').value);
             if (!ab || !fe) return mostrarAviso('Preencha a hora de abrir e a de fechar.');
             if (ab === fe) return mostrarAviso('Abertura e fechamento não podem ser iguais.');
-            if (!confirm(`Confirmar horário de funcionamento ${textoHorario({ abertura: ab, fechamento: fe })}?\n\nPortaria e Solteiras passam a seguir esse horário na hora.`)) return;
+            if (!(await ECUI.confirmar({ titulo: `Horário ${textoHorario({ abertura: ab, fechamento: fe })}?`, texto: 'Portaria, Solteiras e Vallet passam a seguir esse horário na hora.', confirmar: 'Salvar horário' }))) return;
             await gravarHorario(ab, fe);
         };
         window.restaurarHorarioPadrao = async () => {
-            if (!confirm('Voltar ao horário padrão (21h às 8h)?')) return;
+            if (!(await ECUI.confirmar({ titulo: 'Voltar ao horário padrão?', texto: 'Das 21h às 8h.', confirmar: 'Voltar ao padrão' }))) return;
             document.getElementById('hora_abertura').value = HORARIO_PADRAO.abertura;
             document.getElementById('hora_fechamento').value = HORARIO_PADRAO.fechamento;
             atualizarPreviaHorario();
@@ -2233,7 +2490,7 @@
         });
 
         window.desativarAcessoSeguro = async (userId) => {
-            if (!confirm('Desativar esse acesso? A pessoa perde a entrada em todas as telas até ser reativada.')) return;
+            if (!(await ECUI.confirmar({ titulo: 'Desativar esse acesso?', texto: 'A pessoa perde a entrada em todas as telas até ser reativada.', confirmar: 'Desativar', perigo: true }))) return;
             try { await chamarGerenciarAcesso({ action: 'desativar', user_id_edicao: userId }); mostrarAviso('Acesso desativado.', true); await carregarGestaoAcessos(); }
             catch (e) { mostrarAviso(e.message); }
         };
@@ -2242,7 +2499,7 @@
             catch (e) { mostrarAviso(e.message); }
         };
         window.excluirAcessoSeguro = async (userId, nome) => {
-            if (!confirm(`EXCLUIR DEFINITIVAMENTE o acesso de "${nome}"? Isso apaga a conta de login dela também — não dá pra desfazer.`)) return;
+            if (!(await ECUI.confirmar({ titulo: `Excluir de vez o acesso de "${nome}"?`, texto: 'Isso apaga a conta de login também. Não dá para desfazer.', confirmar: 'Excluir acesso', perigo: true }))) return;
             try { await chamarGerenciarAcesso({ action: 'excluir', user_id_edicao: userId }); mostrarAviso('Acesso excluído.', true); await carregarGestaoAcessos(); }
             catch (e) { mostrarAviso(e.message); }
         };
@@ -2251,12 +2508,13 @@
             catch (e) { mostrarAviso(e.message); }
         };
         window.definirSenhaSeguro = async (userId, nome) => {
-            const senha = prompt(`Definir nova senha para "${nome}" (mínimo 6 caracteres):`);
+            const senha = await ECUI.pedirTexto({ titulo: `Nova senha para "${nome}"`, texto: 'Mínimo 6 caracteres. Passe para a pessoa por um canal seguro.', placeholder: 'Nova senha', confirmar: 'Definir senha', max: 72 });
             if (senha === null) return;
             if (senha.length < 6) return mostrarAviso('A senha precisa ter pelo menos 6 caracteres.');
             try { await chamarGerenciarAcesso({ action: 'definir_senha', user_id_edicao: userId, nova_senha: senha }); mostrarAviso('Senha definida! Já pode passar pra pessoa entrar com ela.', true); }
             catch (e) { mostrarAviso(e.message); }
         };
     </script>
+<script>window.ECUI && ECUI.prepararLogin({ email: 'email-dashboard', senha: 'senha-dashboard', form: 'form-login-dashboard', chave: 'eclub_lembrar_email_dashboard' });</script>
 </body>
 </html>

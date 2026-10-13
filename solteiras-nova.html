@@ -10,7 +10,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:ital,wght@1,900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="eclub-ui.css">
+    <script src="eclub-ui.js"></script>
     <style>
         /* Só os estilos da TELA DE LOGIN vêm daqui (escopados sob
            .tela-login/.login-card) — o resto deste bloco é o visual do
@@ -56,70 +57,89 @@
         }
         .login-card .erro { color: #f87171; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 14px; }
 
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f4f4f5; color: #18181b; overflow-x: hidden; }
-        /* NOVO VISUAL DE ALTO CONTRASTE */
-        .glass-card { background: #ffffff; border: 1px solid #d4d4d8; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
-        .input-field { background: #ffffff !important; border: 2px solid #a1a1aa !important; color: #000 !important; font-weight: 900; }
-        .input-field:focus { border-color: #eab308 !important; outline: none; box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.3); }
-        .input-field::placeholder { color: #71717a; font-weight: bold; }
-        .btn-gold { background: #eab308; color: #000; font-weight: 900; transition: 0.3s; border: 2px solid #ca8a04; }
-        .btn-gold:hover { background: #facc15; }
-        .card-aniversariante {
-            background: linear-gradient(90deg, #fff1a8 0%, #fff8d6 50%, #f3e8ff 100%) !important;
-            border-left: 12px solid #eab308 !important;
-            box-shadow: inset 0 0 0 2px rgba(234, 179, 8, 0.45), 0 8px 24px rgba(234, 179, 8, 0.25) !important;
-        }
-        .item-cliente { border-bottom: 1px solid #e4e4e7; transition: 0.3s; background: #ffffff; }
-        .item-cliente:hover { background: #f4f4f5; }
-        .cliente-bloqueada { background: #fef2f2 !important; border-left: 6px solid #ef4444 !important; }
-        .cliente-checkin-ok { background: #f0fdf4 !important; }
-        .login-bg { background: radial-gradient(circle at center, #27272a 0%, #09090b 100%); }
+        /* ===================== VISUAL 2.0 =====================
+           Escuro por padrão (igual às outras telas); o botão do cabeçalho
+           liga o tema claro. Busca primeiro, cadastro do lado. */
+        :root { --sl-bg:#09090c; --sl-painel:#0e0e13; --sl-card:#14141a; --sl-card2:#1c1c24; --sl-linha:#26262f; --sl-linha2:#33333f; --sl-txt:#f4f4f5; --sl-mut:#a1a1aa; --sl-dado:#d4d4d8; --sl-in:#0b0b0f; }
+        body.tema-claro { --sl-bg:#f3f4f6; --sl-painel:#ffffff; --sl-card:#ffffff; --sl-card2:#f4f4f5; --sl-linha:#e4e4e7; --sl-linha2:#d4d4d8; --sl-txt:#111827; --sl-mut:#4b5563; --sl-dado:#374151; --sl-in:#ffffff; }
+        body { font-family: var(--ec-fonte); background-color: var(--sl-bg); color: var(--sl-txt); overflow-x: hidden; }
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #a1a1aa; border-radius: 10px; }
-        .theme-toggle {
-            position: relative; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 14px;
-            padding: 7px 10px; border-radius: 999px; border: 1px solid #ca8a04;
-            background: #fff; color: #854d0e; font-size: 9px; font-weight: 900; text-transform: uppercase;
-            letter-spacing: .06em; box-shadow: 0 4px 14px rgba(0,0,0,.08); cursor: pointer;
-        }
-        /* Tema escuro — só afeta a tela DEPOIS de logado (#conteudo-sistema); a tela
-           de login continua sempre escura como já era, e sem esse botão. Aqui a
-           direção é invertida em relação às outras telas: o sistema já é claro por
-           padrão, então o botão liga um tema escuro por cima. */
-        body.tema-escuro { background-color: #09090b; color: #f4f4f5; }
-        body.tema-escuro #conteudo-sistema .theme-toggle { background: rgba(0,0,0,.72); color: #facc15; border-color: rgba(234,179,8,.45); }
-        body.tema-escuro #conteudo-sistema header { background: #18181b !important; border-color: #3f3f46 !important; }
-        body.tema-escuro #conteudo-sistema h1,
-        body.tema-escuro #conteudo-sistema h2,
-        body.tema-escuro #conteudo-sistema h3,
-        body.tema-escuro #conteudo-sistema .text-zinc-900 { color: #f4f4f5 !important; }
-        body.tema-escuro #conteudo-sistema .text-zinc-700,
-        body.tema-escuro #conteudo-sistema .text-zinc-600,
-        body.tema-escuro #conteudo-sistema .text-zinc-500 { color: #a1a1aa !important; }
-        body.tema-escuro #conteudo-sistema .bg-zinc-100 { background: #27272a !important; border-color: #3f3f46 !important; }
-        body.tema-escuro #conteudo-sistema .bg-zinc-200 { background: #3f3f46 !important; border-color: #52525b !important; }
-        body.tema-escuro #conteudo-sistema .glass-card { background: #18181b !important; border-color: #3f3f46 !important; color: #f4f4f5 !important; }
-        body.tema-escuro #conteudo-sistema .input-field { background: #09090b !important; border-color: #52525b !important; color: #fff !important; }
-        body.tema-escuro #conteudo-sistema .input-field::placeholder { color: #71717a !important; }
-        /* :not(.card-aniversariante) é essencial aqui: sem isso, esta regra (mais
-           específica por causa do #conteudo-sistema) vencia o fundo dourado original
-           do cartão de aniversariante e deixava o texto (forçado escuro logo abaixo,
-           pra manter legibilidade no fundo claro) invisível — texto escuro em cima
-           de fundo escuro. */
-        body.tema-escuro #conteudo-sistema .item-cliente:not(.card-aniversariante) { background: #18181b !important; border-color: #3f3f46 !important; }
-        body.tema-escuro #conteudo-sistema .item-cliente:hover:not(.card-aniversariante) { background: #27272a !important; }
-        body.tema-escuro #conteudo-sistema .cliente-checkin-ok { background: #052e16 !important; }
-        body.tema-escuro #conteudo-sistema .cliente-bloqueada { background: #450a0a !important; }
-        body.tema-escuro #conteudo-sistema .bg-red-100 { background: #450a0a !important; border-color: #7f1d1d !important; }
-        body.tema-escuro #conteudo-sistema .bg-blue-50 { background: #172554 !important; border-color: #1e3a8a !important; }
-        /* Cartão de aniversariante mantém o visual claro original (dourado sobre
-           fundo claro) mesmo no tema escuro, pra não perder o destaque. */
-        body.tema-escuro #conteudo-sistema .card-aniversariante,
-        body.tema-escuro #conteudo-sistema .card-aniversariante * { color: #18181b !important; }
+        ::-webkit-scrollbar-thumb { background: #52525b; border-radius: 10px; }
+        #conteudo-sistema, #conteudo-sistema * { box-sizing: border-box; }
+        .sl-top { display:flex; align-items:center; gap:18px; padding:14px 28px; background:var(--sl-painel); border-bottom:1px solid var(--sl-linha); flex-wrap:wrap; }
+        .sl-marca { display:flex; align-items:center; gap:12px; }
+        .sl-marca img { width:44px; height:44px; object-fit:contain; }
+        .sl-marca b { display:block; font-family:var(--ec-fonte-titulo); font-weight:900; font-size:23px; line-height:1.1; }
+        .sl-marca span { display:block; font-size:14px; font-weight:700; color:var(--sl-mut); }
+        .sl-esp { flex:1; }
+        .sl-conta { display:flex; align-items:baseline; gap:10px; }
+        .sl-conta b { font-family:var(--ec-fonte-titulo); font-weight:900; font-size:36px; line-height:1; color:#f472b6; }
+        .sl-conta span { font-size:15px; font-weight:800; color:var(--sl-mut); }
+        .sl-faixa { margin:18px 28px 0; padding:16px 20px; border-radius:18px; border:2px solid #ef4444; background:rgba(239,68,68,.1); text-align:center; }
+        .sl-faixa p:first-child { color:var(--ec-blq-txt); font-family:var(--ec-fonte-titulo); font-weight:900; font-size:21px; margin:0; }
+        .sl-faixa p:last-child { color:var(--sl-dado); font-weight:700; font-size:15px; margin:6px 0 0; }
+        .sl-corpo { display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; padding:24px 28px 40px; max-width:1560px; margin:0 auto; width:100%; }
+        .sl-main { flex:999 1 560px; min-width:0; display:flex; flex-direction:column; gap:14px; }
+        .sl-aside { flex:1 1 380px; max-width:470px; position:sticky; top:16px; }
+        .sl-rot { font:800 13px var(--ec-fonte); color:var(--sl-mut); letter-spacing:.06em; text-transform:uppercase; }
+        .sl-busca { display:flex; align-items:center; gap:14px; padding:0 22px; min-height:68px; border-radius:18px; background:var(--sl-in); border:2px solid var(--ec-ouro); cursor:text; }
+        .sl-busca input { flex:1; min-width:0; background:transparent; border:0; outline:none; color:var(--sl-txt); font:800 24px var(--ec-fonte); text-transform:uppercase; }
+        .sl-busca input::placeholder { color:#8b8b95; text-transform:none; font-weight:700; font-size:20px; }
+        .sl-busca .ec-i { width:28px; height:28px; color:var(--ec-ouro); }
+        .sl-lista { display:flex; flex-direction:column; gap:12px; }
+        .sl-res { display:flex; align-items:center; gap:20px; padding:20px 22px; background:var(--sl-card); border:1px solid var(--sl-linha); border-radius:20px; }
+        .sl-res.ok { background:#0f1a13; border-color:#1e3a28; }
+        .sl-res.blq { background:#1f0d0d; border-color:#7f1d1d; }
+        .sl-res.niver { border:2px solid var(--ec-ouro); background:#17140a; }
+        body.tema-claro .sl-res.ok { background:#f0fdf4; border-color:#86efac; }
+        body.tema-claro .sl-res.blq { background:#fef2f2; border-color:#fca5a5; }
+        body.tema-claro .sl-res.niver { background:#fffbeb; }
+        .sl-info { flex:1; min-width:0; }
+        .sl-nome-linha { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+        .sl-nome { font-family:var(--ec-fonte-titulo); font-size:25px; font-weight:800; line-height:1.15; margin:0; text-transform:uppercase; overflow-wrap:anywhere; }
+        .sl-res.blq .sl-nome { color:var(--ec-blq-txt); }
+        .sl-dados { display:flex; gap:8px 18px; flex-wrap:wrap; font-size:15px; font-weight:700; color:var(--sl-dado); margin-top:10px; }
+        .sl-dados span { display:inline-flex; align-items:center; gap:7px; }
+        .sl-dados .ec-i { width:19px; height:19px; color:var(--sl-mut); }
+        .sl-dados .hoje { color:var(--ec-ok-txt); }
+        .sl-dados .niver-dia { color:var(--ec-ouro); }
+        .sl-obs { margin-top:10px; display:inline-flex; gap:8px; align-items:center; padding:6px 12px; border-radius:10px; background:rgba(96,165,250,.12); border:1px solid rgba(96,165,250,.35); color:#bfdbfe; font-size:14px; font-weight:700; }
+        body.tema-claro .sl-obs { color:#1d4ed8; }
+        .sl-bloqbox { margin-top:12px; padding:12px 14px; border-radius:14px; background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.45); font-size:15px; font-weight:700; }
+        .sl-bloqbox b { display:block; color:var(--ec-blq-txt); font-size:13px; letter-spacing:.04em; margin-bottom:4px; }
+        .sl-acoes { display:flex; flex-direction:column; gap:10px; min-width:260px; }
+        .sl-acoes .linha { display:flex; gap:10px; }
+        .sl-acoes .linha .ec-btn { flex:1; padding:0 12px; }
+        .sl-acoes .ec-btn .ec-i { width:19px; height:19px; }
+        .sl-btn-lib { min-height:60px !important; font-size:19px !important; }
+        .sl-btn-lib .ec-i { width:22px !important; height:22px !important; }
+        .sl-entrou { display:flex; align-items:center; justify-content:center; gap:10px; font-size:19px; font-weight:800; color:var(--ec-ok-txt); min-height:52px; }
+        .sl-entrou .ec-i { width:28px; height:28px; stroke-width:3; }
+        .sl-novo { display:flex; align-items:center; gap:14px; min-height:72px; padding:12px 22px; border-radius:18px; border:2px dashed var(--ec-ouro); background:rgba(245,183,0,.06); color:var(--ec-ouro); font:800 19px var(--ec-fonte); cursor:pointer; text-align:left; width:100%; }
+        .sl-novo .ec-i { width:28px; height:28px; }
+        .sl-vazio { padding:40px 20px; text-align:center; color:var(--sl-mut); font-size:17px; font-weight:700; background:var(--sl-card); border:1px solid var(--sl-linha); border-radius:20px; }
+        .sl-vazio b { display:block; color:var(--sl-txt); font-family:var(--ec-fonte-titulo); font-size:22px; margin-bottom:6px; }
+        .sl-vazio.trava b { color:var(--ec-blq-txt); }
+        .sl-form { background:var(--sl-card); border:1px solid #3a3320; border-radius:20px; padding:24px; display:flex; flex-direction:column; gap:14px; }
+        body.tema-claro .sl-form { border-color:#e5d39a; }
+        .sl-form h2 { display:flex; align-items:center; gap:10px; margin:0; font-family:var(--ec-fonte-titulo); font-size:21px; font-weight:800; }
+        .sl-form h2 .ec-i { color:var(--ec-ouro); }
+        .sl-campo { display:flex; flex-direction:column; gap:7px; }
+        .sl-campo > label, .sl-campo > .sl-rot { font:800 13px var(--ec-fonte); color:var(--sl-mut); letter-spacing:.06em; text-transform:uppercase; }
+        .sl-in { width:100%; min-height:56px; background:var(--sl-in); border:2px solid var(--sl-linha2); border-radius:14px; color:var(--sl-txt); font:700 18px var(--ec-fonte); padding:0 16px; outline:none; }
+        .sl-in:focus { border-color:var(--ec-ouro); box-shadow:0 0 0 3px rgba(245,183,0,.15); }
+        .sl-in::placeholder { color:#8b8b95; font-weight:600; }
+        textarea.sl-in { padding:14px 16px; min-height:80px; resize:none; }
+        .sl-data { display:flex; align-items:center; gap:8px; }
+        .sl-data input { text-align:center; padding:0 6px; }
+        .sl-data span { color:var(--sl-mut); font-size:22px; font-weight:800; }
+        #idadeSelo { align-self:flex-start; font-size:15px; }
+        #idadeSelo[hidden] { display:none; }
+        #btnCancelarEdicao.hidden { display:none; }
+        @media (max-width: 1100px) { .sl-aside { position:static; max-width:none; } }
     </style>
 </head>
-<body class="p-4 md:p-8 flex flex-col min-h-screen relative">
+<body class="flex flex-col min-h-screen relative">
     <div id="status-conexao" class="fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.5)] hidden z-[9999] animate-pulse">
         🔴 Sem Internet — Operação Pausada
     </div>
@@ -132,7 +152,7 @@
             <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest leading-relaxed">O sistema de Portaria deve ser acessado <br><span class="text-white">exclusivamente por um computador</span>.</p>
         </div>
     </div>
-    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20">
+    <div id="toast-aviso" class="fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[15px] tracking-wide px-6 py-4 rounded-2xl shadow-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20">
         <span id="toast-icon" class="text-lg">⚠️</span>
         <span id="toast-msg">Mensagem de erro</span>
     </div>
@@ -182,64 +202,59 @@
         </div>
     </div>
 
-    <div id="conteudo-sistema" class="hidden max-w-6xl mx-auto flex-grow w-full">
-        <button id="btnTemaSolteiras" type="button" class="theme-toggle">🌙 <span>ESCURO</span></button>
-        <header class="flex flex-col md:flex-row justify-between md:items-center mb-6 md:mb-8 gap-4 md:gap-6 bg-white p-4 rounded-3xl border border-zinc-300 shadow-sm">
-            <div class="flex items-center gap-4">
-                <div class="bg-black rounded-xl p-2"><img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="Logo" class="h-10"></div>
-                <div>
-                    <h1 class="text-xl md:text-2xl font-black uppercase italic text-zinc-900 leading-none">VIP Single Ladies</h1>
-                    <p id="labelOperador" class="text-zinc-500 font-bold uppercase text-[9px] tracking-widest mt-1">---</p>
-                </div>
+    <div id="conteudo-sistema" class="hidden flex-grow w-full">
+        <header class="sl-top">
+            <div class="sl-marca">
+                <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club">
+                <div><b>VIP Single Ladies</b><span id="labelOperador">---</span></div>
             </div>
-            <div class="flex flex-wrap items-stretch md:items-center gap-3 md:gap-4 w-full md:w-auto">
-                <div id="caixaTurno" class="flex-1 md:flex-none bg-zinc-100 border border-zinc-300 p-3 rounded-2xl text-center min-w-[140px] md:min-w-[190px]">
-                    <p class="text-[9px] font-black text-zinc-600 uppercase">Situação da Casa</p>
-                    <p id="statusTurno" class="text-sm font-black uppercase leading-tight mt-1 text-zinc-500">VERIFICANDO...</p>
-                </div>
-                <div class="flex-1 md:flex-none bg-zinc-100 border border-zinc-300 p-3 rounded-2xl text-center min-w-[110px] md:min-w-[120px]">
-                    <p class="text-[9px] font-black text-zinc-600 uppercase">Check-ins Turno</p>
-                    <p id="contagemEvento" class="text-2xl font-black text-green-600 leading-none mt-1">0</p>
-                </div>
-                <button onclick="sairSistema()" class="bg-red-100 border border-red-300 text-red-600 px-4 py-3 rounded-2xl font-black uppercase text-[10px] hover:bg-red-200 transition-colors">Sair</button>
-            </div>
+            <div id="caixaTurno" class="ec-pill"><span id="statusTurno">Verificando...</span></div>
+            <div class="sl-esp"></div>
+            <div class="sl-conta"><b id="contagemEvento">0</b><span>liberadas no turno</span></div>
+            <button id="btnTemaSolteiras" type="button" class="ec-btn neutro" aria-label="Mudar tema"></button>
+            <button type="button" onclick="sairSistema()" class="ec-btn sair" id="btnSairSolteiras">Sair</button>
         </header>
-        <div id="faixaTravaTurno" class="hidden mb-8 rounded-3xl border-2 border-red-500 bg-red-50 p-5 text-center">
-            <p class="text-red-700 font-black uppercase italic text-lg leading-tight">🔒 <span id="faixaTravaMotivo">CASA FECHADA</span></p>
-            <p class="text-red-600 font-bold uppercase text-[10px] tracking-widest mt-2">Liberar entrada e cadastro novo estão bloqueados. Consultar e editar continuam liberados.</p>
+        <div id="faixaTravaTurno" class="hidden sl-faixa">
+            <p><span id="faixaTravaMotivo">CASA FECHADA</span></p>
+            <p>Liberar entrada e cadastro novo estão bloqueados. Consultar e editar continuam liberados.</p>
         </div>
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-10">
-            <aside class="lg:col-span-1">
-                <div class="glass-card p-5 md:p-6 rounded-[2rem] lg:sticky lg:top-8">
-                    <h2 id="tituloForm" class="text-zinc-900 font-black uppercase italic text-sm mb-6 border-b border-zinc-200 pb-2">📋 Cadastro / Entrada</h2>
-                    <form id="formSolteira" class="space-y-4">
-                        <input type="hidden" id="editId">
-                        <input type="text" id="nome" placeholder="NOME COM SOBRENOME" class="w-full p-4 rounded-xl input-field text-sm" required>
-                        <input type="tel" id="tel" placeholder="WHATSAPP" class="w-full p-4 rounded-xl input-field text-sm" oninput="maskTel(this)" onblur="validarDuplicidade('tel')" required>
-                        <input type="text" id="cpf" placeholder="CPF COMPLETO" class="w-full p-4 rounded-xl input-field text-sm" oninput="maskCPF(this)" onblur="validarDuplicidade('cpf')" required>
-                        <div>
-                            <label class="text-[10px] font-black text-zinc-500 uppercase ml-2">Data de Nascimento</label>
-                            <input type="date" id="nascimento" class="w-full p-4 rounded-xl input-field text-sm uppercase mt-1" onchange="updateIdade(this.value)" required>
-                        </div>
-                        <div class="bg-zinc-100 p-4 rounded-xl border border-zinc-300 flex justify-between items-center text-zinc-900">
-                            <p class="text-[10px] font-black text-zinc-600 uppercase">Idade Calculada</p>
-                            <p id="idadeDisplay" class="text-xl font-black text-zinc-900">--</p>
-                        </div>
-                        <textarea id="obs" placeholder="OBSERVAÇÕES (OPCIONAL)..." class="w-full p-4 rounded-xl input-field text-xs uppercase h-20 resize-none"></textarea>
-                        <button type="submit" id="btnSalvar" class="w-full btn-gold py-5 rounded-xl uppercase text-sm shadow-md mt-2 active:scale-95 transition-all">Confirmar e Liberar</button>
-                        <button type="button" id="btnCancelarEdicao" onclick="limparFormulario()" class="hidden w-full bg-zinc-200 text-zinc-700 hover:bg-zinc-300 py-3 rounded-xl uppercase text-[10px] font-black mt-2 transition-colors border border-zinc-300">Cancelar Edição</button>
-                    </form>
-                </div>
-            </aside>
-            <main class="lg:col-span-2 space-y-6">
-                <div class="relative w-full">
-                    <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." class="w-full p-5 rounded-2xl input-field text-base font-black uppercase pl-14 shadow-md" oninput="filtrarClientes()">
-                    <span class="absolute left-5 top-5 text-xl text-zinc-500">🔍</span>
-                </div>
-                <div class="glass-card rounded-[2rem] overflow-hidden min-h-[240px] lg:min-h-[400px]">
-                    <div id="listaSolteiras" class="flex flex-col"></div>
-                </div>
+        <div class="sl-corpo">
+            <main class="sl-main">
+                <span class="sl-rot">1º passo · procure pelo nome, CPF ou telefone</span>
+                <label class="sl-busca" id="caixaBusca">
+                    <span id="lupaBusca"></span>
+                    <input type="text" id="buscaCliente" placeholder="BUSCAR POR NOME, CPF OU TELEFONE..." oninput="filtrarClientes()" autocomplete="off" aria-label="Buscar solteira">
+                </label>
+                <div id="listaSolteiras" class="sl-lista"></div>
             </main>
+            <aside class="sl-aside">
+                <form id="formSolteira" class="sl-form">
+                    <h2 id="tituloForm"><span id="iconeForm"></span><span id="tituloFormTxt">Nova solteira</span></h2>
+                    <input type="hidden" id="editId">
+                    <div class="sl-campo"><label for="nome">Nome com sobrenome</label>
+                        <input type="text" id="nome" placeholder="Ex.: Juliana Ferreira" class="sl-in" required></div>
+                    <div class="sl-campo"><label for="tel">WhatsApp</label>
+                        <input type="tel" id="tel" placeholder="(41) 99999-9999" class="sl-in" oninput="maskTel(this)" onblur="validarDuplicidade('tel')" required></div>
+                    <div class="sl-campo"><label for="cpf">CPF</label>
+                        <input type="text" id="cpf" placeholder="000.000.000-00" class="sl-in" inputmode="numeric" oninput="maskCPF(this)" onblur="validarDuplicidade('cpf')" required></div>
+                    <div class="sl-campo"><span class="sl-rot">Data de nascimento</span>
+                        <div class="sl-data">
+                            <input type="text" id="nascDia" class="sl-in" inputmode="numeric" maxlength="2" placeholder="DD" aria-label="Dia" style="width:78px" required>
+                            <span>/</span>
+                            <input type="text" id="nascMes" class="sl-in" inputmode="numeric" maxlength="2" placeholder="MM" aria-label="Mês" style="width:78px" required>
+                            <span>/</span>
+                            <input type="text" id="nascAno" class="sl-in" inputmode="numeric" maxlength="4" placeholder="AAAA" aria-label="Ano" style="width:112px" required>
+                        </div>
+                        <input type="hidden" id="nascimento">
+                        <span id="idadeSelo" class="ec-pill" hidden></span>
+                        <span id="idadeDisplay" hidden>--</span>
+                    </div>
+                    <div class="sl-campo"><label for="obs">Observações (opcional)</label>
+                        <textarea id="obs" placeholder="Ex.: amiga da Bruna" class="sl-in"></textarea></div>
+                    <button type="submit" id="btnSalvar" class="ec-btn ouro sl-btn-lib">Cadastrar e liberar</button>
+                    <button type="button" id="btnCancelarEdicao" onclick="limparFormulario()" class="hidden ec-btn neutro">Cancelar edição</button>
+                </form>
+            </aside>
         </div>
     </div>
 
@@ -325,19 +340,30 @@
     // tela de login continua sempre no visual escuro padrão, sem esse botão. Aqui
     // a direção é invertida em relação ao Promoter/Portaria: o sistema já é claro
     // por padrão, então o botão liga um tema escuro por cima.
+    // Escuro por padrão (como as outras telas). A chave é nova de propósito:
+    // a antiga guardava "claro" como padrão e manteria todo mundo no claro.
     function aplicarTemaSolteiras(tema) {
-        const escuro = tema === 'escuro';
-        document.body.classList.toggle('tema-escuro', escuro);
+        const claro = tema === 'claro';
+        document.body.classList.toggle('tema-claro', claro);
         const btn = document.getElementById('btnTemaSolteiras');
-        if (btn) btn.innerHTML = escuro ? '☀️ <span>CLARO</span>' : '🌙 <span>ESCURO</span>';
+        if (btn) {
+            btn.innerHTML = window.ECUI ? ECUI.icone(claro ? 'sol' : 'lua') : (claro ? '☀️' : '🌙');
+            btn.setAttribute('aria-label', claro ? 'Mudar para tema escuro' : 'Mudar para tema claro');
+        }
     }
     document.getElementById('btnTemaSolteiras')?.addEventListener('click', () => {
-        const atual = document.body.classList.contains('tema-escuro') ? 'escuro' : 'claro';
-        const novo = atual === 'escuro' ? 'claro' : 'escuro';
-        localStorage.setItem('eclub_solteiras_tema_visual_v1', novo);
+        const novo = document.body.classList.contains('tema-claro') ? 'escuro' : 'claro';
+        try { localStorage.setItem('eclub_solteiras_tema_v2', novo); } catch (_) {}
         aplicarTemaSolteiras(novo);
     });
-    aplicarTemaSolteiras(localStorage.getItem('eclub_solteiras_tema_visual_v1') || 'claro');
+    let temaSalvo = 'escuro';
+    try { temaSalvo = localStorage.getItem('eclub_solteiras_tema_v2') || 'escuro'; } catch (_) {}
+    aplicarTemaSolteiras(temaSalvo);
+    if (window.ECUI) {
+        document.getElementById('lupaBusca').innerHTML = ECUI.icone('busca');
+        document.getElementById('iconeForm').innerHTML = ECUI.icone('novaPessoa');
+        document.getElementById('btnSairSolteiras').innerHTML = ECUI.icone('sair') + 'Sair';
+    }
     window.addEventListener('offline', () => atualizarAvisoOffline());
     window.addEventListener('online', async () => {
         atualizarAvisoOffline();
@@ -609,7 +635,7 @@
         const bg=isSucesso?'bg-green-600':'bg-red-600';
         const sh=isSucesso?'shadow-[0_0_20px_rgba(22,163,74,0.3)]':'shadow-[0_0_20px_rgba(220,38,38,0.3)]';
         const icon=isSucesso?'✅':(msg.includes('ACESSO')?'👋':((msg.includes('PROIBIDA')||msg.includes('ENCERRADA'))?'🚨':'⚠️'));
-        toast.className=`fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[10px] uppercase tracking-widest px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20 ${bg} ${sh}`;
+        toast.className=`fixed top-4 left-1/2 -translate-x-1/2 z-[10001] text-white font-black text-[15px] tracking-wide px-6 py-4 rounded-2xl transition-all duration-300 transform -translate-y-32 opacity-0 flex items-center gap-3 w-[90%] max-w-sm pointer-events-none border border-white/20 ${bg} ${sh}`;
         document.getElementById('toast-icon').innerText=icon; document.getElementById('toast-msg').innerText=msg;
         setTimeout(()=>{toast.classList.remove('-translate-y-32','opacity-0');toast.classList.add('translate-y-0','opacity-100');},10);
         setTimeout(()=>{toast.classList.remove('translate-y-0','opacity-100');toast.classList.add('-translate-y-32','opacity-0');},4000);
@@ -722,16 +748,17 @@
         const el = document.getElementById('statusTurno');
         const caixa = document.getElementById('caixaTurno');
         if (!el || !caixa) return;
-        if (!t) { el.innerText='VERIFICANDO...'; el.className='text-sm font-black uppercase leading-tight mt-1 text-zinc-500'; return; }
+        const icTurno = n => (window.ECUI ? ECUI.icone(n) : '');
+        if (!t) { el.innerText='Verificando...'; caixa.className='ec-pill'; return; }
         if (t.aberto) {
-            el.innerText = t.motivo ? `● ABERTO (${t.motivo})` : '● ABERTO';
-            el.className = 'text-sm font-black uppercase leading-tight mt-1 text-green-600';
-            caixa.className = 'flex-1 md:flex-none bg-green-50 border border-green-300 p-3 rounded-2xl text-center min-w-[140px] md:min-w-[190px]';
+            el.innerText = t.motivo ? `Casa aberta (${t.motivo})` : `Casa aberta até ${horarioLocal().fechamento}`;
+            caixa.className = 'ec-pill ok';
         } else {
-            el.innerText = `🔒 ${t.motivo || 'TRAVADO'}`;
-            el.className = 'text-[11px] font-black uppercase leading-tight mt-1 text-red-600';
-            caixa.className = 'flex-1 md:flex-none bg-red-50 border border-red-300 p-3 rounded-2xl text-center min-w-[140px] md:min-w-[190px]';
+            el.innerText = t.motivo || 'Travado';
+            caixa.className = 'ec-pill blq';
         }
+        caixa.querySelectorAll('svg').forEach(x => x.remove());
+        caixa.insertAdjacentHTML('afterbegin', icTurno(t.aberto ? 'relogio' : 'cadeado'));
         const faixa = document.getElementById('faixaTravaTurno');
         if (faixa) {
             if (travadoAgora()) {
@@ -827,7 +854,7 @@
         if (travadoAgora()) {
             busca.value = '';
             busca.disabled = true;
-            busca.placeholder = '🔒 CONSULTA BLOQUEADA FORA DO HORÁRIO';
+            busca.placeholder = 'Consulta bloqueada fora do horário';
             busca.classList.add('opacity-50', 'cursor-not-allowed');
         } else {
             busca.disabled = false;
@@ -846,7 +873,7 @@
         } else {
             btn.disabled = false;
             btn.classList.remove('opacity-50', 'cursor-not-allowed');
-            btn.innerText = editando ? 'ATUALIZAR DADOS' : 'Confirmar e Liberar';
+            btn.innerText = editando ? 'ATUALIZAR DADOS' : 'Cadastrar e liberar';
         }
     }
     // Só bloqueia na tela quando TEM internet e o servidor disse que está
@@ -867,7 +894,7 @@
             const data=await apiSolteiras('bootstrap');
             pintarTurno(data.turno);
             operadorLogado=data.operator || operadorLogado; eventoHojeCache=data.eventoHoje || null; clientesCache=Array.isArray(data.clientes)?data.clientes:[];
-            document.getElementById('labelOperador').innerText='OPERADOR: '+operadorLogado.toUpperCase();
+            document.getElementById('labelOperador').innerText='Operador(a): '+operadorLogado;
             document.getElementById('contagemEvento').innerText=Number(data.contagemTurno || clientesCache.length);
             if (!document.getElementById('buscaCliente').value.trim()) render(clientesCache,false);
             atualizarListaCompletaEmSegundoPlano();
@@ -964,45 +991,166 @@
     };
     window.bloquearDesbloquear = async (id,acaoBloquear) => {
         try{
-            if(acaoBloquear){const motivo=prompt('Qual o motivo do bloqueio?');if(!motivo)return;await apiSolteiras('bloquear',{id,motivo});mostrarAviso('Cliente bloqueada!',true);}
-            else{if(!confirm('Tem certeza que deseja DESBLOQUEAR a entrada dessa cliente?'))return;await apiSolteiras('desbloquear',{id});mostrarAviso('Cliente desbloqueada!',true);}
+            const nomeC=(clientesCache.find(x=>x.id===id)||{}).nome||'esta cliente';
+            if(acaoBloquear){
+                const motivo=await ECUI.pedirTexto({titulo:'Bloquear entrada',texto:`Por que ${nomeC} não pode entrar? O motivo aparece para quem buscar o nome dela.`,placeholder:'Motivo do bloqueio',confirmar:'Bloquear',perigo:true,max:200});
+                if(!motivo||!motivo.trim())return;
+                await apiSolteiras('bloquear',{id,motivo:motivo.trim()});mostrarAviso('Cliente bloqueada!',true);
+            }
+            else{
+                if(!(await ECUI.confirmar({titulo:'Desbloquear entrada?',texto:`${nomeC} volta a poder entrar normalmente.`,confirmar:'Desbloquear'})))return;
+                await apiSolteiras('desbloquear',{id});mostrarAviso('Cliente desbloqueada!',true);
+            }
             await atualizarPainelSeguro();
         }catch(e){mostrarAviso(e.message||'Erro ao executar ação!');}
     };
     window.prepararEdicao = id => {
         const c=clientesCache.find(x=>x.id===id); if(!c)return;
         const norm=normalizarDataNascimento(c.data_nascimento||c.nascimento);
-        document.getElementById('editId').value=c.id; document.getElementById('nome').value=c.nome||''; document.getElementById('tel').value=c.tel||''; document.getElementById('cpf').value=c.cpf||''; document.getElementById('nascimento').value=norm?norm.raw:''; document.getElementById('obs').value=c.obs||'';
+        document.getElementById('editId').value=c.id; document.getElementById('nome').value=c.nome||''; document.getElementById('tel').value=c.tel||''; document.getElementById('cpf').value=c.cpf||''; preencherDataPartes(norm?norm.raw:''); document.getElementById('obs').value=c.obs||''; document.getElementById('tituloFormTxt').innerText='Editar cadastro';
         window.updateIdade(norm?norm.raw:null); document.getElementById('btnSalvar').innerText='ATUALIZAR DADOS'; aplicarTravaNoFormulario(); document.getElementById('btnCancelarEdicao').classList.remove('hidden'); document.getElementById('tituloForm').scrollIntoView({behavior:'smooth'});
+    };
+    // Marca em amarelo o pedaço do nome que bate com a busca.
+    function destacarBuscaSl(texto, termo) {
+        const orig = String(texto || '');
+        const termos = normalizeBusca(termo).split(/\s+/).filter(t => t.length >= 2 && /[A-Z]/.test(t));
+        if (!termos.length) return escapeHtml(orig);
+        let norm = ''; const mapa = [];
+        for (let i = 0; i < orig.length; i++) {
+            const n = orig[i].normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+            for (const ch of n) { norm += ch; mapa.push(i); }
+        }
+        const marcar = new Array(orig.length).fill(false);
+        termos.forEach(t => { let pos = norm.indexOf(t); while (pos >= 0) { for (let k = pos; k < pos + t.length; k++) marcar[mapa[k]] = true; pos = norm.indexOf(t, pos + 1); } });
+        let html = '', aberto = false;
+        for (let i = 0; i < orig.length; i++) {
+            if (marcar[i] && !aberto) { html += '<mark class="ec-achado">'; aberto = true; }
+            if (!marcar[i] && aberto) { html += '</mark>'; aberto = false; }
+            html += escapeHtml(orig[i]);
+        }
+        return html + (aberto ? '</mark>' : '');
+    }
+    const ic = n => (window.ECUI ? ECUI.icone(n) : '');
+    function idadeDe(raw) {
+        if (!raw) return NaN;
+        const h = new Date(), n = new Date(raw + 'T12:00:00');
+        let i = h.getFullYear() - n.getFullYear();
+        if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--;
+        return i;
+    }
+    // Não achou na busca: abre o cadastro já com o que foi digitado.
+    window.cadastrarDaBusca = () => {
+        const termo = document.getElementById('buscaCliente').value.trim();
+        window.limparFormulario();
+        const digitos = termo.replace(/\D/g, '');
+        if (/[A-Za-zÀ-ÿ]/.test(termo)) {
+            document.getElementById('nome').value = termo.replace(/\s+/g, ' ').toUpperCase();
+            document.getElementById('tel').focus();
+        } else if (digitos.length >= 10) {
+            const campoTel = document.getElementById('tel'); campoTel.value = digitos; window.maskTel(campoTel);
+            document.getElementById('nome').focus();
+        } else document.getElementById('nome').focus();
+        document.getElementById('tituloForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
     function render(dados,isBusca=false){
         const container=document.getElementById('listaSolteiras'), corte=corteTurno();
         if (travadoAgora()) {
-            container.innerHTML='<div class="p-20 text-center"><p class="text-red-600 font-black text-2xl uppercase italic">🔒 Tela bloqueada</p><p class="text-zinc-500 font-bold text-[11px] uppercase tracking-widest mt-3">Nenhum dado de cliente fica disponível fora do horário de funcionamento</p></div>';
+            container.innerHTML='<div class="sl-vazio trava"><b>Tela bloqueada</b>Nenhum dado de cliente fica disponível fora do horário de funcionamento.</div>';
             return;
         }
+        const termo = isBusca ? document.getElementById('buscaCliente').value.trim() : '';
+        const botaoNovo = isBusca
+            ? `<button type="button" class="sl-novo" onclick="cadastrarDaBusca()">${ic('novaPessoa')}<span>Não é nenhuma delas? Cadastrar “${escapeHtml(termo.toUpperCase())}” como nova</span></button>`
+            : '';
         let paraExibir=isBusca?dados:dados.filter(c=>{const d=dataVisita(c);return d&&d>=corte;});
-        if(!paraExibir.length){container.innerHTML='<div class="p-20 text-center text-zinc-500 font-black text-sm uppercase italic">NENHUM RESULTADO NA TELA</div>';return;}
-        container.innerHTML='';
-        paraExibir.sort((a,b)=>(dataVisita(b)?.getTime()||0)-(dataVisita(a)?.getTime()||0)).forEach(c=>{
+        if(!paraExibir.length){
+            container.innerHTML = isBusca
+                ? `<div class="sl-vazio"><b>Nenhuma cadastrada com “${escapeHtml(termo.toUpperCase())}”</b>Confira a grafia, ou cadastre agora.</div>${botaoNovo}`
+                : '<div class="sl-vazio"><b>Ninguém liberada neste turno ainda</b>Use a busca acima para encontrar a cliente.</div>';
+            return;
+        }
+        const partes = paraExibir.sort((a,b)=>(dataVisita(b)?.getTime()||0)-(dataVisita(a)?.getTime()||0)).map(c=>{
             const norm=normalizarDataNascimento(c.data_nascimento||c.nascimento), isNiver=checkAniversarioSemana(norm), niverData=norm?norm.display:'--/--';
+            const idade = norm ? idadeDe(norm.raw) : NaN;
             const visita=dataVisita(c), naCasa=visita?visita>=corte:false, textoVisita=visita?visita.toLocaleDateString('pt-BR'):'---';
-            const div=document.createElement('div'); div.className=`item-cliente p-4 sm:p-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 ${c.bloqueada?'cliente-bloqueada':(isNiver?'card-aniversariante':(naCasa?'cliente-checkin-ok':''))}`;
-            let painel='',info='';
-            if(c.bloqueada){info=`<div class="mt-3 bg-red-100 p-3 rounded-xl border border-red-300"><span class="text-[9px] font-black uppercase text-red-600 block mb-1">🚨 PROIBIDA A ENTRADA. MOTIVO:</span><span class="text-xs font-bold text-zinc-900">${escapeHtml(c.motivo_bloqueio)||'Sem motivo detalhado.'}</span></div>`;painel=`<div class="flex flex-col items-stretch sm:items-end gap-2"><button onclick="bloquearDesbloquear('${c.id}', false)" class="bg-red-600 text-white hover:bg-red-700 px-6 py-4 rounded-xl text-[10px] font-black uppercase transition-all mb-1 shadow-md">Desbloquear 🔓</button><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button></div>`;}
-            else if(naCasa){painel=`<div class="flex flex-col items-start sm:items-end gap-2"><span class="text-green-600 text-3xl font-black">✓</span><div class="flex gap-4 mt-2"><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-[10px] font-black uppercase text-red-500 opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button></div></div>`;}
-            else{const btnLiberar = travadoAgora()
-                    ? `<button type="button" disabled title="Casa fechada" class="bg-zinc-400 text-white px-8 py-4 rounded-xl text-[11px] font-black uppercase w-full sm:w-[130px] opacity-60 cursor-not-allowed">🔒 Travado</button>`
-                    : `<button onclick="dispararCheckin('${c.id}')" class="bg-green-600 text-white px-8 py-4 rounded-xl text-[11px] font-black uppercase hover:bg-green-500 transition-all shadow-[0_4px_10px_rgba(22,163,74,0.3)] w-full sm:w-[130px]">Liberar</button>`;
-                painel=`<div class="flex flex-col items-stretch sm:items-end gap-2">${btnLiberar}<div class="flex gap-4 mt-2 w-full sm:w-[130px] justify-center"><button onclick="prepararEdicao('${c.id}')" class="text-blue-600 text-[10px] font-black uppercase hover:text-blue-800 transition-all">Editar ✏️</button><button onclick="bloquearDesbloquear('${c.id}', true)" class="text-red-500 text-[10px] font-black uppercase opacity-60 hover:opacity-100 transition-all">Bloquear 🚫</button></div></div>`;}
-            div.innerHTML=`<div class="flex-grow sm:pr-4 w-full min-w-0"><div class="flex flex-wrap items-center gap-2 mb-2"><h3 class="text-lg sm:text-xl font-black uppercase break-words ${c.bloqueada?'text-red-600':'text-zinc-900'}">${escapeHtml(c.nome)}</h3><span class="text-zinc-600 font-bold text-sm bg-zinc-200 px-2 py-0.5 rounded-lg border border-zinc-300">📱 ${escapeHtml(c.tel)||'---'}</span>${isNiver&&!c.bloqueada?'<span class="bg-yellow-400 text-black px-4 py-1.5 rounded-xl text-[10px] font-black border-2 border-yellow-600 shadow-[0_3px_10px_rgba(234,179,8,0.35)] uppercase tracking-widest animate-pulse">🎂 ANIVERSARIANTE DA SEMANA</span>':''}</div><p class="text-[11px] text-zinc-500 font-bold uppercase mt-1">🆔 <span class="text-zinc-700">${escapeHtml(c.cpf)||'---'}</span> | 📅 VISITA: <span class="${naCasa?'text-green-600 font-black':'text-zinc-700'}">${textoVisita}</span> | 🎂 NIVER: <span class="${isNiver&&!c.bloqueada?'text-yellow-800 bg-yellow-200 px-2 py-0.5 rounded-lg border border-yellow-500 font-black':'text-zinc-700'}">${niverData}</span></p>${c.obs&&!c.bloqueada?`<p class="mt-3 text-[10px] font-bold text-blue-700 uppercase bg-blue-50 inline-block px-3 py-1 rounded border border-blue-200">📌 ${escapeHtml(c.obs)}</p>`:''}${info}</div><div class="flex-none w-full sm:w-auto sm:text-right">${painel}</div>`;
-            container.appendChild(div);
+            const id = escapeHtml(c.id);
+            const classe = c.bloqueada ? 'blq' : (isNiver ? 'niver' : (naCasa ? 'ok' : ''));
+            const btnEditar = `<button type="button" onclick="prepararEdicao('${id}')" class="ec-btn neutro">${ic('lapis')}Editar</button>`;
+            const btnBloquear = `<button type="button" onclick="bloquearDesbloquear('${id}', true)" class="ec-btn neutro" style="color:var(--ec-blq-txt)">${ic('bloqueio')}Bloquear</button>`;
+            let painel = '', extra = '';
+            if (c.bloqueada) {
+                extra = `<div class="sl-bloqbox"><b>PROIBIDA A ENTRADA · MOTIVO</b>${escapeHtml(c.motivo_bloqueio)||'Sem motivo detalhado.'}</div>`;
+                painel = `<span class="ec-pill blq" style="align-self:center">${ic('bloqueio')}Bloqueada</span>
+                    <button type="button" onclick="bloquearDesbloquear('${id}', false)" class="ec-btn perigo">Desbloquear</button>
+                    <div class="linha">${btnEditar}</div>`;
+            } else if (naCasa) {
+                const hora = visita ? visita.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+                painel = `<div class="sl-entrou">${ic('check')}Já entrou${hora ? ' ' + escapeHtml(hora) : ''}</div><div class="linha">${btnEditar}${btnBloquear}</div>`;
+            } else {
+                const btnLiberar = travadoAgora()
+                    ? `<button type="button" disabled title="Casa fechada" class="ec-btn neutro sl-btn-lib">${ic('cadeado')}Travado</button>`
+                    : `<button type="button" onclick="dispararCheckin('${id}')" class="ec-btn ok sl-btn-lib">${ic('check')}Liberar entrada</button>`;
+                painel = `${btnLiberar}<div class="linha">${btnEditar}${btnBloquear}</div>`;
+            }
+            const seloNiver = isNiver && !c.bloqueada ? `<span class="ec-pill" style="background:var(--ec-ouro);color:#1a1300;border-color:var(--ec-ouro)">${ic('bolo')}Aniversariante da semana</span>` : '';
+            return `<div class="sl-res ${classe}">
+                <div class="sl-info">
+                    <div class="sl-nome-linha"><h3 class="sl-nome">${destacarBuscaSl(c.nome, termo)}</h3>${seloNiver}</div>
+                    <div class="sl-dados">
+                        <span>${ic('fone')}${escapeHtml(c.tel)||'---'}</span>
+                        <span>${ic('documento')}${escapeHtml(c.cpf)||'---'}</span>
+                        <span class="${naCasa ? 'hoje' : ''}">${ic('calendario')}${naCasa ? 'Veio hoje' : 'Última visita ' + escapeHtml(textoVisita)}</span>
+                        <span class="${isNiver && !c.bloqueada ? 'niver-dia' : ''}">${ic('bolo')}Niver ${escapeHtml(niverData)}${isNaN(idade) ? '' : ' · ' + idade + ' anos'}</span>
+                    </div>
+                    ${c.obs && !c.bloqueada ? `<div class="sl-obs">${ic('info')}${escapeHtml(c.obs)}</div>` : ''}
+                    ${extra}
+                </div>
+                <div class="sl-acoes">${painel}</div>
+            </div>`;
         });
+        container.innerHTML = partes.join('') + botaoNovo;
     }
     window.maskCPF=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');i.value=v;};
     window.maskTel=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d)(\d{4})$/,'$1-$2');i.value=v;};
-    window.updateIdade=v=>{if(!v){document.getElementById('idadeDisplay').innerText='--';return;}const norm=normalizarDataNascimento(v);if(!norm){document.getElementById('idadeDisplay').innerText='--';return;}const h=new Date(),n=new Date(norm.raw+'T12:00:00');let i=h.getFullYear()-n.getFullYear();if(h.getMonth()<n.getMonth()||(h.getMonth()===n.getMonth()&&h.getDate()<n.getDate()))i--;document.getElementById('idadeDisplay').innerText=isNaN(i)?'--':i;};
-    window.limparFormulario=()=>{document.getElementById('formSolteira').reset();document.getElementById('editId').value='';document.getElementById('btnSalvar').innerText='Confirmar e liberar';document.getElementById('btnCancelarEdicao').classList.add('hidden');document.getElementById('idadeDisplay').innerText='--';aplicarTravaNoFormulario();};
+    window.updateIdade=v=>{
+        const disp=document.getElementById('idadeDisplay'), selo=document.getElementById('idadeSelo');
+        const norm = v ? normalizarDataNascimento(v) : null;
+        const idade = norm ? idadeDe(norm.raw) : NaN;
+        disp.innerText = isNaN(idade) ? '--' : idade;
+        if (isNaN(idade) || idade < 0 || idade > 120) { selo.hidden = true; return; }
+        const maior = idade >= 18;
+        selo.className = 'ec-pill ' + (maior ? 'ok' : 'blq');
+        selo.innerHTML = ic(maior ? 'check' : 'alerta') + idade + ' anos · ' + (maior ? 'maior de idade' : 'MENOR DE IDADE');
+        selo.hidden = false;
+    };
+    // Data de nascimento em três caixas (dia / mês / ano). O campo escondido
+    // #nascimento continua guardando AAAA-MM-DD, que é o que vai para o servidor.
+    function lerDataPartes(){
+        const d=document.getElementById('nascDia').value.replace(/\D/g,''), m=document.getElementById('nascMes').value.replace(/\D/g,''), a=document.getElementById('nascAno').value.replace(/\D/g,'');
+        if(!d||!m||a.length!==4) return '';
+        const dd=d.padStart(2,'0'), mm=m.padStart(2,'0');
+        const dt=new Date(`${a}-${mm}-${dd}T12:00:00`);
+        if(isNaN(dt.getTime())||dt.getDate()!==Number(dd)||dt.getMonth()+1!==Number(mm)||Number(a)<1900||dt>new Date()) return '';
+        return `${a}-${mm}-${dd}`;
+    }
+    function preencherDataPartes(raw){
+        const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(raw||''));
+        document.getElementById('nascDia').value=m?m[3]:''; document.getElementById('nascMes').value=m?m[2]:''; document.getElementById('nascAno').value=m?m[1]:'';
+        document.getElementById('nascimento').value=m?`${m[1]}-${m[2]}-${m[3]}`:'';
+        window.updateIdade(m?document.getElementById('nascimento').value:null);
+    }
+    ['nascDia','nascMes','nascAno'].forEach((idCampo, i, todos) => {
+        const el=document.getElementById(idCampo);
+        el.addEventListener('input', () => {
+            el.value=el.value.replace(/\D/g,'');
+            if (i<2 && el.value.length===2) document.getElementById(todos[i+1]).focus();
+            const raw=lerDataPartes();
+            document.getElementById('nascimento').value=raw;
+            window.updateIdade(raw||null);
+        });
+        el.addEventListener('keydown', ev => { if (ev.key==='Backspace' && !el.value && i>0) document.getElementById(todos[i-1]).focus(); });
+    });
+    window.limparFormulario=()=>{document.getElementById('formSolteira').reset();document.getElementById('editId').value='';preencherDataPartes('');document.getElementById('tituloFormTxt').innerText='Nova solteira';document.getElementById('btnSalvar').innerText='Cadastrar e liberar';document.getElementById('btnCancelarEdicao').classList.add('hidden');document.getElementById('idadeDisplay').innerText='--';aplicarTravaNoFormulario();};
     window.validarDuplicidade=async()=>{
         const cpf=document.getElementById('cpf').value,tel=document.getElementById('tel').value;
         if(cpf.replace(/\D/g,'').length<11&&tel.replace(/\D/g,'').length<10)return;
@@ -1016,10 +1164,11 @@
                 const achou = duplicidadeLocal(cpf, tel);
                 data = achou ? {duplicado:true, cliente:achou} : {duplicado:false};
             }
-            if(!data.duplicado||!data.cliente)return;const c=data.cliente;if(c.bloqueada){mostrarAviso(`🚨 PROIBIDA! Motivo: ${c.motivo_bloqueio||'Sem motivo.'}`);window.limparFormulario();return;}if(!clientesCache.some(x=>x.id===c.id))clientesCache.push(c);if(confirm(`CLIENTE ENCONTRADA: ${c.nome}\n\nOK: Fazer Check-in (Ela já pagou).\nCANCELAR: Editar dados dela.`)){await window.dispararCheckin(c.id);window.limparFormulario();}else window.prepararEdicao(c.id);}catch(e){mostrarAviso(e.message||'Erro ao verificar cadastro.');}
+            if(!data.duplicado||!data.cliente)return;const c=data.cliente;if(c.bloqueada){mostrarAviso(`🚨 PROIBIDA! Motivo: ${c.motivo_bloqueio||'Sem motivo.'}`);window.limparFormulario();return;}if(!clientesCache.some(x=>x.id===c.id))clientesCache.push(c);if(await ECUI.confirmar({titulo:`Ela já tem cadastro: ${c.nome}`,texto:'Quer liberar a entrada dela agora, ou abrir o cadastro para editar?',confirmar:'Liberar entrada',cancelar:'Editar dados'})){await window.dispararCheckin(c.id);window.limparFormulario();}else window.prepararEdicao(c.id);}catch(e){mostrarAviso(e.message||'Erro ao verificar cadastro.');}
     };
     document.getElementById('formSolteira').addEventListener('submit',async e=>{
         e.preventDefault();const btn=document.getElementById('btnSalvar'),idEx=document.getElementById('editId').value;
+        if(!document.getElementById('nascimento').value){mostrarAviso('CONFIRA A DATA DE NASCIMENTO (DIA / MÊS / ANO)');document.getElementById('nascDia').focus();return;}
         // Editar cadastro já existente continua liberado a qualquer hora.
         // O que trava é CADASTRO NOVO, que vale como entrada na casa.
         if (!idEx && turnoBloqueadoNaTela()) return;
@@ -1040,7 +1189,7 @@
                 }
             } else mostrarAviso(e.message||'Erro ao salvar os dados!');
         }
-        finally{btn.disabled=false;btn.innerText=idEx?'ATUALIZAR DADOS':'Confirmar e Liberar';}
+        finally{btn.disabled=false;btn.innerText=idEx?'ATUALIZAR DADOS':'Cadastrar e liberar';}
     });
     // Busca agora filtra em cima do cache local (garantirListaCompleta), carregado
     // uma vez só, em vez de mandar cada letra digitada pro servidor reler milhares
@@ -1059,5 +1208,6 @@
         }catch(e){mostrarAviso(e.message||'Erro ao buscar cliente.');}
     },250);};
 </script>
+<script>window.ECUI && ECUI.prepararLogin({ email: 'email-solteiras', senha: 'senha-solteiras', form: 'form-login-solteiras', chave: 'eclub_lembrar_email_solteiras' });</script>
 </body>
 </html>
