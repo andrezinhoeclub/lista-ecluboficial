@@ -964,6 +964,30 @@
     .opBar span.destaque { border-color: rgba(251,146,60,.6); background: rgba(251,146,60,.12); color: #fdba74; }
     .placaGrande::placeholder { font-size: 30px; letter-spacing: .02em; color: #71717a; font-weight: 800; }
     .tabBtn { font-size: 15px !important; letter-spacing: .02em !important; }
+    .vtop { gap: 16px; padding: 14px 18px; margin: 8px 0 20px; background: rgba(14,14,19,.85); border: 1px solid rgba(255,255,255,.08); border-radius: 22px; }
+    .vtop .brand h1 { color: #fff; }
+    .vtop .brand p { margin-top: 3px; font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 700; }
+    .vtop .tabs { margin: 0; }
+    .vEsp { flex: 1; }
+    .vOp { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+    .vOp span { font-size: 12px; font-weight: 800; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+    .vOp strong { font-size: 16px; font-weight: 800; color: var(--text); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vIco { padding: 0 13px; }
+    body.theme-light .vtop { background: rgba(255,255,255,.9); border-color: var(--border); }
+    body.theme-light .vtop .brand h1 { color: #111827; }
+    /* Placa com cara de placa do Brasil (Mercosul) */
+    .placaGrande {
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='26'%3E%3Ctext x='70' y='18' font-family='Arial,Helvetica,sans-serif' font-weight='700' font-size='13' letter-spacing='4' fill='white' text-anchor='middle'%3EBRASIL%3C/text%3E%3C/svg%3E") top center / 140px 26px no-repeat,
+                  linear-gradient(#1e3a8a, #1e3a8a) top / 100% 26px no-repeat, #ffffff !important;
+      color: #111111 !important; border: 3px solid #1e3a8a !important; padding-top: 40px !important; padding-bottom: 18px !important;
+    }
+    .placaGrande::placeholder { color: #9ca3af !important; }
+    .placaGrande:focus { box-shadow: 0 0 0 4px rgba(245,183,0,.45) !important; }
+    .placaGrande:disabled { opacity: .4; }
+    .plate { border-top: 4px solid #1e3a8a; }
+    .actionIcon .ec-i, .waitActions .ec-i, .waitQueueHead .ec-i { width: 18px; height: 18px; }
+    .waitQueueHead strong { display: inline-flex; align-items: center; gap: 8px; font-style: normal; }
+    @media (max-width: 1100px) { .vOp { display: none; } }
     .title h2, .card h2 { font-family: var(--ec-fonte-titulo, inherit); font-style: normal !important; letter-spacing: -.01em; }
     .btn { font-size: 15px; letter-spacing: .02em; }
     .btn.yellow.full, #btnReceberImprimir { font-size: 17px; min-height: 58px; }
@@ -993,7 +1017,6 @@
   </script>
 
   <!-- Botão de tema no mesmo padrão da Portaria: pílula fixa e discreta. -->
-  <button id="themeToggle" class="theme-toggle" type="button" onclick="alternarTema()" aria-label="Alternar tema">🌙 <span>Escuro</span></button>
 
   <div id="toast" class="toast"></div>
 
@@ -1046,24 +1069,24 @@
     </div>
   </div>
   <div id="appPrincipal" class="wrap" hidden>
-    <header class="topbar">
+    <header class="topbar vtop">
       <div class="brand">
         <img src="../logo.png" alt="E-Club" />
         <div>
-          <h1>Vallet E-Club</h1>
-          <p>Operação online/offline</p>
-          <div class="operatorHeader">
-            <span>Operador conectado</span>
-            <strong id="operadorNome">SEM LOGIN</strong>
-            <button class="logoutMini" type="button" onclick="sairOperador()">Sair</button>
-          </div>
+          <h1>Vallet</h1>
+          <p>E-Club · Estacionamento</p>
         </div>
       </div>
-      <!-- As duas abas subiram para cá, no lugar da tarja com o nome da festa. -->
+      <span id="valletNet" class="ec-pill ok"><span class="ec-ponto"></span>Online · tudo salvo</span>
+      <!-- As duas abas: atendimento da noite e cadastros. -->
       <nav class="tabs">
         <button class="tabBtn active" data-tab="atendimento" onclick="trocarTab('atendimento', this)">Atendimento</button>
         <button class="tabBtn" data-tab="cadastros" onclick="trocarTab('cadastros', this)">Cadastros</button>
       </nav>
+      <div class="vEsp"></div>
+      <div class="vOp"><span>Operador</span><strong id="operadorNome">SEM LOGIN</strong></div>
+      <button id="themeToggle" class="ec-btn neutro vIco" type="button" onclick="alternarTema()" aria-label="Alternar tema"></button>
+      <button id="btnSairVallet" class="ec-btn sair" type="button" onclick="sairOperador()">Sair</button>
     </header>
 
     <datalist id="datalistModelos"></datalist>
@@ -1456,6 +1479,9 @@
     const HORARIO_PADRAO_VALLET = { abertura: '21:00', fechamento: '08:00' };
     let horarioVallet = { ...HORARIO_PADRAO_VALLET };
 
+    // Ícone desenhado (visual comum das telas); se o arquivo comum não
+    // carregar (ex.: sem internet na primeira vez), cai no emoji de antes.
+    function vIc(nome, reserva) { return window.ECUI ? ECUI.icone(nome) : (reserva || ''); }
     function aplicarTema(tema) {
       const modoClaro = tema === 'light';
       document.body.classList.toggle('theme-light', modoClaro);
@@ -1465,7 +1491,7 @@
       // Mesma redação da Portaria: o botão mostra o tema em que a tela ESTÁ.
       const btn = document.getElementById('themeToggle');
       if (btn) {
-        btn.innerHTML = modoClaro ? '☀️ <span>Claro</span>' : '🌙 <span>Escuro</span>';
+        btn.innerHTML = vIc(modoClaro ? 'sol' : 'lua', modoClaro ? '☀️' : '🌙');
         btn.setAttribute('aria-label', modoClaro ? 'Usar modo escuro' : 'Usar modo claro');
       }
     }
@@ -3909,7 +3935,7 @@
         </div>
         ${podeDesfazerEntrega(a)
           ? `<div class="actions" style="grid-template-columns:1fr;">
-               <button class="tinyBtn orange searchAction" onclick="desfazerEntrega('${a.id}')" title="Desfazer esta entrega" aria-label="Desfazer entrega"><span class="actionIcon">↩️</span><span>Desfazer entrega</span></button>
+               <button class="tinyBtn orange searchAction" onclick="desfazerEntrega('${a.id}')" title="Desfazer esta entrega" aria-label="Desfazer entrega"><span class="actionIcon">${vIc('undo','↩️')}</span><span>Desfazer entrega</span></button>
              </div>
              <div class="smallText" style="margin-top:10px;">Marcou entregue sem querer? Dá para desfazer nos primeiros ${MINUTOS_PARA_DESFAZER_ENTREGA} minutos.</div>`
           : `<div class="smallText" style="margin-top:10px;">Esse ticket não está mais ativo na operação. Para nova entrada, cadastre novamente a placa no recebimento.</div>`}
@@ -3958,13 +3984,13 @@
     function montarAcoesAtendimento(a, classeExtra = '') {
       const chamado = a.status === 'SOLICITADO';
       const botaoChamada = chamado
-        ? `<button class="tinyBtn quiet searchAction" onclick="cancelarSolicitacao('${a.id}')" title="Cancelar o chamado do veículo" aria-label="Cancelar chamado"><span class="actionIcon">↩️</span><span>Cancelar chamado</span></button>`
-        : `<button class="tinyBtn orange searchAction" onclick="solicitarVeiculo('${a.id}')" title="Marcar veículo como solicitado" aria-label="Marcar veículo como solicitado"><span class="actionIcon">🔔</span><span>Solicitar</span></button>`;
+        ? `<button class="tinyBtn quiet searchAction" onclick="cancelarSolicitacao('${a.id}')" title="Cancelar o chamado do veículo" aria-label="Cancelar chamado"><span class="actionIcon">${vIc('undo','↩️')}</span><span>Cancelar chamado</span></button>`
+        : `<button class="tinyBtn orange searchAction" onclick="solicitarVeiculo('${a.id}')" title="Marcar veículo como solicitado" aria-label="Marcar veículo como solicitado"><span class="actionIcon">${vIc('sino','🔔')}</span><span>Solicitar</span></button>`;
       return `<div class="actions ${classeExtra}">
-        <button class="tinyBtn quiet searchAction" onclick="abrirModalEdicao('${a.id}')" title="Editar atendimento" aria-label="Editar atendimento"><span class="actionIcon">✏️</span><span>Editar</span></button>
-        <button class="tinyBtn quiet searchAction" onclick="imprimirTicketPorId('${a.id}')" title="Reimprimir ticket" aria-label="Reimprimir ticket"><span class="actionIcon">🖨️</span><span>Imprimir</span></button>
+        <button class="tinyBtn quiet searchAction" onclick="abrirModalEdicao('${a.id}')" title="Editar atendimento" aria-label="Editar atendimento"><span class="actionIcon">${vIc('lapis','✏️')}</span><span>Editar</span></button>
+        <button class="tinyBtn quiet searchAction" onclick="imprimirTicketPorId('${a.id}')" title="Reimprimir ticket" aria-label="Reimprimir ticket"><span class="actionIcon">${vIc('impressora','🖨️')}</span><span>Imprimir</span></button>
         ${botaoChamada}
-        <button class="tinyBtn green searchAction" onclick="entregarVeiculo('${a.id}')" title="Entregar veículo" aria-label="Entregar veículo"><span class="actionIcon">✅</span><span>Entregar</span></button>
+        <button class="tinyBtn green searchAction" onclick="entregarVeiculo('${a.id}')" title="Entregar veículo" aria-label="Entregar veículo"><span class="actionIcon">${vIc('check','✅')}</span><span>Entregar</span></button>
       </div>`;
     }
 
@@ -4130,13 +4156,13 @@
             <span>${a.modelo || 'MODELO NÃO INFORMADO'} • ${local}</span>
           </div>
           <div class="waitActions">
-            <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')" title="Entregar veículo">✅ Entregar</button>
-            <button class="tinyBtn quiet" onclick="cancelarSolicitacao('${a.id}')" title="Cancelar o chamado">↩️ Cancelar</button>
+            <button class="tinyBtn green" onclick="entregarVeiculo('${a.id}')" title="Entregar veículo">${vIc('check','✅')} Entregar</button>
+            <button class="tinyBtn quiet" onclick="cancelarSolicitacao('${a.id}')" title="Cancelar o chamado">${vIc('undo','↩️')} Cancelar</button>
           </div>
         </div>`;
       }).join('');
       box.innerHTML = `<div class="waitQueueHead">
-          <strong>🔔 Esperando o carro</strong>
+          <strong>${vIc('sino','🔔')} Esperando o carro</strong>
           <span>${lista.length} na fila • mais antigo primeiro</span>
         </div>
         <div class="waitList">${linhas}</div>`;
@@ -4213,6 +4239,13 @@
       if (!el) return;
       const pendentes = fila.length;
       const semNet = !navigator.onLine;
+      const selo = $('valletNet');
+      if (selo) {
+        selo.className = 'ec-pill ' + (semNet ? 'blq' : (pendentes ? 'cob' : 'ok'));
+        selo.innerHTML = '<span class="ec-ponto"></span>' + (semNet
+          ? `Sem internet${pendentes ? ` · ${pendentes} guardado(s)` : ''}`
+          : (pendentes ? `Enviando ${pendentes}...` : 'Online · tudo salvo'));
+      }
       if (!semNet && !pendentes) { el.classList.add('hidden'); return; }
       el.classList.remove('hidden');
       el.classList.toggle('enviando', !semNet);
@@ -4420,6 +4453,7 @@
     window.addEventListener('DOMContentLoaded', () => atualizarResumoVistoria());
     window.addEventListener('DOMContentLoaded', iniciar);
   </script>
+<script>if (window.ECUI) { var bsv = document.getElementById('btnSairVallet'); if (bsv) bsv.innerHTML = ECUI.icone('sair') + 'Sair'; }</script>
 <script>window.ECUI && ECUI.prepararLogin({ email: 'loginUsuario', senha: 'loginSenha', form: 'loginBox', chave: 'eclub_lembrar_email_vallet' });</script>
 </body>
 </html>
