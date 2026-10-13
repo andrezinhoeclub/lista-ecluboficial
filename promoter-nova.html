@@ -516,6 +516,7 @@
             return id;
         })();
         let timerAtualizacaoSegura = null;
+        let aoVivoPromoter = null; // avisos do servidor: a tela se atualiza sozinha
 
         let logado = ""; let eventos = []; let dadosPromoter = null; let linksAniv = [];
         let sistemaIniciado = false;
@@ -688,6 +689,7 @@
             if (sessaoEncerradaChamada) return;
             sessaoEncerradaChamada = true;
             if (timerAtualizacaoSegura) { clearInterval(timerAtualizacaoSegura); timerAtualizacaoSegura = null; }
+            try { aoVivoPromoter?.parar(); } catch (_) {} aoVivoPromoter = null;
             sistemaIniciado = false;
             // Guarda o aviso pra aparecer já na tela de login, depois do reload
             // (muito mais simples e confiável do que tentar desfazer na mão
@@ -801,23 +803,29 @@
         });
 
         function iniciarSistema() {
-            const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            if (st === "visualizar") {
-                document.getElementById('navAcoes').style.display = 'none';
-                document.getElementById('painel').classList.remove('pb-44');
-                document.getElementById('painel').classList.add('pb-10');
-            }
-            if (st === "aniversario") {
-                document.getElementById('secaoAniversario').classList.remove('hidden');
-                document.getElementById('botoesAniversario').classList.remove('hidden');
-                renderAniversarios();
-            }
+            pmAplicarBarraDeBotoes();
+            if (pmPerfil() === "aniversario") renderAniversarios();
             renderPerformance();
             pmMontarSeletor();
             pmCarregarLista(true);
             // Atualização periódica via backend; o navegador recebe somente agregados e status necessários.
             if (timerAtualizacaoSegura) clearInterval(timerAtualizacaoSegura);
             timerAtualizacaoSegura = setInterval(() => atualizarDadosSeguros(true), 30000);
+            // Mudou o evento, o horário, ou entrou nome na lista? Atualiza na
+            // hora, sem apertar F5. Ao voltar para a aba, também busca de novo.
+            if (aoVivoPromoter) { try { aoVivoPromoter.parar(); } catch (_) {} aoVivoPromoter = null; }
+            if (window.ECUI?.aoVivo) {
+                aoVivoPromoter = ECUI.aoVivo({
+                    sb, nome: 'promoter',
+                    tabelas: ['configuracoes', 'eventos', 'reservas', 'links_aniversario'],
+                    atraso: 500, minimo: 3000, seguranca: 30000,
+                    atualizar: async () => {
+                        const { data: sessaoAtual } = await sb.auth.getSession();
+                        if (!sessaoAtual.session) return;
+                        await atualizarDadosSeguros(true);
+                    },
+                });
+            }
         }
         // ===================================================================
         // ===== PAINEL DO PROMOTER: COLOCAR NOME E ACOMPANHAR A LISTA ======
@@ -911,7 +919,25 @@
         // Volta a ser a do arquivo antigo: cabecalho grande, sem barra de festa,
         // sem contadores e sem lista. E chamada toda vez que a tela se repinta,
         // entao pode rodar quantas vezes for — nao faz nada duas vezes.
+        // Barra de botões de baixo (copiar link / aniversário / cortesia) de
+        // acordo com o tipo da conta. É refeita a cada atualização da tela,
+        // porque o tipo pode mudar no Dashboard com a tela aberta: "apenas
+        // visualizar" não tem NENHUM botão embaixo.
+        function pmAplicarBarraDeBotoes() {
+            const tipo = pmPerfil();
+            const nav = document.getElementById('navAcoes');
+            const painel = document.getElementById('painel');
+            if (nav) nav.style.display = tipo === 'visualizar' ? 'none' : '';
+            if (painel) {
+                painel.classList.toggle('pb-44', tipo !== 'visualizar');
+                painel.classList.toggle('pb-10', tipo === 'visualizar');
+            }
+            const ehAniv = tipo === 'aniversario';
+            document.getElementById('botoesAniversario')?.classList.toggle('hidden', !ehAniv);
+            document.getElementById('secaoAniversario')?.classList.toggle('hidden', !ehAniv);
+        }
         function pmAplicarModoVisualizar() {
+            pmAplicarBarraDeBotoes();
             const painel = document.getElementById('painel');
             const classico = document.getElementById('cabecalhoVisualizar');
             if (!painel || !classico) return false;
