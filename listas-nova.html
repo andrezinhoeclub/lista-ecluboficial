@@ -273,6 +273,39 @@
     .aniv b{display:block;margin-top:5px;font-size:19px;font-weight:900;font-style:italic;
       letter-spacing:-.5px;text-transform:uppercase;text-shadow:0 0 18px rgba(240,171,252,.5)}
 
+    /* ===== cartao do convite de aniversario (so no link de aniversario) ===== */
+    .convite{overflow:hidden;border-radius:28px;border:1px solid rgba(217,70,239,.34);
+      background:rgba(255,255,255,.03);box-shadow:0 0 40px rgba(217,70,239,.18)}
+    .convite .topo-aniv{padding:26px 20px 20px;text-align:center;border-bottom:1px solid rgba(217,70,239,.22);
+      background:linear-gradient(160deg,rgba(217,70,239,.22) 0%,rgba(88,28,135,.18) 100%)}
+    .convite .festeja{display:block;font-size:42px;line-height:1;margin-bottom:6px;
+      filter:drop-shadow(0 0 14px rgba(217,70,239,.65));animation:pulsaAniv 2.4s ease-in-out infinite}
+    @keyframes pulsaAniv{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+    @media (prefers-reduced-motion: reduce){ .convite .festeja{animation:none} }
+    .convite .especial{display:block;font-size:12px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--rosa)}
+    .convite .aniversariante{margin:6px 0 0;font-size:27px;font-weight:900;font-style:italic;letter-spacing:-.8px;
+      text-transform:uppercase;line-height:1.08;overflow-wrap:anywhere;text-shadow:0 0 18px rgba(240,171,252,.55)}
+    .convite .corpo-aniv{padding:20px 20px 22px;text-align:center}
+    .convite .rot-evento{display:block;font-size:12px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--apagado)}
+    .convite .evento{margin:5px 0 4px;font-size:21px;font-weight:900;font-style:italic;letter-spacing:-.5px;
+      text-transform:uppercase;line-height:1.15;text-wrap:balance}
+    .convite .quando-aniv{display:block;margin-bottom:16px;font-size:13px;font-weight:800;letter-spacing:.1em;
+      text-transform:uppercase;color:var(--fraco)}
+    .convite .valores{display:flex;gap:8px;margin:0 0 16px}
+    .convite .valores div{flex:1;min-width:0;padding:11px 8px;border-radius:16px;background:var(--caixa);border:1px solid var(--linha)}
+    .convite .valores span{display:block;font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--apagado)}
+    .convite .valores b{display:block;margin-top:4px;font-size:15px;font-weight:900;letter-spacing:-.2px;
+      text-transform:uppercase;line-height:1.25;overflow-wrap:anywhere}
+    .convite .botao-aniv{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;min-height:58px;
+      padding:0 16px;border:0;border-radius:18px;cursor:pointer;font-family:inherit;font-size:15px;font-weight:900;
+      letter-spacing:.08em;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#c026d3,#7e22ce);
+      box-shadow:0 10px 28px rgba(192,38,211,.32)}
+    .convite .botao-aniv:active{transform:scale(.985)}
+    .aviso-aniv{margin:0 0 14px;padding:14px 16px;border-radius:18px;text-align:center;
+      background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.28)}
+    .aviso-aniv b{display:block;font-size:13px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--ouro-claro)}
+    .aviso-aniv span{display:block;margin-top:5px;font-size:13px;font-weight:600;color:var(--fraco);line-height:1.5}
+
     /* ===== fidelidade (mesma logica de antes, visual novo) ===== */
     .fidelidade{padding:17px;border-radius:20px;margin:4px 0 14px;text-align:center;
       background:rgba(217,70,239,.10);border:1px solid rgba(217,70,239,.36)}
@@ -370,7 +403,11 @@
     </div>
 
     <p class="prazo-venda" id="prazoVenda" hidden></p>
-    <p class="rotulo">Como você quer entrar</p>
+    <div class="aviso-aniv" id="avisoAnivEntrada" hidden>
+      <b>🎁 Consumação inclusa</b>
+      <span>O valor cobrado na portaria é revertido em consumação dentro da casa.</span>
+    </div>
+    <p class="rotulo" id="rotuloEntrada">Como você quer entrar</p>
     <div class="opcoes" id="opcoesEntrada"></div>
     <p class="selo-seguro" id="avisoTaxaEntrada" hidden>* Os valores já incluem a taxa de conveniência</p>
   </section>
@@ -751,6 +788,14 @@
             { tipo:'SOLTEIRO', raw: soltRaw,  rotulo:'Solteiro', icone:'📝' }
         ].filter(o => String(o.raw || '').trim());
     }
+    // Valor do aniversário que aparece no cartão e nos botões: igual ao
+    // sistema antigo — o valor de aniversário (desc_*); se a casa não preencheu,
+    // vale o da portaria; se também não, mostra PORTARIA.
+    function valoresAniversario(ev) {
+        const casal = String((ev.desc_casal || ev.valor_casal || '')).trim() || 'PORTARIA';
+        const solt  = String((ev.desc_solteiro || ev.valor_solteiro || '')).trim() || 'PORTARIA';
+        return { casal: casal.toUpperCase(), solteiro: solt.toUpperCase() };
+    }
     function temCamarote(ev) {
         for (let i = 1; i <= 8; i++) {
             if (ev[`cam${i}_ativo`] && extrairValorNumerico(ev[`v_cam${i}`]) > 0) return true;
@@ -815,7 +860,8 @@
 
         if (globalAniversariante) {
             document.getElementById('nomeAniv').textContent = globalAniversariante;
-            document.getElementById('caixaAniv').hidden = false;
+            // O cartão do convite (renderFestas) já mostra o nome — o banner fica escondido.
+            document.getElementById('caixaAniv').hidden = true;
         }
 
         renderFestas();
@@ -832,6 +878,33 @@
         }
 
         document.getElementById('tituloFestas').textContent = eventosCache.length > 1 ? 'Escolha a noite' : 'Seu nome na lista';
+
+        if (globalAniversariante) {
+            document.getElementById('tituloFestas').textContent = 'Seu nome na lista';
+            document.getElementById('subFestas').textContent = 'Toque no botão para colocar seu nome.';
+            alvo.innerHTML = eventosCache.map(ev => {
+                const v = valoresAniversario(ev);
+                return `
+                <div class="convite">
+                  <div class="topo-aniv">
+                    <span class="festeja">🎉</span>
+                    <span class="especial">Convite VIP especial</span>
+                    <p class="aniversariante">${escapar(globalAniversariante)}</p>
+                  </div>
+                  <div class="corpo-aniv">
+                    <span class="rot-evento">Evento</span>
+                    <p class="evento">${escapar(ev.nome)}</p>
+                    <span class="quando-aniv">${escapar(porExtenso(ev))}</span>
+                    <div class="valores">
+                      <div><span>👫 Casal</span><b>${escapar(v.casal)}</b></div>
+                      <div><span>👤 Solteiro</span><b>${escapar(v.solteiro)}</b></div>
+                    </div>
+                    <button class="botao-aniv" onclick="abrirFesta('${escapar(ev.id)}')">🎁 Colocar nome na lista</button>
+                  </div>
+                </div>`;
+            }).join('');
+            return;
+        }
 
         alvo.innerHTML = eventosCache.map(ev => {
             const hoje = ehHoje(ev);
@@ -894,7 +967,12 @@
         document.getElementById('nomeEntrada').textContent = String(eventoAtivo.nome || '').toUpperCase();
         document.getElementById('seloEntrada').textContent = etiquetaData(eventoAtivo, false);
 
-        const encerrada = vendasOnlineEncerradas(eventoAtivo);
+        // Link de aniversário: igual ao sistema antigo, só tem "nome na lista"
+        // (sem PIX e sem camarote) e o aviso de consumação inclusa.
+        const modoAniv = !!globalAniversariante;
+        document.getElementById('avisoAnivEntrada').hidden = !modoAniv;
+        document.getElementById('rotuloEntrada').textContent = modoAniv ? 'Escolha o seu ingresso' : 'Como você quer entrar';
+        const encerrada = modoAniv ? true : vendasOnlineEncerradas(eventoAtivo);
         // Prazo da venda online bem à vista quando a festa é hoje.
         (() => {
             const el = document.getElementById('prazoVenda');
@@ -951,10 +1029,14 @@
         // viram botões separados, pra o cliente escolher qual é a dele antes
         // de ir pra tela de dados — antes isso não existia e toda reserva
         // de lista virava "CASAL" no sistema, mesmo sendo alguém sozinho.
-        const listaOpcoes = precosLista(eventoAtivo);
+        const listaOpcoes = modoAniv
+            ? (() => { const v = valoresAniversario(eventoAtivo);
+                       return [{ tipo:'CASAL', raw: v.casal, rotulo:'Casal', icone:'👫' },
+                               { tipo:'SOLTEIRO', raw: v.solteiro, rotulo:'Solteiro', icone:'👤' }]; })()
+            : precosLista(eventoAtivo);
         if (listaOpcoes.length) {
             listaOpcoes.forEach(o => {
-                const rotuloValor = `a partir de ${String(o.raw).toUpperCase()}`;
+                const rotuloValor = modoAniv ? String(o.raw).toUpperCase() : `a partir de ${String(o.raw).toUpperCase()}`;
                 // O valor da portaria é texto livre, escrito pela casa, e às vezes
                 // já inclui consumação (ex: "R$ 120 de entrada com direito a R$ 50
                 // de consumação"). Pra quem tá comprando não ficar sem entender o
@@ -971,7 +1053,7 @@
                     <span class="txt">
                       <b>${globalAniversariante ? `Lista do aniversário — ${escapar(o.rotulo)}` : `${escapar(o.rotulo)} — nome na lista`}</b>
                       <span>${globalAniversariante ? 'Consumação inclusa · paga na portaria' : 'Paga na portaria · sem garantia de vaga'}</span>
-                      <span>${escapar(legendaTipo)}</span>
+                      ${modoAniv ? '' : `<span>${escapar(legendaTipo)}</span>`}
                     </span>
                     <span class="valor"><b style="font-size:14px;font-style:normal;line-height:1.35">${escapar(rotuloValor)}</b><span>na porta</span></span>
                   </button>`);
@@ -1000,7 +1082,7 @@
               </button>`);
         }
 
-        if (encerrada) {
+        if (encerrada && !modoAniv) {
             linhas.unshift('<div class="vazio" style="padding:18px">As vendas online desta noite já fecharam.<br>Ainda dá para colocar o nome e pagar na portaria.</div>');
         }
 
