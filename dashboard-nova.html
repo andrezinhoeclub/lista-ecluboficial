@@ -717,14 +717,14 @@
                     <div class="bg-red-500/10 border border-red-500/40 p-6 rounded-3xl flex flex-col">
                         <h3 class="text-red-400 font-black uppercase tracking-widest text-[11px] mb-2 text-center">Faxina por data</h3>
                         <p class="text-[9px] text-zinc-500 font-bold uppercase leading-relaxed mb-4 text-center">
-                            🚧 Ainda não disponível nesta fase — depende da tela de Listas (reservas, camarotes vendidos, Vallet) estar rodando no Supabase.
+                            Apaga os eventos <b>anteriores</b> à data (com reservas, camarotes, listas, solteiras da noite, caronas e Vallet). Sem data, limpa tudo que já passou. Mostra os números antes de apagar.
                         </p>
                         <input type="date" id="data_corte_limpeza" class="w-full bg-[#0a0a0f] border border-red-500/30 p-3 rounded-xl text-[11px] font-black uppercase text-white outline-none mb-3">
                         <button id="btn_limpeza_data" onclick="faxinaPorData()" class="w-full bg-red-600/10 border border-red-600/30 text-red-500 text-[10px] font-black py-4 rounded-xl uppercase hover:bg-red-600 hover:text-white transition-all mt-auto">Analisar e limpar</button>
                     </div>
                     <div class="bg-red-500/10 border border-red-500/40 p-6 rounded-3xl text-center flex flex-col justify-between">
                         <h3 class="text-red-500 font-black uppercase tracking-widest text-[11px] mb-2">Zerar Sistema</h3>
-                        <p class="text-red-500/60 text-[8px] font-bold uppercase leading-relaxed mb-3">Não apaga as Solteiras cadastradas nem os Modelos. Digite ZERAR pra liberar o botão.</p>
+                        <p class="text-red-500/60 text-[8px] font-bold uppercase leading-relaxed mb-3">Apaga todos os eventos e listas. Não apaga as Solteiras cadastradas, os Modelos, os Acessos nem o Vallet. Digite ZERAR pra liberar o botão.</p>
                         <input type="text" id="confirmar_zerar" placeholder="DIGITE ZERAR" class="w-full bg-[#0a0a0f] border border-red-600/40 p-3 rounded-xl text-[11px] font-black uppercase text-white text-center outline-none mb-3">
                         <button onclick="confirmarZerarSistema()" class="w-full bg-red-600 text-white text-[10px] font-black py-4 rounded-xl uppercase mt-auto hover:bg-red-500 transition-all">⚠️ ZERAR TUDO</button>
                     </div>
@@ -1337,22 +1337,111 @@
         };
         window.gerarRelatorioCaronas = avisoPendente;
         window.copiarRotasCarona = avisoPendente;
-        window.faxinaPorData = avisoPendente;
-        window.zerarSistemaCompleto = avisoPendente;
+        // ===== ZONA DE RISCO: faxina por data e zerar sistema =====
+        // Quem apaga é o banco (funções faxina_por_data e zerar_sistema, só
+        // master). Primeiro elas só CONTAM; a tela mostra os números e só
+        // apaga depois da confirmação. As reservas vão para o histórico antes,
+        // pra o desconto de fidelidade continuar valendo.
+        function hojeSP() {
+            return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+        }
+        function erroLimpeza(e) {
+            const msg = String(e?.message || e || '');
+            if (/function .*(faxina_por_data|zerar_sistema)|Could not find the function|schema cache/i.test(msg))
+                return 'Falta rodar o arquivo migracao-limpeza-sistema.sql no Supabase (SQL Editor).';
+            return msg || 'A limpeza foi interrompida por segurança.';
+        }
+        async function apagarCapas(urls) {
+            const caminhos = (urls || []).filter(u => String(u).includes('/capas-eventos/')).map(u => String(u).split('/capas-eventos/')[1]).filter(Boolean);
+            if (!caminhos.length) return 0;
+            try { const { error } = await sb.storage.from('capas-eventos').remove(caminhos); return error ? 0 : caminhos.length; } catch (_) { return 0; }
+        }
+        function linhasResumo(r, comVallet) {
+            const linhas = [
+                `${r.eventos} evento(s)`,
+                `${r.reservas} reserva(s) e nomes de lista`,
+                `${r.listas_aniversario} lista(s) de aniversário`,
+                `${r.entradas_solteiras} entrada(s) de solteiras`,
+                `${r.caronas} pedido(s) de carona`,
+            ];
+            if (comVallet) linhas.push(`${r.vallet_atendimentos} carro(s) do Vallet`);
+            linhas.push(`${(r.capas || []).length} foto(s) de capa`);
+            return linhas.map(l => '• ' + l).join('\n');
+        }
+        async function recarregarTudoDepoisDeLimpar() {
+            await Promise.all([carregarEventos(), carregarReservas(), carregarLinksAniversario(), carregarEntradasSolteiras()]).catch(() => {});
+            try { renderEstaNoite(); } catch (_) {}
+        }
+        window.faxinaPorData = async () => {
+            const campo = document.getElementById('data_corte_limpeza');
+            const btn = document.getElementById('btn_limpeza_data');
+            const hoje = hojeSP();
+            // Sem data escolhida, é "tudo que já passou" (a rotina de domingo).
+            let corte = String(campo?.value || '').trim();
+            if (!corte) { corte = hoje; if (campo) campo.value = hoje; }
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(corte)) return mostrarAviso('Data inválida.');
+            if (corte > hoje) return mostrarAviso('A data não pode ser no futuro — isso apagaria eventos que ainda vão acontecer.');
+            const rotulo = btn ? btn.textContent : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'ANALISANDO...'; }
+            try {
+                const { data: r, error } = await sb.rpc('faxina_por_data', { p_data_corte: corte, p_executar: false });
+                if (error) throw error;
+                const total = r.eventos + r.reservas + r.listas_aniversario + r.entradas_solteiras + r.caronas + r.vallet_atendimentos;
+                if (!total) { mostrarAviso('Nada para limpar antes dessa data. Tudo certo!', true); return; }
+                const dataBonita = corte.split('-').reverse().join('/');
+                const ok = await ECUI.confirmar({
+                    titulo: `Faxina: tudo antes de ${dataBonita}`,
+                    texto: linhasResumo(r, true) + '\n\nAs reservas ficam guardadas no histórico (o desconto de fidelidade continua valendo). Solteiras cadastradas, Modelos e Acessos não são tocados.\n\nNão dá para desfazer.',
+                    confirmar: 'Apagar', perigo: true
+                });
+                if (!ok) return;
+                if (btn) btn.textContent = 'LIMPANDO...';
+                const { data: feito, error: e2 } = await sb.rpc('faxina_por_data', { p_data_corte: corte, p_executar: true });
+                if (e2) throw e2;
+                const fotos = await apagarCapas(feito.capas);
+                mostrarAviso(`Faxina concluída: ${feito.eventos} evento(s), ${feito.reservas} reserva(s) e ${fotos} foto(s).`, true);
+                await recarregarTudoDepoisDeLimpar();
+            } catch (e) {
+                console.error('Erro na faxina por data:', e);
+                mostrarAviso(erroLimpeza(e));
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = rotulo || 'Analisar e limpar'; }
+            }
+        };
+        window.zerarSistemaCompleto = async (palavra) => {
+            try {
+                const { data: r, error } = await sb.rpc('zerar_sistema', { p_confirmacao: '', p_executar: false });
+                if (error) throw error;
+                const ok = await ECUI.confirmar({
+                    titulo: 'Zerar eventos e listas?',
+                    texto: linhasResumo(r, false) + '\n\nAs reservas ficam guardadas no histórico. Solteiras cadastradas, Modelos, Acessos, Ajustes e Vallet não são tocados.\n\nNão dá para desfazer.',
+                    confirmar: 'Zerar tudo', perigo: true
+                });
+                if (!ok) return false;
+                const { data: feito, error: e2 } = await sb.rpc('zerar_sistema', { p_confirmacao: palavra, p_executar: true });
+                if (e2) throw e2;
+                await apagarCapas(feito.capas);
+                mostrarAviso('Sistema zerado com sucesso.', true);
+                setTimeout(() => location.reload(), 1200);
+                return true;
+            } catch (e) {
+                console.error('Erro ao zerar sistema:', e);
+                mostrarAviso(erroLimpeza(e));
+                return false;
+            }
+        };
 
         // Trava de confirmação da Zona de risco: só chama zerarSistemaCompleto()
-        // se a pessoa digitou ZERAR no campinho. Puramente de UX por enquanto,
-        // já que zerarSistemaCompleto ainda é o aviso acima — mas já deixa a
-        // trava pronta pra quando essa função virar real.
-        window.confirmarZerarSistema = () => {
+        // se a pessoa digitou ZERAR no campinho (o banco confere de novo).
+        window.confirmarZerarSistema = async () => {
             const campo = document.getElementById('confirmar_zerar');
             const valor = (campo?.value || '').trim().toUpperCase();
             if (valor !== 'ZERAR') {
                 mostrarAviso('Digite ZERAR no campinho pra confirmar.');
                 return;
             }
-            zerarSistemaCompleto();
-            if (campo) campo.value = '';
+            const feito = await zerarSistemaCompleto(valor);
+            if (feito && campo) campo.value = '';
         };
 
 
