@@ -694,13 +694,13 @@
             <!-- LIBERAÇÕES TEMPORÁRIAS E TESTES (tudo num lugar só) -->
             <div class="glass-card p-8 border-l-4 border-l-sky-500">
                 <h2 class="text-sky-400 font-black text-xl mb-1">Liberações e testes</h2>
-                <p class="text-zinc-400 text-[11px] font-bold mb-6">Para abrir uma tela fora do horário ou testar antes de abrir a casa. Lembre de desligar depois.</p>
+                <p class="text-zinc-400 text-[11px] font-bold mb-6">Para abrir uma tela fora do horário ou testar antes de abrir a casa. Cada uma desliga sozinha 1 hora depois de ligada, caso você esqueça.</p>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="aj-card">
                         <h3>Solteiras fora do horário</h3>
                         <p id="texto-horario-solteiras" class="aj-sub">Liberar e cadastrar só funcionam das 21h às 8h</p>
                         <p id="status-trava-solteiras" class="aj-status">Verificando...</p>
-                        <button type="button" onclick="liberarSolteirasTemporario(2)" class="ec-btn ouro w-full">Liberar por 2 horas</button>
+                        <button type="button" onclick="liberarSolteirasTemporario(1)" class="ec-btn ouro w-full">Liberar por 1 hora</button>
                         <button type="button" onclick="cancelarLiberacaoSolteiras()" class="ec-btn neutro w-full">Cancelar liberação</button>
                     </div>
                     <div class="aj-card">
@@ -2338,10 +2338,10 @@
             dadosSolteiras = [];
         }
 
-        window.liberarSolteirasTemporario = async (horas = 2) => {
+        window.liberarSolteirasTemporario = async (horas = 1) => {
             const { error } = await sb.rpc('definir_liberacao_solteiras', { p_horas: horas });
             if (error) return mostrarAviso('Erro ao liberar.');
-            mostrarAviso(`Solteiras liberada por ${horas}h.`, true);
+            mostrarAviso(`Solteiras liberada por ${horas === 1 ? '1 hora' : horas + 'h'}. Desliga sozinha depois.`, true);
             pintarStatusTravaSolteiras();
         };
         window.cancelarLiberacaoSolteiras = async () => {
@@ -2526,14 +2526,32 @@
         let modoTesteAtivo = false, modoTesteValletAtivo = false;
         window.toggleModoTeste = async () => {
             const { error } = await sb.from('configuracoes').update({ modo_teste: !modoTesteAtivo }).eq('id', 'sistema');
-            if (error) mostrarAviso('Erro ao alterar o modo teste.');
+            if (error) return mostrarAviso('Erro ao alterar o modo teste.');
+            mostrarAviso(!modoTesteAtivo ? 'Modo teste da Portaria ligado. Desliga sozinho em 1 hora.' : 'Modo teste da Portaria desligado.', true);
         };
         window.toggleModoTesteVallet = async () => {
             const { error } = await sb.from('configuracoes').update({ modo_teste_vallet: !modoTesteValletAtivo }).eq('id', 'sistema');
             if (error) return mostrarAviso('Erro ao alterar o modo teste do Vallet.');
-            mostrarAviso(!modoTesteValletAtivo ? 'Modo teste do Vallet liberado.' : 'Modo teste do Vallet finalizado.', true);
+            mostrarAviso(!modoTesteValletAtivo ? 'Modo teste do Vallet ligado. Desliga sozinho em 1 hora.' : 'Modo teste do Vallet desligado.', true);
         };
 
+        // "● LIGADO — desliga sozinho em 42 min" (o banco desliga com 1 hora).
+        function textoPrazo(ligado, expira) {
+            if (!ligado) return { cls: '', txt: 'Desligado' };
+            const t = expira ? new Date(expira).getTime() : NaN;
+            if (isNaN(t)) return { cls: 'cob', txt: '● LIGADO agora' };
+            const min = Math.max(0, Math.ceil((t - Date.now()) / 60000));
+            return { cls: 'cob', txt: min > 0 ? `● LIGADO — desliga sozinho em ${min} min` : '● LIGADO — desligando...' };
+        }
+        function pintarPrazosTeste() {
+            const a = textoPrazo(modoTesteAtivo, configuracoesAtuais.modo_teste_expira_em);
+            const b = textoPrazo(modoTesteValletAtivo, configuracoesAtuais.modo_teste_vallet_expira_em);
+            const stT = document.getElementById('status-modo-teste');
+            if (stT) { stT.className = 'aj-status ' + a.cls; stT.textContent = a.txt; }
+            const stV = document.getElementById('status-modo-teste-vallet');
+            if (stV) { stV.className = 'aj-status ' + b.cls; stV.textContent = b.txt; }
+        }
+        setInterval(() => { try { pintarPrazosTeste(); } catch (_) {} }, 30000);
         function aplicarConfiguracoes(dataParcial) {
             if (!dataParcial) return;
             // Mescla em vez de substituir: "configuracoes" e
@@ -2548,12 +2566,10 @@
             modoTesteValletAtivo = data.modo_teste_vallet === true;
             const btn = document.getElementById('btnModoTeste');
             if (btn) { btn.textContent = modoTesteAtivo ? 'Desligar teste' : 'Ligar teste'; btn.className = 'ec-btn w-full ' + (modoTesteAtivo ? 'perigo' : 'neutro'); }
-            const stT = document.getElementById('status-modo-teste');
-            if (stT) { stT.className = 'aj-status ' + (modoTesteAtivo ? 'cob' : ''); stT.textContent = modoTesteAtivo ? '● LIGADO agora' : 'Desligado'; }
+            pintarPrazosTeste();
             const btnVallet = document.getElementById('btnModoTesteVallet');
             if (btnVallet) { btnVallet.textContent = modoTesteValletAtivo ? 'Desligar teste' : 'Ligar teste'; btnVallet.className = 'ec-btn w-full ' + (modoTesteValletAtivo ? 'perigo' : 'neutro'); }
-            const stV = document.getElementById('status-modo-teste-vallet');
-            if (stV) { stV.className = 'aj-status ' + (modoTesteValletAtivo ? 'cob' : ''); stV.textContent = modoTesteValletAtivo ? '● LIGADO agora' : 'Desligado'; }
+
             document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado';
             document.getElementById('valor_taxa').value = data.taxa_valor ?? '';
             document.getElementById('custo_sistema').value = data.custo_sistema ?? '';
