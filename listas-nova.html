@@ -558,6 +558,9 @@
     let numCamaroteSelecionado = null;
     let intervalPagamento = null, intervalCamarotes = null, intervalRelogio = null;
     let taxaPixTipo = 'desativado', taxaPixValor = 0;
+    // Hora em que a venda online fecha no dia da festa (Dashboard > Ajustes).
+    let horaLimiteVenda = '22:00';
+    const rotuloHoraVenda = (hhmm) => { const h = Number(hhmm.slice(0, 2)), m = hhmm.slice(3, 5); return m === '00' ? `${h}h` : `${h}h${m}`; };
     let statusCamarotes = {};          // por evento, para a etiqueta "esgotado" na lista
     let ultimaCompra = null;           // o que a tela de confirmado mostra
     let reservaEmAndamento = null;     // { reservaId, statusToken } do PIX aberto
@@ -623,7 +626,7 @@
     const vendasOnlineEncerradas = (evento) => {
         const d = normalizarDataEvento(evento && evento.data);
         if (!d) return true;
-        return new Date() >= new Date(`${d}T22:00:00`);
+        return new Date() >= new Date(`${d}T${horaLimiteVenda}:00`);
     };
     const bloquearEventoPassadoSeNecessario = (evento) => {
         if (!eventoJaPassou(evento)) return false;
@@ -802,6 +805,7 @@
 
         taxaPixTipo = boot.configuracao?.taxa_tipo || 'desativado';
         taxaPixValor = Number(boot.configuracao?.taxa_valor || 0);
+        if (/^\d{2}:\d{2}$/.test(String(boot.configuracao?.hora_limite_venda || ''))) horaLimiteVenda = boot.configuracao.hora_limite_venda;
         globalPromoter = boot.contexto?.promoter || 'site_direto';
         globalAniversariante = boot.contexto?.aniversariante || '';
         eventoFixo = boot.contexto?.festa || null;
@@ -895,12 +899,12 @@
         (() => {
             const el = document.getElementById('prazoVenda');
             const d = normalizarDataEvento(eventoAtivo.data);
-            const fim = d ? new Date(`${d}T22:00:00`) : null;
+            const fim = d ? new Date(`${d}T${horaLimiteVenda}:00`) : null;
             const falta = fim ? fim - new Date() : -1;
             if (!el) return;
             if (encerrada || !fim || falta > 24 * 3600 * 1000) { el.hidden = true; return; }
             const h = Math.floor(falta / 3600000), m = Math.floor((falta % 3600000) / 60000);
-            el.textContent = `Venda online até às 22h · faltam ${h ? h + 'h' : ''}${String(m).padStart(h ? 2 : 1, '0')}${h ? '' : ' min'}`;
+            el.textContent = `Venda online até às ${rotuloHoraVenda(horaLimiteVenda)} · faltam ${h ? h + 'h' : ''}${String(m).padStart(h ? 2 : 1, '0')}${h ? '' : ' min'}`;
             el.hidden = false;
         })();
         const pix = encerrada ? [] : precosPix(eventoAtivo);
