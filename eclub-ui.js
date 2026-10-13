@@ -50,7 +50,8 @@
     baixar: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
     copiar: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
     mais: '<path d="M12 5v14M5 12h14"/>',
-    zap: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>'
+    zap: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+    mapa: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'
   };
 
   function icone(nome, estilo) {

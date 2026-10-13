@@ -113,6 +113,32 @@
         .btn-menu.active, .btn-menu.active-danger, .btn-menu.active-success, .btn-menu.active-pink, .btn-menu.active-blue { background: var(--ec-ouro) !important; color: #1a1300 !important; border-color: var(--ec-ouro) !important; box-shadow: none !important; }
         .btn-menu .ec-i { width: 19px; height: 19px; }
         .btn-periodo { font-size: 14px !important; text-transform: none !important; }
+        /* Ajustes: cartões de liberação */
+        .aj-card { background: #0f0f14; border: 1px solid #2a2a34; border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+        .aj-card h3 { margin: 0; font-size: 17px; font-weight: 800; color: #fff; }
+        .aj-sub { margin: 0; font-size: 13px; font-weight: 600; color: #a1a1aa; line-height: 1.45; }
+        .aj-status { margin: 2px 0 4px; font-size: 14px; font-weight: 800; color: #a1a1aa; }
+        .aj-status.ok { color: #4ade80; } .aj-status.cob { color: #fdba74; } .aj-status.blq { color: #fca5a5; }
+        /* Solteiras e Caronas */
+        .sc-tit { margin: 0; font-size: 30px; font-weight: 900; color: #fff; }
+        .sc-sub { margin: 4px 0 0; font-size: 15px; font-weight: 600; color: #a1a1aa; }
+        .sc-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+        .sc-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .sc-select { min-height: 46px; padding: 0 14px; border-radius: 12px; font: 800 15px var(--ec-fonte) !important; min-width: 260px; }
+        .sc-bairro { margin-top: 14px; }
+        .sc-bairro-cab { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; font-weight: 800; color: #c4b5fd; letter-spacing: .04em; text-transform: uppercase; }
+        .sc-bairro-cab span { color: #a1a1aa; text-transform: none; letter-spacing: 0; font-weight: 700; }
+        .sc-pedido { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid #26262f; border-radius: 14px; background: #101016; margin-bottom: 8px; flex-wrap: wrap; }
+        .sc-num { width: 32px; height: 32px; border-radius: 10px; background: #23232b; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #d4d4d8; flex: none; }
+        .sc-info { flex: 1; min-width: 220px; }
+        .sc-info b { display: block; font-size: 16px; color: #fff; }
+        .sc-info small { display: block; font-size: 13px; color: #a1a1aa; font-weight: 600; margin-top: 2px; }
+        .sc-link { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 12px; border-radius: 10px; background: #1c1c24; border: 1px solid #33333f; color: #e4e4e7; font-size: 13px; font-weight: 800; text-decoration: none; }
+        .sc-link:hover { border-color: #52525b; }
+        .sc-link .ec-i { width: 17px; height: 17px; }
+        .sc-tabela th { padding: 10px 12px; font-size: 12px; color: #a1a1aa; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; border-bottom: 1px solid #26262f; }
+        .sc-tabela td { padding: 10px 12px !important; }
+        @media (max-width: 900px) { .sc-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sc-select { min-width: 0; flex: 1; } }
         /* Esta noite */
         .en-titulo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
         .en-titulo h2 { margin: 0; font-size: 32px; font-weight: 900; color: #fff; line-height: 1.1; }
@@ -197,7 +223,7 @@
                 <button data-ic="grafico" onclick="trocarAba('aba-relatorios', this, 'normal')" class="btn-menu">Relatórios</button>
                 <button data-ic="lista" onclick="trocarAba('aba-auditoria', this, 'success')" class="btn-menu">Auditoria</button>
                 <button data-ic="calendario" onclick="trocarAba('aba-festas', this, 'normal')" class="btn-menu">Eventos</button>
-                <button data-ic="carro" onclick="trocarAba('aba-solteiras', this, 'pink')" class="btn-menu">Caronas</button>
+                <button data-ic="carro" onclick="trocarAba('aba-solteiras', this, 'pink'); carregarCaronas()" class="btn-menu">Solteiras e Caronas</button>
                 <button data-ic="coroa" onclick="trocarAba('aba-aniversarios', this, 'normal')" class="btn-menu">Listas e Camarotes</button>
                 <button data-ic="pessoas" onclick="trocarAba('aba-acessos', this, 'success'); carregarGestaoAcessos()" class="btn-menu">Acessos</button>
                 <button data-ic="ajustes" onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu">Ajustes</button>
@@ -319,78 +345,50 @@
             </div>
         </section>
 
-        <section id="aba-solteiras" class="hidden space-y-8">
-            <div class="glass-card p-8 border-l-4 border-l-pink-500 flex flex-col md:flex-row justify-between items-center gap-6">
+        <section id="aba-solteiras" class="hidden space-y-6">
+            <div class="sc-topo">
                 <div>
-                    <h2 class="text-pink-500 font-black uppercase italic text-2xl tracking-tighter">Gestão de Caronas e Base VIP</h2>
-                    <p class="text-[10px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Base imune à limpeza de eventos (Retenção de 90 dias)</p>
-                </div>
-                <div class="bg-[#0a0a0f] border border-pink-500/30 px-10 py-5 rounded-3xl text-center shadow-[0_0_30px_rgba(219,39,119,0.15)] min-w-[200px]">
-                    <p class="text-[10px] font-black text-pink-500 uppercase tracking-widest mb-1">Cadastradas no Sistema</p>
-                    <p id="total-solteiras-badge" class="text-4xl font-black text-white leading-none">0</p>
+                    <h2 class="sc-tit">Solteiras e Caronas</h2>
+                    <p class="sc-sub">Pedidos de carona, entradas da noite e a base de clientes. As regras e liberações ficam em Ajustes.</p>
                 </div>
             </div>
-            <div class="glass-card p-8 border-l-4 border-l-fuchsia-500">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-fuchsia-500 font-black uppercase italic text-xl tracking-tighter">Check-ins Recentes</h2>
-                    <span class="bg-fuchsia-500/10 border border-fuchsia-500/20 px-3 py-1.5 rounded-lg text-[8px] font-black text-fuchsia-500 uppercase animate-pulse">● Tempo Real</span>
-                </div>
-                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Cada check-in (ou cadastro novo) grava uma entrada própria desta noite — registro independente de "última visita", que não é mais usado pra contar presença.</p>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead><tr class="text-[10px] text-zinc-500 font-black uppercase border-b border-white/5"><th class="pb-4 pl-4">Quando</th><th class="pb-4">Cliente</th><th class="pb-4">Evento</th></tr></thead>
-                        <tbody id="tabela-entradas-solteiras-body"><tr><td colspan="3" class="p-10 text-center text-zinc-500 font-bold uppercase italic">Nenhum check-in registrado ainda</td></tr></tbody>
-                    </table>
-                </div>
+            <div class="sc-kpis">
+                <div class="en-kpi"><span class="r">Cadastradas</span><b id="total-solteiras-badge" style="color:#f9a8d4">0</b><small>na base de solteiras</small></div>
+                <div class="en-kpi"><span class="r">Entraram esta noite</span><b id="sc-entradas-noite">0</b><small>solteiras liberadas</small></div>
+                <div class="en-kpi"><span class="r">Pedidos de carona</span><b id="sc-pedidos" style="color:#c4b5fd">0</b><small id="sc-pedidos-sub">no evento escolhido</small></div>
+                <div class="en-kpi"><span class="r">Vagas no carro</span><b id="sc-vagas">0</b><small id="sc-bairros">—</small></div>
             </div>
-            <div class="glass-card p-8 border-l-4 border-l-amber-500 flex flex-col md:flex-row justify-between items-center gap-6">
-                <div>
-                    <h2 class="text-amber-500 font-black uppercase italic text-xl tracking-tighter">🔒 Horário de Funcionamento</h2>
-                    <p id="texto-horario-solteiras" class="text-[10px] text-zinc-400 font-bold uppercase mt-1 tracking-widest">Liberar e cadastrar só funcionam das 21h às 8h</p>
-                    <p id="status-trava-solteiras" class="text-[11px] font-black uppercase mt-3 tracking-widest text-zinc-500">Verificando...</p>
-                </div>
-                <div class="flex flex-col gap-2 min-w-[220px]">
-                    <button type="button" onclick="liberarSolteirasTemporario(2)" class="bg-amber-500/20 border border-amber-500/40 text-amber-300 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-black transition-all">Liberar por 2 horas</button>
-                    <button type="button" onclick="cancelarLiberacaoSolteiras()" class="bg-zinc-800 border border-zinc-700 text-zinc-400 px-6 py-2 rounded-2xl text-[9px] font-black uppercase tracking-widest hover:text-white transition-all">Cancelar liberação</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="flex flex-col gap-8">
-                    <div class="glass-card p-8 border-t-4 border-t-purple-500 flex flex-col h-full">
-                        <h2 class="text-purple-500 font-black uppercase italic text-xl tracking-tighter mb-2">🚗 Configurar Caronas VIP</h2>
-                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-8">Defina as regras para a página das solteiras.</p>
-                        <div class="space-y-6 flex-grow">
-                            <div>
-                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">⏰ Horário Limite (Dia do Evento)</label>
-                                <input type="time" id="config_hora_carona" class="w-full p-4 rounded-2xl font-bold text-xs" required>
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest ml-2 mb-2 block">🗺️ Bairros Atendidos (Separados por vírgula)</label>
-                                <textarea id="config_bairros_carona" placeholder="Ex: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-xs h-32 resize-none uppercase"></textarea>
-                            </div>
-                        </div>
-                        <button onclick="salvarConfigCaronas()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg mt-6">💾 Salvar Regras de Logística</button>
+
+            <div class="en-card">
+                <div class="en-cab">
+                    <h3>Pedidos de carona</h3>
+                    <div class="sc-acoes">
+                        <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="sc-select" aria-label="Escolher o evento"><option value="">Selecione o evento...</option></select>
+                        <button type="button" onclick="carregarCaronas(true)" class="ec-btn neutro" id="btn-atualizar-caronas">Atualizar</button>
+                        <button type="button" onclick="copiarRotasCarona()" class="ec-btn ouro" id="btn-copiar-rota">Copiar rota para o motorista</button>
                     </div>
                 </div>
-                <div class="flex flex-col gap-8">
-                    <div class="glass-card p-8 border-t-4 border-t-blue-500 flex flex-col">
-                        <h2 class="text-blue-500 font-black uppercase italic text-xl tracking-tighter mb-2">🗺️ Gerador de Rotas</h2>
-                        <p class="text-[9px] text-zinc-500 font-bold uppercase mb-2">Exporte a lista ordenada por bairros para o motorista.</p>
-                        <p class="text-[8px] text-yellow-500 font-black uppercase mb-6">🚧 Depende da tela de Listas (bairro + carona por reserva) — ainda não disponível.</p>
-                        <select id="filtro-evento-carona" onchange="gerarRelatorioCaronas()" class="w-full bg-[#0a0a0f] border border-zinc-800 p-4 rounded-2xl text-xs font-black uppercase mb-4 text-white outline-none">
-                            <option value="">Selecione o Evento...</option>
-                        </select>
-                        <textarea id="output-rotas-carona" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-40 bg-[#0a0a0f] border-zinc-800 border resize-none" placeholder="Aguardando seleção do evento..."></textarea>
-                        <button onclick="copiarRotasCarona()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para o Motorista</button>
+                <div id="lista-caronas"><p class="en-vazio">Escolha o evento para ver os pedidos.</p></div>
+            </div>
+
+            <div class="en-grade3">
+                <div class="en-card">
+                    <div class="en-cab"><h3>Entradas recentes de solteiras</h3><span class="ec-pill ok" style="padding:4px 10px;font-size:13px"><span class="ec-ponto"></span>Tempo real</span></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse sc-tabela">
+                            <thead><tr><th>Quando</th><th>Cliente</th><th>Evento</th></tr></thead>
+                            <tbody id="tabela-entradas-solteiras-body"><tr><td colspan="3" class="p-10 text-center text-zinc-500 font-bold">Nenhum check-in registrado ainda</td></tr></tbody>
+                        </table>
                     </div>
                 </div>
-            </div>
-            <div class="glass-card p-8 border-t-4 border-t-pink-500 flex flex-col mt-4">
-                <h2 class="text-pink-500 font-black uppercase italic text-xl tracking-tighter mb-2">📲 Base de Clientes (Transmissão)</h2>
-                <p class="text-[9px] text-zinc-500 font-bold uppercase mb-6">Gere a lista de todas as solteiras cadastradas, ordenadas da visita mais recente para a mais antiga.</p>
-                <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="w-full bg-pink-900/40 hover:bg-pink-800/60 border border-pink-500/50 text-pink-300 font-black uppercase text-[10px] py-4 rounded-xl transition-colors mb-4">🔄 Carregar Cadastradas</button>
-                <textarea id="output-marketing" readonly class="w-full rounded-2xl p-4 text-[10px] font-mono text-zinc-300 mb-4 h-48 bg-[#0a0a0f] border-zinc-800 border resize-none whitespace-pre" placeholder="Clique no botão acima para carregar a lista..."></textarea>
-                <button onclick="copiarMarketing()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-black uppercase text-[10px] py-4 rounded-xl transition-colors shadow-lg">📋 Copiar para WhatsApp</button>
+                <div class="en-card flex flex-col">
+                    <div class="en-cab"><h3>Base para transmissão</h3><span>da visita mais recente para a mais antiga</span></div>
+                    <div class="flex gap-2 mb-3">
+                        <button onclick="gerarListaMarketing()" id="btn-gerar-lista" class="ec-btn neutro flex-1">Carregar cadastradas</button>
+                        <button onclick="copiarMarketing()" class="ec-btn ouro flex-1">Copiar para o WhatsApp</button>
+                    </div>
+                    <textarea id="output-marketing" readonly class="w-full rounded-2xl p-4 text-[13px] font-mono text-zinc-300 flex-grow min-h-[220px] bg-[#0a0a0f] border-zinc-800 border resize-none whitespace-pre" placeholder="Clique em Carregar cadastradas..."></textarea>
+                </div>
             </div>
         </section>
 
@@ -693,20 +691,48 @@
                 </div>
             </div>
 
-            <!-- FERRAMENTAS DE TESTE (discreto, só pra quem precisa) -->
-            <div class="glass-card p-6 border-l-4 border-l-zinc-600">
-                <h2 class="text-zinc-400 font-black uppercase italic text-sm mb-1 tracking-tighter">🧪 Ferramentas de teste</h2>
-                <p class="text-zinc-600 text-[9px] font-bold uppercase tracking-wider mb-5">Usar só pra testar o funcionamento, antes de abrir a casa pro público.</p>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="bg-blue-500/5 border border-blue-500/25 p-4 rounded-2xl text-center flex flex-col justify-between">
-                        <h3 class="text-blue-400/80 font-black uppercase tracking-widest text-[10px] mb-2">Modo Teste Portaria</h3>
-                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="w-full bg-blue-600/80 text-white text-[10px] font-black py-3 rounded-xl uppercase mt-auto hover:bg-blue-600 transition-all">🔓 LIBERAR TESTE</button>
+            <!-- LIBERAÇÕES TEMPORÁRIAS E TESTES (tudo num lugar só) -->
+            <div class="glass-card p-8 border-l-4 border-l-sky-500">
+                <h2 class="text-sky-400 font-black text-xl mb-1">Liberações e testes</h2>
+                <p class="text-zinc-400 text-[11px] font-bold mb-6">Para abrir uma tela fora do horário ou testar antes de abrir a casa. Lembre de desligar depois.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="aj-card">
+                        <h3>Solteiras fora do horário</h3>
+                        <p id="texto-horario-solteiras" class="aj-sub">Liberar e cadastrar só funcionam das 21h às 8h</p>
+                        <p id="status-trava-solteiras" class="aj-status">Verificando...</p>
+                        <button type="button" onclick="liberarSolteirasTemporario(2)" class="ec-btn ouro w-full">Liberar por 2 horas</button>
+                        <button type="button" onclick="cancelarLiberacaoSolteiras()" class="ec-btn neutro w-full">Cancelar liberação</button>
                     </div>
-                    <div class="bg-cyan-500/5 border border-cyan-500/25 p-4 rounded-2xl text-center flex flex-col justify-between">
-                        <h3 class="text-cyan-400/80 font-black uppercase tracking-widest text-[10px] mb-2">Modo Teste Vallet</h3>
-                        <button id="btnModoTesteVallet" onclick="toggleModoTesteVallet()" class="w-full bg-cyan-600/80 text-white text-[10px] font-black py-3 rounded-xl uppercase mt-auto hover:bg-cyan-600 transition-all">🔓 LIBERAR TESTE</button>
+                    <div class="aj-card">
+                        <h3>Modo teste da Portaria</h3>
+                        <p class="aj-sub">Libera a busca de todos os eventos, a qualquer hora.</p>
+                        <p id="status-modo-teste" class="aj-status">—</p>
+                        <button id="btnModoTeste" onclick="toggleModoTeste()" class="ec-btn neutro w-full">Ligar teste</button>
+                    </div>
+                    <div class="aj-card">
+                        <h3>Modo teste do Vallet</h3>
+                        <p class="aj-sub">Libera o Vallet sem festa. Os carros de teste não entram nos relatórios.</p>
+                        <p id="status-modo-teste-vallet" class="aj-status">—</p>
+                        <button id="btnModoTesteVallet" onclick="toggleModoTesteVallet()" class="ec-btn neutro w-full">Ligar teste</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- REGRAS DAS CARONAS -->
+            <div class="glass-card p-8 border-l-4 border-l-purple-500">
+                <h2 class="text-purple-400 font-black text-xl mb-1">Regras das caronas</h2>
+                <p class="text-zinc-400 text-[11px] font-bold mb-6">Valem para a página de pedido de carona das solteiras.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <label class="block">
+                        <span class="block text-purple-300 text-[11px] font-black mb-2">Pedidos até que horas (no dia do evento)</span>
+                        <input type="time" id="config_hora_carona" class="w-full p-4 rounded-2xl font-bold text-sm" required>
+                    </label>
+                    <label class="block md:col-span-2">
+                        <span class="block text-purple-300 text-[11px] font-black mb-2">Bairros atendidos (separados por vírgula)</span>
+                        <textarea id="config_bairros_carona" placeholder="Ex.: Bairro Alto, Tarumã, Boa Vista..." class="w-full p-4 rounded-2xl font-bold text-sm h-24 resize-none uppercase"></textarea>
+                    </label>
+                </div>
+                <button onclick="salvarConfigCaronas()" class="ec-btn w-full mt-4" style="background:#7c3aed;color:#fff">Salvar regras das caronas</button>
             </div>
 
             <!-- ZONA DE RISCO -->
@@ -1335,8 +1361,128 @@
             URL.revokeObjectURL(url);
             mostrarAviso('Excel baixado com sucesso!', true);
         };
-        window.gerarRelatorioCaronas = avisoPendente;
-        window.copiarRotasCarona = avisoPendente;
+        // ===== PEDIDOS DE CARONA (aba Solteiras e Caronas) =====
+        // Lidos direto da tabela (só o master enxerga). Sem tempo real de
+        // propósito — atualiza ao abrir a aba ou no botão Atualizar.
+        let dadosCaronas = [];
+        let caronasCarregadas = false;
+        window.carregarCaronas = async (forcar = false) => {
+            if (caronasCarregadas && !forcar) { gerarRelatorioCaronas(); return; }
+            const btn = document.getElementById('btn-atualizar-caronas');
+            if (btn) btn.disabled = true;
+            try {
+                const { data, error } = await sb.from('caronas_solicitacoes')
+                    .select('id, evento_id, evento, nome, tel, cep, bairro, endereco, qtd_solteiras, tem_carona, data_reserva')
+                    .order('data_reserva', { ascending: true }).limit(2000);
+                if (error) throw error;
+                dadosCaronas = data || [];
+                caronasCarregadas = true;
+                popularEventosCarona();
+                gerarRelatorioCaronas();
+                if (forcar) mostrarAviso('Pedidos de carona atualizados.', true);
+            } catch (e) {
+                console.error('caronas:', e);
+                document.getElementById('lista-caronas').innerHTML = '<p class="en-vazio">Não foi possível carregar os pedidos agora.</p>';
+            } finally { if (btn) btn.disabled = false; }
+        };
+        function popularEventosCarona() {
+            const sel = document.getElementById('filtro-evento-carona');
+            if (!sel) return;
+            const atual = sel.value;
+            const noite = dataDaNoiteSP();
+            const evs = [...dadosEventos].filter(e => e.data).sort((a, b) => b.data.localeCompare(a.data));
+            sel.innerHTML = '<option value="">Selecione o evento...</option>' + evs.map(e =>
+                `<option value="${escapeHtml(e.id)}">${escapeHtml(e.data.split('-').reverse().join('/'))} · ${escapeHtml(e.nome)}</option>`).join('');
+            if (atual && evs.some(e => e.id === atual)) { sel.value = atual; return; }
+            // Padrão: a festa de hoje; senão a próxima; senão a mais recente.
+            const hoje = evs.find(e => e.data === noite);
+            const proxima = [...evs].reverse().find(e => e.data > noite);
+            const alvo = hoje || proxima || evs[0];
+            if (alvo) sel.value = alvo.id;
+        }
+        function pedidosDoEvento(evId) {
+            const ev = dadosEventos.find(e => e.id === evId);
+            if (!ev) return [];
+            const nome = normalizarTextoDash(ev.nome);
+            return dadosCaronas.filter(c => (c.evento_id && c.evento_id === ev.id) || (!c.evento_id && normalizarTextoDash(c.evento) === nome));
+        }
+        function linkMapa(p) {
+            return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${p.endereco || ''}, ${p.bairro || ''}, Curitiba - PR`);
+        }
+        function foneBonito(tel) {
+            const d = String(tel || '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '');
+            if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+            if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+            return String(tel || '');
+        }
+        function linkZap(tel) {
+            const d = String(tel || '').replace(/\D/g, '');
+            return d ? 'https://wa.me/' + (d.startsWith('55') ? d : '55' + d) : '';
+        }
+        window.gerarRelatorioCaronas = () => {
+            const sel = document.getElementById('filtro-evento-carona');
+            const box = document.getElementById('lista-caronas');
+            if (!sel || !box) return;
+            const ic = n => (window.ECUI ? ECUI.icone(n) : '');
+            const pedidos = sel.value ? pedidosDoEvento(sel.value) : [];
+            const vagas = pedidos.reduce((t, p) => t + (Number(p.qtd_solteiras) || 1), 0);
+            const grupos = {};
+            pedidos.forEach(p => { const b = String(p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase(); (grupos[b] = grupos[b] || []).push(p); });
+            const bairros = Object.keys(grupos).sort();
+            document.getElementById('sc-pedidos').textContent = String(pedidos.length);
+            document.getElementById('sc-vagas').textContent = String(vagas);
+            document.getElementById('sc-bairros').textContent = bairros.length ? `${bairros.length} ${bairros.length === 1 ? 'bairro' : 'bairros'}` : '—';
+            if (!sel.value) { box.innerHTML = '<p class="en-vazio">Escolha o evento para ver os pedidos.</p>'; return; }
+            if (!pedidos.length) { box.innerHTML = '<p class="en-vazio">Nenhum pedido de carona para este evento.</p>'; return; }
+            let n = 0;
+            box.innerHTML = bairros.map(b => `<div class="sc-bairro">
+                <div class="sc-bairro-cab">${ic('carro')}${escapeHtml(b)} <span>· ${grupos[b].length} ${grupos[b].length === 1 ? 'pedido' : 'pedidos'}</span></div>
+                ${grupos[b].map(p => { n++; const q = Number(p.qtd_solteiras) || 1; const z = linkZap(p.tel); return `<div class="sc-pedido">
+                    <span class="sc-num">${n}</span>
+                    <div class="sc-info"><b>${escapeHtml(p.nome || 'SEM NOME')}</b><small>${escapeHtml(p.endereco || 'Sem endereço')}${p.cep ? ' · CEP ' + escapeHtml(p.cep) : ''}</small></div>
+                    <span class="ec-pill cort" style="font-size:13px;padding:5px 11px">${q} ${q > 1 ? 'vagas' : 'vaga'}</span>
+                    ${z ? `<a class="sc-link" href="${z}" target="_blank" rel="noopener">${ic('zap')}${escapeHtml(foneBonito(p.tel))}</a>` : ''}
+                    <a class="sc-link" href="${linkMapa(p)}" target="_blank" rel="noopener">${ic('mapa')}Mapa</a>
+                </div>`; }).join('')}
+            </div>`).join('');
+        };
+        function textoRotaCaronas() {
+            const sel = document.getElementById('filtro-evento-carona');
+            const ev = dadosEventos.find(e => e.id === sel?.value);
+            const pedidos = ev ? pedidosDoEvento(ev.id) : [];
+            if (!ev || !pedidos.length) return '';
+            const grupos = {};
+            pedidos.forEach(p => { const b = String(p.bairro || 'BAIRRO NÃO INFORMADO').toUpperCase(); (grupos[b] = grupos[b] || []).push(p); });
+            const vagas = pedidos.reduce((t, p) => t + (Number(p.qtd_solteiras) || 1), 0);
+            let t = `🚗 ROTA DE CARONAS - E-CLUB\n🎉 Evento: ${ev.nome}\n👥 Total de solicitações: ${pedidos.length}\n💺 Total de passageiras/vagas: ${vagas}\n\nOrganização sugerida por bairros:\n\n`;
+            let n = 1;
+            Object.keys(grupos).sort().forEach(b => {
+                t += `🛑 BAIRRO: ${b}\n`;
+                grupos[b].forEach(p => {
+                    const q = Number(p.qtd_solteiras) || 1;
+                    t += `\n${n++}. ${p.nome || 'SEM NOME'}\nWhatsApp: ${p.tel || 'Sem número'}\nQuantidade: ${q} ${q > 1 ? 'VAGAS' : 'VAGA'}\nEndereço: ${p.endereco || 'Sem endereço'}\nBairro: ${p.bairro || '---'}\nCEP: ${p.cep || '---'}\nMapa: ${linkMapa(p)}\n`;
+                });
+                t += `\n------------------------------------\n\n`;
+            });
+            return t.trim();
+        }
+        window.copiarRotasCarona = async () => {
+            const t = textoRotaCaronas();
+            if (!t) return mostrarAviso('Nenhum pedido de carona neste evento para copiar.');
+            try { await navigator.clipboard.writeText(t); }
+            catch (_) {
+                const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); ta.remove();
+            }
+            mostrarAviso('Rota copiada! É só colar no WhatsApp do motorista.', true);
+        };
+        function contarSolteirasDaNoite() {
+            const el = document.getElementById('sc-entradas-noite');
+            if (!el) return;
+            const noite = dataDaNoiteSP();
+            const ids = new Set(dadosEventos.filter(e => e.data === noite).map(e => e.id));
+            el.textContent = String(dadosEntradasSolteiras.filter(e => ids.has(e.evento_id)).length);
+        }
         // ===== ZONA DE RISCO: faxina por data e zerar sistema =====
         // Quem apaga é o banco (funções faxina_por_data e zerar_sistema, só
         // master). Primeiro elas só CONTAM; a tela mostra os números e só
@@ -1691,6 +1837,7 @@
 
         window.renderRelatorios = () => {
             try { renderEstaNoite(); } catch (e) { console.error('Esta noite:', e); }
+            try { contarSolteirasDaNoite(); if (caronasCarregadas) { popularEventosCarona(); } } catch (_) {}
             const container = document.getElementById('container-bolhas');
             if (!container) return;
             popularFiltroPromoterExcel();
@@ -2208,7 +2355,7 @@
             if (!el) return;
             const aberto = dentroDoHorario();
             if (aberto) {
-                el.className = 'text-[11px] font-black uppercase mt-3 tracking-widest text-emerald-400';
+                el.className = 'aj-status ok';
                 el.innerText = '● Aberto agora — dentro do horário';
                 return;
             }
@@ -2216,10 +2363,10 @@
             const expiraEm = config?.liberacao_solteiras_expira_em ? new Date(config.liberacao_solteiras_expira_em).getTime() : 0;
             if (expiraEm > Date.now()) {
                 const faltam = Math.max(1, Math.round((expiraEm - Date.now()) / 60000));
-                el.className = 'text-[11px] font-black uppercase mt-3 tracking-widest text-amber-400';
+                el.className = 'aj-status cob';
                 el.innerText = `● Liberado por exceção — faltam ${faltam} min`;
             } else {
-                el.className = 'text-[11px] font-black uppercase mt-3 tracking-widest text-red-400';
+                el.className = 'aj-status blq';
                 el.innerText = '● Travado — fora do horário de funcionamento';
             }
         }
@@ -2400,9 +2547,13 @@
             modoTesteAtivo = data.modo_teste === true;
             modoTesteValletAtivo = data.modo_teste_vallet === true;
             const btn = document.getElementById('btnModoTeste');
-            if (btn) btn.innerHTML = modoTesteAtivo ? '🛑 FINALIZAR TESTE' : '🔓 LIBERAR TESTE';
+            if (btn) { btn.textContent = modoTesteAtivo ? 'Desligar teste' : 'Ligar teste'; btn.className = 'ec-btn w-full ' + (modoTesteAtivo ? 'perigo' : 'neutro'); }
+            const stT = document.getElementById('status-modo-teste');
+            if (stT) { stT.className = 'aj-status ' + (modoTesteAtivo ? 'cob' : ''); stT.textContent = modoTesteAtivo ? '● LIGADO agora' : 'Desligado'; }
             const btnVallet = document.getElementById('btnModoTesteVallet');
-            if (btnVallet) btnVallet.innerHTML = modoTesteValletAtivo ? '🛑 FINALIZAR TESTE' : '🔓 LIBERAR TESTE';
+            if (btnVallet) { btnVallet.textContent = modoTesteValletAtivo ? 'Desligar teste' : 'Ligar teste'; btnVallet.className = 'ec-btn w-full ' + (modoTesteValletAtivo ? 'perigo' : 'neutro'); }
+            const stV = document.getElementById('status-modo-teste-vallet');
+            if (stV) { stV.className = 'aj-status ' + (modoTesteValletAtivo ? 'cob' : ''); stV.textContent = modoTesteValletAtivo ? '● LIGADO agora' : 'Desligado'; }
             document.getElementById('tipo_taxa').value = data.taxa_tipo || 'desativado';
             document.getElementById('valor_taxa').value = data.taxa_valor ?? '';
             document.getElementById('custo_sistema').value = data.custo_sistema ?? '';
