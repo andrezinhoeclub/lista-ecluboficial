@@ -845,7 +845,7 @@
     }
 
     // ===== 1. A LISTA DAS FESTAS =====
-    async function carregarPagina() {
+    async function carregarPagina(silencioso = false) {
         const boot = await apiListas('bootstrap', { ref: globalPromoter, id: urlParams.get('id') || '' });
 
         taxaPixTipo = boot.configuracao?.taxa_tipo || 'desativado';
@@ -864,9 +864,29 @@
             document.getElementById('caixaAniv').hidden = true;
         }
 
+        // Atualização silenciosa (aba voltou, passou um tempo): só redesenha
+        // se a pessoa está olhando a lista das festas — nunca no meio de um
+        // formulário ou de um pagamento.
+        if (silencioso && telaAtual !== 'telaFestas') return;
         renderFestas();
         buscarCamarotesDeFundo();
     }
+
+    // Quem deixa a página aberta vê as mudanças do Dashboard (festa nova, modo
+    // teste, horário de encerramento) sem apertar F5: busca de novo ao voltar
+    // para a aba e de tempos em tempos enquanto ela está à vista.
+    (function manterAtualizada() {
+        let ultima = Date.now(), ocupado = false;
+        async function renovar() {
+            if (ocupado || document.hidden || Date.now() - ultima < 20000) return;
+            ocupado = true;
+            try { await carregarPagina(true); } catch (_) {}
+            ultima = Date.now(); ocupado = false;
+        }
+        document.addEventListener('visibilitychange', renovar);
+        window.addEventListener('online', renovar);
+        setInterval(renovar, 60000);
+    })();
 
     function renderFestas() {
         const alvo = document.getElementById('listaFestas');

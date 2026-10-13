@@ -546,7 +546,7 @@
             document.getElementById("qtd-cliente").value = "1";
         }
 
-        async function carregarPagina() {
+        async function carregarPagina(silencioso = false) {
             try {
                 const data = await apiCaronas('bootstrap');
 
@@ -597,6 +597,7 @@
                         </div>`;
                 }).join("");
             } catch (e) {
+                if (silencioso) return; // numa atualização automática, mantém o que já está na tela
                 document.getElementById("listaEventos").innerHTML = `
                     <p class="text-center text-[10px] text-red-300 uppercase tracking-widest p-8 glass rounded-3xl">
                         Erro ao carregar eventos. Tente novamente.
@@ -1086,6 +1087,22 @@
         });
 
         carregarPagina();
+
+        // Quem deixa a página aberta vê as mudanças do Dashboard (festa nova,
+        // horário limite) sem apertar F5: busca de novo ao voltar para a aba
+        // e de tempos em tempos enquanto ela está à vista.
+        (function manterAtualizada() {
+            let ultima = Date.now(), ocupado = false;
+            async function renovar() {
+                if (ocupado || document.hidden || Date.now() - ultima < 20000) return;
+                ocupado = true;
+                try { await carregarPagina(true); } catch (_) {}
+                ultima = Date.now(); ocupado = false;
+            }
+            document.addEventListener("visibilitychange", renovar);
+            window.addEventListener("online", renovar);
+            setInterval(renovar, 60000);
+        })();
     </script>
 </body>
 </html>

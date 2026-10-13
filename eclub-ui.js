@@ -217,5 +217,91 @@
     }
   }
 
-  window.ECUI = { icone, confirmar, pedirTexto, aberto, avisoGrande, prepararLogin };
+  // ---------- atualização ao vivo ----------
+  // A tela não precisa mais de F5. De três jeitos ao mesmo tempo:
+  //  1) AVISO NA HORA: o Supabase avisa quando uma tabela muda (por exemplo,
+  //     você liga o modo teste na Dashboard) e a tela busca de novo;
+  //  2) AO VOLTAR: ao voltar para a aba, abrir o notebook, ou a internet
+  //     voltar, a tela busca de novo na hora (o aviso pode ter se perdido);
+  //  3) REDE DE SEGURANÇA: de tempos em tempos busca sozinha mesmo que o
+  //     aviso falhe (a cada 15 s se o aviso estiver fora do ar, 60 s se não).
+  // Se nada disso funcionar, a tela continua como antes — nunca piora.
+  //
+  // aoVivo({ sb, atualizar, tabelas, atraso, minimo, nome })
+  //   sb        cliente do Supabase já logado
+  //   atualizar função que busca tudo de novo (a própria tela já tem uma)
+  //   tabelas   quais tabelas observar, ex.: ['configuracoes', 'eventos']
+  //   atraso    espera curta (ms) para juntar vários avisos seguidos
+  //   minimo    intervalo mínimo (ms) entre duas buscas
+  //   seguranca (opcional) de quanto em quanto tempo (ms) buscar mesmo sem aviso;
+  //             se não vier, usa 60 s com o aviso funcionando e 15 s sem ele
+  // Devolve { agora(), parar() }.
+  function aoVivo(op) {
+    const sb = op.sb, atualizar = op.atualizar;
+    const tabelas = op.tabelas || [];
+    const atraso = op.atraso == null ? 300 : op.atraso;
+    const minimo = op.minimo == null ? 1500 : op.minimo;
+    let timer = null, rodando = false, repetir = false, vivo = true, ultima = 0, conectado = false, canal = null, vigia = null;
+
+    async function rodar() {
+      if (!vivo) return;
+      if (rodando) { repetir = true; return; }
+      rodando = true;
+      try { await atualizar(); } catch (_) { /* a tela já trata os próprios erros */ }
+      ultima = Date.now();
+      rodando = false;
+      if (repetir) { repetir = false; agendar(); }
+    }
+    function agendar() {
+      if (!vivo) return;
+      clearTimeout(timer);
+      const espera = Math.max(atraso, minimo - (Date.now() - ultima));
+      timer = setTimeout(rodar, espera);
+    }
+    function voltou() { if (!document.hidden) agendar(); }
+
+    document.addEventListener("visibilitychange", voltou);
+    window.addEventListener("focus", voltou);
+    window.addEventListener("online", agendar);
+
+    // Rede de segurança. Só busca com a aba à vista.
+    vigia = setInterval(() => {
+      if (!vivo || document.hidden) return;
+      const quanto = op.seguranca || (conectado ? 60000 : 15000);
+      if (Date.now() - ultima >= quanto) agendar();
+    }, 5000);
+
+    (async () => {
+      try {
+        if (!sb || !tabelas.length || typeof sb.channel !== "function") return;
+        // Garante que o canal vai com a sessão de quem está logado.
+        try {
+          const { data } = await sb.auth.getSession();
+          if (data && data.session && sb.realtime && typeof sb.realtime.setAuth === "function") sb.realtime.setAuth(data.session.access_token);
+        } catch (_) {}
+        if (!vivo) return;
+        canal = sb.channel("aovivo-" + (op.nome || "tela") + "-" + Math.random().toString(36).slice(2, 8));
+        tabelas.forEach((t) => canal.on("postgres_changes", { event: "*", schema: "public", table: t }, agendar));
+        canal.subscribe((estado) => {
+          conectado = estado === "SUBSCRIBED";
+          // Ao (re)conectar, busca o que pode ter passado enquanto estava fora.
+          if (conectado) agendar();
+        });
+      } catch (_) { conectado = false; }
+    })();
+
+    return {
+      agora: agendar,
+      parar() {
+        vivo = false;
+        clearTimeout(timer); clearInterval(vigia);
+        document.removeEventListener("visibilitychange", voltou);
+        window.removeEventListener("focus", voltou);
+        window.removeEventListener("online", agendar);
+        try { if (canal && sb && sb.removeChannel) sb.removeChannel(canal); } catch (_) {}
+      },
+    };
+  }
+
+  window.ECUI = { icone, confirmar, pedirTexto, aberto, avisoGrande, prepararLogin, aoVivo };
 })();

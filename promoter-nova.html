@@ -803,8 +803,17 @@
         });
 
         function iniciarSistema() {
-            pmAplicarBarraDeBotoes();
-            if (pmPerfil() === "aniversario") renderAniversarios();
+            const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            if (st === "visualizar") {
+                document.getElementById('navAcoes').style.display = 'none';
+                document.getElementById('painel').classList.remove('pb-44');
+                document.getElementById('painel').classList.add('pb-10');
+            }
+            if (st === "aniversario") {
+                document.getElementById('secaoAniversario').classList.remove('hidden');
+                document.getElementById('botoesAniversario').classList.remove('hidden');
+                renderAniversarios();
+            }
             renderPerformance();
             pmMontarSeletor();
             pmCarregarLista(true);
@@ -919,25 +928,7 @@
         // Volta a ser a do arquivo antigo: cabecalho grande, sem barra de festa,
         // sem contadores e sem lista. E chamada toda vez que a tela se repinta,
         // entao pode rodar quantas vezes for — nao faz nada duas vezes.
-        // Barra de botões de baixo (copiar link / aniversário / cortesia) de
-        // acordo com o tipo da conta. É refeita a cada atualização da tela,
-        // porque o tipo pode mudar no Dashboard com a tela aberta: "apenas
-        // visualizar" não tem NENHUM botão embaixo.
-        function pmAplicarBarraDeBotoes() {
-            const tipo = pmPerfil();
-            const nav = document.getElementById('navAcoes');
-            const painel = document.getElementById('painel');
-            if (nav) nav.style.display = tipo === 'visualizar' ? 'none' : '';
-            if (painel) {
-                painel.classList.toggle('pb-44', tipo !== 'visualizar');
-                painel.classList.toggle('pb-10', tipo === 'visualizar');
-            }
-            const ehAniv = tipo === 'aniversario';
-            document.getElementById('botoesAniversario')?.classList.toggle('hidden', !ehAniv);
-            document.getElementById('secaoAniversario')?.classList.toggle('hidden', !ehAniv);
-        }
         function pmAplicarModoVisualizar() {
-            pmAplicarBarraDeBotoes();
             const painel = document.getElementById('painel');
             const classico = document.getElementById('cabecalhoVisualizar');
             if (!painel || !classico) return false;

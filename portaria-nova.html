@@ -625,6 +625,7 @@
   let sincronizando = false;
   let debounceBusca = null;
   let bootstrapTimer = null;
+  let aoVivoPortaria = null; // avisos do servidor: a tela se atualiza sozinha
   let restaurandoSessao = false;
   // Cache local dos candidatos de busca (válidos + no turno OU PIX pago —
   // mesma regra de sempre, decidida no servidor). Carregado uma vez e
@@ -1001,6 +1002,8 @@
   async function encerrarSessaoLocal(mensagem="Sessão encerrada.") {
     clearInterval(bootstrapTimer);
     bootstrapTimer = null;
+    try { aoVivoPortaria?.parar(); } catch (_) {}
+    aoVivoPortaria = null;
     operadorLogado = "";
     eventos = [];
     candidatosCache = null;
@@ -1075,6 +1078,22 @@
         if (lerFila().length) sincronizarFilaOffline().catch(()=>{});
         else carregarBootstrap().catch(()=>{});
       }, 45000);
+    }
+    // Qualquer mudança no Dashboard (modo teste, horário, evento) ou nas
+    // reservas chega aqui na hora — sem precisar apertar F5. Ao voltar para a
+    // aba, ou quando a internet volta, busca de novo na hora também.
+    if (!aoVivoPortaria && window.ECUI?.aoVivo) {
+      aoVivoPortaria = ECUI.aoVivo({
+        sb, nome: "portaria",
+        tabelas: ["configuracoes", "eventos", "reservas"],
+        atraso: 400, minimo: 2500, seguranca: 30000,
+        atualizar: async () => {
+          const { data: sessaoAtual } = await sb.auth.getSession();
+          if (!sessaoAtual.session) return;
+          if (lerFila().length) await sincronizarFilaOffline().catch(() => {});
+          else await carregarBootstrap().catch(() => {});
+        },
+      });
     }
   }
   async function carregarBootstrap() {

@@ -933,6 +933,22 @@
             montarGridCamarotes();
             await Promise.all([carregarEventos(), carregarModelos(), carregarConfiguracoes(), carregarSolteirasBadge(), carregarReservas(), carregarLinksAniversario(), carregarNomesAcessos(), carregarEntradasSolteiras()]);
             ligarTempoReal();
+            // Os avisos em tempo real podem se perder (aba dormindo, internet
+            // que caiu). Ao voltar para a aba, ou quando a internet volta, a
+            // tela busca tudo de novo — e a cada 3 minutos, de segurança.
+            if (window.ECUI?.aoVivo) {
+                ECUI.aoVivo({
+                    sb, nome: 'dashboard', tabelas: [],
+                    atraso: 400, minimo: 5000, seguranca: 180000,
+                    atualizar: async () => {
+                        const { data } = await sb.auth.getSession();
+                        if (!data.session) return;
+                        await Promise.all([carregarEventos(), carregarModelos(), carregarConfiguracoes(), carregarSolteirasBadge(), carregarReservas(), carregarLinksAniversario(), carregarEntradasSolteiras()]);
+                        atualizarValletNoite();
+                        pintarStatusTravaSolteiras();
+                    },
+                });
+            }
             atualizarValletNoite();
             setInterval(() => { try { renderEstaNoite(); } catch (_) {} }, 60000);
             setInterval(atualizarValletNoite, 120000);

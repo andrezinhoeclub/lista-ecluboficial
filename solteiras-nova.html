@@ -289,6 +289,7 @@
     let operadorLogado = "";
     let eventoHojeCache = null;
     let intervaloAtualizacao = null;
+    let aoVivoSolteiras = null; // avisos do servidor: a tela se atualiza sozinha
     let buscaTimer = null;
     let restaurandoSessao = false;
     // Cache local da lista completa de cadastros, usada só pela busca (ver
@@ -703,6 +704,7 @@
     }
     async function bloquearTelaSessao(msg) {
         if (intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao=null;
+        try { aoVivoSolteiras?.parar(); } catch (_) {} aoVivoSolteiras = null;
         document.getElementById('conteudo-sistema').classList.add('hidden');
         document.getElementById('telaBloqueio').classList.remove('hidden'); document.getElementById('telaBloqueio').classList.add('flex');
         mostrarAviso(msg || '🚨 CONEXÃO ENCERRADA.');
@@ -935,6 +937,22 @@
             else atualizarPainelSeguro();
         },20000);
         revisarTrava();
+        // Mudou algo no Dashboard (modo teste, horário, evento) ou entrou
+        // gente na lista? A tela atualiza na hora, sem apertar F5. Ao voltar
+        // para a aba ou quando a internet volta, também busca de novo.
+        if (aoVivoSolteiras) { try { aoVivoSolteiras.parar(); } catch (_) {} aoVivoSolteiras = null; }
+        if (window.ECUI?.aoVivo) {
+            aoVivoSolteiras = ECUI.aoVivo({
+                sb, nome: 'solteiras',
+                tabelas: ['configuracoes', 'eventos', 'clientes_solteiras'],
+                atraso: 400, minimo: 2500, seguranca: 30000,
+                atualizar: async () => {
+                    revisarTrava();
+                    if (lerFila().length) await sincronizarFilaOffline().catch(()=>{});
+                    else await atualizarPainelSeguro();
+                },
+            });
+        }
     }
 
     // ===== LOGIN =====
@@ -968,6 +986,7 @@
 
     window.sairSistema = async () => {
         if (intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao = null;
+        try { aoVivoSolteiras?.parar(); } catch (_) {} aoVivoSolteiras = null;
         clientesCache = []; eventoHojeCache = null;
         try { await sb.auth.signOut(); } catch (_) {}
         document.getElementById('conteudo-sistema').classList.add('hidden');
