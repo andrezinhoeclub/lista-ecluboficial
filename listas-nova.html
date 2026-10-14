@@ -126,6 +126,36 @@
       border-radius:99px;font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
       background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.36);color:#fca5a5}
     .chip.fechado{background:rgba(113,113,122,.16);border-color:rgba(113,113,122,.4);color:#d4d4d8}
+    .chip.roxo{background:rgba(168,85,247,.18);border-color:rgba(192,132,252,.5);color:#f3e8ff}
+
+    /* ===== EVENTO PRIVADO E LOTES =====
+       Evento privado abre pelo link exclusivo, com a logo do proprio
+       evento no lugar da logo da casa. Os lotes ficam numa caixa roxa
+       logo acima das opcoes: qual lote esta a venda, quanto resta e
+       quando vira o proximo. */
+    .selo-privado{display:block;width:max-content;margin:-6px auto 16px;padding:7px 14px;border-radius:99px;
+      background:#3b0764;border:1px solid rgba(192,132,252,.5);color:#f3e8ff;
+      font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase}
+    .lote-caixa{background:rgba(168,85,247,.10);border:2px solid rgba(192,132,252,.6);border-radius:22px;
+      padding:16px;margin-bottom:14px}
+    .lote-topo{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+    .lote-topo b{font-size:18px;font-weight:900;font-style:italic;letter-spacing:-.4px;text-transform:uppercase;color:#f3e8ff}
+    .lote-topo span{font-size:15px;font-weight:900;color:#fde047;white-space:nowrap}
+    .lote-barra{display:block;height:10px;border-radius:99px;background:rgba(59,7,100,.9);overflow:hidden;margin:10px 0}
+    .lote-barra i{display:block;height:100%;background:#c084fc;border-radius:99px}
+    .lote-caixa p{margin:6px 0 0;font-size:14px;font-weight:600;line-height:1.5;color:#e9d5ff}
+    .lote-linha{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:8px;margin-top:14px}
+    .lote-item{border-radius:14px;padding:9px 8px;text-align:center;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.25)}
+    .lote-item b{display:block;font-size:13px;font-weight:900;text-transform:uppercase}
+    .lote-item strong{display:block;font-size:15px;font-weight:900;margin-top:3px}
+    .lote-item span{display:block;font-size:12px;font-weight:900;letter-spacing:.1em;margin-top:3px}
+    .lote-item.a_venda{border-color:#c084fc;background:rgba(168,85,247,.22)}
+    .lote-item.a_venda span{color:#86efac}
+    .lote-item.esgotado,.lote-item.encerrado{opacity:.55}
+    .lote-item.esgotado strong,.lote-item.encerrado strong{text-decoration:line-through}
+    .lote-item.proximo span{color:#fde047}
+    .lote-esgotado{text-align:center}
+    .lote-esgotado b{display:block;font-size:20px;font-weight:900;font-style:italic;text-transform:uppercase;color:#fca5a5}
 
     /* ===== capa da festa escolhida, no topo das telas seguintes ===== */
     .herói{position:relative;border-radius:24px;overflow:hidden;border:1px solid var(--linha);
@@ -364,6 +394,7 @@
     <div class="topo topo-centro">
       <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club" class="marca">
     </div>
+    <span class="selo-privado" id="seloPrivado" hidden>Evento privado · Convite</span>
 
     <div id="caixaAniv" class="aniv" hidden>
       <span>Convite de aniversário</span>
@@ -580,7 +611,9 @@
         if (error) {
             let payloadErro = {};
             try { payloadErro = await error.context.json(); } catch (_) {}
-            throw new Error(payloadErro?.error || error.message || `Erro ao chamar a função.`);
+            const erro = new Error(payloadErro?.error || error.message || `Erro ao chamar a função.`);
+            erro.codigo = payloadErro?.codigo || '';
+            throw erro;
         }
         if (data?.error) throw new Error(data.error);
         return data;
@@ -588,6 +621,13 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     let globalPromoter = urlParams.get('ref') || "site_direto";
+    // O código do promoter que veio no link (?ref=). Fica guardado à parte:
+    // depois do bootstrap, "globalPromoter" passa a ser o NOME do promoter,
+    // e mandar o nome no lugar do código fazia a venda ficar sem promoter.
+    const refDoLink = urlParams.get('ref') || '';
+    // Link exclusivo de evento privado: listas-nova.html?e=CÓDIGO
+    const codigoPrivado = /^[0-9a-f-]{36}$/i.test(urlParams.get('e') || '') ? urlParams.get('e') : '';
+    let modoPrivado = false;
     let globalAniversariante = ""; let eventoFixo = null; let eventosCache = [];
     let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
     let promoterTipo = "padrao";
@@ -769,6 +809,14 @@
         // reverte em consumação, não uma fração separada. Por isso usa o
         // próprio valor do ingresso como "cons", em vez de um campo à parte
         // (que não existe no cadastro do evento). Casal e Solteiro são secos.
+        // Evento com lotes: o servidor já manda em ant_casal/ant_solteiro os
+        // valores do lote que está à venda agora. Lote tem Casal e Individual.
+        if (ev.tem_lotes) {
+            return [
+                { tipo:'CASAL',    raw: ev.ant_casal,    rotulo:'Casal',      icone:'👫', cons: 0 },
+                { tipo:'SOLTEIRO', raw: ev.ant_solteiro, rotulo:'Individual', icone:'👤', cons: 0 }
+            ].filter(o => extrairValorNumerico(o.raw) > 0);
+        }
         return [
             { tipo:'CASAL',              raw: ev.ant_casal,       rotulo:'Casal',              icone:'👫', cons: 0 },
             { tipo:'CASAL CONSUMAÇÃO',   raw: ev.ant_casal_cons,  rotulo:'Casal com consumo',  icone:'🍹', cons: ev.ant_casal_cons },
@@ -819,6 +867,55 @@
         return true;
     }
 
+    // ===== LOTES =====
+    const dataCurta = (iso) => { const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}` : ''; };
+    const precoDoLote = (l) => extrairValorNumerico(l?.valor_solteiro) || extrairValorNumerico(l?.valor_casal);
+    const ROTULO_LOTE = { esgotado: 'Esgotado', encerrado: 'Encerrado', a_venda: 'Agora', proximo: 'Em breve' };
+
+    function caixaDeLotes(ev) {
+        if (!ev?.tem_lotes) return '';
+        if (ev.lotes_esgotados || !ev.lote_atual) {
+            return `<div class="lote-caixa lote-esgotado"><b>Ingressos esgotados</b><p>Todos os lotes deste evento já foram vendidos.</p></div>`;
+        }
+        const atual = ev.lote_atual;
+        const restam = atual.restantes != null
+            ? `<span>${atual.restantes === 1 ? 'Resta 1' : 'Restam ' + atual.restantes}</span>` : '';
+        const barra = (atual.quantidade && atual.restantes != null)
+            ? `<span class="lote-barra"><i style="width:${Math.min(100, Math.round(100 * (atual.quantidade - atual.restantes) / atual.quantidade))}%"></i></span>` : '';
+        // "Vira pro 3º lote (R$ 120) em 20/10 ou quando esgotar."
+        const quando = [];
+        if (atual.vende_ate) quando.push(`em ${dataCurta(atual.vende_ate)}`);
+        if (atual.quantidade) quando.push('quando esgotar');
+        let virada = '';
+        if (ev.proximo_lote) {
+            const p = precoDoLote(ev.proximo_lote);
+            virada = `Vira pro ${ev.proximo_lote.nome}${p ? ' (' + formatarNumeroMoeda(p) + ')' : ''}${quando.length ? ' ' + quando.join(' ou ') : ''}.`;
+        } else if (atual.vende_ate) {
+            virada = `Vendas deste lote até ${dataCurta(atual.vende_ate)}.`;
+        }
+        const linha = (ev.lotes || []).length > 1 ? `<div class="lote-linha">${ev.lotes.map(l => {
+            const p = precoDoLote(l);
+            return `<div class="lote-item ${escapar(l.situacao)}"><b>${escapar(l.nome)}</b><strong>${p ? escapar(formatarNumeroMoeda(p)) : '—'}</strong><span>${escapar(ROTULO_LOTE[l.situacao] || '')}</span></div>`;
+        }).join('')}</div>` : '';
+        return `<div class="lote-caixa">
+            <div class="lote-topo"><b>${escapar(atual.nome)} à venda</b>${restam}</div>
+            ${barra}
+            ${virada ? `<p>${escapar(virada)}</p>` : ''}
+            ${linha}
+          </div>`;
+    }
+
+    // Evento privado: a logo do evento entra no lugar da logo da casa em
+    // todas as telas (festas, como entrar, dados, PIX e confirmado).
+    function aplicarVisualPrivado(ev) {
+        document.getElementById('seloPrivado').hidden = !modoPrivado;
+        if (!modoPrivado || !ev) return;
+        if (ev.logo_url) {
+            document.querySelectorAll('img.marca').forEach(img => { img.src = ev.logo_url; img.alt = ev.nome || 'Evento'; });
+        }
+        document.title = `${String(ev.nome || 'Evento').toUpperCase()} | Ingressos`;
+    }
+
     // ===== CONTATOS DA CASA (Ajustes da Dashboard) =====
     // Instagram, WhatsApp e endereço vêm do servidor (configuracoes). O que
     // está escrito no HTML fica só de reserva, pra página nunca ficar sem
@@ -846,7 +943,7 @@
 
     // ===== 1. A LISTA DAS FESTAS =====
     async function carregarPagina(silencioso = false) {
-        const boot = await apiListas('bootstrap', { ref: globalPromoter, id: urlParams.get('id') || '' });
+        const boot = await apiListas('bootstrap', { ref: refDoLink, id: urlParams.get('id') || '', e: codigoPrivado });
 
         taxaPixTipo = boot.configuracao?.taxa_tipo || 'desativado';
         taxaPixValor = Number(boot.configuracao?.taxa_valor || 0);
@@ -856,7 +953,15 @@
         eventoFixo = boot.contexto?.festa || null;
         promoterTipo = boot.contexto?.promoterTipo || 'padrao';
         eventosCache = Array.isArray(boot.eventos) ? boot.eventos : [];
+        modoPrivado = !!boot.contexto?.privado;
         aplicarContatosCasa(boot.contatos);
+        aplicarVisualPrivado(eventosCache[0]);
+        if (boot.contexto?.linkPrivadoInvalido) {
+            document.getElementById('tituloFestas').textContent = 'Link encerrado';
+            document.getElementById('subFestas').textContent = '';
+            document.getElementById('listaFestas').innerHTML = '<div class="vazio">Este link de evento não vale mais ou o evento já aconteceu.<br>Peça um link novo para quem te convidou.</div>';
+            return;
+        }
 
         if (globalAniversariante) {
             document.getElementById('nomeAniv').textContent = globalAniversariante;
@@ -898,6 +1003,10 @@
         }
 
         document.getElementById('tituloFestas').textContent = eventosCache.length > 1 ? 'Escolha a noite' : 'Seu nome na lista';
+        if (modoPrivado) {
+            document.getElementById('tituloFestas').textContent = 'Seu convite';
+            document.getElementById('subFestas').textContent = 'Toque no evento para garantir o seu ingresso.';
+        }
 
         if (globalAniversariante) {
             document.getElementById('tituloFestas').textContent = 'Seu nome na lista';
@@ -938,6 +1047,10 @@
             // O preço de cada forma de entrar só aparece depois, na tela
             // "como você quer entrar".
             const chips = [];
+            if (ev.privado) chips.push('<span class="chip roxo">🔒 Evento privado</span>');
+            if (ev.tem_lotes) chips.push(ev.lote_atual
+                ? `<span class="chip roxo">🎟️ ${escapar(ev.lote_atual.nome)} à venda</span>`
+                : '<span class="chip">🎟️ Ingressos esgotados</span>');
             if (esgotado) chips.push('<span class="chip">💎 Camarotes esgotados</span>');
 
             return `
@@ -1022,7 +1135,9 @@
             // nome na lista — aqui dá pra ser exato porque o PIX tem um valor
             // numérico de verdade pra consumação (ao contrário do texto livre
             // da portaria), então mostra quanto volta em crédito.
-            const detalhe = consumo > 0
+            const detalhe = eventoAtivo.tem_lotes
+                ? `Ingresso do ${eventoAtivo.lote_atual?.nome || 'lote atual'} · entrada garantida`
+                : consumo > 0
                 ? `100% vira consumação: ${formatarNumeroMoeda(consumo)} pra gastar lá dentro`
                 : 'Seco: é só a entrada garantida, sem volta em consumação';
             // Com taxa de conveniência ativa, mostra o valor da entrada e a
@@ -1036,8 +1151,8 @@
               <button class="opcao pix" onclick="escolherPix('${escapar(o.tipo)}')">
                 <span class="icone">${o.icone}</span>
                 <span class="txt">
-                  ${i === 0 ? '<span class="fita">⚡ Mais escolhido</span>' : ''}
-                  <b>${escapar(o.rotulo)} — PIX antecipado</b>
+                  ${i === 0 && !eventoAtivo.tem_lotes ? '<span class="fita">⚡ Mais escolhido</span>' : ''}
+                  <b>${escapar(o.rotulo)} — ${eventoAtivo.tem_lotes ? escapar(eventoAtivo.lote_atual?.nome || 'lote atual') : 'PIX antecipado'}</b>
                   <span>${escapar(detalhe)}</span>
                 </span>
                 <span class="valor"><b>${escapar(formatarNumeroMoeda(total))}</b><span>${escapar(legendaValor)}</span></span>
@@ -1054,7 +1169,11 @@
                        return [{ tipo:'CASAL', raw: v.casal, rotulo:'Casal', icone:'👫' },
                                { tipo:'SOLTEIRO', raw: v.solteiro, rotulo:'Solteiro', icone:'👤' }]; })()
             : precosLista(eventoAtivo);
-        if (listaOpcoes.length) {
+        // Evento privado pode não ter "nome na lista": só entra quem compra.
+        const semLista = !!eventoAtivo.privado && eventoAtivo.lista_gratis === false && !modoAniv;
+        if (semLista) {
+            // nada de nome na lista neste evento
+        } else if (listaOpcoes.length) {
             listaOpcoes.forEach(o => {
                 const rotuloValor = modoAniv ? String(o.raw).toUpperCase() : `a partir de ${String(o.raw).toUpperCase()}`;
                 // O valor da portaria é texto livre, escrito pela casa, e às vezes
@@ -1103,8 +1222,14 @@
         }
 
         if (encerrada && !modoAniv) {
-            linhas.unshift('<div class="vazio" style="padding:18px">As vendas online desta noite já fecharam.<br>Ainda dá para colocar o nome e pagar na portaria.</div>');
+            linhas.unshift(semLista
+                ? '<div class="vazio" style="padding:18px">As vendas online deste evento já fecharam.</div>'
+                : '<div class="vazio" style="padding:18px">As vendas online desta noite já fecharam.<br>Ainda dá para colocar o nome e pagar na portaria.</div>');
+        } else if (!linhas.length && !(eventoAtivo.tem_lotes && eventoAtivo.lotes_esgotados)) {
+            linhas.push('<div class="vazio" style="padding:18px">Nenhuma forma de entrada aberta agora.</div>');
         }
+        // Caixa do lote (qual está à venda, quanto resta, quando vira) em cima de tudo.
+        if (!encerrada && !modoAniv && eventoAtivo.tem_lotes) linhas.unshift(caixaDeLotes(eventoAtivo));
 
         document.getElementById('opcoesEntrada').innerHTML = linhas.join('');
         document.getElementById('avisoTaxaEntrada').hidden = !(taxaPixTipo !== 'desativado' && taxaPixValor > 0 && pix.length);
@@ -1161,6 +1286,7 @@
         const rotuloBase = consumo > 0 ? 'Valor do ingresso' : 'Entrada';
         alvo.innerHTML = `
           <div class="linha"><span>${escapar(nomeFesta)}</span><b>${escapar(o?.rotulo || tipoAtivo)}</b></div>
+          ${eventoAtivo.tem_lotes && eventoAtivo.lote_atual ? `<div class="linha"><span>Lote</span><b>${escapar(String(eventoAtivo.lote_atual.nome).toUpperCase())}</b></div>` : ''}
           ${taxa > 0 ? `<div class="linha"><span>${escapar(rotuloBase)}</span><b>${escapar(formatarNumeroMoeda(base))}</b></div>
           <div class="linha"><span>Taxa de conveniência</span><b>${escapar(formatarNumeroMoeda(taxa))}</b></div>` : ''}
           ${consumo > 0 ? `<div class="linha"><span>100% vira consumação lá dentro</span><b>${escapar(formatarNumeroMoeda(consumo))}</b></div>` : ''}
@@ -1182,7 +1308,7 @@
 
     // ===== FIDELIDADE (mesma regra da versão anterior) =====
     async function verificarFidelidade(telefone) {
-        const data = await apiListas('fidelidade', { telefone, ref: globalPromoter, id: urlParams.get('id') || '' });
+        const data = await apiListas('fidelidade', { telefone, ref: refDoLink, id: urlParams.get('id') || '' });
         return data.elegivel === true;
     }
 
@@ -1267,8 +1393,9 @@
                 tipo: tipoEnviado,
                 pix: eFluxoPix,
                 fidelidade: aplicouDescontoFidelidade,
-                ref: globalPromoter,
-                id: urlParams.get('id') || ''
+                ref: refDoLink,
+                id: urlParams.get('id') || '',
+                e: codigoPrivado
             });
 
             const o = precosPix(eventoAtivo).find(x => x.tipo === tipoEnviado);
@@ -1276,7 +1403,8 @@
                 nome: n, evento: eventoAtivo, tipo: tipoEnviado, pix: eFluxoPix,
                 total: eFluxoPix ? extrairValorNumerico(o?.raw) + calcularTaxaApenas(o?.raw) : 0,
                 consumo: eFluxoPix ? extrairValorNumerico(o?.cons) : 0,
-                rotulo: eFluxoPix ? (o?.rotulo || tipoEnviado) : (tipoEnviado === 'SOLTEIRO' ? 'Solteiro' : 'Casal')
+                rotulo: eFluxoPix ? (o?.rotulo || tipoEnviado) : (tipoEnviado === 'SOLTEIRO' ? 'Solteiro' : 'Casal'),
+                lote: eFluxoPix && eventoAtivo.tem_lotes ? (eventoAtivo.lote_atual?.nome || '') : ''
             };
 
             if (!eFluxoPix) { mostrarConfirmado(); return; }
@@ -1290,6 +1418,22 @@
                 btn.disabled = false; btn.textContent = textoOriginal;
             }
         } catch (e) {
+            if (e.codigo === 'LOTE_MUDOU') {
+                // O lote virou enquanto a pessoa preenchia: busca o valor novo
+                // e mostra no resumo ANTES de gerar o PIX.
+                try { await carregarPagina(true); } catch (_) {}
+                const novo = eventosCache.find(x => String(x.id) === String(eventoAtivo?.id));
+                if (novo) eventoAtivo = novo;
+                btn.disabled = false; btn.textContent = textoOriginal;
+                if (precosPix(eventoAtivo).some(o => o.tipo === tipoAtivo)) {
+                    desenharResumo();
+                    mostrarAviso('O lote virou. Confira o valor novo no resumo e toque de novo para gerar o PIX.');
+                } else {
+                    mostrarAviso('Os ingressos deste lote acabaram.');
+                    setTimeout(() => location.reload(), 2200);
+                }
+                return;
+            }
             mostrarAviso(e.message || 'Não foi possível concluir agora.');
             btn.disabled = false; btn.textContent = textoOriginal;
         }
@@ -1415,7 +1559,8 @@
             const nova = await apiListas('criar_camarote', {
                 eventId: eventoAtivo.id, num: numCamaroteSelecionado,
                 nome: n, telefone: t, cpf,
-                ref: globalPromoter, id: urlParams.get('id') || ''
+                ref: refDoLink, id: urlParams.get('id') || '',
+                e: codigoPrivado
             });
 
             const valCru = String(eventoAtivo[`v_cam${numCamaroteSelecionado}`] || '0');
@@ -1541,6 +1686,7 @@
             ['Quando', etiquetaData(c.evento, false)],
             ['Entrada', String(c.rotulo || c.tipo || '').toUpperCase()]
         ];
+        if (c.lote) itens.push(['Lote', String(c.lote).toUpperCase()]);
         if (c.pix) itens.push(['Pago', formatarNumeroMoeda(c.total)]);
         if (c.consumo > 0) itens.push(['Consumação', formatarNumeroMoeda(c.consumo)]);
         itens.push(['Nome na portaria', c.nome]);
