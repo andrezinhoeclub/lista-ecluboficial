@@ -259,8 +259,8 @@
     <div id="painel-dashboard" class="max-w-7xl mx-auto hidden">
         <header class="db-top">
             <div class="db-marca">
-                <img src="logo-eclub.png" alt="E-Club" onerror="this.src='https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png'">
-                <div><b>Command Center</b><span>Dashboard E-Club</span></div>
+                <img id="db-logo-casa" src="logo-eclub.png" alt="E-Club" onerror="this.src='https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png'">
+                <div><b>Command Center</b><span id="db-nome-casa">Dashboard E-Club</span></div>
             </div>
             <nav class="db-nav" id="db-nav">
                 <button data-ic="lua" onclick="trocarAba('aba-noite', this, 'normal')" class="btn-menu active">Esta noite</button>
@@ -272,6 +272,7 @@
                 <button data-ic="pessoas" onclick="trocarAba('aba-acessos', this, 'success'); carregarGestaoAcessos()" class="btn-menu">Acessos</button>
                 <button data-ic="ajustes" onclick="trocarAba('aba-config', this, 'danger')" class="btn-menu">Ajustes</button>
             </nav>
+            <a id="btnPainelDono" href="master-nova.html" class="ec-btn hidden" title="Painel do dono da plataforma: casas, planos e mensalidades" style="text-decoration:none">Painel do dono</a>
             <button id="btnSairDashboard" onclick="bloquearDashboard()" class="ec-btn sair" title="Encerrar sessão administrativa">Sair</button>
         </header>
 
@@ -952,6 +953,28 @@
         let dadosPromotersEvento = [];
         let dadosPromotersPrivado = [];
         let filtroTipoEvento = 'todos';
+        // Casa de quem entrou (várias casas). Sem a tabela de casas no banco,
+        // fica vazio e tudo funciona como antes (linha "sistema").
+        let CASA = null;
+        const filtroAjustes = () => (CASA ? { casa_id: CASA.id } : { id: 'sistema' });
+        const pastaDaCasa = () => (CASA ? CASA.id + '/' : '');
+        async function carregarCasa() {
+            try {
+                const { data: idCasa } = await sb.rpc('minha_casa');
+                if (!idCasa) return;
+                const { data } = await sb.from('casas').select('*').eq('id', idCasa).maybeSingle();
+                if (!data) return;
+                CASA = data;
+                if (data.slug !== 'eclub') {
+                    document.getElementById('db-nome-casa').textContent = 'Dashboard ' + data.nome;
+                    const logo = document.getElementById('db-logo-casa');
+                    if (data.logo_url) { logo.src = data.logo_url; logo.alt = data.nome; }
+                    document.title = data.nome + ' | Command Center';
+                }
+                const { data: dono } = await sb.rpc('sou_dono_plataforma');
+                document.getElementById('btnPainelDono').classList.toggle('hidden', dono !== true);
+            } catch (_) { /* banco sem as casas: segue como E-Club */ }
+        }
 
         const escapeHtml = (v) => String(v ?? '')
             .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -1063,6 +1086,7 @@
             document.getElementById('dashboard-login').classList.add('hidden');
             document.getElementById('painel-dashboard').classList.remove('hidden');
             montarGridCamarotes();
+            await carregarCasa();
             await Promise.all([carregarEventos(), carregarModelos(), carregarConfiguracoes(), carregarSolteirasBadge(), carregarReservas(), carregarLinksAniversario(), carregarNomesAcessos(), carregarEntradasSolteiras(), carregarDadosPrivados()]);
             ligarTempoReal();
             // Os avisos em tempo real podem se perder (aba dormindo, internet
@@ -1293,6 +1317,8 @@
             document.getElementById('opcao-ev-publico').classList.toggle('on', !privado);
             document.getElementById('opcao-ev-privado').classList.toggle('on', privado);
             if (privado) atualizarPromotersPrivado();
+            // Já deixa a linha do 1º lote aberta para preencher (valor e quantidade).
+            if (privado && !document.querySelector('#lotes_editor .lote-ed')) adicionarLote(false);
         };
 
         function linkDoEventoPrivado(ev) {
@@ -1386,12 +1412,12 @@
                 <div class="c-sit">${l.id ? '' : 'Novo · passa a valer quando salvar o evento'}</div>
             </div>`;
         }
-        window.adicionarLote = () => {
+        window.adicionarLote = (focar = true) => {
             const editor = document.getElementById('lotes_editor');
             const n = editor.querySelectorAll('.lote-ed').length + 1;
             editor.insertAdjacentHTML('beforeend', linhaLoteHtml({ nome: `${n}º LOTE` }));
             atualizarModoLotes();
-            editor.lastElementChild.querySelector('.lote-solteiro')?.focus();
+            if (focar) editor.lastElementChild.querySelector('.lote-solteiro')?.focus();
         };
         window.removerLoteDoEditor = (botao) => {
             const linha = botao.closest('.lote-ed');
@@ -1441,7 +1467,8 @@
         }
         function lerLotesDoFormulario() {
             const modo = radioValor('lotes_virada', 'ambos');
-            const linhas = [...document.querySelectorAll('#lotes_editor .lote-ed')];
+            const linhas = [...document.querySelectorAll('#lotes_editor .lote-ed')].filter(linha =>
+                linha.dataset.id || ['.lote-solteiro', '.lote-casal', '.lote-qtd', '.lote-ate'].some(c => linha.querySelector(c).value.trim()));
             const lotes = linhas.map((linha, i) => {
                 const nome = linha.querySelector('.lote-nome').value.trim().toUpperCase() || `${i + 1}º LOTE`;
                 const qtdTxt = linha.querySelector('.lote-qtd').value.trim();
@@ -1546,7 +1573,7 @@
                 let url = document.getElementById('url_imagem_atual').value || null;
 
                 if (arq) {
-                    const caminho = `${Date.now()}_${arq.name}`.replace(/[^a-zA-Z0-9._-]/g, '_');
+                    const caminho = pastaDaCasa() + `${Date.now()}_${arq.name}`.replace(/[^a-zA-Z0-9._-]/g, '_');
                     const { error: erroUpload } = await sb.storage.from('capas-eventos').upload(caminho, arq, { upsert: true });
                     if (erroUpload) throw new Error('Erro ao enviar a capa: ' + erroUpload.message);
                     const { data: urlData } = sb.storage.from('capas-eventos').getPublicUrl(caminho);
@@ -1570,7 +1597,7 @@
                 let logo = document.getElementById('url_logo_atual').value || null;
                 const arqLogo = document.getElementById('upload_logo').files[0];
                 if (privado && arqLogo) {
-                    const caminhoLogo = `logo_${Date.now()}_${arqLogo.name}`.replace(/[^a-zA-Z0-9._-]/g, '_');
+                    const caminhoLogo = pastaDaCasa() + `logo_${Date.now()}_${arqLogo.name}`.replace(/[^a-zA-Z0-9._-]/g, '_');
                     const { error: erroLogo } = await sb.storage.from('capas-eventos').upload(caminhoLogo, arqLogo, { upsert: true });
                     if (erroLogo) throw new Error('Erro ao enviar a logo: ' + erroLogo.message);
                     logo = sb.storage.from('capas-eventos').getPublicUrl(caminhoLogo).data.publicUrl;
@@ -2927,7 +2954,7 @@
                 el.innerText = '● Aberta — dentro do horário';
                 return;
             }
-            const { data: config } = await sb.from('configuracoes').select('liberacao_solteiras_expira_em').eq('id', 'sistema').single();
+            const { data: config } = await sb.from('configuracoes').select('liberacao_solteiras_expira_em').match(filtroAjustes()).single();
             const expiraEm = config?.liberacao_solteiras_expira_em ? new Date(config.liberacao_solteiras_expira_em).getTime() : 0;
             if (expiraEm > Date.now()) {
                 const faltam = Math.max(1, Math.round((expiraEm - Date.now()) / 60000));
@@ -2989,7 +3016,7 @@
                 : `Abre às ${rotuloHora(ab)} e fecha às ${rotuloHora(fe)} no mesmo dia.`;
         };
         async function gravarHorario(ab, fe) {
-            const { error } = await sb.from('configuracoes').update({ hora_abertura: ab, hora_fechamento: fe }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes').update({ hora_abertura: ab, hora_fechamento: fe }).match(filtroAjustes());
             if (error) {
                 console.error(error);
                 return mostrarAviso(/hora_abertura|hora_fechamento|column/i.test(error.message || '')
@@ -3016,7 +3043,7 @@
 
         window.salvarConfigCaronas = async () => {
             const b = document.getElementById('config_bairros_carona').value.toUpperCase();
-            const { error } = await sb.from('configuracoes').update({ carona_bairros: b }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes').update({ carona_bairros: b }).match(filtroAjustes());
             if (error) return mostrarAviso('Erro ao salvar os bairros.');
             aplicarConfiguracoes({ carona_bairros: b });
             mostrarAviso('Bairros salvos!', true);
@@ -3062,7 +3089,7 @@
         window.pintarHorasRegras = () => pintarRegrasHora(false);
         async function gravarHoraRegra(chave, valor) {
             const r = HORAS_REGRAS[chave];
-            const { error } = await sb.from('configuracoes').update({ [r.campo]: valor }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes').update({ [r.campo]: valor }).match(filtroAjustes());
             if (error) {
                 console.error('salvar horário da regra:', error);
                 return mostrarAviso(/column|coluna/i.test(error.message || '')
@@ -3135,7 +3162,7 @@
                 contato_whatsapp: limparTelefone(document.getElementById('contato_whatsapp').value),
                 contato_endereco: String(document.getElementById('contato_endereco').value || '').trim(),
             };
-            const { error } = await sb.from('configuracoes').update(payload).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes').update(payload).match(filtroAjustes());
             if (error) return mostrarAviso('Erro ao salvar contatos.');
             mostrarAviso('Contatos salvos. As páginas já estão usando os novos.', true);
         };
@@ -3146,13 +3173,13 @@
         window.salvarTaxaPix = async () => {
             const tipo = document.getElementById('tipo_taxa').value;
             const valor = parseFloat(document.getElementById('valor_taxa').value) || 0;
-            const { error } = await sb.from('configuracoes_financeiro').update({ taxa_tipo: tipo, taxa_valor: valor }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes_financeiro').update({ taxa_tipo: tipo, taxa_valor: valor }).match(filtroAjustes());
             if (error) return mostrarAviso('Erro ao salvar taxa.');
             mostrarAviso('Taxa atualizada com sucesso!', true);
         };
         window.salvarCustoSistema = async () => {
             const valor = parseFloat(document.getElementById('custo_sistema').value) || 0;
-            const { error } = await sb.from('configuracoes_financeiro').update({ custo_sistema: valor }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes_financeiro').update({ custo_sistema: valor }).match(filtroAjustes());
             if (error) return mostrarAviso('Erro ao salvar custo.');
             mostrarAviso('Custo do sistema salvo com sucesso!', true);
         };
@@ -3165,17 +3192,17 @@
             const nome = qual === 'vallet' ? 'do Vallet' : 'da Portaria';
             const dados = { [campo]: !!ligar };
             if (ligar) dados[campo + '_expira_em'] = null;
-            const { error } = await sb.from('configuracoes').update(dados).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes').update(dados).match(filtroAjustes());
             if (error) return mostrarAviso(`Erro ao alterar o modo teste ${nome}.`);
             mostrarAviso(ligar ? `Modo teste ${nome} ligado por 1 hora.` : `Modo teste ${nome} desligado.`, true);
         };
         window.toggleModoTeste = async () => {
-            const { error } = await sb.from('configuracoes').update({ modo_teste: !modoTesteAtivo }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes').update({ modo_teste: !modoTesteAtivo }).match(filtroAjustes());
             if (error) return mostrarAviso('Erro ao alterar o modo teste.');
             mostrarAviso(!modoTesteAtivo ? 'Modo teste da Portaria ligado. Desliga sozinho em 1 hora.' : 'Modo teste da Portaria desligado.', true);
         };
         window.toggleModoTesteVallet = async () => {
-            const { error } = await sb.from('configuracoes').update({ modo_teste_vallet: !modoTesteValletAtivo }).eq('id', 'sistema');
+            const { error } = await sb.from('configuracoes').update({ modo_teste_vallet: !modoTesteValletAtivo }).match(filtroAjustes());
             if (error) return mostrarAviso('Erro ao alterar o modo teste do Vallet.');
             mostrarAviso(!modoTesteValletAtivo ? 'Modo teste do Vallet ligado. Desliga sozinho em 1 hora.' : 'Modo teste do Vallet desligado.', true);
         };
@@ -3231,8 +3258,8 @@
         }
         async function carregarConfiguracoes() {
             const [{ data }, { data: dataFinanceiro }] = await Promise.all([
-                sb.from('configuracoes').select('*').eq('id', 'sistema').single(),
-                sb.from('configuracoes_financeiro').select('*').eq('id', 'sistema').single(),
+                sb.from('configuracoes').select('*').match(filtroAjustes()).single(),
+                sb.from('configuracoes_financeiro').select('*').match(filtroAjustes()).single(),
             ]);
             aplicarConfiguracoes({ ...(data || {}), ...(dataFinanceiro || {}) });
         }
