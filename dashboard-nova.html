@@ -276,6 +276,9 @@
             <button id="btnSairDashboard" onclick="bloquearDashboard()" class="ec-btn sair" title="Encerrar sessão administrativa">Sair</button>
         </header>
 
+        <!-- Aviso da mensalidade / empresa em só leitura (várias empresas) -->
+        <div id="aviso-empresa" class="hidden" role="status" style="margin:0 0 18px;padding:16px 18px;border-radius:18px;font-weight:800;font-size:15px;line-height:1.5"></div>
+
         <section id="aba-noite" class="space-y-6">
             <div class="en-titulo">
                 <h2 id="en-titulo-txt">Esta noite</h2>
@@ -956,8 +959,62 @@
         // Casa de quem entrou (várias casas). Sem a tabela de casas no banco,
         // fica vazio e tudo funciona como antes (linha "sistema").
         let CASA = null;
+        // Módulos que a empresa contratou (null = todos, como sempre foi).
+        let MODULOS = null;
+        const temModulo = (m) => !MODULOS || MODULOS.includes(m);
         const filtroAjustes = () => (CASA ? { casa_id: CASA.id } : { id: 'sistema' });
         const pastaDaCasa = () => (CASA ? CASA.id + '/' : '');
+        // Esconde o que a empresa não contratou (abas, evento privado e as
+        // permissões da aba Acessos). O servidor também recusa, isto é só a tela.
+        function aplicarModulos() {
+            const mostrar = (el, sim) => { if (el) el.style.display = sim ? '' : 'none'; };
+            const aba = (id) => document.querySelector(`#db-nav [onclick^="trocarAba('${id}'"]`);
+            mostrar(aba('aba-festas'), temModulo('eventos'));
+            mostrar(aba('aba-solteiras'), temModulo('solteiras') || temModulo('caronas'));
+            mostrar(aba('aba-aniversarios'), temModulo('eventos') || temModulo('promoters'));
+            mostrar(document.getElementById('opcao-ev-privado'), temModulo('eventos_privados'));
+            const cartao = (id) => document.getElementById(id)?.closest('.glass-card');
+            mostrar(cartao('acesso-portaria'), temModulo('portaria'));
+            mostrar(cartao('acesso-promoter'), temModulo('promoters'));
+            mostrar(cartao('acesso-solteiras'), temModulo('solteiras'));
+            mostrar(cartao('acesso-vallet'), temModulo('vallet'));
+            mostrar(cartao('acesso-caronas'), temModulo('caronas'));
+        }
+
+        // Aviso da mensalidade: vence logo, venceu, ou a empresa está travada.
+        async function avisoEmpresa() {
+            const caixa = document.getElementById('aviso-empresa');
+            if (!CASA || CASA.isenta) { caixa.classList.add('hidden'); return; }
+            try {
+                const [{ data: faturas }, { data: regras }] = await Promise.all([
+                    sb.from('faturas').select('*').eq('status', 'aberta').order('vencimento'),
+                    sb.from('plataforma_regras').select('*').eq('id', 1).maybeSingle(),
+                ]);
+                const hoje = hojeSP();
+                const br = (d) => String(d || '').split('-').reverse().join('/');
+                const somaDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+                const f = (faturas || [])[0];
+                let txt = '', cor = 'aviso';
+                if (CASA.situacao === 'so_leitura') {
+                    txt = 'Empresa em modo SÓ LEITURA: dá para ver tudo, mas não dá para criar eventos novos. Regularize a mensalidade para liberar.';
+                    cor = 'erro';
+                } else if (f && f.vencimento < hoje) {
+                    const dLeitura = regras ? somaDias(f.vencimento, regras.dias_so_leitura) : '';
+                    txt = `Mensalidade de ${brl(f.valor)} vencida desde ${br(f.vencimento)}.` + (dLeitura ? (dLeitura > hoje ? ` A partir de ${br(dLeitura)} a empresa fica em modo só leitura.` : ' Regularize para evitar o bloqueio do sistema.') : '');
+                    cor = 'erro';
+                } else if (f && regras && f.vencimento <= somaDias(hoje, regras.aviso_dias_antes)) {
+                    txt = `Sua mensalidade de ${brl(f.valor)} vence em ${br(f.vencimento)}.`;
+                }
+                if (!txt) { caixa.classList.add('hidden'); return; }
+                if (regras?.chave_pix) txt += ` Chave PIX para pagamento: ${regras.chave_pix}`;
+                caixa.textContent = txt;
+                caixa.style.background = cor === 'erro' ? 'rgba(248,113,113,.14)' : 'rgba(245,183,0,.12)';
+                caixa.style.border = cor === 'erro' ? '1px solid rgba(248,113,113,.45)' : '1px solid rgba(245,183,0,.4)';
+                caixa.style.color = cor === 'erro' ? '#fca5a5' : '#fde68a';
+                caixa.classList.remove('hidden');
+            } catch (_) { caixa.classList.add('hidden'); }
+        }
+
         async function carregarCasa() {
             try {
                 const { data: idCasa } = await sb.rpc('minha_casa');
@@ -968,11 +1025,15 @@
                 if (data.slug !== 'eclub') {
                     document.getElementById('db-nome-casa').textContent = 'Dashboard ' + data.nome;
                     const logo = document.getElementById('db-logo-casa');
-                    if (data.logo_url) { logo.src = data.logo_url; logo.alt = data.nome; }
+                    if (data.logo_url) { logo.src = data.logo_url; logo.alt = data.nome; } else logo.style.display = 'none';
                     document.title = data.nome + ' | Command Center';
                 }
                 const { data: dono } = await sb.rpc('sou_dono_plataforma');
                 document.getElementById('btnPainelDono').classList.toggle('hidden', dono !== true);
+                const { data: mods, error: erroMods } = await sb.rpc('meus_modulos');
+                if (!erroMods && Array.isArray(mods)) MODULOS = mods;
+                aplicarModulos();
+                avisoEmpresa();
             } catch (_) { /* banco sem as casas: segue como E-Club */ }
         }
 
@@ -1668,6 +1729,7 @@
             } catch (err) {
                 const msg = String(err.message || '');
                 if (err.validacao) { mostrarAviso(msg); return; }
+                if (/evento novo so com casa ativa/i.test(msg)) { mostrarAviso('Empresa em modo só leitura: não dá para criar eventos novos até a mensalidade ser regularizada.'); return; }
                 mostrarAviso(/privado|lotes_evento|promoters_evento|schema cache/i.test(msg)
                     ? 'Falta rodar o arquivo migracao-eventos-privados.sql no Supabase (SQL Editor).'
                     : 'Erro ao salvar evento: ' + msg);
