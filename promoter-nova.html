@@ -1550,9 +1550,12 @@
         window.copiarLinkGeral = () => {
             const ev = pmEventosAbertos().find(e => String(e.nome || '') === pmFestaAtual);
             if (ev && ev.privado && !ev.link_privado) return mostrarAviso('Este evento privado ainda não tem link. Avise a casa.');
+            // Promoter de outra casa (não a E-Club): o link leva o nome da casa.
+            const casa = String(dadosPromoter?.casa || 'eclub');
+            const daCasa = casa && casa !== 'eclub' ? `&casa=${encodeURIComponent(casa)}` : '';
             const link = (ev && ev.privado)
                 ? `${PAGINA_LISTAS}?e=${encodeURIComponent(ev.link_privado)}&ref=${encodeURIComponent(logado)}`
-                : `${PAGINA_LISTAS}?ref=${encodeURIComponent(logado)}`;
+                : `${PAGINA_LISTAS}?ref=${encodeURIComponent(logado)}${daCasa}`;
             navigator.clipboard.writeText(link).then(() => mostrarAviso(ev && ev.privado ? "Link do evento privado copiado!" : "Link Copiado!", true));
         };
         window.copiarLinkAniv = (id, n) => { const link = `${PAGINA_LISTAS}?id=${encodeURIComponent(id)}`; navigator.clipboard.writeText(`*Convite VIP: Lista de ${n}* 🍾\n\nGaranta seu nome na lista pelo link abaixo:\n${link}`).then(() => mostrarAviso("Convite Copiado!", true)); };
