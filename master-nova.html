@@ -10,62 +10,107 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   /* =================================================================
-     PAINEL DO DONO DA PLATAFORMA
-     Só o dono (tabela plataforma_donos) entra aqui. Cadastra casas,
-     muda plano, situação e mensalidade, cria o administrador de cada
-     casa e guarda o Mercado Pago e o e-mail de cada uma.
+     PAINEL DO DONO DA PLATAFORMA (AbreAPorta)
+     Só o dono entra aqui. Quatro abas:
+       Empresas      ficha, módulos contratados, situação, administrador
+       Mensalidades  faturas de cada mês: pago, em aberto, atrasado
+       Relatórios    números de cada empresa por período
+       Regras        o que acontece quando atrasa + preço de cada módulo
      ================================================================= */
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--ec-bg); color: var(--ec-txt); font-family: var(--ec-fonte); font-size: 16px; }
   .pagina { max-width: 1180px; margin: 0 auto; padding: 22px 16px 60px; }
   [hidden] { display: none !important; }
   h1, h2, h3 { font-family: var(--ec-fonte-titulo); margin: 0; letter-spacing: -.01em; }
-  .topo { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
+  .topo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
   .topo .marca { flex: 1; min-width: 220px; }
   .topo .marca b { display: block; font: 900 26px var(--ec-fonte-titulo); }
   .topo .marca span { display: block; color: var(--ec-mut); font-weight: 700; margin-top: 2px; }
   .cartao { background: var(--ec-card); border: 1px solid var(--ec-linha); border-radius: 22px; padding: 20px; }
-  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
   .kpi span { display: block; color: var(--ec-mut); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
-  .kpi b { display: block; font: 900 30px var(--ec-fonte-titulo); margin-top: 6px; }
-  .kpi b.verde { color: var(--ec-ok-txt); }
+  .kpi b { display: block; font: 900 28px var(--ec-fonte-titulo); margin-top: 6px; }
+  .kpi small { display: block; color: var(--ec-fraco); font-weight: 700; font-size: 13px; margin-top: 2px; }
+  .verde { color: var(--ec-ok-txt); } .vermelho { color: var(--ec-blq-txt); } .laranja { color: var(--ec-cob-txt); }
+  .abas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .abas button { min-height: 48px; padding: 0 20px; border-radius: 14px; border: 1px solid var(--ec-linha2); background: var(--ec-card2); color: var(--ec-txt); font: 800 16px var(--ec-fonte); cursor: pointer; }
+  .abas button.on { background: var(--ec-ouro); color: var(--ec-ouro-txt); border-color: var(--ec-ouro); }
   .grade2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .grade3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .grade4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
   .campo label { display: block; font-size: 13px; font-weight: 800; color: var(--ec-mut); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 6px 4px; }
-  .campo input, .campo select { width: 100%; height: 50px; padding: 0 14px; border-radius: 14px; border: 2px solid var(--ec-linha2); background: #0a0a0f; color: var(--ec-txt); font: 700 16px var(--ec-fonte); outline: none; }
-  .campo input:focus, .campo select:focus { border-color: var(--ec-ouro); }
-  .campo small { display: block; margin: 6px 0 0 4px; color: var(--ec-fraco); font-size: 13px; font-weight: 700; word-break: break-all; }
-  .secao-tit { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 30px 0 14px; }
-  .secao-tit h2 { font-size: 22px; }
+  .campo input, .campo select, .campo textarea { width: 100%; min-height: 50px; padding: 0 14px; border-radius: 14px; border: 2px solid var(--ec-linha2); background: #0a0a0f; color: var(--ec-txt); font: 700 16px var(--ec-fonte); outline: none; }
+  .campo textarea { padding: 12px 14px; min-height: 80px; resize: vertical; }
+  .campo input:focus, .campo select:focus, .campo textarea:focus { border-color: var(--ec-ouro); }
+  .campo small { display: block; margin: 6px 0 0 4px; color: var(--ec-fraco); font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+  .bloco-tit { font: 900 18px var(--ec-fonte-titulo); margin: 22px 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .bloco-tit:first-child { margin-top: 0; }
+  .barra { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; }
+  .barra .campo { flex: 1; min-width: 180px; }
+  .modulos-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mod { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--ec-linha2); background: #0c0c11; }
+  .mod:has(input[type=checkbox]:checked) { border-color: var(--ec-ouro); background: rgba(245,183,0,.07); }
+  .mod input[type=checkbox] { width: 24px; height: 24px; flex: 0 0 24px; accent-color: var(--ec-ouro); }
+  .mod .txt { flex: 1; min-width: 0; }
+  .mod .txt b { display: block; font-size: 16px; font-weight: 900; }
+  .mod .txt small { display: block; color: var(--ec-mut); font-size: 13px; font-weight: 700; line-height: 1.35; margin-top: 2px; }
+  .mod .preco { width: 112px; flex: 0 0 112px; }
+  .mod .preco input { width: 100%; height: 44px; border-radius: 12px; border: 2px solid var(--ec-linha2); background: #0a0a0f; color: var(--ec-txt); font: 800 16px var(--ec-fonte); padding: 0 10px; text-align: right; }
+  .total { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 18px; border-radius: 16px; background: var(--ec-card2); margin-top: 12px; }
+  .mod.isenta { align-self: end; min-height: 50px; padding-top: 8px; padding-bottom: 8px; cursor: pointer; }
+  #f-admin .bloco-tit { margin-top: 26px; }
+  .total b { font: 900 30px var(--ec-fonte-titulo); color: var(--ec-ok-txt); }
   .casas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .casa { display: flex; flex-direction: column; gap: 14px; }
+  .casa { display: flex; flex-direction: column; gap: 12px; }
   .casa .cab { display: flex; gap: 12px; align-items: flex-start; }
   .casa .cab img, .casa .cab .sem-logo { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 14px; object-fit: contain; background: #0a0a0f; border: 1px solid var(--ec-linha2); display: grid; place-items: center; font: 900 18px var(--ec-fonte-titulo); color: var(--ec-mut); }
   .casa .cab h3 { font-size: 20px; }
-  .casa .cab .end { color: var(--ec-mut); font-weight: 700; font-size: 14px; margin-top: 3px; word-break: break-all; }
-  .casa .linha { display: flex; flex-wrap: wrap; gap: 8px; }
-  .casa .nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .casa .nums div { background: var(--ec-card2); border-radius: 14px; padding: 10px 12px; }
-  .casa .nums span { display: block; font-size: 12px; font-weight: 800; color: var(--ec-mut); text-transform: uppercase; letter-spacing: .06em; }
-  .casa .nums b { display: block; font: 900 22px var(--ec-fonte-titulo); margin-top: 2px; }
-  .casa .admins { font-size: 14px; font-weight: 700; color: var(--ec-mut); }
-  .casa .admins div { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--ec-linha); }
-  .casa .admins b { color: var(--ec-txt); }
-  .casa .acoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: auto; }
-  .casa .acoes .ec-btn { width: 100%; font-size: 14px; min-height: 44px; padding: 0 10px; }
+  .casa .cab .end { color: var(--ec-mut); font-weight: 700; font-size: 14px; margin-top: 3px; overflow-wrap: anywhere; }
+  .linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chip { display: inline-flex; padding: 4px 10px; border-radius: 999px; background: var(--ec-card2); border: 1px solid var(--ec-linha2); font-size: 13px; font-weight: 800; }
+  .nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .nums div { background: var(--ec-card2); border-radius: 14px; padding: 10px 12px; }
+  .nums span { display: block; font-size: 12px; font-weight: 800; color: var(--ec-mut); text-transform: uppercase; letter-spacing: .06em; }
+  .nums b { display: block; font: 900 22px var(--ec-fonte-titulo); margin-top: 2px; }
+  .admins { font-size: 14px; font-weight: 700; color: var(--ec-mut); }
+  .admins div { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--ec-linha); }
+  .admins b { color: var(--ec-txt); }
+  .acoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: auto; }
+  .acoes .ec-btn { width: 100%; font-size: 14px; min-height: 44px; padding: 0 8px; }
   .link-mini { color: var(--ec-ouro); font-weight: 800; font-size: 14px; background: none; border: 0; cursor: pointer; padding: 4px 0; font-family: inherit; }
   .gaveta { border-top: 1px solid var(--ec-linha); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
   .msg { padding: 14px 16px; border-radius: 14px; font-weight: 800; margin-top: 14px; }
   .msg.ok { background: var(--ec-ok-bg); color: var(--ec-ok-txt); border: 1px solid var(--ec-ok-bd); }
   .msg.erro { background: var(--ec-blq-bg); color: var(--ec-blq-txt); border: 1px solid var(--ec-blq-bd); }
+  .vazio { color: var(--ec-mut); font-weight: 700; padding: 30px; text-align: center; border: 1px dashed var(--ec-linha2); border-radius: 22px; grid-column: 1 / -1; }
+  .faturas { display: flex; flex-direction: column; gap: 8px; }
+  .fatura { display: grid; grid-template-columns: minmax(0,1.7fr) minmax(0,.7fr) minmax(0,.8fr) minmax(0,.8fr) minmax(0,1.3fr) 230px; gap: 12px; align-items: center; padding: 14px 16px; border-radius: 16px; background: var(--ec-card); border: 1px solid var(--ec-linha); }
+  .fatura.cab { background: transparent; border: 0; padding: 0 16px; color: var(--ec-mut); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+  .fatura b { font-weight: 900; }
+  .fatura .botoes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .fatura .botoes .ec-btn { min-height: 40px; font-size: 14px; padding: 0 12px; }
+  .rel-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  .tabela { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .tabela th { text-align: left; color: var(--ec-mut); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding: 10px 8px; border-bottom: 1px solid var(--ec-linha2); }
+  .tabela td { padding: 12px 8px; border-bottom: 1px solid var(--ec-linha); font-weight: 700; }
+  .tabela td.num, .tabela th.num { text-align: right; }
+  .rolagem { overflow-x: auto; }
   .login { max-width: 420px; margin: 10vh auto 0; }
   .login h1 { font-size: 26px; margin-bottom: 6px; }
   .login p { color: var(--ec-mut); font-weight: 700; margin: 0 0 18px; }
   .login .campo { margin-bottom: 14px; }
   .login .ec-btn { width: 100%; }
-  .vazio { color: var(--ec-mut); font-weight: 700; padding: 30px; text-align: center; border: 1px dashed var(--ec-linha2); border-radius: 22px; grid-column: 1 / -1; }
-  @media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .casas, .grade3 { grid-template-columns: 1fr; } }
-  @media (max-width: 640px) { .grade2 { grid-template-columns: 1fr; } .casa .acoes { grid-template-columns: 1fr; } }
+  .explica { color: var(--ec-mut); font-weight: 700; font-size: 14px; line-height: 1.55; margin: 0 0 14px; }
+  @media (max-width: 960px) {
+    .kpis, .rel-kpis, .grade4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .casas, .grade3, .modulos-form { grid-template-columns: 1fr; }
+    .fatura { grid-template-columns: 1fr 1fr; }
+    .fatura.cab { display: none; }
+    .fatura .botoes { grid-column: 1 / -1; justify-content: flex-start; }
+    .fatura > .nome, .fatura > .sit { grid-column: 1 / -1; }
+    .fatura [data-rot]::before { content: attr(data-rot); display: block; font-size: 11px; font-weight: 800; color: var(--ec-mut); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 2px; }
+  }
+  @media (max-width: 640px) { .kpi b { font-size: 22px; white-space: nowrap; } .grade4 { grid-template-columns: 1fr; } .barra .campo { min-width: 100%; } .barra > .ec-btn { flex: 1 1 40%; } .grade2 { grid-template-columns: 1fr; } .acoes { grid-template-columns: 1fr 1fr; } .mod .preco { width: 92px; flex-basis: 92px; } }
 </style>
 </head>
 <body>
@@ -85,42 +130,137 @@
 <!-- ===== PAINEL ===== -->
 <div id="telaPainel" class="pagina" hidden>
   <header class="topo">
-    <div class="marca"><b>AbreAPorta</b><span>Painel do dono · casas, planos e mensalidades</span></div>
+    <div class="marca"><b>AbreAPorta</b><span>Painel do dono · empresas, módulos e mensalidades</span></div>
     <a class="ec-btn neutro" href="dashboard-nova.html">Minha Dashboard</a>
     <button class="ec-btn sair" type="button" onclick="sair()">Sair</button>
   </header>
 
   <section class="kpis">
-    <div class="cartao kpi"><span>Casas ativas</span><b id="kAtivas">0</b></div>
-    <div class="cartao kpi"><span>Mensalidades por mês</span><b id="kMensal" class="verde">R$ 0</b></div>
-    <div class="cartao kpi"><span>Só leitura</span><b id="kLeitura">0</b></div>
-    <div class="cartao kpi"><span>Bloqueadas</span><b id="kBloq">0</b></div>
+    <div class="cartao kpi"><span>Empresas ativas</span><b id="kAtivas">0</b><small id="kTotal">de 0</small></div>
+    <div class="cartao kpi"><span>Mensalidades por mês</span><b id="kMensal" class="verde">R$ 0</b><small>soma das empresas que pagam</small></div>
+    <div class="cartao kpi"><span>Em atraso</span><b id="kAtraso" class="vermelho">R$ 0</b><small id="kAtrasoQtd">0 empresas</small></div>
+    <div class="cartao kpi"><span>Travadas</span><b id="kTravadas" class="laranja">0</b><small id="kTravadasTxt">só leitura ou bloqueadas</small></div>
   </section>
 
-  <section class="cartao">
-    <h2 style="font-size:22px;margin-bottom:16px">Nova casa</h2>
-    <form id="formCasa">
+  <nav class="abas" id="abas">
+    <button type="button" class="on" data-aba="empresas" onclick="trocarAba('empresas')">Empresas</button>
+    <button type="button" data-aba="mensalidades" onclick="trocarAba('mensalidades')">Mensalidades</button>
+    <button type="button" data-aba="relatorios" onclick="trocarAba('relatorios')">Relatórios</button>
+    <button type="button" data-aba="regras" onclick="trocarAba('regras')">Regras e preços</button>
+  </nav>
+
+  <!-- ===== ABA EMPRESAS ===== -->
+  <section id="aba-empresas">
+    <div class="barra">
+      <div class="campo"><label for="busca">Procurar empresa</label><input id="busca" placeholder="Nome, endereço, cidade ou responsável" oninput="pintarEmpresas()"></div>
+      <div class="campo" style="max-width:240px"><label for="filtroSit">Situação</label>
+        <select id="filtroSit" onchange="pintarEmpresas()"><option value="">Todas</option><option value="ativa">Ativas</option><option value="so_leitura">Só leitura</option><option value="bloqueada">Bloqueadas</option><option value="atraso">Com atraso</option></select></div>
+      <button class="ec-btn ouro" type="button" onclick="abrirFicha()">+ Nova empresa</button>
+    </div>
+
+    <!-- Ficha da empresa (nova ou editar) -->
+    <form id="ficha" class="cartao" hidden style="margin-bottom:18px">
+      <div class="bloco-tit"><span id="fichaTit">Nova empresa</span><button class="ec-btn neutro" type="button" onclick="fecharFicha()">Fechar</button></div>
+      <input type="hidden" id="f-id">
       <div class="grade2">
-        <div class="campo"><label for="nc-nome">Nome da casa</label><input id="nc-nome" maxlength="80" placeholder="Ex.: Bar do Zé" required></div>
-        <div class="campo"><label for="nc-slug">Endereço</label><input id="nc-slug" maxlength="40" placeholder="bardoze" required><small id="nc-previa">A página da casa: abreaporta.com.br/listas-nova.html?casa=…</small></div>
+        <div class="campo"><label for="f-nome">Nome da empresa *</label><input id="f-nome" maxlength="80" required placeholder="Ex.: Bar do Zé"></div>
+        <div class="campo"><label for="f-slug">Endereço *</label><input id="f-slug" maxlength="40" required placeholder="bardoze"><small id="f-previa">A página: abreaporta.com.br/listas-nova.html?casa=…</small></div>
+        <div class="campo"><label for="f-razao">Razão social</label><input id="f-razao" maxlength="120"></div>
+        <div class="campo"><label for="f-doc">CNPJ ou CPF</label><input id="f-doc" maxlength="30" inputmode="numeric"></div>
+        <div class="campo"><label for="f-resp">Responsável</label><input id="f-resp" maxlength="80"></div>
+        <div class="campo"><label for="f-tel">Telefone / WhatsApp</label><input id="f-tel" maxlength="30" inputmode="tel"></div>
+        <div class="campo"><label for="f-email">E-mail de contato</label><input id="f-email" type="email" maxlength="160"></div>
+        <div class="grade2" style="gap:10px">
+          <div class="campo"><label for="f-cidade">Cidade</label><input id="f-cidade" maxlength="80"></div>
+          <div class="campo"><label for="f-uf">UF</label><input id="f-uf" maxlength="2" style="text-transform:uppercase"></div>
+        </div>
+        <div class="campo"><label for="f-end">Endereço da empresa</label><input id="f-end" maxlength="200" placeholder="Rua, número, bairro"></div>
+        <div class="campo"><label for="f-inicio">Cliente desde</label><input id="f-inicio" type="date"></div>
       </div>
+      <div class="campo" style="margin-top:14px"><label for="f-logo">Link da logo (https://…)</label><input id="f-logo" maxlength="500" placeholder="Aparece na página pública, no e-mail e na Dashboard da empresa"></div>
+      <div class="campo" style="margin-top:14px"><label for="f-obs">Observações</label><textarea id="f-obs" maxlength="1000"></textarea></div>
+
+      <div class="bloco-tit">Módulos contratados <small style="font:700 14px var(--ec-fonte);color:var(--ec-mut)">marque o que a empresa vai usar e o preço combinado</small></div>
+      <div id="f-modulos" class="modulos-form"></div>
       <div class="grade3" style="margin-top:14px">
-        <div class="campo"><label for="nc-plano">Plano</label>
-          <select id="nc-plano"><option value="basico">Básico (R$ 149)</option><option value="casa" selected>Casa (R$ 299)</option><option value="completo">Completo (R$ 499)</option></select></div>
-        <div class="campo"><label for="nc-mensal">Mensalidade R$</label><input id="nc-mensal" inputmode="decimal" value="299"></div>
-        <div class="campo"><label for="nc-dia">Dia do vencimento</label><input id="nc-dia" type="number" min="1" max="28" value="10"></div>
+        <div class="campo"><label for="f-desconto">Desconto R$</label><input id="f-desconto" inputmode="decimal" value="0" oninput="somarFicha()"></div>
+        <div class="campo"><label for="f-dia">Dia do vencimento</label><input id="f-dia" type="number" min="1" max="28" value="10"></div>
+        <label class="mod isenta"><input type="checkbox" id="f-isenta" onchange="somarFicha()"><span class="txt"><b>Isenta</b><small>Não paga mensalidade</small></span></label>
       </div>
-      <div class="grade2" style="margin-top:14px">
-        <div class="campo"><label for="nc-email">E-mail do administrador da casa</label><input id="nc-email" type="email" required><small>Ele recebe um e-mail para criar a senha e entra pela Dashboard.</small></div>
-        <div class="campo"><label for="nc-admin">Nome do administrador</label><input id="nc-admin" maxlength="60" placeholder="Ex.: ZÉ"></div>
+      <div class="total"><span style="font-weight:800;color:var(--ec-mut)">Mensalidade desta empresa</span><b id="f-total">R$ 0</b></div>
+
+      <div id="f-admin">
+        <div class="bloco-tit">Administrador da empresa</div>
+        <div class="grade2">
+          <div class="campo"><label for="f-admin-email">E-mail do administrador *</label><input id="f-admin-email" type="email" maxlength="160"><small>Ele recebe um e-mail para criar a senha e entra pela Dashboard.</small></div>
+          <div class="campo"><label for="f-admin-nome">Nome do administrador</label><input id="f-admin-nome" maxlength="60" placeholder="Ex.: ZÉ"></div>
+        </div>
       </div>
-      <button class="ec-btn ouro" type="submit" id="btnCriarCasa" style="margin-top:18px;width:100%">Criar casa</button>
-      <div id="msgCasa" class="msg" hidden></div>
+      <button class="ec-btn ouro" type="submit" id="btnSalvarFicha" style="margin-top:18px;width:100%">Salvar empresa</button>
+      <div id="msgFicha" class="msg" hidden></div>
+    </form>
+
+    <div id="listaCasas" class="casas"><div class="vazio">Carregando…</div></div>
+  </section>
+
+  <!-- ===== ABA MENSALIDADES ===== -->
+  <section id="aba-mensalidades" hidden>
+    <div class="barra">
+      <div class="campo"><label for="fat-casa">Empresa</label><select id="fat-casa" onchange="carregarFaturas()"><option value="">Todas</option></select></div>
+      <div class="campo" style="max-width:240px"><label for="fat-status">Mostrar</label>
+        <select id="fat-status" onchange="carregarFaturas()"><option value="aberta">Em aberto</option><option value="paga">Pagas</option><option value="cancelada">Canceladas</option><option value="">Todas</option></select></div>
+      <button class="ec-btn neutro" type="button" onclick="alternarGerar()">Gerar fatura</button>
+      <button class="ec-btn neutro" type="button" onclick="rodarRotina()" title="Gera as faturas do mês e aplica as regras de atraso agora (isso já roda sozinho todo dia às 9h)">Aplicar regras agora</button>
+    </div>
+    <form id="formGerar" class="cartao" hidden style="margin-bottom:16px" onsubmit="gerarFatura(event)">
+      <div class="grade4">
+        <div class="campo"><label for="g-casa">Empresa</label><select id="g-casa" required></select></div>
+        <div class="campo"><label for="g-mes">Mês</label><input id="g-mes" type="month" required></div>
+        <div class="campo"><label for="g-valor">Valor R$</label><input id="g-valor" inputmode="decimal" placeholder="Mensalidade da empresa"></div>
+        <div class="campo"><label for="g-venc">Vencimento</label><input id="g-venc" type="date"></div>
+      </div>
+      <button class="ec-btn ouro" type="submit" style="margin-top:14px">Criar fatura</button>
+    </form>
+    <div id="listaFaturas" class="faturas"><div class="vazio">Carregando…</div></div>
+  </section>
+
+  <!-- ===== ABA RELATÓRIOS ===== -->
+  <section id="aba-relatorios" hidden>
+    <div class="cartao">
+      <div class="barra" style="margin-bottom:0">
+        <div class="campo"><label for="rel-casa">Empresa</label><select id="rel-casa"></select></div>
+        <div class="campo" style="max-width:220px"><label for="rel-periodo">Período</label>
+          <select id="rel-periodo" onchange="periodoRel()"><option value="mes">Este mês</option><option value="mes_passado">Mês passado</option><option value="30">Últimos 30 dias</option><option value="ano">Este ano</option><option value="outro">Escolher datas</option></select></div>
+        <div class="campo" style="max-width:190px"><label for="rel-de">De</label><input id="rel-de" type="date"></div>
+        <div class="campo" style="max-width:190px"><label for="rel-ate">Até</label><input id="rel-ate" type="date"></div>
+        <button class="ec-btn ouro" type="button" onclick="gerarRelatorio()">Ver relatório</button>
+      </div>
+    </div>
+    <div id="relResultado" style="margin-top:16px"></div>
+  </section>
+
+  <!-- ===== ABA REGRAS E PREÇOS ===== -->
+  <section id="aba-regras" hidden>
+    <form class="cartao" onsubmit="salvarRegras(event)">
+      <div class="bloco-tit">Quando a empresa não paga no dia</div>
+      <p class="explica" id="regrasExemplo">—</p>
+      <div class="grade4">
+        <div class="campo"><label for="r-gerar">Gerar a fatura no dia</label><input id="r-gerar" type="number" min="1" max="28" oninput="exemploRegras()"><small>de cada mês</small></div>
+        <div class="campo"><label for="r-aviso">Avisar antes</label><input id="r-aviso" type="number" min="0" max="15" oninput="exemploRegras()"><small>dias antes de vencer</small></div>
+        <div class="campo"><label for="r-leitura">Só leitura depois de</label><input id="r-leitura" type="number" min="1" max="120" oninput="exemploRegras()"><small>dias de atraso</small></div>
+        <div class="campo"><label for="r-bloq">Bloquear depois de</label><input id="r-bloq" type="number" min="1" max="180" oninput="exemploRegras()"><small>dias de atraso</small></div>
+      </div>
+      <div class="campo" style="margin-top:14px"><label for="r-pix">Sua chave PIX para receber as mensalidades</label><input id="r-pix" maxlength="140" placeholder="Aparece no aviso de mensalidade da Dashboard das empresas"></div>
+      <button class="ec-btn ouro" type="submit" style="margin-top:16px">Salvar regras</button>
+    </form>
+
+    <form class="cartao" style="margin-top:16px" onsubmit="salvarCatalogo(event)">
+      <div class="bloco-tit">Preço padrão de cada módulo</div>
+      <p class="explica">É o valor que já vem preenchido ao cadastrar uma empresa nova. Mudar aqui não muda o que as empresas que já existem pagam.</p>
+      <div id="catalogo" class="modulos-form"></div>
+      <button class="ec-btn ouro" type="submit" style="margin-top:16px">Salvar preços</button>
     </form>
   </section>
-
-  <div class="secao-tit"><h2>Casas</h2><button class="ec-btn neutro" type="button" onclick="carregar(true)">Atualizar</button></div>
-  <div id="listaCasas" class="casas"><div class="vazio">Carregando…</div></div>
 </div>
 
 <script src="eclub-ui.js"></script>
@@ -130,15 +270,19 @@
   // Login guardado só enquanto o navegador estiver aberto (igual à Dashboard).
   const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storageKey: 'sb-master-auth', storage: window.sessionStorage } });
   const PAGINA_LISTAS = 'https://abreaporta.com.br/listas-nova.html';
-  const PRECO_PLANO = { basico: 149, casa: 299, completo: 499 };
-  const NOME_PLANO = { basico: 'Básico', casa: 'Casa', completo: 'Completo' };
   const NOME_SITUACAO = { ativa: 'Ativa', so_leitura: 'Só leitura', bloqueada: 'Bloqueada' };
-  let casas = [];
+  let casas = [], catalogo = [], regras = null, hoje = '';
   const abertas = new Set(); // gavetas abertas (sobrevivem ao recarregar a lista)
 
   const esc = (v) => String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-  const brl = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-  const slugDe = (v) => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9-]+/g, '').replace(/^-+|-+$/g, '').slice(0, 40);
+  const brl = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const num = (v) => { const n = parseFloat(String(v ?? '').replace(/R\$/gi, '').replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
+  const br = (iso) => String(iso || '').slice(0, 10).split('-').reverse().join('/');
+  const mesBR = (iso) => { const [a, m] = String(iso || '').split('-'); return ['', 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][Number(m)] + '/' + a; };
+  const dias = (de, ate) => Math.round((new Date(ate + 'T12:00:00') - new Date(de + 'T12:00:00')) / 86400000);
+  const somaDias = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
+  const slugDe = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9-]+/g, '').replace(/^-+|-+$/g, '').slice(0, 40);
+  const iniciais = (n) => (String(n || '?').normalize('NFD').replace(/[^A-Za-z0-9]/g, '') || '?').slice(0, 2).toUpperCase();
   function aviso(msg, ok = true) { if (window.ECUI?.avisoGrande) ECUI.avisoGrande({ titulo: msg, erro: !ok }); else alert(msg); }
 
   async function api(action, payload = {}) {
@@ -170,81 +314,95 @@
     }
     document.getElementById('telaLogin').hidden = true;
     document.getElementById('telaPainel').hidden = false;
-    carregar();
+    await carregar();
   }
   window.sair = async () => { await sb.auth.signOut(); location.reload(); };
   sb.auth.getSession().then(({ data }) => { if (data.session) entrar(); });
   window.ECUI && ECUI.prepararLogin({ email: 'email-master', senha: 'senha-master', form: 'formLogin', chave: 'eclub_lembrar_email_master' });
 
-  // ===== NOVA CASA =====
-  const ncNome = document.getElementById('nc-nome'), ncSlug = document.getElementById('nc-slug');
-  let slugEditado = false;
-  function previa() { document.getElementById('nc-previa').textContent = `A página da casa: abreaporta.com.br/listas-nova.html?casa=${slugDe(ncSlug.value) || '…'}`; }
-  ncNome.addEventListener('input', () => { if (!slugEditado) ncSlug.value = slugDe(ncNome.value); previa(); });
-  ncSlug.addEventListener('input', () => { slugEditado = true; ncSlug.value = slugDe(ncSlug.value); previa(); });
-  document.getElementById('nc-plano').addEventListener('change', (e) => { document.getElementById('nc-mensal').value = PRECO_PLANO[e.target.value] || ''; });
-  document.getElementById('formCasa').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const msg = document.getElementById('msgCasa'); msg.hidden = true;
-    const btn = document.getElementById('btnCriarCasa'); btn.disabled = true; btn.textContent = 'Criando…';
-    try {
-      const r = await api('criar_casa', {
-        nome: ncNome.value, slug: ncSlug.value, plano: document.getElementById('nc-plano').value,
-        mensalidade: document.getElementById('nc-mensal').value, dia_vencimento: document.getElementById('nc-dia').value,
-        admin_email: document.getElementById('nc-email').value, admin_nome: document.getElementById('nc-admin').value,
-      });
-      msg.className = 'msg ' + (r.aviso ? 'erro' : 'ok');
-      msg.textContent = r.aviso || `Casa "${r.casa.nome}" criada. O administrador recebeu o e-mail para criar a senha.`;
-      msg.hidden = false;
-      e.target.reset(); slugEditado = false; previa();
-      document.getElementById('nc-mensal').value = PRECO_PLANO.casa;
-      await carregar();
-    } catch (err) {
-      msg.className = 'msg erro'; msg.textContent = err.message; msg.hidden = false;
-    } finally { btn.disabled = false; btn.textContent = 'Criar casa'; }
-  });
+  window.trocarAba = (qual) => {
+    document.querySelectorAll('#abas button').forEach(b => b.classList.toggle('on', b.dataset.aba === qual));
+    ['empresas', 'mensalidades', 'relatorios', 'regras'].forEach(a => { document.getElementById('aba-' + a).hidden = a !== qual; });
+    if (qual === 'mensalidades') carregarFaturas();
+  };
 
-  // ===== LISTA DE CASAS =====
+  // ===== CARREGAR TUDO =====
   window.carregar = async (manual = false) => {
     try {
       const r = await api('listar');
-      casas = r.casas || [];
-      pintar();
+      casas = r.casas || []; catalogo = r.catalogo || []; regras = r.regras; hoje = r.hoje || new Date().toISOString().slice(0, 10);
+      pintarKpis(); pintarEmpresas(); pintarSelects(); pintarRegras();
       if (manual) aviso('Lista atualizada.');
     } catch (err) {
       document.getElementById('listaCasas').innerHTML = `<div class="vazio">${esc(err.message)}</div>`;
     }
   };
 
+  function pintarKpis() {
+    const ativas = casas.filter(c => c.situacao === 'ativa');
+    const pagantes = casas.filter(c => !c.isenta && c.situacao !== 'bloqueada');
+    const atrasadas = casas.filter(c => c.vencidas > 0);
+    const travadas = casas.filter(c => c.situacao !== 'ativa');
+    document.getElementById('kAtivas').textContent = ativas.length;
+    document.getElementById('kTotal').textContent = `de ${casas.length} empresa(s)`;
+    document.getElementById('kMensal').textContent = brl(pagantes.reduce((t, c) => t + Number(c.mensalidade || 0), 0));
+    document.getElementById('kAtraso').textContent = brl(atrasadas.reduce((t, c) => t + Number(c.em_atraso ?? c.em_aberto ?? 0), 0));
+    document.getElementById('kAtrasoQtd').textContent = `${atrasadas.length} empresa(s)`;
+    document.getElementById('kTravadas').textContent = travadas.length;
+    document.getElementById('kTravadasTxt').textContent = `${travadas.filter(c => c.situacao === 'so_leitura').length} só leitura · ${travadas.filter(c => c.situacao === 'bloqueada').length} bloqueadas`;
+  }
+
+  function pintarSelects() {
+    const ops = casas.map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+    const fat = document.getElementById('fat-casa'), sel = fat.value;
+    fat.innerHTML = '<option value="">Todas</option>' + ops; fat.value = sel;
+    const pagantes = casas.filter(c => !c.isenta).map(c => `<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+    document.getElementById('g-casa').innerHTML = pagantes || '<option value="">Nenhuma empresa pagante</option>';
+    const rel = document.getElementById('rel-casa'), selRel = rel.value;
+    rel.innerHTML = ops; if (selRel) rel.value = selRel;
+  }
+
+  // ===== EMPRESAS =====
   function selo(c) {
     const cls = c.situacao === 'ativa' ? 'ok' : c.situacao === 'so_leitura' ? 'cob' : 'blq';
-    return `<span class="ec-pill ${cls}"><span class="ec-ponto"></span>${esc(NOME_SITUACAO[c.situacao] || c.situacao)}</span>`;
+    const porque = c.situacao !== 'ativa' && c.situacao_motivo === 'inadimplencia' ? ' (atraso)' : '';
+    return `<span class="ec-pill ${cls}"><span class="ec-ponto"></span>${esc(NOME_SITUACAO[c.situacao] || c.situacao)}${porque}</span>`;
   }
-  function pintar() {
-    const ativas = casas.filter(c => c.situacao === 'ativa');
-    document.getElementById('kAtivas').textContent = ativas.length;
-    document.getElementById('kMensal').textContent = brl(ativas.filter(c => !c.padrao).reduce((t, c) => t + Number(c.mensalidade || 0), 0));
-    document.getElementById('kLeitura').textContent = casas.filter(c => c.situacao === 'so_leitura').length;
-    document.getElementById('kBloq').textContent = casas.filter(c => c.situacao === 'bloqueada').length;
+  const nomeModulo = (cod) => (catalogo.find(m => m.codigo === cod) || {}).nome || cod;
+
+  window.pintarEmpresas = () => {
+    const termo = slugDe(document.getElementById('busca').value);
+    const filtro = document.getElementById('filtroSit').value;
+    const lista = casas.filter(c => {
+      if (filtro === 'atraso' ? !(c.vencidas > 0) : (filtro && c.situacao !== filtro)) return false;
+      if (!termo) return true;
+      return slugDe([c.nome, c.slug, c.cidade, c.responsavel, c.razao_social, c.documento].join(' ')).includes(termo);
+    });
     const alvo = document.getElementById('listaCasas');
-    if (!casas.length) { alvo.innerHTML = '<div class="vazio">Nenhuma casa cadastrada.</div>'; return; }
-    alvo.innerHTML = casas.map(c => {
+    if (!lista.length) { alvo.innerHTML = `<div class="vazio">${casas.length ? 'Nenhuma empresa neste filtro.' : 'Nenhuma empresa cadastrada.'}</div>`; return; }
+    alvo.innerHTML = lista.map(c => {
       const pagina = c.padrao ? PAGINA_LISTAS : `${PAGINA_LISTAS}?casa=${encodeURIComponent(c.slug)}`;
       const admins = (c.administradores || []).map(a => `<div><b>${esc(a.nome)}</b>${a.ativo ? '' : ' (inativo)'}<button class="link-mini" type="button" onclick="reenviar('${a.user_id}')">Reenviar e-mail de senha</button></div>`).join('')
         || '<div>Nenhum administrador ainda.</div>';
+      const contato = [c.responsavel, c.telefone, [c.cidade, c.uf].filter(Boolean).join('/')].filter(Boolean).join(' · ');
+      const atraso = c.vencidas > 0 ? `<span class="ec-pill blq">Atrasada desde ${br(c.mais_antiga_vencida)} · ${brl(c.em_atraso ?? c.em_aberto)}</span>` : '';
       return `
       <article class="cartao casa">
         <div class="cab">
-          ${c.logo_url ? `<img src="${esc(c.logo_url)}" alt="">` : `<div class="sem-logo">${esc((String(c.nome || '?').normalize('NFD').replace(/[^A-Za-z0-9]/g, '') || '?').slice(0, 2).toUpperCase())}</div>`}
+          ${c.logo_url ? `<img src="${esc(c.logo_url)}" alt="">` : `<div class="sem-logo">${esc(iniciais(c.nome))}</div>`}
           <div style="flex:1;min-width:0">
-            <h3>${esc(c.nome)}${c.padrao ? ' <span class="ec-pill" style="font-size:12px;padding:3px 9px">sua casa</span>' : ''}</h3>
-            <div class="end">abreaporta.com.br · ${esc(c.slug)}</div>
+            <h3>${esc(c.nome)}${c.padrao ? ' <span class="chip">sua empresa</span>' : ''}</h3>
+            <div class="end">${esc(c.slug)}${contato ? ' · ' + esc(contato) : ''}</div>
           </div>
         </div>
         <div class="linha">
           ${selo(c)}
-          <span class="ec-pill">Plano ${esc(NOME_PLANO[c.plano] || c.plano)}</span>
-          ${c.padrao ? '' : `<span class="ec-pill">${c.mensalidade != null ? brl(c.mensalidade) + '/mês' : 'sem mensalidade'}${c.dia_vencimento ? ' · dia ' + c.dia_vencimento : ''}</span>`}
+          ${c.isenta ? '<span class="ec-pill">Isenta</span>' : `<span class="ec-pill">${brl(c.mensalidade)}/mês · dia ${c.dia_vencimento || 10}</span>`}
+          ${atraso}
+          ${c.liberado_ate && c.liberado_ate >= hoje ? `<span class="ec-pill cob">Prazo extra até ${br(c.liberado_ate)}</span>` : ''}
+        </div>
+        <div class="linha">${(c.modulos || []).map(m => `<span class="chip">${esc(nomeModulo(m.codigo))}</span>`).join('') || '<span class="chip">Sem módulos</span>'}</div>
+        <div class="linha">
           <span class="ec-pill ${c.mp_configurado ? 'ok' : 'blq'}">Mercado Pago ${c.mp_configurado ? '✓' : 'falta'}</span>
           <span class="ec-pill ${c.email_configurado ? 'ok' : 'cob'}">E-mail ${c.email_configurado ? '✓' : 'falta'}</span>
         </div>
@@ -254,47 +412,39 @@
           <div><span>Reservas</span><b>${c.reservas}</b></div>
         </div>
         <div class="admins">${admins}</div>
-        <div class="linha">
-          <button class="link-mini" type="button" onclick="copiar('${esc(pagina)}')">Copiar link da página pública</button>
-        </div>
+        <div class="linha"><button class="link-mini" type="button" onclick="copiar('${esc(pagina)}')">Copiar link da página pública</button></div>
         <div class="acoes">
-          <button class="ec-btn neutro" type="button" onclick="alternar('${c.id}', 'editar')">Editar</button>
-          <button class="ec-btn neutro" type="button" onclick="alternar('${c.id}', 'pagamento')">Mercado Pago e e-mail</button>
-          ${c.padrao ? '' : `<button class="ec-btn neutro" type="button" onclick="alternar('${c.id}', 'situacao')">Mudar situação</button>`}
-          <button class="ec-btn neutro" type="button" onclick="adicionarAdmin('${c.id}')">Adicionar administrador</button>
+          <button class="ec-btn neutro" type="button" onclick="abrirFicha('${c.id}')">Editar ficha</button>
+          <button class="ec-btn neutro" type="button" onclick="alternar('${c.id}', 'pagamento')">PIX e e-mail</button>
+          ${c.padrao ? `<button class="ec-btn neutro" type="button" onclick="verRelatorio('${c.id}')">Relatório</button>` : `<button class="ec-btn neutro" type="button" onclick="alternar('${c.id}', 'situacao')">Situação</button>`}
+          <button class="ec-btn neutro" type="button" onclick="adicionarAdmin('${c.id}')">+ Administrador</button>
+          ${c.padrao ? '' : `<button class="ec-btn neutro" type="button" onclick="verFaturas('${c.id}')">Mensalidades</button>`}
+          ${c.padrao ? '' : `<button class="ec-btn neutro" type="button" onclick="verRelatorio('${c.id}')">Relatório</button>`}
         </div>
         ${c.padrao ? '' : gavetaSituacao(c)}
-        ${gavetaEditar(c)}
         ${gavetaPagamento(c)}
       </article>`;
     }).join('');
-  }
+  };
 
   function gavetaSituacao(c) {
     const op = (s, txt, cls) => `<button class="ec-btn ${cls}" type="button" ${c.situacao === s ? 'disabled' : ''} onclick="mudarSituacao('${c.id}', '${s}')">${txt}${c.situacao === s ? ' (agora)' : ''}</button>`;
     return `<div class="gaveta" ${abertas.has(c.id + ':situacao') ? '' : 'hidden'} data-gaveta="${c.id}:situacao">
-      <div class="admins" style="margin:0"><b>Ativa:</b> funciona normal. <b>Só leitura:</b> vê tudo, mas não cria evento novo. <b>Bloqueada:</b> a equipe não entra e a página pública sai do ar.</div>
-      <div class="acoes" style="grid-template-columns:repeat(3,minmax(0,1fr))">${op('ativa', 'Ativa', 'ok')}${op('so_leitura', 'Só leitura', 'neutro')}${op('bloqueada', 'Bloquear', 'perigo')}</div>
-    </div>`;
-  }
-  function gavetaEditar(c) {
-    return `<form class="gaveta" ${abertas.has(c.id + ':editar') ? '' : 'hidden'} data-gaveta="${c.id}:editar" onsubmit="salvarCasa(event, '${c.id}')">
-      <div class="grade2">
-        <div class="campo"><label>Nome</label><input name="nome" value="${esc(c.nome)}" maxlength="80"></div>
-        <div class="campo"><label>Plano</label><select name="plano">${Object.keys(NOME_PLANO).map(p => `<option value="${p}" ${c.plano === p ? 'selected' : ''}>${NOME_PLANO[p]}</option>`).join('')}</select></div>
-        <div class="campo"><label>Mensalidade R$</label><input name="mensalidade" inputmode="decimal" value="${c.mensalidade ?? ''}"></div>
-        <div class="campo"><label>Dia do vencimento</label><input name="dia_vencimento" type="number" min="1" max="28" value="${c.dia_vencimento ?? ''}"></div>
+      <div class="admins" style="margin:0"><b>Ativa:</b> funciona normal. <b>Só leitura:</b> vê tudo, mas não cria evento novo. <b>Bloqueada:</b> a equipe não entra e a página pública sai do ar. Trava posta aqui fica até você tirar; trava por atraso sai sozinha quando a mensalidade é paga.</div>
+      <div class="acoes">${op('ativa', 'Ativa', 'ok')}${op('so_leitura', 'Só leitura', 'neutro')}${op('bloqueada', 'Bloquear', 'perigo')}</div>
+      <div class="barra" style="margin:0">
+        <div class="campo"><label>Dar prazo extra até</label><input type="date" id="prazo-${c.id}" value="${esc(c.liberado_ate || '')}"></div>
+        <button class="ec-btn neutro" type="button" onclick="darPrazo('${c.id}')">Salvar prazo</button>
       </div>
-      <div class="campo"><label>Link da logo (https://…)</label><input name="logo_url" value="${esc(c.logo_url || '')}" placeholder="Aparece na página pública e no e-mail"></div>
-      <button class="ec-btn ouro" type="submit">Salvar</button>
-    </form>`;
+      <button class="ec-btn sair" type="button" onclick="excluirCasa('${c.id}')">Apagar empresa</button>
+    </div>`;
   }
   function gavetaPagamento(c) {
     return `<form class="gaveta" ${abertas.has(c.id + ':pagamento') ? '' : 'hidden'} data-gaveta="${c.id}:pagamento" onsubmit="salvarSegredos(event, '${c.id}')">
       ${c.padrao ? '<p class="admins" style="margin:0">A E-Club usa o token e o e-mail dos Secrets das funções, como sempre. Só preencha aqui se quiser trocar.</p>' : ''}
       <div class="campo"><label>Access Token do Mercado Pago (produção)</label><input name="mp_access_token" type="password" autocomplete="off" placeholder="${c.mp_configurado ? 'Já configurado — deixe em branco para manter' : 'APP_USR-…'}"><small>Fica guardado só no servidor. Depois de salvo, ninguém consegue ver de novo.</small></div>
       <div class="grade2">
-        <div class="campo"><label>E-mail que envia os comprovantes</label><input name="email_remetente" type="email" autocomplete="off" placeholder="${c.email_configurado ? 'Já configurado' : 'naoresponda@dominiodacasa.com.br'}"></div>
+        <div class="campo"><label>E-mail que envia os comprovantes</label><input name="email_remetente" type="email" autocomplete="off" placeholder="${c.email_configurado ? 'Já configurado' : 'naoresponda@dominiodaempresa.com.br'}"></div>
         <div class="campo"><label>Senha desse e-mail</label><input name="email_senha" type="password" autocomplete="new-password" placeholder="Deixe em branco para manter"></div>
         <div class="campo"><label>Nome que aparece no e-mail</label><input name="email_nome" maxlength="60" placeholder="${esc(c.nome)}"></div>
         <div class="campo"><label>Servidor SMTP e porta</label><div style="display:flex;gap:8px"><input name="email_host" placeholder="smtp.gmail.com" style="flex:1"><input name="email_porta" type="number" placeholder="465" style="width:96px"></div></div>
@@ -310,35 +460,111 @@
     el.hidden = !el.hidden;
     if (el.hidden) abertas.delete(chave); else abertas.add(chave);
   };
-  window.salvarCasa = async (e, id) => {
+
+  // ----- ficha (nova ou editar) -----
+  let slugEditado = false;
+  window.abrirFicha = (id = '') => {
+    const c = casas.find(x => x.id === id) || null;
+    const f = document.getElementById('ficha');
+    f.reset();
+    document.getElementById('msgFicha').hidden = true;
+    document.getElementById('fichaTit').textContent = c ? `Editar ${c.nome}` : 'Nova empresa';
+    document.getElementById('f-id').value = c ? c.id : '';
+    const val = (idCampo, v) => { document.getElementById(idCampo).value = v ?? ''; };
+    val('f-nome', c?.nome); val('f-slug', c?.slug); val('f-razao', c?.razao_social); val('f-doc', c?.documento);
+    val('f-resp', c?.responsavel); val('f-tel', c?.telefone); val('f-email', c?.email_contato); val('f-cidade', c?.cidade);
+    val('f-uf', c?.uf); val('f-end', c?.endereco); val('f-inicio', c?.inicio_em || hoje); val('f-logo', c?.logo_url); val('f-obs', c?.observacoes);
+    val('f-desconto', c ? String(c.desconto || 0).replace('.', ',') : '0'); val('f-dia', c?.dia_vencimento || 10);
+    document.getElementById('f-isenta').checked = !!c?.isenta;
+    document.getElementById('f-isenta').disabled = !!c?.padrao;
+    document.getElementById('f-slug').disabled = !!c?.padrao;
+    document.getElementById('f-admin').hidden = !!c;
+    document.getElementById('f-admin-email').required = !c;
+    slugEditado = !!c;
+    // Módulos: os da empresa (com o preço dela) ou os padrões do catálogo.
+    const tem = new Map((c?.modulos || []).map(m => [m.codigo, m.valor]));
+    document.getElementById('f-modulos').innerHTML = catalogo.map(m => {
+      const marcado = c ? tem.has(m.codigo) : ['eventos', 'promoters', 'portaria'].includes(m.codigo);
+      const preco = c && tem.has(m.codigo) ? tem.get(m.codigo) : m.valor_padrao;
+      return `<label class="mod"><input type="checkbox" data-mod="${m.codigo}" ${marcado ? 'checked' : ''} onchange="somarFicha()">
+        <span class="txt"><b>${esc(m.nome)}</b><small>${esc(m.descricao || '')}</small></span>
+        <span class="preco"><input data-preco="${m.codigo}" inputmode="decimal" value="${String(Number(preco || 0)).replace('.', ',')}" oninput="somarFicha()" aria-label="Preço de ${esc(m.nome)}"></span></label>`;
+    }).join('');
+    previaFicha(); somarFicha();
+    f.hidden = false;
+    f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.getElementById('f-nome').focus();
+  };
+  window.fecharFicha = () => { document.getElementById('ficha').hidden = true; };
+  function modulosDaFicha() {
+    return [...document.querySelectorAll('#f-modulos input[data-mod]:checked')].map(ch => ({
+      codigo: ch.dataset.mod, valor: num(document.querySelector(`#f-modulos input[data-preco="${ch.dataset.mod}"]`).value),
+    }));
+  }
+  window.somarFicha = () => {
+    const isenta = document.getElementById('f-isenta').checked;
+    const soma = modulosDaFicha().reduce((t, m) => t + m.valor, 0) - num(document.getElementById('f-desconto').value);
+    document.getElementById('f-total').textContent = isenta ? 'Isenta' : brl(Math.max(0, soma));
+  };
+  function previaFicha() { document.getElementById('f-previa').textContent = `A página: abreaporta.com.br/listas-nova.html?casa=${slugDe(document.getElementById('f-slug').value) || '…'}`; }
+  document.getElementById('f-nome').addEventListener('input', (e) => { if (!slugEditado) document.getElementById('f-slug').value = slugDe(e.target.value); previaFicha(); });
+  document.getElementById('f-slug').addEventListener('input', (e) => { slugEditado = true; e.target.value = slugDe(e.target.value); previaFicha(); });
+
+  document.getElementById('ficha').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const f = new FormData(e.target);
+    const id = document.getElementById('f-id').value;
+    const msg = document.getElementById('msgFicha'); msg.hidden = true;
+    const v = (x) => document.getElementById(x).value;
+    const dados = {
+      nome: v('f-nome'), slug: v('f-slug'), razao_social: v('f-razao'), documento: v('f-doc'), responsavel: v('f-resp'),
+      telefone: v('f-tel'), email_contato: v('f-email'), cidade: v('f-cidade'), uf: v('f-uf'), endereco: v('f-end'),
+      inicio_em: v('f-inicio'), logo_url: v('f-logo'), observacoes: v('f-obs'),
+      desconto: v('f-desconto'), dia_vencimento: v('f-dia'), isenta: document.getElementById('f-isenta').checked,
+      modulos: modulosDaFicha(),
+    };
+    if (!dados.modulos.length) { msg.className = 'msg erro'; msg.textContent = 'Marque pelo menos um módulo.'; msg.hidden = false; return; }
+    const btn = document.getElementById('btnSalvarFicha'); btn.disabled = true; btn.textContent = 'Salvando…';
     try {
-      await api('atualizar_casa', { casa_id: id, nome: f.get('nome'), plano: f.get('plano'), mensalidade: f.get('mensalidade'), dia_vencimento: f.get('dia_vencimento'), logo_url: f.get('logo_url') });
-      abertas.delete(id + ':editar');
-      aviso('Casa atualizada.'); await carregar();
-    } catch (err) { aviso(err.message, false); }
+      const r = id
+        ? await api('atualizar_casa', { casa_id: id, ...dados })
+        : await api('criar_casa', { ...dados, admin_email: v('f-admin-email'), admin_nome: v('f-admin-nome') });
+      if (r.aviso) { msg.className = 'msg erro'; msg.textContent = r.aviso; msg.hidden = false; }
+      else { aviso(id ? 'Ficha salva.' : `Empresa "${r.casa.nome}" criada. O administrador recebeu o e-mail para criar a senha.`); fecharFicha(); }
+      await carregar();
+    } catch (err) {
+      msg.className = 'msg erro'; msg.textContent = err.message; msg.hidden = false;
+    } finally { btn.disabled = false; btn.textContent = 'Salvar empresa'; }
+  });
+
+  window.mudarSituacao = async (id, nova) => {
+    const c = casas.find(x => x.id === id); if (!c) return;
+    if (nova === 'bloqueada' && !(await ECUI.confirmar({ titulo: `Bloquear ${c.nome}?`, texto: 'A equipe da empresa deixa de entrar no sistema e a página pública sai do ar até você reativar.', confirmar: 'Bloquear', perigo: true }))) return;
+    try { await api('atualizar_casa', { casa_id: id, situacao: nova }); abertas.delete(id + ':situacao'); aviso(`${c.nome}: ${NOME_SITUACAO[nova]}.`); await carregar(); }
+    catch (err) { aviso(err.message, false); }
+  };
+  window.darPrazo = async (id) => {
+    const data = document.getElementById('prazo-' + id).value;
+    try { await api('atualizar_casa', { casa_id: id, liberado_ate: data || null }); aviso(data ? `Prazo extra até ${br(data)}.` : 'Prazo extra removido.'); await carregar(); }
+    catch (err) { aviso(err.message, false); }
+  };
+  window.excluirCasa = async (id) => {
+    const c = casas.find(x => x.id === id); if (!c) return;
+    const conf = await ECUI.pedirTexto({ titulo: `Apagar ${c.nome} de vez?`, texto: `Apaga a empresa, os eventos, as reservas, a equipe e os logins dela. Não dá para desfazer.\nPara confirmar, digite o endereço: ${c.slug}`, placeholder: c.slug, confirmar: 'Apagar empresa', perigo: true, max: 60 });
+    if (!conf) return;
+    try { await api('excluir_casa', { casa_id: id, confirmacao: conf }); aviso('Empresa apagada.'); await carregar(); }
+    catch (err) { aviso(err.message, false); }
   };
   window.salvarSegredos = async (e, id) => {
     e.preventDefault();
     const f = new FormData(e.target);
     const dados = {}; for (const [k, v] of f.entries()) if (String(v).trim()) dados[k] = String(v).trim();
     if (!Object.keys(dados).length) return aviso('Nada para salvar: preencha algum campo.', false);
-    try {
-      await api('salvar_segredos', { casa_id: id, ...dados });
-      abertas.delete(id + ':pagamento');
-      aviso('Guardado no cofre da casa.'); await carregar();
-    } catch (err) { aviso(err.message, false); }
-  };
-  window.limparMP = async (id) => {
-    if (!(await ECUI.confirmar({ titulo: 'Apagar o token do Mercado Pago?', texto: 'A página dessa casa para de vender no PIX até um token novo ser colocado.', confirmar: 'Apagar', perigo: true }))) return;
-    try { await api('salvar_segredos', { casa_id: id, limpar_mp: true }); aviso('Token apagado.'); await carregar(); }
+    try { await api('salvar_segredos', { casa_id: id, ...dados }); abertas.delete(id + ':pagamento'); aviso('Guardado no cofre da empresa.'); await carregar(); }
     catch (err) { aviso(err.message, false); }
   };
-  window.mudarSituacao = async (id, nova) => {
-    const c = casas.find(x => x.id === id); if (!c) return;
-    if (nova === 'bloqueada' && !(await ECUI.confirmar({ titulo: `Bloquear ${c.nome}?`, texto: 'A equipe da casa deixa de entrar no sistema e a página pública sai do ar até você reativar.', confirmar: 'Bloquear', perigo: true }))) return;
-    try { await api('atualizar_casa', { casa_id: id, situacao: nova }); abertas.delete(id + ':situacao'); aviso(`${c.nome}: ${NOME_SITUACAO[nova]}.`); await carregar(); }
+  window.limparMP = async (id) => {
+    if (!(await ECUI.confirmar({ titulo: 'Apagar o token do Mercado Pago?', texto: 'A página dessa empresa para de vender no PIX até um token novo ser colocado.', confirmar: 'Apagar', perigo: true }))) return;
+    try { await api('salvar_segredos', { casa_id: id, limpar_mp: true }); aviso('Token apagado.'); await carregar(); }
     catch (err) { aviso(err.message, false); }
   };
   window.adicionarAdmin = async (id) => {
@@ -356,6 +582,144 @@
   window.copiar = (txt) => {
     const fim = () => aviso('Link copiado.');
     try { navigator.clipboard.writeText(txt).then(fim).catch(() => prompt('Copie o link:', txt)); } catch (_) { prompt('Copie o link:', txt); }
+  };
+
+  // ===== MENSALIDADES =====
+  window.verFaturas = (id) => { document.getElementById('fat-casa').value = id; document.getElementById('fat-status').value = ''; trocarAba('mensalidades'); };
+  window.carregarFaturas = async () => {
+    const alvo = document.getElementById('listaFaturas');
+    try {
+      const r = await api('listar_faturas', { casa_id: document.getElementById('fat-casa').value || null, status: document.getElementById('fat-status').value || null });
+      const lista = r.faturas || [];
+      if (!lista.length) { alvo.innerHTML = '<div class="vazio">Nenhuma fatura neste filtro.</div>'; return; }
+      const nomeCasa = (id) => (casas.find(c => c.id === id) || {}).nome || '—';
+      alvo.innerHTML = `<div class="fatura cab"><span>Empresa</span><span>Mês</span><span>Valor</span><span>Vencimento</span><span>Situação</span><span></span></div>` + lista.map(f => {
+        let sit = '', cls = '';
+        if (f.status === 'paga') { sit = `Paga em ${br(f.pago_em)}${f.forma ? ' · ' + esc(f.forma) : ''}`; cls = 'verde'; }
+        else if (f.status === 'cancelada') { sit = 'Cancelada'; cls = ''; }
+        else if (f.vencimento < r.hoje) { sit = `Atrasada há ${dias(f.vencimento, r.hoje)} dia(s)`; cls = 'vermelho'; }
+        else if (f.vencimento === r.hoje) { sit = 'Vence hoje'; cls = 'laranja'; }
+        else { sit = `Em aberto · vence em ${dias(r.hoje, f.vencimento)} dia(s)`; }
+        const botoes = f.status === 'aberta'
+          ? `<button class="ec-btn ok" type="button" onclick="marcarPaga('${f.id}')">Marcar paga</button><button class="ec-btn neutro" type="button" onclick="mudarFatura('${f.id}', 'cancelada')">Cancelar</button>`
+          : `<button class="ec-btn neutro" type="button" onclick="mudarFatura('${f.id}', 'aberta')">Reabrir</button>`;
+        return `<div class="fatura"><b class="nome">${esc(nomeCasa(f.casa_id))}</b><span data-rot="Mês">${mesBR(f.competencia)}</span><b data-rot="Valor">${brl(f.valor)}</b><span data-rot="Vencimento">${br(f.vencimento)}</span><span class="sit ${cls}" style="font-weight:800">${sit}</span><div class="botoes">${botoes}</div></div>`;
+      }).join('');
+    } catch (err) { alvo.innerHTML = `<div class="vazio">${esc(err.message)}</div>`; }
+  };
+  window.marcarPaga = async (id) => {
+    const forma = await ECUI.pedirTexto({ titulo: 'Marcar como paga', texto: 'Como a empresa pagou? (ex.: PIX, boleto, dinheiro)', placeholder: 'PIX', valor: 'PIX', confirmar: 'Confirmar pagamento', max: 40 });
+    if (forma === null) return;
+    try {
+      const r = await api('atualizar_fatura', { fatura_id: id, status: 'paga', forma: forma || 'PIX' });
+      aviso(r.situacao === 'ativa' ? 'Pagamento registrado. A empresa está ativa.' : 'Pagamento registrado.');
+      await Promise.all([carregarFaturas(), carregar()]);
+    } catch (err) { aviso(err.message, false); }
+  };
+  window.mudarFatura = async (id, status) => {
+    if (status === 'cancelada' && !(await ECUI.confirmar({ titulo: 'Cancelar esta fatura?', texto: 'Ela deixa de contar como atraso.', confirmar: 'Cancelar fatura', perigo: true }))) return;
+    try { await api('atualizar_fatura', { fatura_id: id, status }); aviso(status === 'aberta' ? 'Fatura reaberta.' : 'Fatura cancelada.'); await Promise.all([carregarFaturas(), carregar()]); }
+    catch (err) { aviso(err.message, false); }
+  };
+  window.alternarGerar = () => {
+    const f = document.getElementById('formGerar'); f.hidden = !f.hidden;
+    if (!f.hidden) document.getElementById('g-mes').value = (hoje || new Date().toISOString()).slice(0, 7);
+  };
+  window.gerarFatura = async (e) => {
+    e.preventDefault();
+    try {
+      await api('gerar_fatura', { casa_id: document.getElementById('g-casa').value, mes: document.getElementById('g-mes').value, valor: document.getElementById('g-valor').value || null, vencimento: document.getElementById('g-venc').value || null });
+      aviso('Fatura criada.'); e.target.reset(); e.target.hidden = true; await Promise.all([carregarFaturas(), carregar()]);
+    } catch (err) { aviso(err.message, false); }
+  };
+  window.rodarRotina = async () => {
+    try { const r = await api('rodar_rotina'); aviso(`Pronto: ${r.resultado?.faturas_geradas || 0} fatura(s) gerada(s), ${r.resultado?.situacoes_mudadas || 0} empresa(s) mudaram de situação.`); await Promise.all([carregarFaturas(), carregar()]); }
+    catch (err) { aviso(err.message, false); }
+  };
+
+  // ===== RELATÓRIOS =====
+  window.periodoRel = () => {
+    const p = document.getElementById('rel-periodo').value;
+    const h = hoje || new Date().toISOString().slice(0, 10);
+    const [a, m] = h.split('-').map(Number);
+    const fimMes = (ano, mes) => new Date(ano, mes, 0).getDate();
+    let de = '', ate = h;
+    if (p === 'mes') de = h.slice(0, 7) + '-01';
+    else if (p === 'mes_passado') { const am = m === 1 ? [a - 1, 12] : [a, m - 1]; de = `${am[0]}-${String(am[1]).padStart(2, '0')}-01`; ate = `${am[0]}-${String(am[1]).padStart(2, '0')}-${fimMes(am[0], am[1])}`; }
+    else if (p === '30') de = somaDias(h, -30);
+    else if (p === 'ano') de = `${a}-01-01`;
+    if (p !== 'outro') { document.getElementById('rel-de').value = de; document.getElementById('rel-ate').value = ate; }
+  };
+  window.verRelatorio = (id) => { document.getElementById('rel-casa').value = id; trocarAba('relatorios'); gerarRelatorio(); };
+  window.gerarRelatorio = async () => {
+    if (!document.getElementById('rel-de').value) periodoRel();
+    const alvo = document.getElementById('relResultado');
+    const casaId = document.getElementById('rel-casa').value;
+    const c = casas.find(x => x.id === casaId);
+    alvo.innerHTML = '<div class="vazio">Calculando…</div>';
+    try {
+      const r = await api('relatorio', { casa_id: casaId, de: document.getElementById('rel-de').value, ate: document.getElementById('rel-ate').value });
+      const x = r.relatorio || {};
+      const k = (rot, val, sub = '') => `<div class="cartao kpi"><span>${rot}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+      const pagas = (r.faturas || []).filter(f => f.status === 'paga');
+      const abertasF = (r.faturas || []).filter(f => f.status === 'aberta');
+      alvo.innerHTML = `
+        <div class="bloco-tit">${esc(c?.nome || '')} · ${br(x.de)} a ${br(x.ate)}</div>
+        <div class="rel-kpis">
+          ${k('Eventos', x.eventos ?? 0)}
+          ${k('Nomes na lista', x.nomes_na_lista ?? 0)}
+          ${k('Entradas', x.entradas ?? 0, x.nomes_na_lista ? Math.round(100 * (x.entradas || 0) / x.nomes_na_lista) + '% de quem estava na lista' : '')}
+          ${k('Vendido no PIX', brl((x.pix_valor || 0) + (x.camarotes_valor || 0)), `${x.pix_pagos || 0} ingressos · ${x.camarotes_vendidos || 0} camarotes`)}
+          ${k('Ingressos PIX', brl(x.pix_valor || 0), `${x.pix_pagos || 0} vendidos`)}
+          ${k('Camarotes', brl(x.camarotes_valor || 0), `${x.camarotes_vendidos || 0} vendidos · ${x.cortesias || 0} cortesias`)}
+          ${k('Solteiras', x.solteiras ?? 0, 'entradas')}
+          ${k('Carros no vallet', x.vallet_carros ?? 0, `${x.caronas || 0} pedidos de carona`)}
+        </div>
+        <div class="cartao" style="margin-top:16px">
+          <div class="bloco-tit">Por evento</div>
+          ${(x.por_evento || []).length ? `<div class="rolagem"><table class="tabela"><thead><tr><th>Evento</th><th>Data</th><th class="num">Nomes</th><th class="num">Entradas</th><th class="num">PIX</th><th class="num">Valor PIX</th></tr></thead><tbody>
+            ${x.por_evento.map(e => `<tr><td>${esc(e.evento || '—')}</td><td>${br(e.data_evento)}</td><td class="num">${e.nomes}</td><td class="num">${e.entradas}</td><td class="num">${e.pix}</td><td class="num">${brl(e.pix_valor)}</td></tr>`).join('')}
+          </tbody></table></div>` : '<p class="explica">Nenhum evento no período.</p>'}
+        </div>
+        ${c && !c.isenta ? `<div class="cartao" style="margin-top:16px"><div class="bloco-tit">Mensalidades no período</div>
+          <p class="explica" style="margin:0">${pagas.length} paga(s): <b class="verde">${brl(pagas.reduce((t, f) => t + Number(f.valor), 0))}</b> · ${abertasF.length} em aberto: <b class="vermelho">${brl(abertasF.reduce((t, f) => t + Number(f.valor), 0))}</b></p></div>` : ''}`;
+    } catch (err) { alvo.innerHTML = `<div class="vazio">${esc(err.message)}</div>`; }
+  };
+
+  // ===== REGRAS E PREÇOS =====
+  function pintarRegras() {
+    if (regras) {
+      document.getElementById('r-gerar').value = regras.dia_gerar;
+      document.getElementById('r-aviso').value = regras.aviso_dias_antes;
+      document.getElementById('r-leitura').value = regras.dias_so_leitura;
+      document.getElementById('r-bloq').value = regras.dias_bloqueio;
+      document.getElementById('r-pix').value = regras.chave_pix || '';
+    }
+    exemploRegras();
+    document.getElementById('catalogo').innerHTML = catalogo.map(m => `
+      <label class="mod"><span class="txt"><b>${esc(m.nome)}</b><small>${esc(m.descricao || '')}</small></span>
+      <span class="preco"><input data-cat="${m.codigo}" inputmode="decimal" value="${String(Number(m.valor_padrao || 0)).replace('.', ',')}" aria-label="Preço padrão de ${esc(m.nome)}"></span></label>`).join('');
+  }
+  window.exemploRegras = () => {
+    const g = Number(document.getElementById('r-gerar').value || 1), a = Number(document.getElementById('r-aviso').value || 0);
+    const l = Number(document.getElementById('r-leitura').value || 5), b = Number(document.getElementById('r-bloq').value || 15);
+    document.getElementById('regrasExemplo').textContent =
+      `Exemplo com vencimento no dia 10: a fatura do mês é criada no dia ${g}; a empresa vê o aviso a partir do dia ${Math.max(1, 10 - a)}; ` +
+      `se não pagar, fica em SÓ LEITURA no dia ${10 + l} (não cria evento novo) e é BLOQUEADA no dia ${10 + b} (equipe não entra e a página sai do ar). ` +
+      `Quando você marca a fatura como paga, ela volta ao normal na hora.`;
+  };
+  window.salvarRegras = async (e) => {
+    e.preventDefault();
+    const v = (id) => document.getElementById(id).value;
+    if (Number(v('r-bloq')) < Number(v('r-leitura'))) return aviso('Os dias para bloquear precisam ser iguais ou maiores que os de só leitura.', false);
+    try { await api('salvar_regras', { dia_gerar: v('r-gerar'), aviso_dias_antes: v('r-aviso'), dias_so_leitura: v('r-leitura'), dias_bloqueio: v('r-bloq'), chave_pix: v('r-pix') }); aviso('Regras salvas.'); await carregar(); }
+    catch (err) { aviso(err.message, false); }
+  };
+  window.salvarCatalogo = async (e) => {
+    e.preventDefault();
+    const modulos = [...document.querySelectorAll('#catalogo input[data-cat]')].map(i => ({ codigo: i.dataset.cat, valor_padrao: num(i.value) }));
+    try { await api('salvar_catalogo', { modulos }); aviso('Preços salvos.'); await carregar(); }
+    catch (err) { aviso(err.message, false); }
   };
 </script>
 </body>
