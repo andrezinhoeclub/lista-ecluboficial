@@ -418,9 +418,11 @@
         // pública funciona, sem exigir conta de ninguém) quanto pra quem
         // logou no Painel Logística (listar_rotas) — o sb.functions.invoke
         // já manda o token da sessão sozinho quando ela existe.
+        // Várias casas: caronas-nova.html?casa=nomedacasa (sem isso, E-Club).
+        const casaDoLink = (() => { const c = new URLSearchParams(location.search).get('casa') || ''; return /^[a-z0-9-]{2,40}$/.test(c) ? c : ''; })();
         async function apiCaronas(action, payload = {}) {
             const { data, error } = await sb.functions.invoke('caronas-api', {
-                body: { action, ...payload }
+                body: { action, casa: casaDoLink, ...payload }
             });
             if (error) {
                 let payloadErro = {};
