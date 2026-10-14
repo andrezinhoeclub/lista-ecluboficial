@@ -803,17 +803,8 @@
         });
 
         function iniciarSistema() {
-            const st = (dadosPromoter.tipo || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-            if (st === "visualizar") {
-                document.getElementById('navAcoes').style.display = 'none';
-                document.getElementById('painel').classList.remove('pb-44');
-                document.getElementById('painel').classList.add('pb-10');
-            }
-            if (st === "aniversario") {
-                document.getElementById('secaoAniversario').classList.remove('hidden');
-                document.getElementById('botoesAniversario').classList.remove('hidden');
-                renderAniversarios();
-            }
+            pmAplicarBarraDeBotoes();
+            if (pmPerfil() === "aniversario") renderAniversarios();
             renderPerformance();
             pmMontarSeletor();
             pmCarregarLista(true);
@@ -928,7 +919,25 @@
         // Volta a ser a do arquivo antigo: cabecalho grande, sem barra de festa,
         // sem contadores e sem lista. E chamada toda vez que a tela se repinta,
         // entao pode rodar quantas vezes for — nao faz nada duas vezes.
+        // Barra de botões de baixo (copiar link / aniversário / cortesia) de
+        // acordo com o tipo da conta. É refeita a cada atualização da tela,
+        // porque o tipo pode mudar no Dashboard com a tela aberta: "apenas
+        // visualizar" não tem NENHUM botão embaixo.
+        function pmAplicarBarraDeBotoes() {
+            const tipo = pmPerfil();
+            const nav = document.getElementById('navAcoes');
+            const painel = document.getElementById('painel');
+            if (nav) nav.style.display = tipo === 'visualizar' ? 'none' : '';
+            if (painel) {
+                painel.classList.toggle('pb-44', tipo !== 'visualizar');
+                painel.classList.toggle('pb-10', tipo === 'visualizar');
+            }
+            const ehAniv = tipo === 'aniversario';
+            document.getElementById('botoesAniversario')?.classList.toggle('hidden', !ehAniv);
+            document.getElementById('secaoAniversario')?.classList.toggle('hidden', !ehAniv);
+        }
         function pmAplicarModoVisualizar() {
+            pmAplicarBarraDeBotoes();
             const painel = document.getElementById('painel');
             const classico = document.getElementById('cabecalhoVisualizar');
             if (!painel || !classico) return false;
@@ -973,7 +982,7 @@
             const htmlNovo = lista.map(e => {
                 const nome = String(e.nome || '');
                 const d = pmDiaDaFesta(e.data);
-                const rotulo = (d ? d.dia.nome + ' ' + d.curta + ' - ' : '') + nome.toUpperCase();
+                const rotulo = (e.privado ? '🔒 PRIVADO · ' : '') + (d ? d.dia.nome + ' ' + d.curta + ' - ' : '') + nome.toUpperCase();
                 return `<option value="${escapeHtml(nome)}">${escapeHtml(rotulo)}</option>`;
             }).join('');
             // Só repinta quando mudou de verdade: repintar a cada 15s fecharia
@@ -1034,7 +1043,7 @@
             // semana que vem".
             if (elDia) elDia.innerHTML = escapeHtml(nomeDoDia)
                 + (pmEhHoje(ev) ? ' <i class="pm-hoje">HOJE</i>' : '');
-            if (elNome) elNome.textContent = String(ev.nome || '').toUpperCase() + (ev.hora ? ' · ' + ev.hora : '');
+            if (elNome) elNome.textContent = (ev.privado ? '🔒 PRIVADO · ' : '') + String(ev.nome || '').toUpperCase() + (ev.hora ? ' · ' + ev.hora : '');
             if (btn) btn.textContent = 'ADICIONAR ' + dia.artigo + ' ' + nomeDoDia;
         }
 
@@ -1535,7 +1544,17 @@
         // paralelo, é a listas-nova.html (a listas.html ainda é a do Firebase).
         // Na virada para o sistema novo, troque aqui para 'listas.html'.
         const PAGINA_LISTAS = 'https://abreaporta.com.br/listas-nova.html';
-        window.copiarLinkGeral = () => { navigator.clipboard.writeText(`${PAGINA_LISTAS}?ref=${encodeURIComponent(logado)}`).then(() => mostrarAviso("Link Copiado!", true)); };
+        // Festa escolhida é um EVENTO PRIVADO: copia o link exclusivo dele (só
+        // quem tem esse link acha o evento), já com o promoter marcado.
+        // Festa pública: o link de sempre, com todas as festas públicas.
+        window.copiarLinkGeral = () => {
+            const ev = pmEventosAbertos().find(e => String(e.nome || '') === pmFestaAtual);
+            if (ev && ev.privado && !ev.link_privado) return mostrarAviso('Este evento privado ainda não tem link. Avise a casa.');
+            const link = (ev && ev.privado)
+                ? `${PAGINA_LISTAS}?e=${encodeURIComponent(ev.link_privado)}&ref=${encodeURIComponent(logado)}`
+                : `${PAGINA_LISTAS}?ref=${encodeURIComponent(logado)}`;
+            navigator.clipboard.writeText(link).then(() => mostrarAviso(ev && ev.privado ? "Link do evento privado copiado!" : "Link Copiado!", true));
+        };
         window.copiarLinkAniv = (id, n) => { const link = `${PAGINA_LISTAS}?id=${encodeURIComponent(id)}`; navigator.clipboard.writeText(`*Convite VIP: Lista de ${n}* 🍾\n\nGaranta seu nome na lista pelo link abaixo:\n${link}`).then(() => mostrarAviso("Convite Copiado!", true)); };
         window.mask = (i) => { let v = i.value.replace(/\D/g, "").substring(0, 11); if (v.length > 0) v = "(" + v; if (v.length > 3) v = v.substring(0, 3) + ") " + v.substring(3); if (v.length > 10) v = v.substring(0, 10) + "-" + v.substring(10); i.value = v; };
 </script>
