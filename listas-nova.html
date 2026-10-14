@@ -628,11 +628,6 @@
     // Link exclusivo de evento privado: listas-nova.html?e=CÓDIGO
     const codigoPrivado = /^[0-9a-f-]{36}$/i.test(urlParams.get('e') || '') ? urlParams.get('e') : '';
     let modoPrivado = false;
-    // Várias casas: a página de cada casa é listas-nova.html?casa=nomedacasa
-    // (sem isso, é a E-Club, como sempre).
-    const casaDoLink = /^[a-z0-9-]{2,40}$/.test(urlParams.get('casa') || '') ? urlParams.get('casa') : '';
-    let casaAtual = null; // { slug, nome, logo_url, padrao } vinda do servidor
-    let enderecoCasa = '';
     let globalAniversariante = ""; let eventoFixo = null; let eventosCache = [];
     let eventoAtivo = null; let tipoAtivo = null; let eFluxoPix = false;
     let promoterTipo = "padrao";
@@ -916,37 +911,9 @@
         document.getElementById('seloPrivado').hidden = !modoPrivado;
         if (!modoPrivado || !ev) return;
         if (ev.logo_url) {
-            document.querySelectorAll('img.marca').forEach(img => { img.src = ev.logo_url; img.alt = ev.nome || 'Evento'; img.style.display = ''; });
-            document.querySelectorAll('.marca-texto').forEach(el => el.remove());
+            document.querySelectorAll('img.marca').forEach(img => { img.src = ev.logo_url; img.alt = ev.nome || 'Evento'; });
         }
         document.title = `${String(ev.nome || 'Evento').toUpperCase()} | Ingressos`;
-    }
-
-    // Outra casa (não a E-Club): a logo, o nome e os créditos passam a ser
-    // os DELA. Sem logo cadastrada, o nome da casa aparece escrito.
-    function aplicarVisualCasa(casa) {
-        if (!casa) return;
-        // E-Club: só troca a logo se ela subiu uma pela Dashboard.
-        if (casa.padrao) {
-            if (casa.logo_url) document.querySelectorAll('img.marca').forEach(img => { img.src = casa.logo_url; });
-            return;
-        }
-        document.querySelectorAll('img.marca').forEach(img => {
-            if (casa.logo_url) { img.src = casa.logo_url; img.alt = casa.nome; return; }
-            if (img.dataset.trocada) return;
-            const nome = document.createElement('span');
-            nome.className = 'marca-texto';
-            nome.textContent = String(casa.nome || '').toUpperCase();
-            nome.style.cssText = 'display:block;font-size:22px;font-weight:900;font-style:italic;letter-spacing:-.5px;line-height:58px;color:var(--tinta);text-align:center';
-            img.dataset.trocada = '1';
-            // style (e não "hidden"): o CSS da logo (.marca{display:block})
-            // passa por cima do atributo hidden e a logo da E-Club continuava ali.
-            img.style.display = 'none';
-            img.insertAdjacentElement('afterend', nome);
-        });
-        document.querySelectorAll('.creditos').forEach(el => { el.textContent = '⚡ ' + casa.nome; });
-        document.querySelector('link[rel="icon"]')?.setAttribute('href', casa.logo_url || 'data:,');
-        document.title = `${String(casa.nome || '').toUpperCase()} | Seu nome na lista`;
     }
 
     // ===== CONTATOS DA CASA (Ajustes da Dashboard) =====
@@ -958,16 +925,6 @@
         const ig = String(c.instagram || '').trim().replace(/^@/, '').replace(/[^A-Za-z0-9._]/g, '');
         const zap = String(c.whatsapp || '').replace(/\D/g, '');
         const end = String(c.endereco || '').trim();
-        enderecoCasa = end;
-        // Outra casa: os links de reserva escritos na página são os da
-        // E-Club, então o que a casa não preencheu fica escondido.
-        if (casaAtual && !casaAtual.padrao) {
-            const esconder = (id, vazio) => { const el = document.getElementById(id); if (el) el.style.display = vazio ? 'none' : ''; };
-            esconder('linkInstaCasa', !ig);
-            esconder('linkZapCasa', zap.length < 10);
-            esconder('linkZapCasaOk', zap.length < 10);
-            esconder('linkMapaCasa', !end);
-        }
         if (ig) {
             const el = document.getElementById('linkInstaCasa');
             if (el) el.href = `https://www.instagram.com/${ig}/`;
@@ -986,7 +943,7 @@
 
     // ===== 1. A LISTA DAS FESTAS =====
     async function carregarPagina(silencioso = false) {
-        const boot = await apiListas('bootstrap', { ref: refDoLink, id: urlParams.get('id') || '', e: codigoPrivado, casa: casaDoLink });
+        const boot = await apiListas('bootstrap', { ref: refDoLink, id: urlParams.get('id') || '', e: codigoPrivado });
 
         taxaPixTipo = boot.configuracao?.taxa_tipo || 'desativado';
         taxaPixValor = Number(boot.configuracao?.taxa_valor || 0);
@@ -997,8 +954,6 @@
         promoterTipo = boot.contexto?.promoterTipo || 'padrao';
         eventosCache = Array.isArray(boot.eventos) ? boot.eventos : [];
         modoPrivado = !!boot.contexto?.privado;
-        casaAtual = boot.casa || null;
-        aplicarVisualCasa(casaAtual);
         aplicarContatosCasa(boot.contatos);
         aplicarVisualPrivado(eventosCache[0]);
         if (boot.contexto?.linkPrivadoInvalido) {
@@ -1353,7 +1308,7 @@
 
     // ===== FIDELIDADE (mesma regra da versão anterior) =====
     async function verificarFidelidade(telefone) {
-        const data = await apiListas('fidelidade', { telefone, ref: refDoLink, id: urlParams.get('id') || '', casa: casaDoLink });
+        const data = await apiListas('fidelidade', { telefone, ref: refDoLink, id: urlParams.get('id') || '' });
         return data.elegivel === true;
     }
 
@@ -1758,18 +1713,17 @@
             + 'T' + String(x.getHours()).padStart(2,'0') + String(x.getMinutes()).padStart(2,'0') + '00';
         const p = new URLSearchParams({
             action: 'TEMPLATE',
-            text: `${ev?.nome || 'Festa'} · ${casaAtual && !casaAtual.padrao ? casaAtual.nome : 'E-Club'}`,
+            text: `${ev?.nome || 'Festa'} · E-Club`,
             dates: `${carimbo(inicio)}/${carimbo(fim)}`,
-            location: enderecoCasa || (casaAtual && !casaAtual.padrao ? '' : 'R. Aníbal Goularte Maia Filho, 81 - Bairro Alto, Curitiba - PR'),
-            details: `Seu nome está na lista ${casaAtual && !casaAtual.padrao ? 'de ' + casaAtual.nome : 'do E-Club'}. Leve documento com foto.`
+            location: 'R. Aníbal Goularte Maia Filho, 81 - Bairro Alto, Curitiba - PR',
+            details: 'Seu nome está na lista do E-Club. Leve documento com foto.'
         });
         return 'https://calendar.google.com/calendar/render?' + p.toString();
     }
 
     carregarPagina().catch(e => {
-        document.getElementById('listaFestas').innerHTML = e && e.codigo === 'CASA_BLOQUEADA'
-            ? '<div class="vazio">Esta página está temporariamente fora do ar.</div>'
-            : '<div class="vazio">Não consegui carregar as festas agora.<br>Confira a internet e atualize a página.</div>';
+        document.getElementById('listaFestas').innerHTML =
+            '<div class="vazio">Não consegui carregar as festas agora.<br>Confira a internet e atualize a página.</div>';
         console.error('bootstrap listas:', e);
     });
 </script>
