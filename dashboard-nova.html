@@ -210,12 +210,12 @@
         .lote-ed label { display: block; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #a1a1aa; margin: 0 0 4px 4px; }
         .lote-ed input { width: 100%; height: 46px; padding: 0 12px; border-radius: 12px; font-size: 14px; font-weight: 800; box-sizing: border-box; }
         .lote-ed input:disabled { opacity: .35; cursor: not-allowed; }
-        .lote-ed .c-nome { grid-column: span 3; } .lote-ed .c-val { grid-column: span 2; } .lote-ed .c-qtd { grid-column: span 2; } .lote-ed .c-ate { grid-column: span 2; } .lote-ed .c-x { grid-column: span 1; }
+        .lote-ed .c-nome { grid-column: span 3; } .lote-ed .c-val { grid-column: span 3; } .lote-ed .c-qtd { grid-column: span 4; } .lote-ed .c-ate { grid-column: span 4; } .lote-ed .c-x { grid-column: span 4; }
         .lote-ed .c-sit { grid-column: span 12; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #a1a1aa; margin-left: 4px; }
         .lote-ed .c-x button { width: 100%; height: 46px; border-radius: 12px; background: rgba(220,38,38,.18); color: #fca5a5; font-weight: 900; font-size: 15px; border: 1px solid rgba(220,38,38,.35); }
         .sit-a_venda { color: #86efac !important; } .sit-esgotado, .sit-encerrado { color: #fca5a5 !important; } .sit-proximo { color: #fde047 !important; }
         @media (max-width: 760px) {
-            .lote-ed .c-nome { grid-column: span 12; } .lote-ed .c-val { grid-column: span 6; } .lote-ed .c-qtd { grid-column: span 6; } .lote-ed .c-ate { grid-column: span 6; } .lote-ed .c-x { grid-column: span 12; }
+            .lote-ed .c-nome { grid-column: span 12; } .lote-ed .c-val { grid-column: span 4; } .lote-ed .c-qtd { grid-column: span 5; } .lote-ed .c-ate { grid-column: span 7; } .lote-ed .c-x { grid-column: span 12; }
         }
         .filtro-tipo-ev button { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; padding: 10px 16px; border-radius: 14px; background: #18181b; color: #a1a1aa; border: 1px solid #27272a; }
         .filtro-tipo-ev button.on { background: #eab308; color: #000; border-color: #eab308; }
@@ -517,7 +517,7 @@
                                 <p class="priv-titulo">Ingressos por lote</p>
                                 <button type="button" onclick="adicionarLote()" class="priv-btn">+ Adicionar lote</button>
                             </div>
-                            <p class="priv-ajuda">Sem nenhum lote, valem os valores de "PIX antecipado" lá de baixo. Com lotes, o cliente vê só o lote que está à venda.</p>
+                            <p class="priv-ajuda">Sem nenhum lote, valem os valores de "PIX antecipado" lá de baixo. Com lotes, o cliente vê só o lote que está à venda. No evento privado a solteira paga: preencha o valor de Solteira em cada lote (vazio = aquele lote não vende para solteira).</p>
                             <p class="priv-sub">Quando passa pro próximo lote?</p>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                                 <label class="priv-opcao"><input type="radio" name="lotes_virada" value="quantidade" onchange="atualizarModoLotes()"><span><b>Por quantidade</b><small>Vendeu tudo do lote, abre o próximo.</small></span></label>
@@ -1380,11 +1380,12 @@
         function linhaLoteHtml(l = {}) {
             return `<div class="lote-ed" data-id="${escapeHtml(l.id || '')}">
                 <div class="c-nome"><label>Nome do lote</label><input type="text" class="lote-nome" maxlength="40" placeholder="Ex.: 1º LOTE" value="${escapeHtml(l.nome || '')}"></div>
-                <div class="c-val"><label>Individual R$</label><input type="text" inputmode="decimal" class="lote-solteiro" placeholder="0,00" value="${l.valor_solteiro != null ? escapeHtml(String(l.valor_solteiro).replace('.', ',')) : ''}"></div>
-                <div class="c-val"><label>Casal R$</label><input type="text" inputmode="decimal" class="lote-casal" placeholder="0,00" value="${l.valor_casal != null ? escapeHtml(String(l.valor_casal).replace('.', ',')) : ''}"></div>
+                <div class="c-val"><label>Solteiro</label><input type="text" inputmode="decimal" class="lote-solteiro" placeholder="R$ 0,00" value="${l.valor_solteiro != null ? escapeHtml(String(l.valor_solteiro).replace('.', ',')) : ''}"></div>
+                <div class="c-val"><label>Solteira</label><input type="text" inputmode="decimal" class="lote-solteira" placeholder="R$ —" title="Vazio = este lote não vende ingresso de solteira" value="${l.valor_solteira != null ? escapeHtml(String(l.valor_solteira).replace('.', ',')) : ''}"></div>
+                <div class="c-val"><label>Casal</label><input type="text" inputmode="decimal" class="lote-casal" placeholder="R$ 0,00" value="${l.valor_casal != null ? escapeHtml(String(l.valor_casal).replace('.', ',')) : ''}"></div>
                 <div class="c-qtd"><label>Quantidade</label><input type="number" min="1" step="1" class="lote-qtd" placeholder="Sem limite" value="${l.quantidade || ''}"></div>
                 <div class="c-ate"><label>Vende até</label><input type="date" class="lote-ate" onclick="this.showPicker && this.showPicker()" value="${escapeHtml(l.vende_ate || '')}"></div>
-                <div class="c-x"><button type="button" title="Tirar este lote" onclick="removerLoteDoEditor(this)">✕</button></div>
+                <div class="c-x"><label>&nbsp;</label><button type="button" title="Tirar este lote" onclick="removerLoteDoEditor(this)">✕ Tirar lote</button></div>
                 <div class="c-sit">${l.id ? '' : 'Novo · passa a valer quando salvar o evento'}</div>
             </div>`;
         }
@@ -1444,7 +1445,7 @@
         function lerLotesDoFormulario() {
             const modo = radioValor('lotes_virada', 'ambos');
             const linhas = [...document.querySelectorAll('#lotes_editor .lote-ed')].filter(linha =>
-                linha.dataset.id || ['.lote-solteiro', '.lote-casal', '.lote-qtd', '.lote-ate'].some(c => linha.querySelector(c).value.trim()));
+                linha.dataset.id || ['.lote-solteiro', '.lote-solteira', '.lote-casal', '.lote-qtd', '.lote-ate'].some(c => linha.querySelector(c).value.trim()));
             const lotes = linhas.map((linha, i) => {
                 const nome = linha.querySelector('.lote-nome').value.trim().toUpperCase() || `${i + 1}º LOTE`;
                 const qtdTxt = linha.querySelector('.lote-qtd').value.trim();
@@ -1454,11 +1455,12 @@
                 if (qtd && qtd < vendidos) throw new Error(`${nome}: já foram vendidos ${vendidos}. A quantidade não pode ser menor que isso.`);
                 const ate = linha.querySelector('.lote-ate').value || null;
                 const individual = valorLote(linha.querySelector('.lote-solteiro').value);
+                const solteira = valorLote(linha.querySelector('.lote-solteira').value);
                 const casal = valorLote(linha.querySelector('.lote-casal').value);
-                if (!individual && !casal) throw new Error(`${nome}: preencha o valor Individual, o de Casal, ou os dois.`);
+                if (!individual && !solteira && !casal) throw new Error(`${nome}: preencha pelo menos um valor (Solteiro, Solteira ou Casal).`);
                 return {
                     id: linha.dataset.id || null, ordem: i + 1, nome,
-                    valor_solteiro: individual, valor_casal: casal,
+                    valor_solteiro: individual, valor_solteira: solteira, valor_casal: casal,
                     quantidade: modo === 'data' ? null : qtd,
                     vende_ate: modo === 'quantidade' ? null : ate,
                 };
@@ -1480,7 +1482,7 @@
                 if (error) throw error;
             }
             for (const l of lotes) {
-                const dados = { evento_id: eventoId, ordem: l.ordem, nome: l.nome, valor_solteiro: l.valor_solteiro, valor_casal: l.valor_casal, quantidade: l.quantidade, vende_ate: l.vende_ate };
+                const dados = { evento_id: eventoId, ordem: l.ordem, nome: l.nome, valor_solteiro: l.valor_solteiro, valor_solteira: l.valor_solteira, valor_casal: l.valor_casal, quantidade: l.quantidade, vende_ate: l.vende_ate };
                 const { error } = l.id
                     ? await sb.from('lotes_evento').update(dados).eq('id', l.id)
                     : await sb.from('lotes_evento').insert(dados);
@@ -2429,6 +2431,7 @@
                 const pCQ = pixNormal.filter(r => normalizarTextoDash(r.tipo_entrada) === 'CASAL').length;
                 const pCCQ = pixNormal.filter(r => normalizarTextoDash(r.tipo_entrada).startsWith('CASAL CONSUM')).length;
                 const pSQ = pixNormal.filter(r => normalizarTextoDash(r.tipo_entrada) === 'SOLTEIRO').length;
+                const pSaQ = pixNormal.filter(r => normalizarTextoDash(r.tipo_entrada) === 'SOLTEIRA').length;
 
                 const receita = todas.filter(r => r.pago === true && !r.cancelada).reduce((tot, r) => tot + pM(r.valor_pago), 0);
                 const totGer = receita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -2468,6 +2471,7 @@
                                 <div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Casais Seco Pix</span></div>
                                 <div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pCCQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2 text-fuchsia-400">Casais Consumação Pix</span></div>
                                 <div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2">Solteiros Pix</span></div>
+                                ${pSaQ ? `<div class="text-zinc-500 flex items-center"><span class="text-white font-black text-sm w-8">${pSaQ}</span> <span class="uppercase tracking-widest text-[9px] font-bold ml-2 text-pink-400">Solteiras Pix</span></div>` : ''}
                             </div>
                             <div class="grid grid-cols-8 gap-1.5 mt-4">${lCam}</div>
                         </div>
@@ -2555,11 +2559,13 @@
                 const cQ = px.filter(r => normalizarTextoDash(r.tipo_entrada) === 'CASAL').length;
                 const ccQ = px.filter(r => normalizarTextoDash(r.tipo_entrada).startsWith('CASAL CONSUM')).length;
                 const sQ = px.filter(r => normalizarTextoDash(r.tipo_entrada) === 'SOLTEIRO').length;
-                if (cQ > 0 || ccQ > 0 || sQ > 0) {
+                const saQ = px.filter(r => normalizarTextoDash(r.tipo_entrada) === 'SOLTEIRA').length;
+                if (cQ > 0 || ccQ > 0 || sQ > 0 || saQ > 0) {
                     txt += `*${dS[new Date(ev.data + 'T12:00:00Z').getDay()]}*\n`;
                     if (cQ > 0) txt += `Casal Seco - ${cQ}\n`;
                     if (ccQ > 0) txt += `Casal Consumação - ${ccQ}\n`;
                     if (sQ > 0) txt += `Solteiro Seco - ${sQ}\n`;
+                    if (saQ > 0) txt += `Solteira - ${saQ}\n`;
                     txt += `\n`;
                 }
             });
