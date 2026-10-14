@@ -811,10 +811,14 @@
         // (que não existe no cadastro do evento). Casal e Solteiro são secos.
         // Evento com lotes: o servidor já manda em ant_casal/ant_solteiro os
         // valores do lote que está à venda agora. Lote tem Casal e Individual.
+        // Evento privado com valor de Solteira no lote: aparecem Solteiro e
+        // Solteira separados; sem ele, o individual continua "Individual".
         if (ev.tem_lotes) {
+            const temSolteira = extrairValorNumerico(ev.ant_solteira) > 0;
             return [
                 { tipo:'CASAL',    raw: ev.ant_casal,    rotulo:'Casal',      icone:'👫', cons: 0 },
-                { tipo:'SOLTEIRO', raw: ev.ant_solteiro, rotulo:'Individual', icone:'👤', cons: 0 }
+                { tipo:'SOLTEIRO', raw: ev.ant_solteiro, rotulo: temSolteira ? 'Solteiro' : 'Individual', icone:'👤', cons: 0 },
+                { tipo:'SOLTEIRA', raw: ev.ant_solteira, rotulo:'Solteira',   icone:'👩', cons: 0 }
             ].filter(o => extrairValorNumerico(o.raw) > 0);
         }
         return [
