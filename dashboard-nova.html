@@ -1041,7 +1041,7 @@
             const btn = document.getElementById('btn-recuperar-dashboard');
             btn.disabled = true; btn.innerText = 'ENVIANDO...';
             try {
-                const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://abreaporta.com.br/definir-senha-nova.html' });
+                const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://clicreservas.com.br/definir-senha-nova.html' });
                 if (error) throw error;
                 statusRecuperar('Se esse e-mail tiver acesso liberado, o link para criar a nova senha já foi enviado. Confira também a caixa de spam.', true);
             } catch (e) {
@@ -1239,7 +1239,7 @@
         // que vier primeiro). A regra que vale de verdade fica no banco; a
         // conta daqui é só para mostrar a situação na tela.
         // ==========================================================
-        const PAGINA_LISTAS_PUBLICA = 'https://abreaporta.com.br/listas-nova.html';
+        const PAGINA_LISTAS_PUBLICA = 'https://clicreservas.com.br/listas-nova.html';
         const ROTULO_SIT_LOTE = { a_venda: 'À venda', esgotado: 'Esgotado', encerrado: 'Encerrado', proximo: 'Próximo' };
         const ROTULO_VISAO = { publicos: 'Vê só públicos', privados: 'Vê só privados', todos: 'Vê públicos e privados' };
 
@@ -1279,7 +1279,7 @@
                     else if ((modo === 'data' || modo === 'ambos') && l.vende_ate && l.vende_ate < hoje) situacao = 'encerrado';
                     else if (!achou) { situacao = 'a_venda'; achou = true; }
                     else situacao = 'proximo';
-                    return { ...l, vendidos, pagos: pagas.length, arrecadado: pagas.reduce((t, r) => t + Number(r.valor_pago || 0), 0), situacao };
+                    return { ...l, vendidos, pagos: pagas.length, arrecadado: pagas.reduce((t, r) => t + valorVenda(r), 0), situacao };
                 });
         }
 
@@ -2229,7 +2229,7 @@
             const res = dadosReservas.filter(r => ids.has(r.evento_id));
             const val = res.filter(reservaValidaDash);
             const entraram = val.filter(r => r.entrou);
-            const fat = res.filter(r => r.pago === true && !r.cancelada).reduce((t, r) => t + (Number(r.valor_pago) || 0), 0);
+            const fat = res.filter(r => r.pago === true && !r.cancelada).reduce((t, r) => t + valorVenda(r), 0);
             let camAtivos = 0, camOcup = 0; const camAguardando = [];
             evs.forEach(ev => ocupacaoCamarotes(ev.id).forEach(c => {
                 camAtivos++;
@@ -2381,7 +2381,7 @@
             if (!container) return;
             const val = reservasFiltradas.filter(reservaValidaDash);
             const pagas = reservasFiltradas.filter(r => r.pago === true && !r.cancelada);
-            const faturamento = pagas.reduce((tot, r) => tot + (Number(r.valor_pago) || 0), 0);
+            const faturamento = pagas.reduce((tot, r) => tot + valorVenda(r), 0);
             const checkins = val.filter(r => r.entrou).length;
             const taxaCheckin = val.length ? (checkins / val.length) * 100 : 0;
             const ticketMedio = pagas.length ? faturamento / pagas.length : 0;
@@ -2433,7 +2433,7 @@
                 const pSQ = pixNormal.filter(r => normalizarTextoDash(r.tipo_entrada) === 'SOLTEIRO').length;
                 const pSaQ = pixNormal.filter(r => normalizarTextoDash(r.tipo_entrada) === 'SOLTEIRA').length;
 
-                const receita = todas.filter(r => r.pago === true && !r.cancelada).reduce((tot, r) => tot + pM(r.valor_pago), 0);
+                const receita = todas.filter(r => r.pago === true && !r.cancelada).reduce((tot, r) => tot + valorVenda(r), 0);
                 const totGer = receita.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
                 const ocupacao = ocupacaoCamarotes(ev.id);
@@ -2495,7 +2495,7 @@
                     st[p].r++;
                     if (r.entrou) st[p].c++;
                 }
-                if (r.pago === true && !r.cancelada) st[p].receita += Number(r.valor_pago) || 0;
+                if (r.pago === true && !r.cancelada) st[p].receita += valorVenda(r);
             });
             const med = ['🥇', '🥈', '🥉'];
             const rR = Object.entries(st).sort((a, b) => b[1].r - a[1].r).slice(0, 5);
@@ -2542,7 +2542,7 @@
             val.filter(r => r.entrou).forEach(r => { const p = promoterDaReserva(r); pst[p] = (pst[p] || 0) + 1; });
             Object.keys(pst).sort().forEach(p => { txt += `${p} - ${pst[p]}\n`; });
 
-            const tPx = val.filter(r => String(r.metodo || '').toUpperCase() === 'PIX' && r.pago === true).reduce((acc, r) => acc + (Number(r.valor_pago) || 0), 0);
+            const tPx = val.filter(r => String(r.metodo || '').toUpperCase() === 'PIX' && r.pago === true).reduce((acc, r) => acc + valorVenda(r), 0);
             const taxaSistema = Number(configuracoesAtuais.custo_sistema) || 0;
             const saldoLiquido = tPx - taxaSistema;
 
@@ -2673,6 +2673,13 @@
         function isReservaCamaroteMigravel(r) {
             return r.camarote_numero != null && !r.cancelada && (r.pago === true || r.cortesia === true) && !r.entrou;
         }
+        // Valor da VENDA para a casa: o que o cliente pagou menos a taxa do
+        // sistema (a taxa é do dono do sistema, não entra no faturamento).
+        function valorVenda(r) {
+            const pago = Number(r && r.valor_pago) || 0;
+            const taxa = Number(r && r.valor_taxa) || 0;
+            return Math.max(0, Math.round((pago - taxa) * 100) / 100);
+        }
         function nomeCamarote(n) {
             if (n === 7) return 'VIP 1';
             if (n === 8) return 'VIP 2';
@@ -2743,7 +2750,7 @@
                 return;
             }
             tb.innerHTML = res.map(({ r, ev }) => {
-                const valor = r.valor_pago ? `<br><span class="text-[8px] text-yellow-500 font-black uppercase">R$ ${Number(r.valor_pago).toFixed(2).replace('.', ',')}</span>` : '';
+                const valor = r.valor_pago ? `<br><span class="text-[8px] text-yellow-500 font-black uppercase">R$ ${valorVenda(r).toFixed(2).replace('.', ',')}</span>` : '';
                 const migrado = r.migrado_camarote ? `<span class="inline-block mt-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-1 rounded-md text-[7px] font-black uppercase tracking-widest">Migrado</span>` : '';
                 const statusBadge = r.cortesia
                     ? `<span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest">Cortesia</span>`
