@@ -220,6 +220,16 @@
     body.tema-claro .pt-valor.cortesia b, body.tema-claro .pt-valor.cortesia span{color:#a21caf}
     .pt-card.entrou .pt-valor b, .pt-card.entrou .pt-valor span{color:var(--pt-fraco);opacity:.5}
     .pt-meta .tipo{color:var(--pt-txt);font-weight:900;letter-spacing:.3px}
+    /* O QUE a pessoa tem: camarote, ingresso PIX, cortesia ou lista. */
+    .pt-item{display:inline-flex;align-items:center;gap:6px;margin:6px 0 2px;padding:5px 11px;border-radius:9px;font-weight:900;font-size:14px;letter-spacing:.4px;line-height:1.2;border:1px solid transparent}
+    .pt-item.cat-camarote{background:rgba(34,211,238,.14);color:#67e8f9;border-color:rgba(34,211,238,.45)}
+    .pt-item.cat-ingresso{background:rgba(34,197,94,.14);color:#86efac;border-color:rgba(34,197,94,.45)}
+    .pt-item.cat-cortesia{background:rgba(196,181,253,.14);color:#ddd6fe;border-color:rgba(196,181,253,.45)}
+    .pt-item.cat-lista{background:rgba(255,255,255,.06);color:var(--pt-txt);border-color:rgba(255,255,255,.18)}
+    body.tema-claro .pt-item.cat-camarote{color:#0e7490}
+    body.tema-claro .pt-item.cat-ingresso{color:#15803d}
+    body.tema-claro .pt-item.cat-cortesia{color:#6d28d9}
+    body.tema-claro .pt-item.cat-lista{border-color:rgba(15,23,42,.22);background:rgba(15,23,42,.05)}
     .pt-meta .ev{opacity:.6}
     .pt-acao{flex:0 0 auto;display:flex;align-items:center}
     .pt-btn{height:clamp(40px, 5.4vh, 50px);min-width:164px;border:0;border-radius:13px;background:var(--pt-vd);
@@ -989,7 +999,7 @@
     btn.disabled = true;
     btn.textContent = "ENVIANDO...";
     try {
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: "https://abreaporta.com.br/definir-senha-nova.html" });
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: "https://clicreservas.com.br/definir-senha-nova.html" });
       if (error) throw error;
       mensagemRecuperar("Se esse e-mail tiver acesso liberado, o link para criar a nova senha já foi enviado. Confira também o spam.", true);
     } catch (e) {
@@ -1431,7 +1441,8 @@
       : "";
     cont.innerHTML = avisoLimite + resultados.map((c, i) => {
       const repetido = contagem[normalizeTextCliente(c.nome || "")] > 1;
-      const tags = (Array.isArray(c.tags) ? c.tags : []).map(tag =>
+      // "DONO" e "CORTESIA" já aparecem por extenso na linha do item.
+      const tags = (Array.isArray(c.tags) ? c.tags : []).filter(tag => !(c.item && /^(DONO|CORTESIA)$/i.test(String(tag)))).map(tag =>
         `<span class="tag border ${tagClass(tag)}">${escapeHtml(tag)}</span>`
       ).join("");
       const { classeValor, rotuloValor, textoValor, detalheValor } = classificarValor(c);
@@ -1439,7 +1450,7 @@
       // e o nome do evento some, o pontinho dele some junto (sem sobrar separador
       // solto no fim da linha).
       const partes = [
-        { classe: "tipo", texto: c.tipo || "---" },
+        { classe: "tipo", texto: c.item ? "" : (c.tipo || "---") },
         { classe: "", texto: c.promoter || "DIRETO" },
         { classe: "ev", texto: c.evento || "" }
       ].filter(x => String(x.texto).trim())
@@ -1449,6 +1460,7 @@
         <div class="pt-pos">${i + 1}</div>
         <div class="pt-info">
           <div class="pt-nome"><span class="txt">${destacarBusca(c.nome || "SEM NOME", termosBusca)}</span><span class="pt-fone ${repetido ? "destaque" : ""}">${escapeHtml(formatarTelefone(c.telefone))}</span></div>
+          ${c.item ? `<div class="pt-item cat-${escapeHtml(c.itemCat || "lista")}">${escapeHtml(c.item)}</div>` : ""}
           <div class="pt-meta">${tags}${partes.join("")}</div>
         </div>
         <div class="pt-valor ${classeValor}">
@@ -1622,7 +1634,7 @@
     let sub = "Entrada liberada";
     if (c) {
       const v = classificarValor(c);
-      sub += " · " + [c.tipo, v.classeValor === "cobrar" ? `${v.textoValor} a cobrar` : (v.classeValor === "pago" ? `${v.textoValor} já pago` : "cortesia")]
+      sub += " · " + [c.item || c.tipo, v.classeValor === "cobrar" ? `${v.textoValor} a cobrar` : (v.classeValor === "pago" ? `${v.textoValor} já pago` : "cortesia")]
         .filter(Boolean).join(" · ");
     }
     if (!navigator.onLine) sub = "Sem internet · fica guardada e sobe sozinha";
