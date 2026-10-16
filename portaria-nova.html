@@ -1202,8 +1202,8 @@
     try { localStorage.setItem(CHAVE_ULTIMOS, JSON.stringify(lista)); } catch {}  // isto é só backup
     renderUltimos();
   }
-  // Janela para desfazer: a mesma do servidor. Passou disso, o ↩ some do rodapé.
-  const MINUTOS_PARA_DESFAZER = 10;
+  // Desfazer só pelo aviso verde (6 segundos logo depois de liberar). O rodapé
+  // mostra os últimos liberados apenas como histórico, sem botão de desfazer.
   function registrarUltimo(nome, reservaId) {
     const d = new Date();
     const item = {
@@ -1227,15 +1227,12 @@
       return;
     }
     cont.innerHTML = (ARMAZENAMENTO_OK ? "" : AVISO_SEM_ARMAZENAMENTO) + lista.map(i => {
-      const dentroDaJanela = i.id && (Date.now() - Number(i.em || 0)) < MINUTOS_PARA_DESFAZER * 60000;
-      return `<span class="pt-pill">${escapeHtml(i.nome)} <i>${escapeHtml(i.hora)}</i>${
-        dentroDaJanela ? `<button type="button" class="pt-desfazer" data-desfazer="${escapeHtml(i.id)}" title="Desfazer esta liberação">↩</button>` : ""
-      }</span>`;
+      return `<span class="pt-pill">${escapeHtml(i.nome)} <i>${escapeHtml(i.hora)}</i></span>`;
     }).join("");
   }
   if ($("pt-versao")) $("pt-versao").textContent = "v" + VERSAO_PAGINA;
   renderUltimos();
-  setInterval(renderUltimos, 30000); // o ↩ some sozinho quando passa da janela
+  setInterval(renderUltimos, 30000);
   // Tira um item da fila offline (usado quando o operador desfaz uma entrada que
   // ainda nem chegou no servidor).
   function removerDaFila(condicao) {
