@@ -1385,7 +1385,12 @@
   function mostrarResultados(resultados) {
     renderFiltros(resultados);
     const f = FILTROS.find(x => x.id === filtroAtual) || FILTROS[0];
-    const filtrados = resultados.filter(f.teste);
+    // Quem já entrou vai sempre para o fim da lista (mantendo a ordem do
+    // resto), para não ficar no meio atrapalhando a consulta.
+    const filtrados = resultados.filter(f.teste)
+      .map((c, i) => ({ c, i }))
+      .sort((x, y) => (Number(!!x.c.entrou) - Number(!!y.c.entrou)) || (x.i - y.i))
+      .map(x => x.c);
     $("pt-qtd").textContent = filtrados.length
       ? `${filtrados.length} ${filtrados.length === 1 ? "encontrado" : "encontrados"}` : "";
     renderResultados(filtrados.slice(0, MAX_RESULTADOS_TELA), filtrados.length > MAX_RESULTADOS_TELA);
