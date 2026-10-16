@@ -1011,7 +1011,11 @@
       btn.textContent = "ENVIAR LINK";
     }
   };
-  async function encerrarSessaoLocal(mensagem="Sessão encerrada.") {
+  // derrubada=true: este login abriu a Portaria em OUTRO aparelho. Não faz
+  // logout (o logout apagaria o login de todas as abas deste navegador, como
+  // a Solteiras aberta ao lado); só marca ESTA aba para voltar à tela de
+  // login, sem retomar sozinha.
+  async function encerrarSessaoLocal(mensagem="Sessão encerrada.", derrubada=false) {
     clearInterval(bootstrapTimer);
     bootstrapTimer = null;
     try { aoVivoPortaria?.parar(); } catch (_) {}
@@ -1021,7 +1025,8 @@
     candidatosCache = null;
     carregandoCandidatos = null;
     try { sessionStorage.setItem('eclub_portaria_aviso_sessao', mensagem || 'Sessão encerrada.'); } catch (_) {}
-    try { await sb.auth.signOut(); } catch {}
+    if (derrubada) { try { sessionStorage.setItem('eclub_portaria_derrubada', '1'); } catch (_) {} }
+    else { try { await sb.auth.signOut({ scope: 'local' }); } catch {} }
     location.reload();
   }
   // ===== CHAMADA SEGURA PARA A EDGE FUNCTION =====
@@ -1044,7 +1049,7 @@
       err.status = error.context?.status || 500;
       err.codigo = payload?.codigo || "";
       if (err.codigo === "SESSAO_EM_OUTRA_MAQUINA") {
-        encerrarSessaoLocal(err.message).catch(() => {});
+        encerrarSessaoLocal(err.message, true).catch(() => {});
       }
       throw err;
     }
@@ -1819,10 +1824,11 @@
     try {
       const { error } = await sb.auth.signInWithPassword({ email, password: senha });
       if (error) throw Object.assign(new Error("E-mail ou senha inválidos."), { status: 401 });
+      try { sessionStorage.removeItem('eclub_portaria_derrubada'); } catch (_) {}
       await validarAcessoPortaria();
     } catch (e) {
       console.warn("Falha de login Portaria:", e?.message);
-      try { await sb.auth.signOut(); } catch {}
+      try { await sb.auth.signOut({ scope: 'local' }); } catch {}
       mensagemAuth(e?.status === 403 ? e.message : (e.message || "E-mail ou senha inválidos, ou acesso não autorizado."));
     } finally {
       $("senha-portaria").value = "";
@@ -1836,6 +1842,8 @@
   // Sessão já aberta antes (recarregou a página) continua logada.
   sb.auth.getSession().then(async ({ data }) => {
     if (!data.session) return;
+    // Derrubada por outro aparelho: espera o operador entrar de novo.
+    try { if (sessionStorage.getItem('eclub_portaria_derrubada')) return; } catch (_) {}
     if (restaurandoSessao) return;
     restaurandoSessao = true;
     try {
