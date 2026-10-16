@@ -208,7 +208,7 @@
                 <img src="https://andrezinhoeclub.github.io/lista-ecluboficial/logo.png" alt="E-Club">
                 <div><b>VIP Single Ladies</b><span id="labelOperador">---</span></div>
             </div>
-            <div id="caixaTurno" class="ec-pill"><span id="statusTurno">Verificando...</span></div>
+            <div id="caixaTurno" class="ec-pill" style="display:none"><span id="statusTurno">Verificando...</span></div>
             <div class="sl-esp"></div>
             <div class="sl-conta"><b id="contagemEvento">0</b><span>liberadas no turno</span></div>
             <button id="btnTemaSolteiras" type="button" class="ec-btn neutro" aria-label="Mudar tema"></button>
@@ -771,7 +771,10 @@
         const caixa = document.getElementById('caixaTurno');
         if (!el || !caixa) return;
         const icTurno = n => (window.ECUI ? ECUI.icone(n) : '');
-        if (!t) { el.innerText='Verificando...'; caixa.className='ec-pill'; return; }
+        // Casa aberta: não mostra nada (o aviso "Casa aberta até..." saiu).
+        // Só aparece quando a tela está travada.
+        if (!t) { el.innerText='Verificando...'; caixa.className='ec-pill'; caixa.style.display='none'; return; }
+        caixa.style.display = t.aberto ? 'none' : '';
         if (t.aberto) {
             el.innerText = t.motivo ? `Casa aberta (${t.motivo})` : `Casa aberta até ${horarioLocal().fechamento}`;
             caixa.className = 'ec-pill ok';
