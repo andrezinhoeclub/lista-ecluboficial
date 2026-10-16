@@ -687,7 +687,7 @@
         const btn = document.getElementById('btn-recuperar-solteiras');
         if (btn) { btn.disabled = true; btn.innerText = 'ENVIANDO...'; }
         try {
-            const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://abreaporta.com.br/definir-senha-nova.html' });
+            const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://clicreservas.com.br/definir-senha-nova.html' });
             if (error) throw error;
             mensagemRecuperarSolteiras('Se esse e-mail tiver acesso liberado, o link para criar a nova senha já foi enviado. Confira também o spam.', true);
         } catch (e) {
@@ -727,6 +727,7 @@
             err.codigo = payloadErro?.codigo || '';
             if (err.codigo === 'SESSAO_EM_OUTRA_MAQUINA') {
                 try { sessionStorage.setItem('eclub_solteiras_aviso_sessao', err.message); } catch (_) {}
+                try { sessionStorage.setItem('eclub_solteiras_derrubada', '1'); } catch (_) {}
                 bloquearTelaSessao(err.message);
             }
             throw err;
@@ -973,10 +974,11 @@
         try {
             const { error } = await sb.auth.signInWithPassword({ email, password: senha });
             if (error) throw Object.assign(new Error('E-mail ou senha inválidos.'), { status: 401 });
+            try { sessionStorage.removeItem('eclub_solteiras_derrubada'); } catch (_) {}
             await iniciarSessaoModulo();
         } catch (e) {
             console.error(e);
-            try { await sb.auth.signOut(); } catch (_) {}
+            try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
             mensagemAuth(/Sem permissão|Acesso suspenso|Acesso não cadastrado/i.test(e.message||'') ? e.message : 'E-mail, senha ou permissão inválidos.');
         } finally {
             document.getElementById('senha-solteiras').value = '';
@@ -988,7 +990,7 @@
         if (intervaloAtualizacao) clearInterval(intervaloAtualizacao); intervaloAtualizacao = null;
         try { aoVivoSolteiras?.parar(); } catch (_) {} aoVivoSolteiras = null;
         clientesCache = []; eventoHojeCache = null;
-        try { await sb.auth.signOut(); } catch (_) {}
+        try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
         document.getElementById('conteudo-sistema').classList.add('hidden');
         document.getElementById('telaBloqueio').classList.add('hidden');
         document.getElementById('solteiras-login').classList.remove('hidden');
@@ -998,13 +1000,16 @@
     // Sessão já aberta antes (recarregou a página) continua logada.
     sb.auth.getSession().then(async ({ data }) => {
         if (!data.session) return;
+        // Derrubada por outro aparelho: espera a operadora entrar de novo
+        // (sem isto, um F5 tomaria a sessão de volta do outro aparelho).
+        try { if (sessionStorage.getItem('eclub_solteiras_derrubada')) return; } catch (_) {}
         if (restaurandoSessao) return;
         restaurandoSessao = true;
         try {
             await iniciarSessaoModulo();
         } catch (e) {
             console.warn('Sessão de Solteiras recusada:', e?.message || e);
-            try { await sb.auth.signOut(); } catch (_) {}
+            try { await sb.auth.signOut({ scope: 'local' }); } catch (_) {}
         } finally {
             restaurandoSessao = false;
         }
@@ -1107,7 +1112,14 @@
                 : '<div class="sl-vazio"><b>Ninguém liberada neste turno ainda</b>Use a busca acima para encontrar a cliente.</div>';
             return;
         }
-        const partes = paraExibir.sort((a,b)=>(dataVisita(b)?.getTime()||0)-(dataVisita(a)?.getTime()||0)).map(c=>{
+        // Sem busca, mostra só as 3 últimas liberadas no turno (o resto se acha
+        // pela busca) — assim o cadastro de nova solteira não vai parar lá no
+        // fim da tela numa noite com muitas entradas.
+        paraExibir = paraExibir.sort((a,b)=>(dataVisita(b)?.getTime()||0)-(dataVisita(a)?.getTime()||0));
+        const LIMITE_SEM_BUSCA = 3;
+        const escondidas = isBusca ? 0 : Math.max(0, paraExibir.length - LIMITE_SEM_BUSCA);
+        if (escondidas) paraExibir = paraExibir.slice(0, LIMITE_SEM_BUSCA);
+        const partes = paraExibir.map(c=>{
             const norm=normalizarDataNascimento(c.data_nascimento||c.nascimento), isNiver=checkAniversarioSemana(norm), niverData=norm?norm.display:'--/--';
             const idade = norm ? idadeDe(norm.raw) : NaN;
             const visita=dataVisita(c), naCasa=visita?visita>=corte:false, textoVisita=visita?visita.toLocaleDateString('pt-BR'):'---';
@@ -1146,7 +1158,10 @@
                 <div class="sl-acoes">${painel}</div>
             </div>`;
         });
-        container.innerHTML = partes.join('') + botaoNovo;
+        const avisoEscondidas = escondidas
+            ? `<div class="sl-vazio" style="padding:14px 16px"><b>+ ${escondidas} ${escondidas === 1 ? 'outra liberada' : 'outras liberadas'} neste turno</b>Para ver alguém, use a busca acima.</div>`
+            : '';
+        container.innerHTML = partes.join('') + avisoEscondidas + botaoNovo;
     }
     window.maskCPF=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');i.value=v;};
     window.maskTel=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d)(\d{4})$/,'$1-$2');i.value=v;};
