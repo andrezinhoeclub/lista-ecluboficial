@@ -1148,7 +1148,7 @@
                     <div class="sl-nome-linha"><h3 class="sl-nome">${destacarBuscaSl(c.nome, termo)}</h3>${seloNiver}</div>
                     <div class="sl-dados">
                         <span>${ic('fone')}${escapeHtml(c.tel)||'---'}</span>
-                        <span>${ic('documento')}${escapeHtml(c.cpf)||'---'}</span>
+                        <span>${ic('documento')}${escapeHtml(cpfEscondido(c.cpf))||'---'}</span>
                         <span class="${naCasa ? 'hoje' : ''}">${ic('calendario')}${naCasa ? 'Veio hoje' : 'Última visita ' + escapeHtml(textoVisita)}</span>
                         <span class="${isNiver && !c.bloqueada ? 'niver-dia' : ''}">${ic('bolo')}Niver ${escapeHtml(niverData)}${isNaN(idade) ? '' : ' · ' + idade + ' anos'}</span>
                     </div>
@@ -1162,6 +1162,19 @@
             ? `<div class="sl-vazio" style="padding:14px 16px"><b>+ ${escondidas} ${escondidas === 1 ? 'outra liberada' : 'outras liberadas'} neste turno</b>Para ver alguém, use a busca acima.</div>`
             : '';
         container.innerHTML = partes.join('') + avisoEscondidas + botaoNovo;
+    }
+    // CPF válido = 11 dígitos, não todos iguais, e os 2 dígitos verificadores certos.
+    function cpfValido(v){
+        const d=String(v||'').replace(/\D/g,'');
+        if(d.length!==11||/^(\d)\1{10}$/.test(d))return false;
+        for(let t=9;t<11;t++){let soma=0;for(let k=0;k<t;k++)soma+=Number(d[k])*(t+1-k);if(((soma*10)%11)%10!==Number(d[t]))return false;}
+        return true;
+    }
+    // Na lista, o CPF aparece escondido: ***.221.039-**
+    function cpfEscondido(v){
+        const d=String(v||'').replace(/\D/g,'');
+        if(d.length===11)return `***.${d.slice(3,6)}.${d.slice(6,9)}-**`;
+        return d ? '***' : '';
     }
     window.maskCPF=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');i.value=v;};
     window.maskTel=i=>{let v=i.value.replace(/\D/g,'').substring(0,11);v=v.replace(/^(\d{2})(\d)/g,'($1) $2').replace(/(\d)(\d{4})$/,'$1-$2');i.value=v;};
@@ -1204,8 +1217,9 @@
         el.addEventListener('keydown', ev => { if (ev.key==='Backspace' && !el.value && i>0) document.getElementById(todos[i-1]).focus(); });
     });
     window.limparFormulario=()=>{document.getElementById('formSolteira').reset();document.getElementById('editId').value='';preencherDataPartes('');document.getElementById('tituloFormTxt').innerText='Nova solteira';document.getElementById('btnSalvar').innerText='Cadastrar e liberar';document.getElementById('btnCancelarEdicao').classList.add('hidden');document.getElementById('idadeDisplay').innerText='--';aplicarTravaNoFormulario();};
-    window.validarDuplicidade=async()=>{
+    window.validarDuplicidade=async(campo)=>{
         const cpf=document.getElementById('cpf').value,tel=document.getElementById('tel').value;
+        if (campo==='cpf' && cpf.replace(/\D/g,'').length===11 && !cpfValido(cpf)) { mostrarAviso('CPF INVÁLIDO — CONFIRA OS NÚMEROS'); return; }
         if(cpf.replace(/\D/g,'').length<11&&tel.replace(/\D/g,'').length<10)return;
         try{
             let data;
@@ -1225,6 +1239,16 @@
         // Editar cadastro já existente continua liberado a qualquer hora.
         // O que trava é CADASTRO NOVO, que vale como entrada na casa.
         if (!idEx && turnoBloqueadoNaTela()) return;
+        // CPF errado não salva. Em edição, só confere se o CPF foi mudado.
+        {
+            const cpfDig=document.getElementById('cpf').value.replace(/\D/g,'');
+            const antigo=idEx ? String(((clientesCache||[]).find(x=>String(x.id)===String(idEx))||{}).cpf||'').replace(/\D/g,'') : null;
+            if (cpfDig && cpfDig!==antigo && !cpfValido(cpfDig)) {
+                mostrarAviso('CPF INVÁLIDO — CONFIRA OS NÚMEROS');
+                document.getElementById('cpf').focus();
+                return;
+            }
+        }
         btn.disabled=true;btn.innerText='SALVANDO...';
         const dados={id:idEx,nome:document.getElementById('nome').value,tel:document.getElementById('tel').value,cpf:document.getElementById('cpf').value,data_nascimento:document.getElementById('nascimento').value,obs:document.getElementById('obs').value};
         try{await apiSolteiras('salvar_cliente',dados);mostrarAviso(idEx?'Dados atualizados e entrada registrada!':'Cadastro salvo e liberado!',true);window.limparFormulario();limparFocarBusca();await atualizarPainelSeguro();}
