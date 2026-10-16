@@ -161,12 +161,22 @@
         .en-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
         .en-cab > span { font-size: 14px; font-weight: 700; color: #a1a1aa; }
         .en-graf { display: grid; gap: 10px; align-items: end; height: 220px; padding-top: 26px; border-bottom: 1px solid #33333f; }
-        .en-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; min-width: 0; cursor: default; }
+        .en-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 0; min-width: 0; cursor: default; }
+        .en-col em { margin-bottom: 6px; }
         .en-col em { font-style: normal; font-size: 13px; font-weight: 800; color: #a1a1aa; }
-        .en-col i { display: block; width: 100%; max-width: 56px; border-radius: 4px 4px 0 0; background: #22c55e; opacity: .55; min-height: 2px; }
-        .en-col.pico i { opacity: 1; }
-        .en-col.pico em { color: #fff; font-size: 15px; }
-        .en-col:hover i { opacity: 1; }
+        /* Barras lado a lado: verde = clientes da lista, rosa = solteiras
+           (cores validadas para daltonismo no fundo escuro do cartão). */
+        .en-col .par { display: flex; align-items: flex-end; justify-content: center; gap: 2px; width: 100%; height: 100%; }
+        .en-col .b { flex: 1 1 0; max-width: 34px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 0; }
+        .en-col .b em { margin-bottom: 4px; font-size: 13px; }
+        .en-col .seg { display: block; width: 100%; border-radius: 4px 4px 0 0; flex: none; }
+        .en-col .seg.l { background: #16a34a; }
+        .en-col .seg.s { background: #ec4899; }
+        .en-col.pico .b em { color: #fff; }
+        .en-col:hover .seg { filter: brightness(1.15); }
+        .en-legenda { display: flex; gap: 18px; flex-wrap: wrap; margin: -4px 0 6px; font-size: 14px; font-weight: 800; color: #d4d4d8; }
+        .en-legenda span { display: inline-flex; align-items: center; gap: 8px; }
+        .en-legenda i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
         .en-horas { display: grid; gap: 10px; margin-top: 8px; text-align: center; font-size: 13px; font-weight: 800; color: #a1a1aa; }
         .en-linha { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #22222a; font-size: 16px; font-weight: 700; color: #f4f4f5; }
         .en-linha:last-child { border-bottom: 0; }
@@ -2258,10 +2268,14 @@
             const hAb = Number(h.abertura.slice(0, 2)), hFe = Number(h.fechamento.slice(0, 2));
             const hFim = aberta && agora ? agora.h : (hFe + 23) % 24;
             for (let x = hAb, n = 0; n < 24; n++, x = (x + 1) % 24) { horas.push(x); if (x === hFim) break; }
-            const cont = new Map(horas.map(x => [x, 0]));
-            entraram.forEach(r => { const t = horaSP(r.entrada_em); if (t && cont.has(t.h)) cont.set(t.h, cont.get(t.h) + 1); });
-            solt.forEach(e => { const t = horaSP(e.criado_em); if (t && cont.has(t.h)) cont.set(t.h, cont.get(t.h) + 1); });
-            const valores = horas.map(x => cont.get(x));
+            // Lista e solteiras contadas separadas (cada uma com a sua cor).
+            const contL = new Map(horas.map(x => [x, 0]));
+            const contS = new Map(horas.map(x => [x, 0]));
+            entraram.forEach(r => { const t = horaSP(r.entrada_em); if (t && contL.has(t.h)) contL.set(t.h, contL.get(t.h) + 1); });
+            solt.forEach(e => { const t = horaSP(e.criado_em); if (t && contS.has(t.h)) contS.set(t.h, contS.get(t.h) + 1); });
+            const valL = horas.map(x => contL.get(x));
+            const valS = horas.map(x => contS.get(x));
+            const valores = horas.map((x, i) => valL[i] + valS[i]);
             const maxV = Math.max(0, ...valores);
             const total = valores.reduce((a, b) => a + b, 0);
             const elG = document.getElementById('en-grafico');
@@ -2272,8 +2286,18 @@
                 const iPico = valores.indexOf(maxV);
                 document.getElementById('en-pico').textContent = `pico às ${horas[iPico]}h · ${maxV} ${maxV === 1 ? 'pessoa' : 'pessoas'}`;
                 const cols = `grid-template-columns:repeat(${horas.length},minmax(0,1fr))`;
-                elG.innerHTML = `<div class="en-graf" style="${cols}" role="img" aria-label="Entradas por hora: ${horas.map((x, i) => `${x}h ${valores[i]}`).join(', ')}">`
-                    + horas.map((x, i) => `<div class="en-col ${i === iPico ? 'pico' : ''}" title="${x}h: ${valores[i]} ${valores[i] === 1 ? 'entrada' : 'entradas'}"><em>${valores[i] || ''}</em><i style="height:${maxV ? Math.max(1, valores[i] / maxV * 100) : 0}%"></i></div>`).join('')
+                const maxB = Math.max(0, ...valL, ...valS); // a barra mais alta ocupa a altura toda
+                const pct = v => (maxB && v ? Math.max(1.5, v / maxB * 100) : 0);
+                const legenda = `<div class="en-legenda"><span><i style="background:#16a34a"></i>Clientes</span><span><i style="background:#ec4899"></i>Solteiras</span></div>`;
+                elG.innerHTML = legenda + `<div class="en-graf" style="${cols}" role="img" aria-label="Entradas por hora: ${horas.map((x, i) => `${x}h ${valL[i]} clientes e ${valS[i]} solteiras`).join(', ')}">`
+                    + horas.map((x, i) => {
+                        const l = valL[i], s = valS[i];
+                        // Duas barras lado a lado: clientes (verde) e solteiras (rosa),
+                        // cada uma com o seu número em cima.
+                        const barra = (v, cls) => `<div class="b"><em>${v || ''}</em>${v ? `<i class="seg ${cls}" style="height:${pct(v)}%"></i>` : ''}</div>`;
+                        const dica = `${x}h: ${l} ${l === 1 ? 'cliente' : 'clientes'} · ${s} ${s === 1 ? 'solteira' : 'solteiras'} · total ${valores[i]}`;
+                        return `<div class="en-col ${i === iPico ? 'pico' : ''}" title="${dica}"><div class="par">${barra(l, 'l')}${barra(s, 's')}</div></div>`;
+                    }).join('')
                     + `</div><div class="en-horas" style="${cols}">${horas.map(x => `<span>${x}h</span>`).join('')}</div>`;
             }
 
