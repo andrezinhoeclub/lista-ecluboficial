@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Exportar Solteiras</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#050505;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:24px}
+  .card{width:100%;max-width:440px;background:#141414;border:1px solid rgba(227,185,78,.35);border-radius:22px;padding:30px 26px;text-align:center}
+  h1{margin:0 0 6px;font-size:26px} p{color:#a1a1aa;font-size:15px;line-height:1.5;margin:0 0 18px}
+  input{width:100%;box-sizing:border-box;padding:15px 16px;margin:0 0 10px;border-radius:12px;border:2px solid #2a2a34;background:#0b0b0f;color:#fff;font-size:16px}
+  input:focus{outline:none;border-color:#e3b94e}
+  button{width:100%;padding:16px;border:0;border-radius:12px;background:#e3b94e;color:#111;font-size:17px;font-weight:800;cursor:pointer}
+  button:disabled{opacity:.6;cursor:wait}
+  #msg{margin-top:16px;font-size:15px;font-weight:700;line-height:1.5}
+  .ok{color:#4ade80}.erro{color:#f87171}
+</style>
+</head>
+<body>
+<form class="card" id="f">
+  <h1>Exportar Solteiras</h1>
+  <p>Baixa a lista completa de solteiras do sistema antigo para levar ao sistema novo. Entre com o login <b>master</b>.</p>
+  <input id="email" type="email" placeholder="E-mail do master" autocomplete="username" required>
+  <input id="senha" type="password" placeholder="Senha" autocomplete="current-password" required>
+  <button id="btn" type="submit">Entrar e baixar a lista</button>
+  <div id="msg"></div>
+</form>
+<script type="module">
+  // Página só de leitura: não muda nada no sistema antigo, só baixa a lista.
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, getIdToken, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  const app = initializeApp({ apiKey:"AIzaSyCxakv-aI8XvFYOLRS_pKxgR3sjMnTQo8g", authDomain:"teste-de-reserva.firebaseapp.com", projectId:"teste-de-reserva", storageBucket:"teste-de-reserva.firebasestorage.app", messagingSenderId:"163395694876", appId:"1:163395694876:web:8b1116a0483af951548ad9" });
+  const auth = getAuth(app);
+  const API = 'https://us-central1-teste-de-reserva.cloudfunctions.net/solteirasApi';
+  const msg = (t, cls) => { const m = document.getElementById('msg'); m.textContent = t; m.className = cls || ''; };
+  async function chamar(token, body) {
+    const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, cache: 'no-store', body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.ok === false) throw new Error(d.error || ('erro ' + r.status));
+    return d;
+  }
+  document.getElementById('f').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const btn = document.getElementById('btn'); btn.disabled = true;
+    try {
+      msg('Entrando...');
+      await signInWithEmailAndPassword(auth, document.getElementById('email').value.trim(), document.getElementById('senha').value);
+      const token = await getIdToken(auth.currentUser, false);
+      msg('Buscando a lista...');
+      const sess = await chamar(token, { action: 'start_session' });
+      const d = await chamar(token, { action: 'listar_tudo', sessionToken: sess.sessionToken });
+      const lista = Array.isArray(d.clientes) ? d.clientes : [];
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(lista)], { type: 'application/json' }));
+      a.download = 'solteiras-sistema-antigo.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      msg('Pronto! ' + lista.length + ' solteiras baixadas no arquivo solteiras-sistema-antigo.json. Mande esse arquivo no chat.', 'ok');
+    } catch (e) {
+      const t = String(e.message || e);
+      if (/auth\//.test(t)) msg('E-mail ou senha errados.', 'erro');
+      else if (/hor[aá]rio|423|travad/i.test(t)) msg('O sistema antigo travou a lista fora do horário. Tente durante o horário da noite ou depois de liberar as Solteiras no Dashboard antigo. (' + t + ')', 'erro');
+      else msg('Não deu: ' + t, 'erro');
+    } finally {
+      document.getElementById('senha').value = '';
+      try { await signOut(auth); } catch (_) {}
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
